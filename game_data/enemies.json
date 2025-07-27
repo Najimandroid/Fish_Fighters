@@ -1,0 +1,40 @@
+{
+    "UID_1": {
+        "UID": 1,
+
+        "name": "Shrimp",
+        "description": "Just a normal shrimp.",
+
+        "health": 5,
+
+        "attackPower": 2,
+        "attackRange": 200,
+        "attackFrequency": 2,
+        "attackType": 1,
+
+        "movementSpeed": 10,
+
+        "knockbackCount": 1,
+
+        "texture": "assets/images/textures/enemies/shrimpTEST.png"
+    },
+    "UID_2": {
+        "UID": 2,
+
+        "name": "Crab",
+        "description": "A mean crab.",
+
+        "health": 20,
+
+        "attackPower": 10,
+        "attackRange": 300,
+        "attackFrequency": 5,
+        "attackType": 2,
+
+        "movementSpeed": 2,
+
+        "knockbackCount": 3,
+
+        "texture": "assets/images/textures/enemies/crabTEST.png"
+    }
+}

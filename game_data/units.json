@@ -1,0 +1,36 @@
+{
+    "UID_1": {
+        "UID": 1,
+
+        "name": "Fish",
+        "description": "Just a normal fish.",
+
+        "health": 10,
+
+        "attackPower": 2,
+        "attackRange": 5,
+        "attackType": 1,
+        "attackFrequency": 1.5,
+
+        "movementSpeed": 5,
+
+        "knockbackCount": 3
+    },
+    "UID_2": {
+        "UID": 2,
+
+        "name": "Big Fish",
+        "description": "Just a normal fish but bigger.",
+
+        "health": 30,
+
+        "attackPower": 5,
+        "attackRange": 10,
+        "attackType": 1,
+        "attackFrequency": 5,
+
+        "movementSpeed": 2,
+
+        "knockbackCount": 1
+    }
+}

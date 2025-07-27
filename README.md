@@ -1,2 +1,3 @@
-# Fish_Fighters
-"The Battle Cats"-like game.
+# Fish Fighters
+
+LE FAMEUX PROJET QUI VA ETRE BATTLE CATS MAIS EN MIEUX MWAHAHA

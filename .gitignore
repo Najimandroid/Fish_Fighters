@@ -1,0 +1,24 @@
+# Visual Studio
+.vs/
+*.sdf
+*.suo
+*.user
+*.VC.db
+*.VC.opendb
+
+# Build
+out/
+build/
+CMakeFiles/
+CMakeCache.txt
+*.obj
+*.pdb
+*.exe
+
+# CMake presets
+CMakeUserPresets.json
+
+# SFML / assets
+*.dll
+*.log
+*.tmp

@@ -1,0 +1,63 @@
+{
+    "UID_1": {
+        "UID": 1,
+
+        "stageName": "Seaside Rampage",
+
+        "enemiesLimit": 10,
+        "unitsLimit": 20,
+
+        "baseTexture": "assets/images/textures/bases/enemyBaseTEST.png",
+        "backgroundTexture": "assets/images/textures/backgrounds/backgroundTEST.png",
+
+        "numberOfDifferentEnemies": 2,
+        "enemies": [
+            {
+                "UID": 1,
+                "amount": -1,
+                "respawnTime": 2,
+                "spawnStart": 5,
+                "layer": -1,
+                "baseHealth": 100,
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 2,
+                "amount": 1,
+                "respawnTime": 0,
+                "spawnStart": 0,
+                "layer": 1,
+                "baseHealth": 50,
+                "isBoss": 1,
+                "bypassEnemyLimit": 1
+            }
+        ]
+    },
+
+    "UID_2": {
+        "UID": 2,
+
+        "stageName": "Volcano Blitz",
+
+        "enemiesLimit": 20,
+        "unitsLimit": 20,
+
+        "baseTexture": "assets/images/textures/bases/enemyBaseTEST.png",
+        "backgroundTexture": "assets/images/textures/backgrounds/backgroundTEST.png",
+
+        "numberOfDifferentEnemies": 1,
+        "enemies": [
+            {
+                "UID": 1,
+                "amount": 3,
+                "respawnTime": 7,
+                "spawnStart": 3,
+                "layer": -1,
+                "baseHealth": 100,
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            }
+        ]
+    }
+}
