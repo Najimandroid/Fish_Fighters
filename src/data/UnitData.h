@@ -19,7 +19,7 @@ struct UnitData
 	std::string description = "???";
 
 	//Battle datas
-	float baseHealth = 1.0f;
+	float health = 1.0f;
 
 	float attackPower = 1.0f;
 	float attackRange = 1.0f;
@@ -29,4 +29,6 @@ struct UnitData
 	float movementSpeed = 1.0f;
 
 	int knockbackCount = 1;
+
+	std::string texture;
 };

@@ -42,7 +42,7 @@ bool DataLoader::load_units(const std::string& path)
         data->name = value.at("name").get<std::string>();
         data->description = value.at("description").get<std::string>();
 
-        data->baseHealth = value.at("health").get<float>();
+        data->health = value.at("health").get<float>();
 
         data->attackPower = value.at("attackPower").get<float>();
         data->attackRange = value.at("attackRange").get<float>();
@@ -52,6 +52,8 @@ bool DataLoader::load_units(const std::string& path)
         data->movementSpeed = value.at("movementSpeed").get<float>();
 
         data->knockbackCount = value.at("knockbackCount").get<int>();
+
+        data->texture = value.at("texture").get<std::string>();
 
         m_unitsDataBase[data->UID] = data;
     }

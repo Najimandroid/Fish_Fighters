@@ -48,7 +48,9 @@ void BattleBase::update(float deltaTime)
 		std::cout << "Base destroyed x_x\n";
 	}
 
+#ifdef DEBUG_MODE
 	std::cout << "[Fish Base Health] = " << currentHealth << "\n";
+#endif
 
 	update_position();
 }

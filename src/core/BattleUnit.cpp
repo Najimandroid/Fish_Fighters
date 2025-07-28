@@ -1,18 +1,18 @@
-#include "BattleEnemy.h"
-#include "../data/EnemyData.h"
+#include "BattleUnit.h"
+#include "../data/UnitData.h"
 
 #include <iostream>
 
 //BattleEnemy::BattleEnemy() = default;
 
-BattleEnemy::BattleEnemy(std::shared_ptr<EnemyData> data_, sf::Vector2f magnification_):
+BattleUnit::BattleUnit(std::shared_ptr<UnitData> data_) :
 	data(data_)
 {
 	//Init core datas
-	magnification = magnification_;
-	currentHealth = data->health * magnification.x;
+	//magnification = magnification_;
+	currentHealth = data->health; //* magnification.x;
 	state = State::IDLE;
-	position = { 0.0f, 360.0f };
+	position = { 1620.0f, 360.0f };
 
 
 	//Init battle zones
@@ -41,7 +41,7 @@ BattleEnemy::BattleEnemy(std::shared_ptr<EnemyData> data_, sf::Vector2f magnific
 #endif
 }
 
-void BattleEnemy::update(float deltaTime)
+void BattleUnit::update(float deltaTime)
 {
 	//Simple state machine
 	if (state == IDLE)
@@ -58,7 +58,7 @@ void BattleEnemy::update(float deltaTime)
 	if (state == WALK)
 	{
 		velocity = { data->movementSpeed * 10.0f * deltaTime, 0.0f }; //*10.0f to make them more speedy
-		position += velocity;
+		position -= velocity;
 		velocity = { 0.0f, 0.0f };
 	}
 	if (state == ATTACK)
@@ -88,7 +88,7 @@ void BattleEnemy::update(float deltaTime)
 	currentAttackCooldown += deltaTime;
 }
 
-void BattleEnemy::update_position()
+void BattleUnit::update_position()
 {
 	sprite.setPosition(position);
 

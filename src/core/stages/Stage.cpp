@@ -1,6 +1,7 @@
 #include "Stage.h"
 
 #include "../BattleEnemy.h"
+#include "../BattleUnit.h"
 
 #include <iostream>
 
@@ -39,17 +40,6 @@ void Stage::load(int uid)
 
 	m_enemyStageDatas = stageJson->enemies;
 
-	/*
-	//Setup base sprite
-	if (!m_baseTexture.loadFromFile(stageJson->baseTexture)) { bool loadDefault = m_baseTexture.loadFromFile("assets/images/textures/bases/defaultBase.png"); }
-	m_baseSprite.setTexture(m_baseTexture, true);
-	m_baseSprite.setPosition({ 0.0f, 360.0f - m_baseTexture.getSize().y / 2}); //the base is placed in the center of the screen
-	m_baseHitbox.position = m_baseSprite.getPosition();
-
-	m_fishBaseSprite.setPosition({ 1280.0f - m_fishBaseTexture.getSize().x, 360.0f - m_fishBaseTexture.getSize().y / 2});
-	m_fishBaseHitbox.position = m_fishBaseSprite.getPosition();
-	*/
-
 	//Setup background
 	bool bg = m_backgroundTexture.loadFromFile(stageJson->backgroundTexture); //to do: adding default bground
 	m_backgroundSprite.setTexture(m_backgroundTexture, true);
@@ -63,10 +53,13 @@ void Stage::unload()
 	m_uid = -1;
 
 	m_enemies.clear();
+	m_units.clear();
 	m_enemyStageDatas.clear();
 
 	m_enemyBase = nullptr;
 	m_fishBase = nullptr;
+
+	m_isLoaded = false;
 }
 
 void Stage::update(float deltaTime)
@@ -104,6 +97,7 @@ void Stage::update(float deltaTime)
 
 	update_bases(deltaTime);
 	update_enemies(deltaTime);
+	update_units(deltaTime);
 }
 
 void Stage::update_enemies(float deltaTime)
@@ -117,7 +111,8 @@ void Stage::update_enemies(float deltaTime)
 		if (enemy->isDead)
 		{
 			//remove enemy from map
-			m_enemies.erase(it);
+			m_enemies.erase(it); //Todo: create remove_enemy();
+			m_enemiesCount--;
 			continue;
 		}
 
@@ -133,6 +128,38 @@ void Stage::update_enemies(float deltaTime)
 		}
 
 		enemy->update(deltaTime);
+		it++;
+	}
+}
+
+void Stage::update_units(float deltaTime)
+{
+	if (m_units.empty()) return;
+
+	for (auto it = m_units.begin(); it != m_units.end();)
+	{
+		auto unit = it->second;
+
+		if (unit->isDead)
+		{
+			//remove enemy from map
+			m_units.erase(it); //Todo: create remove_enemy();
+			m_unitsCount--;
+			continue;
+		}
+
+		bool isFishBaseReached = unit->attackRangeZone.findIntersection(m_enemyBase->hitbox).has_value();
+		if (isFishBaseReached)
+		{
+			unit->targets.insert(m_enemyBase);
+			unit->state = unit->IDLE;
+		}
+		else
+		{
+			unit->state = unit->WALK;
+		}
+
+		unit->update(deltaTime);
 		it++;
 	}
 }
@@ -155,6 +182,7 @@ void Stage::render(sf::RenderWindow& window)
 	window.draw(m_fishBase->rHitbox);
 #endif
 
+	//Drawing enemies
 	for (auto& [layer, enemy] : std::ranges::reverse_view(m_enemies))
 	{
 
@@ -165,6 +193,20 @@ void Stage::render(sf::RenderWindow& window)
 		window.draw(enemy->rDamageZone);
 		window.draw(enemy->rAttackRangeZone);
 		window.draw(enemy->rHitbox);
+#endif
+	}
+
+	//Drawing units
+	for (auto& [layer, unit] : std::ranges::reverse_view(m_units))
+	{
+
+		window.draw(unit->sprite);
+
+#ifdef DEBUG_MODE
+		//Rendering the hitboxes in debug mode
+		window.draw(unit->rDamageZone);
+		window.draw(unit->rAttackRangeZone);
+		window.draw(unit->rHitbox);
 #endif
 	}
 }
@@ -200,6 +242,19 @@ void Stage::spawn_enemy(std::shared_ptr<EnemyData> enemyData, sf::Vector2f magni
 
 	m_enemiesCount++;
 	m_enemies[battleEnemy->currentLayer] = battleEnemy;
+}
+
+void Stage::spawn_unit(std::shared_ptr<UnitData> unitData)
+{
+	if (m_unitsCount >= m_unitsLimit) return;
+
+	std::shared_ptr<BattleUnit> battleUnit = std::make_shared<BattleUnit>(unitData);
+	battleUnit->currentLayer = generate_random_spawn_layer();
+
+	battleUnit->position.y -= battleUnit->currentLayer;
+
+	m_unitsCount++;
+	m_units[battleUnit->currentLayer] = battleUnit;
 }
 
 int Stage::generate_random_spawn_layer()

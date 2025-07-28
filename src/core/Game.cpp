@@ -126,6 +126,14 @@ void Game::poll_events()
             {
                 m_window.close();
             }
+            if (e_keycode->code == sf::Keyboard::Key::A)
+            {
+                m_stage->spawn_unit(m_dataLoader->get_unit_data(1));
+            }
+            if (e_keycode->code == sf::Keyboard::Key::E)
+            {
+                m_stage->spawn_unit(m_dataLoader->get_unit_data(2));
+            }
         }
 
         if (const auto* e_window = event->getIf<sf::Event::Resized>())

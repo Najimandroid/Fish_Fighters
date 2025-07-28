@@ -20,6 +20,7 @@
 
 class DataLoader;
 class BattleEnemy;
+class BattleUnit;
 class EnemyData;
 
 class Stage
@@ -36,14 +37,12 @@ public:
 	void render(sf::RenderWindow& window);
 
 	void spawn_enemy(std::shared_ptr<EnemyData> enemyData, sf::Vector2f magnification, int layer, bool bypassLimit);
+	void spawn_unit(std::shared_ptr<UnitData> unitData); //Todo: add some kind of UserDatas to keep track of the level of each unit
 	int generate_random_spawn_layer();
 
 	void update_enemies(float deltaTime);
+	void update_units(float deltaTime);
 	void update_bases(float deltaTime);
-
-private:
-
-	void spawn_bases(float health, std::string texture);
 
 private:
 
@@ -62,26 +61,25 @@ private:
 	std::vector<std::shared_ptr<EnemyStageData>> m_enemyStageDatas;
 
 	//Entities
-	using BattleEnemyMap_t  = std::map<int, std::shared_ptr<BattleEnemy>>;
-	BattleEnemyMap_t m_enemies; //enemies are stocked in layer order (helps with rendering)
+	using BattleEnemiesMap_t  = std::map<int, std::shared_ptr<BattleEnemy>>;
+	using BattleUnitsMap_t  = std::map<int, std::shared_ptr<BattleUnit>>;
+	BattleEnemiesMap_t m_enemies; //enemies are stocked in layer order (helps with rendering)
+	BattleUnitsMap_t m_units;
+
 
 	//Bases
 	std::shared_ptr<BattleBase> m_enemyBase;
 	std::shared_ptr<BattleBase> m_fishBase;
 
 	//Rendering
-	/*
-	sf::Texture m_baseTexture;
-	sf::Sprite m_baseSprite;
-
-	sf::Texture m_fishBaseTexture = sf::Texture("assets/images/textures/bases/fishBaseTEST.png");
-	sf::Sprite m_fishBaseSprite = sf::Sprite(m_fishBaseTexture);
-	*/
-
 	sf::Texture m_backgroundTexture;
 	sf::Sprite m_backgroundSprite;
 
 	//Other
 	float m_elapsedTime = 0.f;
 	bool m_isLoaded = false;
+
+private:
+
+	void spawn_bases(float health, std::string texture);
 };

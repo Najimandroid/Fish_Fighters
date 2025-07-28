@@ -9,9 +9,7 @@
 #include <vector>
 
 class UnitData;
-class BattleEnemy;
-
-using WeakBattleEnemyPtr = std::weak_ptr<BattleEnemy>;
+//class BattleEnemy;
 
 /*
 * The BattleUnit represents the spawned unit in a stage
@@ -21,16 +19,15 @@ class BattleUnit: public BattleEntity
 {
 public:
 
+	BattleUnit(std::shared_ptr<UnitData> data_);
+
 	//Overrides
-	virtual void update(float deltaTime) override {};
+	virtual void update(float deltaTime) override;
 
 	//Data
 	std::shared_ptr<const UnitData> data;
 
-	//Targets
-	std::vector<WeakBattleEnemyPtr> targets;
-
 private:
 	//Private overrides
-	virtual void update_position() override {};
+	virtual void update_position() override;
 };
