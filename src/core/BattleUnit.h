@@ -4,11 +4,12 @@
 #include <SFML/Graphics/Rect.hpp>
 
 #include "BattleEntity.h"
+#include "../data/UnitData.h"
 
 #include <memory>
 #include <vector>
 
-class UnitData;
+//class UnitData;
 //class BattleEnemy;
 
 /*
@@ -25,7 +26,7 @@ public:
 	virtual void update(float deltaTime) override;
 
 	//Data
-	std::shared_ptr<const UnitData> data;
+	std::shared_ptr<UnitData> data = nullptr;
 
 private:
 	//Private overrides

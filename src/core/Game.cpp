@@ -1,5 +1,7 @@
 #include "Game.h"
 
+#include <iostream>
+
 Game::Game():
     m_dataLoader(std::make_shared<DataLoader>()),
     m_stage(std::make_shared<Stage>())
@@ -128,10 +130,12 @@ void Game::poll_events()
             }
             if (e_keycode->code == sf::Keyboard::Key::A)
             {
+                std::cout << "spawn fish 1\n";
                 m_stage->spawn_unit(m_dataLoader->get_unit_data(1));
             }
             if (e_keycode->code == sf::Keyboard::Key::E)
             {
+                std::cout << "spawn fish 2\n";
                 m_stage->spawn_unit(m_dataLoader->get_unit_data(2));
             }
         }

@@ -12,12 +12,12 @@ BattleUnit::BattleUnit(std::shared_ptr<UnitData> data_) :
 	//magnification = magnification_;
 	currentHealth = data->health; //* magnification.x;
 	state = State::IDLE;
-	position = { 1620.0f, 360.0f };
+	position = { 1080.0f, 360.0f };
 
 
 	//Init battle zones
-	attackRangeZone.size = { data->attackRange , 720.0f };
-	damageZone.size = { data->attackRange , 720.0f };
+	attackRangeZone.size = { -data->attackRange , 720.0f };
+	damageZone.size = { -data->attackRange , 720.0f };
 
 	//Init position
 	hitbox.position = position;

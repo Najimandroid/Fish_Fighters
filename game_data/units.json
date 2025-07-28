@@ -8,7 +8,7 @@
         "health": 10,
 
         "attackPower": 2,
-        "attackRange": 5,
+        "attackRange": 200,
         "attackType": 1,
         "attackFrequency": 1.5,
 
@@ -27,7 +27,7 @@
         "health": 30,
 
         "attackPower": 5,
-        "attackRange": 10,
+        "attackRange": 250,
         "attackType": 1,
         "attackFrequency": 5,
 
