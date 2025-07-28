@@ -12,20 +12,21 @@
 //class BattleUnit;
 
 /*
-* The BattleEnemy represents the spawned enemy in a stage
+* The BattleBase represents a base in a stage
 */
 
-class BattleEnemy: public BattleEntity
+class BattleBase : public BattleEntity
 {
 public:
 
-	BattleEnemy(std::shared_ptr<EnemyData> data_, sf::Vector2f magnification_);
+	BattleBase(float health_, std::string texture_);
 
 	//Overrides
 	virtual void update(float deltaTime) override;
 
-	//Data
-	std::shared_ptr<EnemyData> data = nullptr;
+public:
+
+	float maxHealth = 1.0f;
 
 private:
 	//Private overrides

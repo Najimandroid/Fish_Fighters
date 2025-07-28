@@ -2,6 +2,7 @@
 
 #include "../../data/EnemyStageData.h"
 #include "../DataLoader.h"
+#include "../BattleBase.h"
 
 #include <SFML/Graphics.hpp>
 
@@ -30,13 +31,19 @@ public:
 	void init(std::shared_ptr<DataLoader> dataLoader);
 
 	void load(int uid);
+	void unload();
 	void update(float deltaTime);
 	void render(sf::RenderWindow& window);
 
-	void spawn_enemy(std::shared_ptr<EnemyData> enemyData, int layer, bool bypassLimit);
+	void spawn_enemy(std::shared_ptr<EnemyData> enemyData, sf::Vector2f magnification, int layer, bool bypassLimit);
 	int generate_random_spawn_layer();
 
 	void update_enemies(float deltaTime);
+	void update_bases(float deltaTime);
+
+private:
+
+	void spawn_bases(float health, std::string texture);
 
 private:
 
@@ -55,20 +62,21 @@ private:
 	std::vector<std::shared_ptr<EnemyStageData>> m_enemyStageDatas;
 
 	//Entities
-	std::map<int, std::shared_ptr<BattleEnemy>> m_enemies; //enemies are stocked in layer order (helps with rendering)
+	using BattleEnemyMap_t  = std::map<int, std::shared_ptr<BattleEnemy>>;
+	BattleEnemyMap_t m_enemies; //enemies are stocked in layer order (helps with rendering)
 
 	//Bases
-	float baseHealth = 1.0f;
-	float fishBaseHealth = 50.0f;
-	sf::FloatRect m_baseHitbox;
-	sf::FloatRect m_fishBaseHitbox;
+	std::shared_ptr<BattleBase> m_enemyBase;
+	std::shared_ptr<BattleBase> m_fishBase;
 
 	//Rendering
+	/*
 	sf::Texture m_baseTexture;
 	sf::Sprite m_baseSprite;
 
 	sf::Texture m_fishBaseTexture = sf::Texture("assets/images/textures/bases/fishBaseTEST.png");
 	sf::Sprite m_fishBaseSprite = sf::Sprite(m_fishBaseTexture);
+	*/
 
 	sf::Texture m_backgroundTexture;
 	sf::Sprite m_backgroundSprite;

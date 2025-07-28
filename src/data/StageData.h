@@ -15,6 +15,8 @@ struct StageData
 	int enemiesLimit = 10;
 	int unitsLimit = 10;
 
+	float baseHealth = 100.0f;
+
 	std::vector<std::shared_ptr<EnemyStageData>> enemies;
 
 	std::string baseTexture;

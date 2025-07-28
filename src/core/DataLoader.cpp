@@ -138,6 +138,8 @@ bool DataLoader::load_stages(const std::string& path)
         data->enemiesLimit = value.at("enemiesLimit").get<int>();
         data->unitsLimit = value.at("unitsLimit").get<int>();
 
+        data->baseHealth = value.at("baseHealth").get<float>();
+
         data->baseTexture = value.at("baseTexture").get<std::string>();
         data->backgroundTexture = value.at("backgroundTexture").get<std::string>();
         
@@ -158,6 +160,9 @@ bool DataLoader::load_stages(const std::string& path)
             enemyData->layer = enemyValue.at("layer").get<int>();
 
             enemyData->baseHealthThreshold = enemyValue.at("baseHealth").get<float>();
+
+            enemyData->magnification.x = enemyValue["magnification"][0];
+            enemyData->magnification.y = enemyValue["magnification"][1];
 
             enemyData->isBoss = (bool)enemyValue.at("isBoss").get<int>();
             enemyData->bypassEnemyLimit = (bool)enemyValue.at("bypassEnemyLimit").get<int>();

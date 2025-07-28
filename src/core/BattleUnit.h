@@ -22,11 +22,15 @@ class BattleUnit: public BattleEntity
 public:
 
 	//Overrides
-	virtual void updatePosition() override {};
+	virtual void update(float deltaTime) override {};
 
 	//Data
 	std::shared_ptr<const UnitData> data;
 
 	//Targets
 	std::vector<WeakBattleEnemyPtr> targets;
+
+private:
+	//Private overrides
+	virtual void update_position() override {};
 };

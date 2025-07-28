@@ -1,5 +1,7 @@
 #pragma once
 
+#include <SFML/System/Vector2.hpp>
+
 class EnemyStageData {
 public:
 
@@ -13,6 +15,8 @@ public:
     int layer = -1; // -1 means any
 
     float baseHealthThreshold = 100; // percentage (e.g. 100 = full base hp)
+
+    sf::Vector2f magnification = { 1.f, 1.f }; // multiplier x : hp ; y : attack
 
     bool isBoss = false;
     bool bypassEnemyLimit = false; // enable if you want the enemy to spawn even if the stage's enemies limit is reached

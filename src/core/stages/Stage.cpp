@@ -7,24 +7,23 @@
 void Stage::init(std::shared_ptr<DataLoader> dataLoader)
 {
 	m_dataLoader = dataLoader;
+	unload();
 }
 
 Stage::Stage():
-	m_baseHitbox(sf::FloatRect({0, 0}, {1, 720})), m_fishBaseHitbox(sf::FloatRect({ 0, 0 }, { 1, 720 })),
+	m_enemyBase(nullptr), m_fishBase(nullptr),
 
-	m_baseTexture(sf::Texture()), m_baseSprite(sf::Sprite(m_baseTexture)), 
+	//m_baseTexture(sf::Texture()), m_baseSprite(sf::Sprite(m_baseTexture)), 
 	m_backgroundTexture(sf::Texture()), m_backgroundSprite(sf::Sprite(m_backgroundTexture))
 {}
 
 void Stage::load(int uid)
 {
+	if (m_uid != -1) unload();
+
 	//Loading stage with the StageData uid
 
 	std::shared_ptr<const StageData> stageJson = m_dataLoader->get_stage_data(uid);
-
-	//Clear previous data
-	m_enemies.clear();
-	m_enemyStageDatas.clear();
 
 	//setup stage data
 	m_uid = uid;
@@ -36,8 +35,11 @@ void Stage::load(int uid)
 	m_enemiesCount = 0;
 	m_unitsCount = 0;
 
+	spawn_bases(stageJson->baseHealth, stageJson->baseTexture);
+
 	m_enemyStageDatas = stageJson->enemies;
 
+	/*
 	//Setup base sprite
 	if (!m_baseTexture.loadFromFile(stageJson->baseTexture)) { bool loadDefault = m_baseTexture.loadFromFile("assets/images/textures/bases/defaultBase.png"); }
 	m_baseSprite.setTexture(m_baseTexture, true);
@@ -46,6 +48,7 @@ void Stage::load(int uid)
 
 	m_fishBaseSprite.setPosition({ 1280.0f - m_fishBaseTexture.getSize().x, 360.0f - m_fishBaseTexture.getSize().y / 2});
 	m_fishBaseHitbox.position = m_fishBaseSprite.getPosition();
+	*/
 
 	//Setup background
 	bool bg = m_backgroundTexture.loadFromFile(stageJson->backgroundTexture); //to do: adding default bground
@@ -53,6 +56,17 @@ void Stage::load(int uid)
 	m_backgroundSprite.setPosition({ 0.0f, 0.0f });
 
 	m_isLoaded = true;
+}
+
+void Stage::unload()
+{
+	m_uid = -1;
+
+	m_enemies.clear();
+	m_enemyStageDatas.clear();
+
+	m_enemyBase = nullptr;
+	m_fishBase = nullptr;
 }
 
 void Stage::update(float deltaTime)
@@ -81,27 +95,36 @@ void Stage::update(float deltaTime)
 			auto data = m_dataLoader->get_enemy_data(spawnEnemyData->UID);
 
 			//std::cout << "Spawned enemy: " << data->name << "\n";*
-			spawn_enemy(data, spawnEnemyData->layer, spawnEnemyData->isBoss);
+			spawn_enemy(data, spawnEnemyData->magnification, spawnEnemyData->layer, spawnEnemyData->isBoss);
 
 			spawnEnemyData->currentTimer = 0.f;
 			spawnEnemyData->spawnedCount++;
 		}
 	}
 
+	update_bases(deltaTime);
 	update_enemies(deltaTime);
 }
 
 void Stage::update_enemies(float deltaTime)
 {
 	if (m_enemies.empty()) return;
-	for (auto& [layer, enemy] : m_enemies)
+
+	for (auto it = m_enemies.begin(); it != m_enemies.end();)
 	{
+		auto enemy = it->second;
 
-		enemy->updatePosition();
+		if (enemy->isDead)
+		{
+			//remove enemy from map
+			m_enemies.erase(it);
+			continue;
+		}
 
-		bool isFishBaseReached = enemy->attackRangeZone.findIntersection(m_fishBaseHitbox).has_value();
+		bool isFishBaseReached = enemy->attackRangeZone.findIntersection(m_fishBase->hitbox).has_value();
 		if (isFishBaseReached)
 		{
+			enemy->targets.insert(m_fishBase);
 			enemy->state = enemy->IDLE;
 		}
 		else
@@ -109,26 +132,32 @@ void Stage::update_enemies(float deltaTime)
 			enemy->state = enemy->WALK;
 		}
 
-
-		if (enemy->state == enemy->WALK)
-		{
-			enemy->velocity = { enemy->data->movementSpeed * 10.0f * deltaTime, 0.0f }; //*10.0f to make them more speedy
-			enemy->position += enemy->velocity;
-			enemy->velocity = { 0.0f, 0.0f };
-		}
+		enemy->update(deltaTime);
+		it++;
 	}
+}
+
+void Stage::update_bases(float deltaTime)
+{
+	m_enemyBase->update(deltaTime);
+	m_fishBase->update(deltaTime);
 }
 
 void Stage::render(sf::RenderWindow& window)
 {
 	window.draw(m_backgroundSprite);
-	window.draw(m_baseSprite);
-	window.draw(m_fishBaseSprite);
+	window.draw(m_enemyBase->sprite);
+	window.draw(m_fishBase->sprite);
+
+#ifdef DEBUG_MODE
+	//Rendering the hitboxes in debug mode
+	window.draw(m_enemyBase->rHitbox);
+	window.draw(m_fishBase->rHitbox);
+#endif
 
 	for (auto& [layer, enemy] : std::ranges::reverse_view(m_enemies))
 	{
 
-		enemy->sprite.setPosition(enemy->position);
 		window.draw(enemy->sprite);
 
 #ifdef DEBUG_MODE
@@ -140,11 +169,22 @@ void Stage::render(sf::RenderWindow& window)
 	}
 }
 
-void Stage::spawn_enemy(std::shared_ptr<EnemyData> enemyData,int layer = -1, bool bypassLimit = false)
+void Stage::spawn_bases(float health, std::string texture)
+{
+	m_enemyBase = std::make_unique<BattleBase>(health, texture);
+	m_enemyBase->position = { 0.0f, 360.0f - m_enemyBase->texture.getSize().y / 2 };
+	m_enemyBase->position.y -= m_enemyBase->currentLayer;
+
+	m_fishBase = std::make_unique<BattleBase>(350.0f, "assets/images/textures/bases/fishBaseTEST.png");
+	m_fishBase->position = { 1280.0f - m_fishBase->texture.getSize().x, 360.0f - m_fishBase->texture.getSize().y / 2 };
+	m_fishBase->position.y -= m_fishBase->currentLayer;
+}
+
+void Stage::spawn_enemy(std::shared_ptr<EnemyData> enemyData, sf::Vector2f magnification, int layer = -1, bool bypassLimit = false)
 {
 	if (m_enemiesCount >= m_enemiesLimit && bypassLimit == false) return;
 
-	std::shared_ptr<BattleEnemy> battleEnemy = std::make_shared<BattleEnemy>(enemyData);
+	std::shared_ptr<BattleEnemy> battleEnemy = std::make_shared<BattleEnemy>(enemyData, magnification);
 
 	//spawn in corresponding layer
 	if (layer > 0)

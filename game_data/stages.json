@@ -7,6 +7,8 @@
         "enemiesLimit": 10,
         "unitsLimit": 20,
 
+        "baseHealth": 100,
+
         "baseTexture": "assets/images/textures/bases/enemyBaseTEST.png",
         "backgroundTexture": "assets/images/textures/backgrounds/backgroundTEST.png",
 
@@ -15,10 +17,11 @@
             {
                 "UID": 1,
                 "amount": -1,
-                "respawnTime": 2,
+                "respawnTime": 3,
                 "spawnStart": 5,
                 "layer": -1,
                 "baseHealth": 100,
+                "magnification" :  [1, 1],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
             },
@@ -29,6 +32,7 @@
                 "spawnStart": 0,
                 "layer": 1,
                 "baseHealth": 50,
+                "magnification": [ 1, 1 ],
                 "isBoss": 1,
                 "bypassEnemyLimit": 1
             }
@@ -43,6 +47,8 @@
         "enemiesLimit": 20,
         "unitsLimit": 20,
 
+        "baseHealth": 200,
+
         "baseTexture": "assets/images/textures/bases/enemyBaseTEST.png",
         "backgroundTexture": "assets/images/textures/backgrounds/backgroundTEST.png",
 
@@ -55,6 +61,7 @@
                 "spawnStart": 3,
                 "layer": -1,
                 "baseHealth": 100,
+                "magnification": [ 1, 1 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
             }

@@ -26,7 +26,7 @@
 
         "health": 20,
 
-        "attackPower": 10,
+        "attackPower": 100,
         "attackRange": 300,
         "attackFrequency": 5,
         "attackType": 2,

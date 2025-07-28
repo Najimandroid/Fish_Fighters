@@ -33,6 +33,7 @@ set(PROJECT_SOURCES
     src/core/DataLoader.cpp
     src/core/BattleEntity.cpp
     src/core/BattleEnemy.cpp
+    src/core/BattleBase.cpp
     src/core/stages/Stage.cpp
     # ← ajoute ici les futurs fichiers, par ex.:
     # src/utils/NewSystem.cpp

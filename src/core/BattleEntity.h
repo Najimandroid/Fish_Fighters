@@ -4,6 +4,8 @@
 #include <SFML/Graphics/Sprite.hpp>
 #include <SFML/Graphics/RectangleShape.hpp>
 
+#include <set>
+
 class BattleEntity
 {
 public:
@@ -11,13 +13,18 @@ public:
 	BattleEntity();
 	virtual ~BattleEntity() = default;
 
-	virtual void updatePosition() = 0;
+	virtual void update(float deltaTime) = 0; //called each frame by the stage instance
+
+private:
+
+	virtual void update_position() = 0; //used to change position of all float_rects and sprites
 
 public:
 	//Data submembers
 	float currentHealth = 1.0f;
-	float attackCooldown = 0.0f;
+	float currentAttackCooldown = 0.0f; //attack cooldown
 	int currentLayer = 0;
+	bool isDead = false;
 
 	//State
 	enum State
@@ -41,6 +48,9 @@ public:
 	sf::FloatRect hitbox;
 	sf::FloatRect attackRangeZone;
 	sf::FloatRect damageZone;
+
+	//Targets
+	std::set<std::weak_ptr<BattleEntity>, std::owner_less<std::weak_ptr<BattleEntity>>> targets;
 
 	//Render
 	sf::Texture texture;
