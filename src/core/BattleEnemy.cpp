@@ -11,11 +11,13 @@ BattleEnemy::BattleEnemy(std::shared_ptr<EnemyData> data_, sf::Vector2f magnific
 	//Init core datas
 	magnification = magnification_;
 	currentHealth = data->health * magnification.x;
-	state = State::IDLE;
+	state = IDLE;
 	position = { 0.0f, 360.0f };
+	currentAttackCooldown = data->attackFrequency; //Set current attack cooldown to attack frequency to make them attack instantly
 
 
 	//Init battle zones
+	hitbox.size = { 200.0f, 720.0f };
 	attackRangeZone.size = { data->attackRange , 720.0f };
 	damageZone.size = { data->attackRange , 720.0f };
 
@@ -46,37 +48,58 @@ void BattleEnemy::update(float deltaTime)
 	//Simple state machine
 	if (state == IDLE)
 	{
+		velocity = { 0.0f, 0.0f };
 		if (currentHealth < 0.0f) state = DEAD;
 		//Todo: add knockback
+		if (targets.empty()) state = WALK;
 
 		if (currentAttackCooldown >= data->attackFrequency)
 		{
 			state = ATTACK;
-			currentAttackCooldown = 0.0f;
 		}
 	}
 	if (state == WALK)
 	{
 		velocity = { data->movementSpeed * 10.0f * deltaTime, 0.0f }; //*10.0f to make them more speedy
 		position += velocity;
-		velocity = { 0.0f, 0.0f };
+		state = IDLE;
 	}
 	if (state == ATTACK)
 	{
-		for (auto& targetPtr : targets)
+		if (targets.empty())
 		{
-			if (auto target = targetPtr.lock())
+			state = IDLE; //No targets to attack
+			goto attackend;
+		}
+
+		if (data->attackType == 1) //if attackType => single
+		{
+			auto target = targets.begin().operator*().lock();
+			if (target)
 			{
-				target->currentHealth -= data->attackPower * magnification.y;
-				//std::cout << "Dealt " << data->attackPower * magnification.y << "damage.\n";
+				target->currentHealth -= data->attackPower * magnification.y; //Deal damage to the first target
 			}
 		}
+		else
+		{
+			for (auto& targetPtr : targets)
+			{
+				if (auto target = targetPtr.lock())
+				{
+					target->currentHealth -= data->attackPower * magnification.y;
+					//std::cout << "Dealt " << data->attackPower * magnification.y << "damage.\n";
+				}
+			}
+		}
+
+	attackend:
 		targets.clear();
+		currentAttackCooldown = 0.0f;
 		state = IDLE;
 	}
 	if (state == KNOCKBACK)
 	{
-
+		//Todo: knockback behaviour
 	}
 	if (state == DEAD)
 	{

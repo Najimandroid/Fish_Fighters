@@ -111,7 +111,8 @@ void Stage::update_enemies(float deltaTime)
 		if (enemy->isDead)
 		{
 			//remove enemy from map
-			m_enemies.erase(it); //Todo: create remove_enemy();
+			std::cout << "Enemy dead\n";
+			it = m_enemies.erase(it); //Todo: create remove_enemy();
 			m_enemiesCount--;
 			continue;
 		}
@@ -120,12 +121,20 @@ void Stage::update_enemies(float deltaTime)
 		if (isFishBaseReached)
 		{
 			enemy->targets.insert(m_fishBase);
-			enemy->state = enemy->IDLE;
 		}
-		else
+
+		for (auto& pair : m_units)
 		{
-			enemy->state = enemy->WALK;
+			auto unit = pair.second;
+			bool isUnitInAttackRange = enemy->attackRangeZone.findIntersection(unit->hitbox).has_value();
+			if (isUnitInAttackRange)
+			{
+				//std::cout << "UNIT FOUND >:(\n";
+				enemy->targets.insert(unit);
+			}
 		}
+
+		//std::cout << "State: " << enemy->state << "\n";
 
 		enemy->update(deltaTime);
 		it++;
@@ -143,7 +152,8 @@ void Stage::update_units(float deltaTime)
 		if (unit->isDead)
 		{
 			//remove enemy from map
-			m_units.erase(it); //Todo: create remove_enemy();
+			std::cout << "Unit dead\n";
+			it = m_units.erase(it); //Todo: create remove_enemy();
 			m_unitsCount--;
 			continue;
 		}
@@ -152,11 +162,16 @@ void Stage::update_units(float deltaTime)
 		if (isFishBaseReached)
 		{
 			unit->targets.insert(m_enemyBase);
-			unit->state = unit->IDLE;
 		}
-		else
+
+		for (auto& pair : m_enemies)
 		{
-			unit->state = unit->WALK;
+			auto enemy = pair.second;
+			bool isEnemyInAttackRange = unit->attackRangeZone.findIntersection(enemy->hitbox).has_value();
+			if (isEnemyInAttackRange)
+			{
+				unit->targets.insert(enemy);
+			}
 		}
 
 		unit->update(deltaTime);
@@ -185,7 +200,6 @@ void Stage::render(sf::RenderWindow& window)
 	//Drawing enemies
 	for (auto& [layer, enemy] : std::ranges::reverse_view(m_enemies))
 	{
-
 		window.draw(enemy->sprite);
 
 #ifdef DEBUG_MODE
@@ -199,7 +213,6 @@ void Stage::render(sf::RenderWindow& window)
 	//Drawing units
 	for (auto& [layer, unit] : std::ranges::reverse_view(m_units))
 	{
-
 		window.draw(unit->sprite);
 
 #ifdef DEBUG_MODE
@@ -239,6 +252,7 @@ void Stage::spawn_enemy(std::shared_ptr<EnemyData> enemyData, sf::Vector2f magni
 	}
 
 	battleEnemy->position.y -= battleEnemy->currentLayer;
+	battleEnemy->update_position();
 
 	m_enemiesCount++;
 	m_enemies[battleEnemy->currentLayer] = battleEnemy;
@@ -252,9 +266,20 @@ void Stage::spawn_unit(std::shared_ptr<UnitData> unitData)
 	battleUnit->currentLayer = generate_random_spawn_layer();
 
 	battleUnit->position.y -= battleUnit->currentLayer;
+	battleUnit->update_position();
 
 	m_unitsCount++;
 	m_units[battleUnit->currentLayer] = battleUnit;
+
+}
+
+void Stage::remove_enemy(BattleEnemy battleEnemy)
+{
+	m_enemies.erase(battleEnemy.currentLayer);
+}
+
+void Stage::remove_unit(BattleUnit battleUnit)
+{
 }
 
 int Stage::generate_random_spawn_layer()

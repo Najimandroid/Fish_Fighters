@@ -14,6 +14,7 @@ public:
 	virtual ~BattleEntity() = default;
 
 	virtual void update(float deltaTime) = 0; //called each frame by the stage instance
+	virtual void update_position() = 0; //used to change position of all float_rects and sprites (called inside of update)
 
 public:
 	//Data submembers
@@ -58,8 +59,4 @@ public:
 	sf::RectangleShape rAttackRangeZone;
 	sf::RectangleShape rDamageZone;
 #endif
-
-private:
-
-	virtual void update_position() = 0; //used to change position of all float_rects and sprites
 };

@@ -23,11 +23,8 @@ public:
 
 	//Overrides
 	virtual void update(float deltaTime) override;
+	virtual void update_position() override;
 
 	//Data
 	std::shared_ptr<EnemyData> data = nullptr;
-
-private:
-	//Private overrides
-	virtual void update_position() override;
 };

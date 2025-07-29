@@ -28,7 +28,7 @@
 
         "attackPower": 5,
         "attackRange": 250,
-        "attackType": 1,
+        "attackType": 2,
         "attackFrequency": 5,
 
         "movementSpeed": 2,

@@ -24,11 +24,11 @@
         "name": "Crab",
         "description": "A mean crab.",
 
-        "health": 20,
+        "health": 50,
 
-        "attackPower": 100,
-        "attackRange": 300,
-        "attackFrequency": 5,
+        "attackPower": 15,
+        "attackRange": 400,
+        "attackFrequency": 10,
         "attackType": 2,
 
         "movementSpeed": 2,

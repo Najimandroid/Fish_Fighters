@@ -38,6 +38,8 @@ public:
 
 	void spawn_enemy(std::shared_ptr<EnemyData> enemyData, sf::Vector2f magnification, int layer, bool bypassLimit);
 	void spawn_unit(std::shared_ptr<UnitData> unitData); //Todo: add some kind of UserDatas to keep track of the level of each unit
+	void remove_enemy(BattleEnemy battleEnemy);
+	void remove_unit(BattleUnit battleUnit);
 	int generate_random_spawn_layer();
 
 	void update_enemies(float deltaTime);
