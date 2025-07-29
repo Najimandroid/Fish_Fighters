@@ -123,20 +123,9 @@ void Stage::update_enemies(float deltaTime)
 			enemy->targets.insert(m_fishBase);
 		}
 
-		for (auto& pair : m_units)
-		{
-			auto unit = pair.second;
-			bool isUnitInAttackRange = enemy->attackRangeZone.findIntersection(unit->hitbox).has_value();
-			if (isUnitInAttackRange && unit->state != unit->KNOCKBACK)
-			{
-				//std::cout << "UNIT FOUND >:(\n";
-				enemy->targets.insert(unit);
-			}
-		}
-
 		//std::cout << "State: " << enemy->state << "\n";
 
-		enemy->update(deltaTime);
+		enemy->update(deltaTime,m_units);
 		it++;
 	}
 }
@@ -164,25 +153,15 @@ void Stage::update_units(float deltaTime)
 			unit->targets.insert(m_enemyBase);
 		}
 
-		for (auto& pair : m_enemies)
-		{
-			auto enemy = pair.second;
-			bool isEnemyInAttackRange = unit->attackRangeZone.findIntersection(enemy->hitbox).has_value();
-			if (isEnemyInAttackRange && enemy->state != enemy->KNOCKBACK)
-			{
-				unit->targets.insert(enemy);
-			}
-		}
-
-		unit->update(deltaTime);
+		unit->update(deltaTime, m_enemies);
 		it++;
 	}
 }
 
 void Stage::update_bases(float deltaTime)
 {
-	m_enemyBase->update(deltaTime);
-	m_fishBase->update(deltaTime);
+	m_enemyBase->update(deltaTime, m_units);
+	m_fishBase->update(deltaTime, m_enemies);
 }
 
 void Stage::render(sf::RenderWindow& window)

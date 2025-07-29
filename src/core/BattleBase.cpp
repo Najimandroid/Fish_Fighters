@@ -16,6 +16,7 @@ BattleBase::BattleBase(float health_, std::string texture_)
 
 
 	//Init battle zones
+	hitbox.size = { 200.0f, 720.0f };
 	attackRangeZone.size = { 0.0f , 720.0f };
 	damageZone.size = { 0.0f  , 720.0f };
 
@@ -41,7 +42,7 @@ BattleBase::BattleBase(float health_, std::string texture_)
 #endif
 }
 
-void BattleBase::update(float deltaTime)
+void BattleBase::update(float deltaTime, const std::map<int, std::shared_ptr<BattleEntity>>& entityList)
 {
 	if (currentHealth < 0.0f)
 	{

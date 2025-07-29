@@ -7,6 +7,7 @@ BattleEntity::BattleEntity():
 
 	texture(sf::Texture()), sprite(sf::Sprite(texture))
 {
+
 #ifdef DEBUG_MODE
 	rHitbox.setPosition(position);
 	rHitbox.setSize(hitbox.size);

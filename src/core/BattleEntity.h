@@ -5,6 +5,7 @@
 #include <SFML/Graphics/RectangleShape.hpp>
 
 #include <set>
+#include <map>
 
 class BattleEntity
 {
@@ -13,7 +14,7 @@ public:
 	BattleEntity();
 	virtual ~BattleEntity() = default;
 
-	virtual void update(float deltaTime) = 0; //called each frame by the stage instance
+	virtual void update(float deltaTime, const std::map<int, std::shared_ptr<BattleEntity>>& entityList) = 0; //called each frame by the stage instance
 	virtual void update_position() = 0; //used to change position of all float_rects and sprites (called inside of update)
 
 public:
@@ -23,6 +24,7 @@ public:
 	float currentAttackCooldown = 0.0f; //attack cooldown
 	float currentKnockbackCooldown = 0.0f;
 	int currentLayer = 0;
+	bool isEntityOnRange = false; //used to check if an entity is on range of the attack range zone (starts the attack state)
 	bool isDead = false;
 
 	//State

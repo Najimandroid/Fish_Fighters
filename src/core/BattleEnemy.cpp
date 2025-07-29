@@ -10,26 +10,31 @@ BattleEnemy::BattleEnemy(std::shared_ptr<EnemyData> data_, sf::Vector2f magnific
 {
 	//Init core datas
 	magnification = magnification_;
+
 	currentHealth = data->health * magnification.x;
 	healthLeftBeforeNextKnockback = data->health - (data->health / data->knockbackCount);
+
 	state = IDLE;
-	position = { 0.0f, 360.0f };
+	position = { 0.0f, 720.f * 2 / 3 };
+
 	currentAttackCooldown = data->attackFrequency; //Set current attack cooldown to attack frequency to make them attack instantly
+
 	currentKnockbackCooldown = 0.f;
 
+	//Init sprite
+	bool isTextureLoaded = texture.loadFromFile(data->texture);
+	sprite.setTexture(texture, true);
+	sprite.setOrigin({ 0.f, static_cast<float>(texture.getSize().y) });
+
 	//Init battle zones
-	hitbox.size = { 200.0f, 720.0f };
-	attackRangeZone.size = { data->attackRange , 720.0f };
-	damageZone.size = { data->attackRange , 720.0f };
+	hitbox.size = { static_cast<float>(texture.getSize().x), 720.0f};
+	attackRangeZone.size = { data->attackRange + static_cast<float>(texture.getSize().x) , 720.0f };
+	damageZone.size = { data->attackRange + static_cast<float>(texture.getSize().x) , 720.0f };
 
 	//Init position
 	hitbox.position = position;
 	attackRangeZone.position = position;
 	damageZone.position = position;
-
-	//Init sprite
-	bool isTextureLoaded = texture.loadFromFile(data->texture);
-	sprite.setTexture(texture, true);
 
 #ifdef DEBUG_MODE
 	//Init debug rectangles
@@ -44,7 +49,7 @@ BattleEnemy::BattleEnemy(std::shared_ptr<EnemyData> data_, sf::Vector2f magnific
 #endif
 }
 
-void BattleEnemy::update(float deltaTime)
+void BattleEnemy::update(float deltaTime, const std::map<int, std::shared_ptr<BattleEntity>>& entityList)
 {
 	//Simple state machine
 	if (state == IDLE)
@@ -52,27 +57,56 @@ void BattleEnemy::update(float deltaTime)
 		velocity = { 0.0f, 0.0f };
 		if (currentHealth < 0.0f) state = KNOCKBACK;
 		if (currentHealth <= healthLeftBeforeNextKnockback) state = KNOCKBACK;
-		//Todo: add knockback
-		if (targets.empty()) state = WALK;
 
-		if (currentAttackCooldown >= data->attackFrequency)
+		//Check the attack range
+		for (auto& pair : entityList)
+		{
+			auto unit = pair.second;
+			bool isUnitInAttackRange = attackRangeZone.findIntersection(unit->hitbox).has_value();
+			if (isUnitInAttackRange)
+			{
+				isEntityOnRange = true;
+				break;
+			}
+		}
+
+		if (isEntityOnRange == false && targets.empty()) state = WALK;
+
+		if (currentAttackCooldown >= data->attackFrequency && isEntityOnRange == true)
 		{
 			state = ATTACK;
 		}
+
+		isEntityOnRange = false;
 	}
 	if (state == WALK)
 	{
 		velocity = { data->movementSpeed * 10.0f * deltaTime, 0.0f }; //*10.0f to make them more speedy
 		position += velocity;
-		state = IDLE;
+		if (currentHealth < 0.0f) state = KNOCKBACK;
+		else state = IDLE;
 	}
 	if (state == ATTACK)
 	{
+		//Get targets in damage zone
+		for (auto& pair : entityList)
+		{
+			auto unit = pair.second;
+			bool isUnitInAttackRange = damageZone.findIntersection(unit->hitbox).has_value();
+			if (isUnitInAttackRange && unit->state != unit->KNOCKBACK)
+			{
+				//std::cout << "UNIT FOUND >:(\n";
+				targets.insert(unit);
+			}
+		}
+
 		if (targets.empty())
 		{
 			state = IDLE; //No targets to attack
 			goto attackend;
 		}
+
+		std::cout << "SLASH!\n";
 
 		if (data->attackType == 1) //if attackType => single
 		{
@@ -143,8 +177,8 @@ void BattleEnemy::update_position()
 
 #ifdef DEBUG_MODE
 	//Update debug rectangles' position
-	rHitbox.setPosition(position);
-	rAttackRangeZone.setPosition(position);
-	rDamageZone.setPosition(position);
+	rHitbox.setPosition(hitbox.position);
+	rAttackRangeZone.setPosition(attackRangeZone.position);
+	rDamageZone.setPosition(damageZone.position);
 #endif
 }

@@ -63,8 +63,8 @@ private:
 	std::vector<std::shared_ptr<EnemyStageData>> m_enemyStageDatas;
 
 	//Entities
-	using BattleEnemiesMap_t  = std::map<int, std::shared_ptr<BattleEnemy>>;
-	using BattleUnitsMap_t  = std::map<int, std::shared_ptr<BattleUnit>>;
+	using BattleEnemiesMap_t  = std::map<int, std::shared_ptr<BattleEntity>>;
+	using BattleUnitsMap_t  = std::map<int, std::shared_ptr<BattleEntity>>;
 	BattleEnemiesMap_t m_enemies; //enemies are stocked in layer order (helps with rendering)
 	BattleUnitsMap_t m_units;
 

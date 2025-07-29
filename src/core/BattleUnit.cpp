@@ -12,24 +12,28 @@ BattleUnit::BattleUnit(std::shared_ptr<UnitData> data_) :
 	//magnification = magnification_;
 	currentHealth = data->health; //* magnification.x;
 	healthLeftBeforeNextKnockback = data->health - (data->health / data->knockbackCount);
+
 	state = IDLE;
-	position = { 1080.0f, 360.0f };
+	position = { 1080.0f, 720.f * 2/3 };
+
 	currentAttackCooldown = data->attackFrequency; //Set current attack cooldown to attack frequency to make them attack instantly
+
 	currentKnockbackCooldown = 0.f;
-
-	//Init battle zones
-	hitbox.size = { 200.0f, 720.0f };
-	attackRangeZone.size = { -data->attackRange , 720.0f };
-	damageZone.size = { -data->attackRange , 720.0f };
-
-	//Init position
-	hitbox.position = position;
-	attackRangeZone.position = position;
-	damageZone.position = position;
 
 	//Init sprite
 	bool isTextureLoaded = texture.loadFromFile(data->texture);
 	sprite.setTexture(texture, true);
+	sprite.setOrigin({ 0.f, static_cast<float>(texture.getSize().y) });
+
+	//Init battle zones
+	hitbox.size = { static_cast<float>(texture.getSize().x), 720.0f };
+	attackRangeZone.size = { data->attackRange + static_cast<float>(texture.getSize().x) , 720.0f };
+	damageZone.size = { data->attackRange + static_cast<float>(texture.getSize().x) , 720.0f };
+
+	//Init position
+	hitbox.position = position;
+	attackRangeZone.position = {position.x - data->attackRange + static_cast<float>(texture.getSize().x), position.y};
+	damageZone.position = { position.x - data->attackRange + static_cast<float>(texture.getSize().x), position.y };;
 
 #ifdef DEBUG_MODE
 	//Init debug rectangles
@@ -44,37 +48,65 @@ BattleUnit::BattleUnit(std::shared_ptr<UnitData> data_) :
 #endif
 }
 
-void BattleUnit::update(float deltaTime)
+void BattleUnit::update(float deltaTime, const std::map<int, std::shared_ptr<BattleEntity>>& entityList)
 {
 	//Simple state machine
 	if (state == IDLE)
 	{
 		velocity = { 0.0f, 0.0f };
-		if (currentHealth < 0.0f) state = KNOCKBACK;
-		if (currentHealth <= healthLeftBeforeNextKnockback) state = KNOCKBACK;
-		//Todo: add knockback
-		if (targets.empty()) state = WALK;
+		if (currentHealth < 0.0f) { state = KNOCKBACK; goto endidle; }
+		if (currentHealth <= healthLeftBeforeNextKnockback) { state = KNOCKBACK; goto endidle; }
 
-		if (currentAttackCooldown >= data->attackFrequency)
+		//Check the attack range
+		for (auto& pair : entityList)
+		{
+			auto unit = pair.second;
+			bool isUnitInAttackRange = attackRangeZone.findIntersection(unit->hitbox).has_value();
+			if (isUnitInAttackRange)
+			{
+				isEntityOnRange = true;
+				break;
+			}
+		}
+
+		if (isEntityOnRange == false && targets.empty()) state = WALK;
+
+		if (currentAttackCooldown >= data->attackFrequency && isEntityOnRange == true)
 		{
 			state = ATTACK;
 		}
+
+	endidle:
+		isEntityOnRange = false;
 	}
 	if (state == WALK)
 	{
 		velocity = { data->movementSpeed * 10.0f * deltaTime, 0.0f }; //*10.0f to make them more speedy
 		position -= velocity;
-		state = IDLE;
+		if (currentHealth < 0.0f) state = KNOCKBACK;
+		else state = IDLE;
 	}
 	if (state == ATTACK)
 	{
+		//Get targets in damage zone
+		for (auto& pair : entityList)
+		{
+			auto enemy = pair.second;
+			bool isUnitInAttackRange = damageZone.findIntersection(enemy->hitbox).has_value();
+			if (isUnitInAttackRange && enemy->state != enemy->KNOCKBACK)
+			{
+				//std::cout << "ENEMY FOUND >:(\n";
+				targets.insert(enemy);
+			}
+		}
+
 		if (targets.empty())
 		{
 			state = IDLE; //No targets to attack
-			goto attackend;
+			goto endattack;
 		}
 
-		std::cout << "Nom!\n";
+		//std::cout << "Nom!\n";
 
 		if (data->attackType == 1) //if attackType => single
 		{
@@ -96,7 +128,7 @@ void BattleUnit::update(float deltaTime)
 			}
 		}
 
-	attackend:
+	endattack:
 		targets.clear();
 		currentAttackCooldown = 0.0f;
 		state = IDLE;
@@ -140,13 +172,13 @@ void BattleUnit::update_position()
 	sprite.setPosition(position);
 
 	hitbox.position = position;
-	attackRangeZone.position = position;
-	damageZone.position = position;
+	attackRangeZone.position = { position.x - data->attackRange, position.y };
+	damageZone.position = { position.x - data->attackRange, position.y };
 
 #ifdef DEBUG_MODE
 	//Update debug rectangles' position
-	rHitbox.setPosition(position);
-	rAttackRangeZone.setPosition(position);
-	rDamageZone.setPosition(position);
+	rHitbox.setPosition(hitbox.position);
+	rAttackRangeZone.setPosition(attackRangeZone.position);
+	rDamageZone.setPosition(damageZone.position);
 #endif
 }

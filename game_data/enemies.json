@@ -8,7 +8,7 @@
         "health": 5,
 
         "attackPower": 2,
-        "attackRange": 200,
+        "attackRange": 10,
         "attackFrequency": 2,
         "attackType": 1,
 
@@ -16,7 +16,7 @@
 
         "knockbackCount": 1,
 
-        "texture": "assets/images/textures/enemies/shrimpTEST.png"
+        "texture": "assets/images/textures/enemies/smallShrimp.png"
     },
     "UID_2": {
         "UID": 2,
@@ -27,7 +27,7 @@
         "health": 100,
 
         "attackPower": 15,
-        "attackRange": 400,
+        "attackRange": 75,
         "attackFrequency": 10,
         "attackType": 2,
 
