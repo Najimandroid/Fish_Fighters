@@ -16,7 +16,7 @@
         "enemies": [
             {
                 "UID": 1,
-                "amount": -1,
+                "amount": 0,
                 "respawnTime": 5,
                 "spawnStart": 5,
                 "layer": -1,

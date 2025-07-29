@@ -11,10 +11,11 @@ BattleEnemy::BattleEnemy(std::shared_ptr<EnemyData> data_, sf::Vector2f magnific
 	//Init core datas
 	magnification = magnification_;
 	currentHealth = data->health * magnification.x;
+	healthLeftBeforeNextKnockback = data->health - (data->health / data->knockbackCount);
 	state = IDLE;
 	position = { 0.0f, 360.0f };
 	currentAttackCooldown = data->attackFrequency; //Set current attack cooldown to attack frequency to make them attack instantly
-
+	currentKnockbackCooldown = 0.f;
 
 	//Init battle zones
 	hitbox.size = { 200.0f, 720.0f };
@@ -49,7 +50,8 @@ void BattleEnemy::update(float deltaTime)
 	if (state == IDLE)
 	{
 		velocity = { 0.0f, 0.0f };
-		if (currentHealth < 0.0f) state = DEAD;
+		if (currentHealth < 0.0f) state = KNOCKBACK;
+		if (currentHealth <= healthLeftBeforeNextKnockback) state = KNOCKBACK;
 		//Todo: add knockback
 		if (targets.empty()) state = WALK;
 
@@ -99,11 +101,31 @@ void BattleEnemy::update(float deltaTime)
 	}
 	if (state == KNOCKBACK)
 	{
-		//Todo: knockback behaviour
+		velocity = { 200.0f * deltaTime, 0.0f };
+		position -= velocity;
+
+		currentKnockbackCooldown += deltaTime;
+
+		if (currentKnockbackCooldown >= 0.5f) //Knockback lasts 0.5 seconds
+		{
+			if (currentHealth < 0.0f)
+			{
+				state = DEAD;
+			}
+			else
+			{
+				state = IDLE; //After knockback, the unit dies
+				currentKnockbackCooldown = 0.0f; //Reset cooldown
+				healthLeftBeforeNextKnockback -= (data->health / data->knockbackCount); //Update healthLeftBeforeNextKnockback
+			}
+		}
+		else
+			state = KNOCKBACK; //Continue knockback
 	}
 	if (state == DEAD)
 	{
 		isDead = true;
+		return;
 	}
 
 	update_position();

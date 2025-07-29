@@ -24,7 +24,7 @@
         "name": "Crab",
         "description": "A mean crab.",
 
-        "health": 50,
+        "health": 100,
 
         "attackPower": 15,
         "attackRange": 400,
@@ -33,7 +33,7 @@
 
         "movementSpeed": 2,
 
-        "knockbackCount": 3,
+        "knockbackCount": 5,
 
         "texture": "assets/images/textures/enemies/crabTEST.png"
     }

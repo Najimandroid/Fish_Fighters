@@ -19,7 +19,9 @@ public:
 public:
 	//Data submembers
 	float currentHealth = 1.0f;
+	float healthLeftBeforeNextKnockback = 0.0f; //used to calculate knockback, if currentHealth is less than this value, the entity will be knocked back
 	float currentAttackCooldown = 0.0f; //attack cooldown
+	float currentKnockbackCooldown = 0.0f;
 	int currentLayer = 0;
 	bool isDead = false;
 

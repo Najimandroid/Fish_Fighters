@@ -127,7 +127,7 @@ void Stage::update_enemies(float deltaTime)
 		{
 			auto unit = pair.second;
 			bool isUnitInAttackRange = enemy->attackRangeZone.findIntersection(unit->hitbox).has_value();
-			if (isUnitInAttackRange)
+			if (isUnitInAttackRange && unit->state != unit->KNOCKBACK)
 			{
 				//std::cout << "UNIT FOUND >:(\n";
 				enemy->targets.insert(unit);
@@ -168,7 +168,7 @@ void Stage::update_units(float deltaTime)
 		{
 			auto enemy = pair.second;
 			bool isEnemyInAttackRange = unit->attackRangeZone.findIntersection(enemy->hitbox).has_value();
-			if (isEnemyInAttackRange)
+			if (isEnemyInAttackRange && enemy->state != enemy->KNOCKBACK)
 			{
 				unit->targets.insert(enemy);
 			}
