@@ -22,7 +22,7 @@ public:
 	BattleBase(float health_, std::string texture_);
 
 	//Overrides
-	virtual void update(float deltaTime, const std::map<int, std::shared_ptr<BattleEntity>>& entityList) override;
+	virtual void update(float deltaTime, const std::map<int, std::vector<std::shared_ptr<BattleEntity>>>& entityList) override;
 
 public:
 

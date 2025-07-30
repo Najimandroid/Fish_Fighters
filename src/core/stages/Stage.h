@@ -36,11 +36,13 @@ public:
 	void update(float deltaTime);
 	void render(sf::RenderWindow& window);
 
-	void spawn_enemy(std::shared_ptr<EnemyData> enemyData, sf::Vector2f magnification, int layer, bool bypassLimit);
+	void spawn_enemy(std::shared_ptr<EnemyData> enemyData, sf::Vector2f magnification, int layer, bool isBoss,bool bypassLimit);
 	void spawn_unit(std::shared_ptr<UnitData> unitData); //Todo: add some kind of UserDatas to keep track of the level of each unit
 	void remove_enemy(BattleEnemy battleEnemy);
 	void remove_unit(BattleUnit battleUnit);
+
 	int generate_random_spawn_layer();
+	void generate_boss_shockwave();
 
 	void update_enemies(float deltaTime);
 	void update_units(float deltaTime);
@@ -63,8 +65,8 @@ private:
 	std::vector<std::shared_ptr<EnemyStageData>> m_enemyStageDatas;
 
 	//Entities
-	using BattleEnemiesMap_t  = std::map<int, std::shared_ptr<BattleEntity>>;
-	using BattleUnitsMap_t  = std::map<int, std::shared_ptr<BattleEntity>>;
+	using BattleEnemiesMap_t  = std::map<int, std::vector<std::shared_ptr<BattleEntity>>>;
+	using BattleUnitsMap_t  = std::map<int, std::vector<std::shared_ptr<BattleEntity>>>;
 	BattleEnemiesMap_t m_enemies; //enemies are stocked in layer order (helps with rendering)
 	BattleUnitsMap_t m_units;
 

@@ -88,7 +88,7 @@ void Stage::update(float deltaTime)
 			auto data = m_dataLoader->get_enemy_data(spawnEnemyData->UID);
 
 			//std::cout << "Spawned enemy: " << data->name << "\n";*
-			spawn_enemy(data, spawnEnemyData->magnification, spawnEnemyData->layer, spawnEnemyData->isBoss);
+			spawn_enemy(data, spawnEnemyData->magnification, spawnEnemyData->layer, spawnEnemyData->isBoss, spawnEnemyData->isBoss);
 
 			spawnEnemyData->currentTimer = 0.f;
 			spawnEnemyData->spawnedCount++;
@@ -106,26 +106,29 @@ void Stage::update_enemies(float deltaTime)
 
 	for (auto it = m_enemies.begin(); it != m_enemies.end();)
 	{
-		auto enemy = it->second;
+		auto& enemyList = it->second;
 
-		if (enemy->isDead)
+		for (auto itvec = enemyList.begin(); itvec != enemyList.end();)
 		{
-			//remove enemy from map
-			std::cout << "Enemy dead\n";
-			it = m_enemies.erase(it); //Todo: create remove_enemy();
-			m_enemiesCount--;
-			continue;
+			auto enemy = itvec.operator*();
+			if (enemy->isDead)
+			{
+				//remove enemy from map
+				std::cout << "Enemy dead\n";
+				itvec = enemyList.erase(itvec); //Todo: create remove_enemy();
+				m_enemiesCount--;
+				continue;
+			}
+
+			bool isFishBaseReached = enemy->attackRangeZone.findIntersection(m_fishBase->hitbox).has_value();
+			if (isFishBaseReached)
+			{
+				enemy->targets.insert(m_fishBase);
+			}
+
+			enemy->update(deltaTime, m_units);
+			itvec++;
 		}
-
-		bool isFishBaseReached = enemy->attackRangeZone.findIntersection(m_fishBase->hitbox).has_value();
-		if (isFishBaseReached)
-		{
-			enemy->targets.insert(m_fishBase);
-		}
-
-		//std::cout << "State: " << enemy->state << "\n";
-
-		enemy->update(deltaTime,m_units);
 		it++;
 	}
 }
@@ -136,24 +139,29 @@ void Stage::update_units(float deltaTime)
 
 	for (auto it = m_units.begin(); it != m_units.end();)
 	{
-		auto unit = it->second;
+		auto& unitList = it->second;
 
-		if (unit->isDead)
+		for (auto itvec = unitList.begin(); itvec != unitList.end();)
 		{
-			//remove enemy from map
-			std::cout << "Unit dead\n";
-			it = m_units.erase(it); //Todo: create remove_enemy();
-			m_unitsCount--;
-			continue;
-		}
+			auto unit = itvec.operator*();
+			if (unit->isDead)
+			{
+				//remove enemy from map
+				std::cout << "Unit dead\n";
+				itvec = unitList.erase(itvec); //Todo: create remove_enemy();
+				m_unitsCount--;
+				continue;
+			}
 
-		bool isFishBaseReached = unit->attackRangeZone.findIntersection(m_enemyBase->hitbox).has_value();
-		if (isFishBaseReached)
-		{
-			unit->targets.insert(m_enemyBase);
-		}
+			bool isEnemyBaseReached = unit->attackRangeZone.findIntersection(m_enemyBase->hitbox).has_value();
+			if (isEnemyBaseReached)
+			{
+				unit->targets.insert(m_enemyBase);
+			}
 
-		unit->update(deltaTime, m_enemies);
+			unit->update(deltaTime, m_enemies);
+			itvec++;
+		}
 		it++;
 	}
 }
@@ -177,29 +185,37 @@ void Stage::render(sf::RenderWindow& window)
 #endif
 
 	//Drawing enemies
-	for (auto& [layer, enemy] : std::ranges::reverse_view(m_enemies))
+	for (auto& [layer, enemyList] : std::ranges::reverse_view(m_enemies))
 	{
-		window.draw(enemy->sprite);
+
+		for (auto& enemy : enemyList)
+		{
+			window.draw(enemy->sprite);
 
 #ifdef DEBUG_MODE
-		//Rendering the hitboxes in debug mode
-		window.draw(enemy->rDamageZone);
-		window.draw(enemy->rAttackRangeZone);
-		window.draw(enemy->rHitbox);
+			//Rendering the hitboxes in debug mode
+			window.draw(enemy->rDamageZone);
+			window.draw(enemy->rAttackRangeZone);
+			window.draw(enemy->rHitbox);
 #endif
+		}
 	}
 
 	//Drawing units
-	for (auto& [layer, unit] : std::ranges::reverse_view(m_units))
+	for (auto& [layer, unitList] : std::ranges::reverse_view(m_units))
 	{
-		window.draw(unit->sprite);
+
+		for (auto& unit : unitList)
+		{
+			window.draw(unit->sprite);
 
 #ifdef DEBUG_MODE
-		//Rendering the hitboxes in debug mode
-		window.draw(unit->rDamageZone);
-		window.draw(unit->rAttackRangeZone);
-		window.draw(unit->rHitbox);
+			//Rendering the hitboxes in debug mode
+			window.draw(unit->rDamageZone);
+			window.draw(unit->rAttackRangeZone);
+			window.draw(unit->rHitbox);
 #endif
+		}
 	}
 }
 
@@ -207,14 +223,12 @@ void Stage::spawn_bases(float health, std::string texture)
 {
 	m_enemyBase = std::make_unique<BattleBase>(health, texture);
 	m_enemyBase->position = { 0.0f, 360.0f - m_enemyBase->texture.getSize().y / 2 };
-	m_enemyBase->position.y -= m_enemyBase->currentLayer;
 
 	m_fishBase = std::make_unique<BattleBase>(350.0f, "assets/images/textures/bases/fishBaseTEST.png");
 	m_fishBase->position = { 1280.0f - m_fishBase->texture.getSize().x, 360.0f - m_fishBase->texture.getSize().y / 2 };
-	m_fishBase->position.y -= m_fishBase->currentLayer;
 }
 
-void Stage::spawn_enemy(std::shared_ptr<EnemyData> enemyData, sf::Vector2f magnification, int layer = -1, bool bypassLimit = false)
+void Stage::spawn_enemy(std::shared_ptr<EnemyData> enemyData, sf::Vector2f magnification, int layer = -1, bool isBoss = false, bool bypassLimit = false)
 {
 	if (m_enemiesCount >= m_enemiesLimit && bypassLimit == false) return;
 
@@ -230,11 +244,12 @@ void Stage::spawn_enemy(std::shared_ptr<EnemyData> enemyData, sf::Vector2f magni
 		battleEnemy->currentLayer = generate_random_spawn_layer();
 	}
 
-	battleEnemy->position.y -= battleEnemy->currentLayer;
 	battleEnemy->update_position();
 
+	if (isBoss) generate_boss_shockwave();
+
 	m_enemiesCount++;
-	m_enemies[battleEnemy->currentLayer] = battleEnemy;
+	m_enemies[battleEnemy->currentLayer].push_back(battleEnemy);
 }
 
 void Stage::spawn_unit(std::shared_ptr<UnitData> unitData)
@@ -244,11 +259,10 @@ void Stage::spawn_unit(std::shared_ptr<UnitData> unitData)
 	std::shared_ptr<BattleUnit> battleUnit = std::make_shared<BattleUnit>(unitData);
 	battleUnit->currentLayer = generate_random_spawn_layer();
 
-	battleUnit->position.y -= battleUnit->currentLayer;
 	battleUnit->update_position();
 
 	m_unitsCount++;
-	m_units[battleUnit->currentLayer] = battleUnit;
+	m_units[battleUnit->currentLayer].push_back(battleUnit);
 
 }
 
@@ -268,4 +282,21 @@ int Stage::generate_random_spawn_layer()
 	std::uniform_int_distribution<> distrib(0, 50);
 
 	return distrib(gen);
+}
+
+void Stage::generate_boss_shockwave()
+{
+	for (auto& pair : m_units)
+	{
+		for (auto& unit : pair.second)
+		{
+			if (unit->state == BattleEntity::State::KNOCKBACK || unit->state == BattleEntity::State::DEAD)
+				continue;
+
+			unit->state = BattleEntity::State::KNOCKBACK;
+			unit->enteredKnockback = true;
+			unit->isOnShockwave = true;
+			unit->currentKnockbackCooldown = 0.f;
+		}
+	}
 }

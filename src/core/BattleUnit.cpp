@@ -48,7 +48,7 @@ BattleUnit::BattleUnit(std::shared_ptr<UnitData> data_) :
 #endif
 }
 
-void BattleUnit::update(float deltaTime, const std::map<int, std::shared_ptr<BattleEntity>>& entityList)
+void BattleUnit::update(float deltaTime, const std::map<int, std::vector<std::shared_ptr<BattleEntity>>>& entityList)
 {
 	//Simple state machine
 	if (state == IDLE)
@@ -60,13 +60,18 @@ void BattleUnit::update(float deltaTime, const std::map<int, std::shared_ptr<Bat
 		//Check the attack range
 		for (auto& pair : entityList)
 		{
-			auto unit = pair.second;
-			bool isUnitInAttackRange = attackRangeZone.findIntersection(unit->hitbox).has_value();
-			if (isUnitInAttackRange)
+			auto& enemyList = pair.second;
+
+			for (auto& enemy : enemyList)
 			{
-				isEntityOnRange = true;
-				break;
+				bool isUnitInAttackRange = attackRangeZone.findIntersection(enemy->hitbox).has_value();
+				if (isUnitInAttackRange)
+				{
+					isEntityOnRange = true;
+					break;
+				}
 			}
+			if (isEntityOnRange) break;
 		}
 
 		if (isEntityOnRange == false && targets.empty()) state = WALK;
@@ -91,13 +96,18 @@ void BattleUnit::update(float deltaTime, const std::map<int, std::shared_ptr<Bat
 		//Get targets in damage zone
 		for (auto& pair : entityList)
 		{
-			auto enemy = pair.second;
-			bool isUnitInAttackRange = damageZone.findIntersection(enemy->hitbox).has_value();
-			if (isUnitInAttackRange && enemy->state != enemy->KNOCKBACK)
+			auto& enemyList = pair.second;
+
+			for (auto& enemy : enemyList)
 			{
-				//std::cout << "ENEMY FOUND >:(\n";
-				targets.insert(enemy);
+				bool isUnitInAttackRange = damageZone.findIntersection(enemy->hitbox).has_value();
+				if (isUnitInAttackRange && enemy->state != enemy->KNOCKBACK)
+				{
+					//std::cout << "ENEMY FOUND >:(\n";
+					targets.insert(enemy);
+				}
 			}
+
 		}
 
 		if (targets.empty())
@@ -135,22 +145,33 @@ void BattleUnit::update(float deltaTime, const std::map<int, std::shared_ptr<Bat
 	}
 	if (state == KNOCKBACK)
 	{
-		velocity = { 200.0f * deltaTime, 0.0f };
-		position += velocity;
+		if (enteredKnockback)
+		{
+			tweenX = tweeny::from(position.x).to(position.x += knockbackDistancePx).during(60.0f * knockbackDuration).via(tweeny::easing::quadraticOut);
+			tweenY = tweeny::from(position.y - static_cast<float>(currentLayer)).to(position.y - static_cast<float>(currentLayer) - 50.0f)
+				.during(30.0f * knockbackDuration).via(tweeny::easing::quadraticOut)
+				.to(position.y - static_cast<float>(currentLayer)).during(30.0f * knockbackDuration).via(tweeny::easing::bounceOut);
+			//position.x -= knockbackDistancePx;
+			enteredKnockback = false;
+		}
 
 		currentKnockbackCooldown += deltaTime;
 
-		if (currentKnockbackCooldown >= 0.5f) //Knockback lasts 0.5 seconds
+		if (currentKnockbackCooldown >= knockbackDuration)
 		{
 			if (currentHealth < 0.0f)
 			{
 				state = DEAD;
+				//std::cout << "Knockback led to death.\n";
 			}
 			else
 			{
 				state = IDLE; //After knockback, the unit dies
 				currentKnockbackCooldown = 0.0f; //Reset cooldown
-				healthLeftBeforeNextKnockback -= (data->health / data->knockbackCount); //Update healthLeftBeforeNextKnockback
+				enteredKnockback = true;
+				if(isOnShockwave == false)
+					healthLeftBeforeNextKnockback -= (data->health / data->knockbackCount); //Update healthLeftBeforeNextKnockback
+				isOnShockwave = false;
 			}
 		}
 		else
@@ -169,7 +190,17 @@ void BattleUnit::update(float deltaTime, const std::map<int, std::shared_ptr<Bat
 
 void BattleUnit::update_position()
 {
-	sprite.setPosition(position);
+	if (state == KNOCKBACK)
+	{
+		if (tweenX.progress() < 1.0f && tweenY.progress() < 1.0f)
+		{
+			sprite.setPosition({ tweenX.step(1), tweenY.step(1) });
+		}
+	}
+	else
+	{
+		sprite.setPosition({ position.x, position.y - static_cast<float>(currentLayer) });
+	}
 
 	hitbox.position = position;
 	attackRangeZone.position = { position.x - data->attackRange, position.y };

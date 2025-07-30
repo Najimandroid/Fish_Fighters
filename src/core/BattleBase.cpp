@@ -42,7 +42,7 @@ BattleBase::BattleBase(float health_, std::string texture_)
 #endif
 }
 
-void BattleBase::update(float deltaTime, const std::map<int, std::shared_ptr<BattleEntity>>& entityList)
+void BattleBase::update(float deltaTime, const std::map<int, std::vector<std::shared_ptr<BattleEntity>>>& entityList)
 {
 	if (currentHealth < 0.0f)
 	{
@@ -58,7 +58,7 @@ void BattleBase::update(float deltaTime, const std::map<int, std::shared_ptr<Bat
 
 void BattleBase::update_position()
 {
-	sprite.setPosition(position);
+	sprite.setPosition({ position.x, position.y - static_cast<float>(currentLayer) });
 
 	hitbox.position = position;
 	attackRangeZone.position = position;

@@ -22,7 +22,7 @@ public:
 	BattleEnemy(std::shared_ptr<EnemyData> data_, sf::Vector2f magnification_);
 
 	//Overrides
-	virtual void update(float deltaTime, const std::map<int, std::shared_ptr<BattleEntity>>& entityList) override;
+	virtual void update(float deltaTime, const std::map<int, std::vector<std::shared_ptr<BattleEntity>>>& entityList) override;
 	virtual void update_position() override;
 
 	//Data

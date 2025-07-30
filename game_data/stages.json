@@ -7,7 +7,7 @@
         "enemiesLimit": 10,
         "unitsLimit": 20,
 
-        "baseHealth": 100,
+        "baseHealth": 50,
 
         "baseTexture": "assets/images/textures/bases/enemyBaseTEST.png",
         "backgroundTexture": "assets/images/textures/backgrounds/backgroundTEST.png",

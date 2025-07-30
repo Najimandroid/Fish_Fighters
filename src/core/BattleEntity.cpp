@@ -28,3 +28,16 @@ BattleEntity::BattleEntity():
 	rDamageZone.setOutlineThickness(3.f);
 #endif
 }
+
+bool BattleEntity::BattleEntityRangeComparator::operator()(const std::weak_ptr<BattleEntity>& a, const std::weak_ptr<BattleEntity>& b) const
+{
+	//The set is sorted by attackRange so if a single attacker wants to attack, it will always attack the closest entity.
+
+	auto spA = a.lock();
+	auto spB = b.lock();
+
+	if (!spA) return false;
+	if (!spB) return true;
+
+	return spA->attackRangeZone.size.x < spB->attackRangeZone.size.x;
+}
