@@ -24,7 +24,7 @@ BattleEnemy::BattleEnemy(std::shared_ptr<EnemyData> data_, sf::Vector2f magnific
 	//Init sprite
 	bool isTextureLoaded = texture.loadFromFile(data->texture);
 	sprite.setTexture(texture, true);
-	sprite.setOrigin({ 0.f, static_cast<float>(texture.getSize().y) });
+	sprite.setOrigin({ static_cast<float>(texture.getSize().x), static_cast<float>(texture.getSize().y) });
 
 	//Init battle zones
 	hitbox.size = { static_cast<float>(texture.getSize().x), 720.0f};
@@ -191,12 +191,12 @@ void BattleEnemy::update_position()
 	{
 		if (tweenX.progress() < 1.0f && tweenY.progress() < 1.0f)
 		{
-			sprite.setPosition({ tweenX.step(1), tweenY.step(1) });
+			sprite.setPosition({ tweenX.step(1) + static_cast<float>(texture.getSize().x), tweenY.step(1) });
 		}
 	}
 	else
 	{
-		sprite.setPosition({ position.x, position.y - static_cast<float>(currentLayer) });
+		sprite.setPosition({ position.x + static_cast<float>(texture.getSize().x), position.y - static_cast<float>(currentLayer) });
 	}
 
 
