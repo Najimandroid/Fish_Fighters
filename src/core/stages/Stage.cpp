@@ -68,10 +68,16 @@ void Stage::update(float deltaTime)
 
 	m_elapsedTime += deltaTime;
 
+	std::cout << "[Base Health]: " << m_enemyBase->currentHealth << " / " << m_enemyBase->maxHealth << "\n";
+
 	for (auto& spawnEnemyData : m_enemyStageDatas)
 	{
+
+		//Checks if the base health correspond to the baseHealthThreshold data
+		if (m_enemyBase->maxHealth * (spawnEnemyData->baseHealthThreshold/100.0f) < m_enemyBase->currentHealth) continue;
+
 		//Checks if elapsed time >= spawnStart
-		if (!spawnEnemyData->hasStarted && m_elapsedTime >= spawnEnemyData->spawnStart) { spawnEnemyData->hasStarted = true; }
+		if (m_elapsedTime >= spawnEnemyData->spawnStart) { spawnEnemyData->hasStarted = true; }
 
 		//Checks if started
 		if (!spawnEnemyData->hasStarted) continue;
