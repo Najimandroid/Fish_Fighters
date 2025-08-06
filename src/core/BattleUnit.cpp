@@ -24,9 +24,7 @@ BattleUnit::BattleUnit(std::shared_ptr<UnitData> data_) :
 	bool isTextureLoaded = texture.loadFromFile(data->texture);
 	sprite.setTexture(texture, true);
 	sprite.setOrigin({ static_cast<float>(texture.getSize().x / data->frameCount / 2), static_cast<float>(texture.getSize().y) });
-	sprite.setTextureRect({ {0, 0}, 
-		{static_cast<int>(texture.getSize().x / data->frameCount), static_cast<int>(texture.getSize().y)} 
-		});
+	currentFrameIndex = 0;
 
 	std::cout << "Spawned rect size x: " << sprite.getTextureRect().size.x << '\n';
 
@@ -82,6 +80,7 @@ void BattleUnit::update(float deltaTime, const std::map<int, std::vector<std::sh
 		}
 
 		if (isEntityOnRange == false && targets.empty()) state = WALK;
+		else currentFrameIndex = 0;
 
 		if (currentAttackCooldown >= data->attackFrequency && isEntityOnRange == true)
 		{
@@ -97,6 +96,14 @@ void BattleUnit::update(float deltaTime, const std::map<int, std::vector<std::sh
 		position -= velocity;
 		if (currentHealth < 0.0f) state = KNOCKBACK;
 		else state = IDLE;
+
+		if (currentFrameCooldown >= timeUntilNextFrame)
+		{
+			currentFrameCooldown = 0.0f;
+			currentFrameIndex++;
+
+			if (currentFrameIndex >= data->knockbackFrameIndex) currentFrameIndex = 0;
+		}
 	}
 	if (state == ATTACK)
 	{
@@ -161,9 +168,7 @@ void BattleUnit::update(float deltaTime, const std::map<int, std::vector<std::sh
 			//position.x -= knockbackDistancePx;
 
 			//Knockback sprite (change value later (2 is index))
-			sprite.setTextureRect({ {static_cast<int>(texture.getSize().x / data->frameCount * 2), 0},
-					{static_cast<int>(texture.getSize().x / data->frameCount), static_cast<int>(texture.getSize().y)}
-				});
+			currentFrameIndex = data->knockbackFrameIndex;
 
 			enteredKnockback = false;
 		}
@@ -182,10 +187,8 @@ void BattleUnit::update(float deltaTime, const std::map<int, std::vector<std::sh
 				state = IDLE; //After knockback, the unit dies
 				currentKnockbackCooldown = 0.0f; //Reset cooldown
 
-				//Reset sprite
-				sprite.setTextureRect({ {0, 0},
-						{static_cast<int>(texture.getSize().x / data->frameCount), static_cast<int>(texture.getSize().y)}
-					});
+				//Reset sprite frame
+				currentFrameIndex = 0;
 
 				enteredKnockback = true;
 				if(isOnShockwave == false)
@@ -203,8 +206,10 @@ void BattleUnit::update(float deltaTime, const std::map<int, std::vector<std::sh
 	}
 
 	update_position();
+	update_sprite();
 
 	currentAttackCooldown += deltaTime;
+	currentFrameCooldown += deltaTime;
 }
 
 void BattleUnit::update_position()
@@ -231,4 +236,16 @@ void BattleUnit::update_position()
 	rAttackRangeZone.setPosition(attackRangeZone.position);
 	rDamageZone.setPosition(damageZone.position);
 #endif
+}
+
+void BattleUnit::update_sprite()
+{
+	static int previousFrameIndex = 0;
+
+	if (currentFrameIndex == previousFrameIndex) return; //No need to update if the frame index is the same
+	previousFrameIndex = currentFrameIndex;
+
+	sprite.setTextureRect({ {static_cast<int>(texture.getSize().x / data->frameCount * currentFrameIndex), 0},
+		{static_cast<int>(texture.getSize().x / data->frameCount), static_cast<int>(texture.getSize().y)}
+		});
 }

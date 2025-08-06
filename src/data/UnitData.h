@@ -32,4 +32,5 @@ struct UnitData
 
 	std::string texture;
 	int frameCount = 1;
+	int knockbackFrameIndex = 1;
 };

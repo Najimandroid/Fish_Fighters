@@ -20,6 +20,7 @@ public:
 
 	virtual void update(float deltaTime, const std::map<int, std::vector<std::shared_ptr<BattleEntity>>>& entityList) = 0; //called each frame by the stage instance
 	virtual void update_position() = 0; //used to change position of all float_rects and sprites (called inside of update)
+	virtual void update_sprite() = 0;
 
 public:
 	//Data submembers
@@ -75,6 +76,9 @@ public:
 	//Render
 	sf::Texture texture;
 	sf::Sprite sprite;
+	float timeUntilNextFrame = 0.5f; //used to calculate the time until the next frame is rendered (in seconds)
+	float currentFrameCooldown = 0.0f;
+	int currentFrameIndex = 0; //used to calculate the current frame of the sprite animation
 
 #ifdef DEBUG_MODE
 	//Debug Rendering

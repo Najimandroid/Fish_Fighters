@@ -17,7 +17,8 @@
         "knockbackCount": 3,
 
         "texture": "assets/images/textures/units/test_sheet.png",
-        "frameCount": 6
+        "frameCount": 6,
+        "knockbackFrameIndex": 2
     },
     "UID_2": {
         "UID": 2,
@@ -37,6 +38,7 @@
         "knockbackCount": 1,
 
         "texture": "assets/images/textures/units/fish2TEST.png",
-        "frameCount": 6
+        "frameCount": 6,
+        "knockbackFrameIndex":  2
     }
 }
