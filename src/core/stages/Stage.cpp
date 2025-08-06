@@ -68,7 +68,7 @@ void Stage::update(float deltaTime)
 
 	m_elapsedTime += deltaTime;
 
-	std::cout << "[Base Health]: " << m_enemyBase->currentHealth << " / " << m_enemyBase->maxHealth << "\n";
+	//std::cout << "[Base Health]: " << m_enemyBase->currentHealth << " / " << m_enemyBase->maxHealth << "\n";
 
 	for (auto& spawnEnemyData : m_enemyStageDatas)
 	{

@@ -23,17 +23,24 @@ BattleUnit::BattleUnit(std::shared_ptr<UnitData> data_) :
 	//Init sprite
 	bool isTextureLoaded = texture.loadFromFile(data->texture);
 	sprite.setTexture(texture, true);
-	sprite.setOrigin({ 0.f, static_cast<float>(texture.getSize().y) });
+	sprite.setOrigin({ static_cast<float>(texture.getSize().x / data->frameCount / 2), static_cast<float>(texture.getSize().y) });
+	sprite.setTextureRect({ {0, 0}, 
+		{static_cast<int>(texture.getSize().x / data->frameCount), static_cast<int>(texture.getSize().y)} 
+		});
+
+	std::cout << "Spawned rect size x: " << sprite.getTextureRect().size.x << '\n';
 
 	//Init battle zones
-	hitbox.size = { static_cast<float>(texture.getSize().x), 720.0f };
-	attackRangeZone.size = { data->attackRange + static_cast<float>(texture.getSize().x) , 720.0f };
-	damageZone.size = { data->attackRange + static_cast<float>(texture.getSize().x) , 720.0f };
+	hitbox.size = { static_cast<float>(texture.getSize().x / data->frameCount / 2), 720.0f };
+	attackRangeZone.size = { data->attackRange + static_cast<float>(texture.getSize().x / data->frameCount / 2) , 720.0f };
+	damageZone.size = { data->attackRange + static_cast<float>(texture.getSize().x / data->frameCount / 2) , 720.0f };
+
+	std::cout << "hitbox size x: " << static_cast<float>(texture.getSize().x / data->frameCount / 2) << '\n';
 
 	//Init position
 	hitbox.position = position;
-	attackRangeZone.position = {position.x - data->attackRange + static_cast<float>(texture.getSize().x), position.y};
-	damageZone.position = { position.x - data->attackRange + static_cast<float>(texture.getSize().x), position.y };;
+	attackRangeZone.position = {position.x - data->attackRange + hitbox.size.x, position.y};
+	damageZone.position = { position.x - data->attackRange + hitbox.size.x, position.y };;
 
 #ifdef DEBUG_MODE
 	//Init debug rectangles
@@ -152,6 +159,12 @@ void BattleUnit::update(float deltaTime, const std::map<int, std::vector<std::sh
 				.during(30.0f * knockbackDuration).via(tweeny::easing::quadraticOut)
 				.to(position.y - static_cast<float>(currentLayer)).during(30.0f * knockbackDuration).via(tweeny::easing::bounceOut);
 			//position.x -= knockbackDistancePx;
+
+			//Knockback sprite (change value later (2 is index))
+			sprite.setTextureRect({ {static_cast<int>(texture.getSize().x / data->frameCount * 2), 0},
+					{static_cast<int>(texture.getSize().x / data->frameCount), static_cast<int>(texture.getSize().y)}
+				});
+
 			enteredKnockback = false;
 		}
 
@@ -168,6 +181,12 @@ void BattleUnit::update(float deltaTime, const std::map<int, std::vector<std::sh
 			{
 				state = IDLE; //After knockback, the unit dies
 				currentKnockbackCooldown = 0.0f; //Reset cooldown
+
+				//Reset sprite
+				sprite.setTextureRect({ {0, 0},
+						{static_cast<int>(texture.getSize().x / data->frameCount), static_cast<int>(texture.getSize().y)}
+					});
+
 				enteredKnockback = true;
 				if(isOnShockwave == false)
 					healthLeftBeforeNextKnockback -= (data->health / data->knockbackCount); //Update healthLeftBeforeNextKnockback

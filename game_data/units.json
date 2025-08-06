@@ -16,7 +16,8 @@
 
         "knockbackCount": 3,
 
-        "texture": "assets/images/textures/units/fishTEST.png"
+        "texture": "assets/images/textures/units/test_sheet.png",
+        "frameCount": 6
     },
     "UID_2": {
         "UID": 2,
@@ -24,17 +25,18 @@
         "name": "Big Fish",
         "description": "Just a normal fish but bigger.",
 
-        "health": 30,
+        "health": 15,
 
         "attackPower": 6,
         "attackRange": 50,
         "attackType": 2,
-        "attackFrequency": 5,
+        "attackFrequency": 3,
 
-        "movementSpeed": 2,
+        "movementSpeed": 3,
 
         "knockbackCount": 1,
 
-        "texture": "assets/images/textures/units/fish2TEST.png"
+        "texture": "assets/images/textures/units/fish2TEST.png",
+        "frameCount": 6
     }
 }

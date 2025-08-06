@@ -54,6 +54,7 @@ bool DataLoader::load_units(const std::string& path)
         data->knockbackCount = value.at("knockbackCount").get<int>();
 
         data->texture = value.at("texture").get<std::string>();
+        data->frameCount = value.at("frameCount").get<int>();
 
         m_unitsDataBase[data->UID] = data;
     }

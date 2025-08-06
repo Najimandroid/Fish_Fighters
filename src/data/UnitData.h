@@ -31,4 +31,5 @@ struct UnitData
 	int knockbackCount = 1;
 
 	std::string texture;
+	int frameCount = 1;
 };

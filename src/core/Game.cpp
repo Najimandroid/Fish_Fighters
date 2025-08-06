@@ -6,7 +6,7 @@ Game::Game():
     m_dataLoader(std::make_shared<DataLoader>()),
     m_stage(std::make_shared<Stage>())
 {
-    m_window.create(sf::VideoMode(m_logicalResolution), "Fish Fighers", sf::Style::None);
+    m_window.create(sf::VideoMode(m_logicalResolution), "Fish Fighers"); //sf::Style::None
     m_window.setFramerateLimit(m_frameRate);
     center_window();
 
