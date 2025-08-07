@@ -16,9 +16,9 @@
         "enemies": [
             {
                 "UID": 1,
-                "amount": -1,
+                "amount": 1,
                 "respawnTime": 5,
-                "spawnStart": 5,
+                "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification" :  [1, 1],

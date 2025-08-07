@@ -7,10 +7,12 @@
 
         "health": 10,
 
-        "attackPower": 2,
+        "attackPower": 10,
         "attackRange": 20,
         "attackType": 1,
         "attackFrequency": 1.5,
+        "foreswing": 0.6,
+        "backswing": 0.2,
 
         "movementSpeed": 5,
 
@@ -32,6 +34,9 @@
         "attackRange": 50,
         "attackType": 2,
         "attackFrequency": 3,
+        "foreswing": 1.5,
+        "backswing": 0.25,
+
 
         "movementSpeed": 3,
 
@@ -39,6 +44,6 @@
 
         "texture": "assets/images/textures/units/fish2TEST.png",
         "frameCount": 6,
-        "knockbackFrameIndex":  2
+        "knockbackFrameIndex": 2
     }
 }

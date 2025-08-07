@@ -299,9 +299,10 @@ void Stage::generate_boss_shockwave()
 			if (unit->state == BattleEntity::State::KNOCKBACK || unit->state == BattleEntity::State::DEAD)
 				continue;
 
-			unit->state = BattleEntity::State::KNOCKBACK;
+			unit->nextState = BattleEntity::State::KNOCKBACK;
 			unit->enteredKnockback = true;
 			unit->isOnShockwave = true;
+
 			unit->currentKnockbackCooldown = 0.f;
 		}
 	}

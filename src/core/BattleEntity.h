@@ -26,7 +26,6 @@ public:
 	//Data submembers
 	float currentHealth = 1.0f;
 
-
 	tweeny::tween<float> tweenX; //Tweens used to play the knockback animation
 	tweeny::tween<float> tweenY;
 	float knockbackDuration = 1.0f; //knockback duration in seconds
@@ -37,7 +36,10 @@ public:
 	float healthLeftBeforeNextKnockback = 0.0f; //used to calculate knockback, if currentHealth is less than this value, the entity will be knocked back
 
 	float currentAttackCooldown = 0.0f; //attack cooldown
+	float currentAttackSwingTime = 0.0f; //time used to calculate if the foreswing and backswing are finished
 	bool isEntityOnRange = false; //used to check if an entity is on range of the attack range zone (starts the attack state)
+	bool isAttackReady = false;
+	bool hasAttacked = false;
 
 	int currentLayer = 0;
 
@@ -53,6 +55,7 @@ public:
 		DEAD,
 	};
 	State state = static_cast<State>(1);
+	State nextState = static_cast<State>(1); //Used to store the state of the next frame (used to calculate the correct sprite frame for example)
 
 	//Boosts
 	sf::Vector2f magnification = { 1.f, 1.f }; // x => hp | y => attack (multiplier)
@@ -76,7 +79,7 @@ public:
 	//Render
 	sf::Texture texture;
 	sf::Sprite sprite;
-	float timeUntilNextFrame = 0.5f; //used to calculate the time until the next frame is rendered (in seconds)
+	float timeUntilNextFrame = 0.2f; //used to calculate the time until the next frame is rendered (in seconds)
 	float currentFrameCooldown = 0.0f;
 	int currentFrameIndex = 0; //used to calculate the current frame of the sprite animation
 

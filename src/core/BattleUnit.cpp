@@ -17,6 +17,7 @@ BattleUnit::BattleUnit(std::shared_ptr<UnitData> data_) :
 	position = { 1080.0f, 720.f * 2/3 };
 
 	currentAttackCooldown = data->attackFrequency; //Set current attack cooldown to attack frequency to make them attack instantly
+	currentAttackSwingTime = 0.f;
 
 	currentKnockbackCooldown = 0.f;
 
@@ -55,6 +56,8 @@ BattleUnit::BattleUnit(std::shared_ptr<UnitData> data_) :
 
 void BattleUnit::update(float deltaTime, const std::map<int, std::vector<std::shared_ptr<BattleEntity>>>& entityList)
 {
+	state = nextState;
+
 	//Simple state machine
 	if (state == IDLE)
 	{
@@ -65,6 +68,8 @@ void BattleUnit::update(float deltaTime, const std::map<int, std::vector<std::sh
 		//Check the attack range
 		for (auto& pair : entityList)
 		{
+			if (!targets.empty()) { isEntityOnRange = true; break; } //If there are already targets, no need to check the range
+
 			auto& enemyList = pair.second;
 
 			for (auto& enemy : enemyList)
@@ -79,8 +84,7 @@ void BattleUnit::update(float deltaTime, const std::map<int, std::vector<std::sh
 			if (isEntityOnRange) break;
 		}
 
-		if (isEntityOnRange == false && targets.empty()) state = WALK;
-		else currentFrameIndex = 0;
+		if (isEntityOnRange == false) state = WALK;
 
 		if (currentAttackCooldown >= data->attackFrequency && isEntityOnRange == true)
 		{
@@ -95,18 +99,32 @@ void BattleUnit::update(float deltaTime, const std::map<int, std::vector<std::sh
 		velocity = { data->movementSpeed * 10.0f * deltaTime, 0.0f }; //*10.0f to make them more speedy
 		position -= velocity;
 		if (currentHealth < 0.0f) state = KNOCKBACK;
-		else state = IDLE;
-
-		if (currentFrameCooldown >= timeUntilNextFrame)
-		{
-			currentFrameCooldown = 0.0f;
-			currentFrameIndex++;
-
-			if (currentFrameIndex >= data->knockbackFrameIndex) currentFrameIndex = 0;
-		}
+		else nextState = IDLE;
 	}
 	if (state == ATTACK)
 	{
+
+		if (currentAttackSwingTime <= data->foreswingTime + data->backswingTime)
+		{
+			if (currentAttackSwingTime >= data->foreswingTime && hasAttacked == true) isAttackReady = false;
+			else if (currentAttackSwingTime >= data->foreswingTime) isAttackReady = true;
+			else isAttackReady = false;
+
+			currentAttackSwingTime += deltaTime;
+			nextState = ATTACK; //Continue attack animation
+		}
+		else
+		{
+			hasAttacked = false;
+			isAttackReady = false;
+			currentAttackSwingTime = 0.0f; //Reset attack swing time
+			currentAttackCooldown = 0.0f;
+			nextState = IDLE;
+		}
+
+		if (isAttackReady == false || hasAttacked == true) goto endattack;
+		hasAttacked = true;
+
 		//Get targets in damage zone
 		for (auto& pair : entityList)
 		{
@@ -126,11 +144,11 @@ void BattleUnit::update(float deltaTime, const std::map<int, std::vector<std::sh
 
 		if (targets.empty())
 		{
-			state = IDLE; //No targets to attack
+			nextState = IDLE; //No targets to attack
 			goto endattack;
 		}
 
-		//std::cout << "Nom!\n";
+		//std::cout << "NOOOOOOOM!";
 
 		if (data->attackType == 1) //if attackType => single
 		{
@@ -154,8 +172,6 @@ void BattleUnit::update(float deltaTime, const std::map<int, std::vector<std::sh
 
 	endattack:
 		targets.clear();
-		currentAttackCooldown = 0.0f;
-		state = IDLE;
 	}
 	if (state == KNOCKBACK)
 	{
@@ -167,8 +183,9 @@ void BattleUnit::update(float deltaTime, const std::map<int, std::vector<std::sh
 				.to(position.y - static_cast<float>(currentLayer)).during(30.0f * knockbackDuration).via(tweeny::easing::bounceOut);
 			//position.x -= knockbackDistancePx;
 
-			//Knockback sprite (change value later (2 is index))
-			currentFrameIndex = data->knockbackFrameIndex;
+			isAttackReady = false;
+			hasAttacked = false;
+			currentAttackSwingTime = 0.0f; //Reset attack swing time
 
 			enteredKnockback = false;
 		}
@@ -184,11 +201,8 @@ void BattleUnit::update(float deltaTime, const std::map<int, std::vector<std::sh
 			}
 			else
 			{
-				state = IDLE; //After knockback, the unit dies
+				nextState = IDLE; //After knockback, the unit dies
 				currentKnockbackCooldown = 0.0f; //Reset cooldown
-
-				//Reset sprite frame
-				currentFrameIndex = 0;
 
 				enteredKnockback = true;
 				if(isOnShockwave == false)
@@ -197,7 +211,7 @@ void BattleUnit::update(float deltaTime, const std::map<int, std::vector<std::sh
 			}
 		}
 		else
-			state = KNOCKBACK; //Continue knockback
+			nextState = KNOCKBACK; //Continue knockback
 	}
 	if (state == DEAD)
 	{
@@ -207,6 +221,8 @@ void BattleUnit::update(float deltaTime, const std::map<int, std::vector<std::sh
 
 	update_position();
 	update_sprite();
+
+	//std::cout << "[Current Swing Time: " << currentAttackSwingTime << "]\n";
 
 	currentAttackCooldown += deltaTime;
 	currentFrameCooldown += deltaTime;
@@ -240,10 +256,36 @@ void BattleUnit::update_position()
 
 void BattleUnit::update_sprite()
 {
-	static int previousFrameIndex = 0;
+	//std::cout << "[Current State: " << state << "]\n";
 
-	if (currentFrameIndex == previousFrameIndex) return; //No need to update if the frame index is the same
-	previousFrameIndex = currentFrameIndex;
+	if (currentFrameCooldown >= timeUntilNextFrame || state == KNOCKBACK) currentFrameCooldown = 0.0f; //the knockback animation will bypass the frame cooldown
+	else return;
+
+	//Updating to the corresponding frame
+	switch (state)
+	{
+	case IDLE:
+		//if (startedAttackAnimation = true)
+		currentFrameIndex = 0;
+		break;
+	case WALK:
+		if (currentFrameIndex < data->knockbackFrameIndex - 1) currentFrameIndex++;
+		else currentFrameIndex = 0; //Reset to the first frame
+		break;
+	case ATTACK:
+		if (currentFrameIndex <= data->knockbackFrameIndex) currentFrameIndex = data->knockbackFrameIndex;
+		if (currentFrameIndex * sprite.getTextureRect().size.x < texture.getSize().x - sprite.getTextureRect().size.x) currentFrameIndex++;
+		else currentFrameIndex = 0;//Reset to the idle frame
+		break;
+	case KNOCKBACK:
+		currentFrameIndex = data->knockbackFrameIndex;
+		break;
+	default:
+		currentFrameIndex = 0;
+		break;
+	}
+
+	//std::cout << "[Current Frame Index: " << currentFrameIndex << "]\n\n\n";
 
 	sprite.setTextureRect({ {static_cast<int>(texture.getSize().x / data->frameCount * currentFrameIndex), 0},
 		{static_cast<int>(texture.getSize().x / data->frameCount), static_cast<int>(texture.getSize().y)}

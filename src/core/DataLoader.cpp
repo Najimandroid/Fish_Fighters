@@ -48,6 +48,8 @@ bool DataLoader::load_units(const std::string& path)
         data->attackRange = value.at("attackRange").get<float>();
         data->attackType = static_cast<AttackType>(value.at("attackType").get<int>());
         data->attackFrequency = value.at("attackFrequency").get<float>();
+        data->foreswingTime = value.at("foreswing").get<float>();
+        data->backswingTime = value.at("backswing").get<float>();
 
         data->movementSpeed = value.at("movementSpeed").get<float>();
 
