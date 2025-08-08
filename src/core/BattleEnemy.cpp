@@ -69,22 +69,26 @@ void BattleEnemy::update(float deltaTime, const std::map<int, std::vector<std::s
 		if (currentHealth <= healthLeftBeforeNextKnockback) { state = KNOCKBACK; goto endidle; }
 
 		//Check the attack range
-		for (auto& pair : entityList)
+		if (!targets.empty()) isEntityOnRange = true; //If there are already targets, no need to check the range 
+		else
 		{
-			if (!targets.empty()) { isEntityOnRange = true; break; } //If there are already targets, no need to check the range
-
-			auto& unitList = pair.second;
-
-			for (auto& unit : unitList)
+			for (auto& pair : entityList)
 			{
-				bool isUnitInAttackRange = attackRangeZone.findIntersection(unit->hitbox).has_value();
-				if (isUnitInAttackRange)
+				if (!targets.empty()) { isEntityOnRange = true; break; } //If there are already targets, no need to check the range
+
+				auto& unitList = pair.second;
+
+				for (auto& unit : unitList)
 				{
-					isEntityOnRange = true;
-					break;
+					bool isUnitInAttackRange = attackRangeZone.findIntersection(unit->hitbox).has_value();
+					if (isUnitInAttackRange)
+					{
+						isEntityOnRange = true;
+						break;
+					}
 				}
+				if (isEntityOnRange) break;
 			}
-			if (isEntityOnRange) break;
 		}
 
 		if (isEntityOnRange == false) state = WALK;
@@ -120,7 +124,7 @@ void BattleEnemy::update(float deltaTime, const std::map<int, std::vector<std::s
 		{
 			hasAttacked = false;
 			isAttackReady = false;
-			currentAttackSwingTime = 0.0f; //Reset attack swing time
+			currentAttackSwingTime = 0.0f; //Reset attack swing timea
 			currentAttackCooldown = 0.0f;
 			nextState = IDLE;
 		}

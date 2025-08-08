@@ -69,22 +69,25 @@ void BattleUnit::update(float deltaTime, const std::map<int, std::vector<std::sh
 		if (currentHealth <= healthLeftBeforeNextKnockback) { state = KNOCKBACK; goto endidle; }
 
 		//Check the attack range
-		for (auto& pair : entityList)
+		if (!targets.empty()) isEntityOnRange = true; //If there are already targets, no need to check the range
+		else
 		{
-			if (!targets.empty()) { isEntityOnRange = true; break; } //If there are already targets, no need to check the range
-
-			auto& enemyList = pair.second;
-
-			for (auto& enemy : enemyList)
+			for (auto& pair : entityList)
 			{
-				bool isUnitInAttackRange = attackRangeZone.findIntersection(enemy->hitbox).has_value();
-				if (isUnitInAttackRange)
+
+				auto& enemyList = pair.second;
+
+				for (auto& enemy : enemyList)
 				{
-					isEntityOnRange = true;
-					break;
+					bool isUnitInAttackRange = attackRangeZone.findIntersection(enemy->hitbox).has_value();
+					if (isUnitInAttackRange)
+					{
+						isEntityOnRange = true;
+						break;
+					}
 				}
+				if (isEntityOnRange) break;
 			}
-			if (isEntityOnRange) break;
 		}
 
 		if (isEntityOnRange == false) state = WALK;

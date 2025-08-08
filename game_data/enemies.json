@@ -12,14 +12,14 @@
         "attackFrequency": 2,
         "attackType": 1,
         "foreswing": 0.1,
-        "backswing": 0.1,
+        "backswing": 0.2,
 
         "movementSpeed": 10,
 
         "knockbackCount": 1,
 
-        "texture": "assets/images/textures/enemies/shrimp_sheet.png",
-        "frameCount": 6,
+        "texture": "assets/images/textures/enemies/shrimp_sheet_b.png",
+        "frameCount": 7,
         "knockbackFrameIndex": 2
     },
     "UID_2": {
