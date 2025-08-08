@@ -251,6 +251,7 @@ void Stage::spawn_enemy(std::shared_ptr<EnemyData> enemyData, sf::Vector2f magni
 	}
 
 	battleEnemy->update_position();
+	battleEnemy->update_sprite();
 
 	if (isBoss) generate_boss_shockwave();
 
@@ -266,6 +267,7 @@ void Stage::spawn_unit(std::shared_ptr<UnitData> unitData)
 	battleUnit->currentLayer = generate_random_spawn_layer();
 
 	battleUnit->update_position();
+	battleUnit->update_sprite();
 
 	m_unitsCount++;
 	m_units[battleUnit->currentLayer].push_back(battleUnit);

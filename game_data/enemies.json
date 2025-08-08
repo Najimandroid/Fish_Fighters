@@ -11,12 +11,16 @@
         "attackRange": 10,
         "attackFrequency": 2,
         "attackType": 1,
+        "foreswing": 0.1,
+        "backswing": 0.1,
 
         "movementSpeed": 10,
 
         "knockbackCount": 1,
 
-        "texture": "assets/images/textures/enemies/smallShrimp.png"
+        "texture": "assets/images/textures/enemies/shrimp_sheet.png",
+        "frameCount": 6,
+        "knockbackFrameIndex": 2
     },
     "UID_2": {
         "UID": 2,
@@ -30,11 +34,15 @@
         "attackRange": 75,
         "attackFrequency": 10,
         "attackType": 2,
+        "foreswing": 0.8,
+        "backswing": 0.2,
 
         "movementSpeed": 2,
 
         "knockbackCount": 5,
 
-        "texture": "assets/images/textures/enemies/crabTEST.png"
+        "texture": "assets/images/textures/enemies/crabTEST.png",
+        "frameCount": 6,
+        "knockbackFrameIndex": 2
     }
 }

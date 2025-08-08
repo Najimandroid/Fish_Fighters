@@ -100,12 +100,16 @@ bool DataLoader::load_enemies(const std::string& path)
         data->attackRange = value.at("attackRange").get<float>();
         data->attackType = static_cast<AttackType>(value.at("attackType").get<int>());
         data->attackFrequency = value.at("attackFrequency").get<float>();
+        data->foreswingTime = value.at("foreswing").get<float>();
+        data->backswingTime = value.at("backswing").get<float>();
 
         data->movementSpeed = value.at("movementSpeed").get<float>();
 
         data->knockbackCount = value.at("knockbackCount").get<int>();
 
         data->texture = value.at("texture").get<std::string>();
+        data->frameCount = value.at("frameCount").get<int>();
+        data->knockbackFrameIndex = value.at("knockbackFrameIndex").get<int>();
 
         m_enemiesDataBase[data->UID] = data;
     }

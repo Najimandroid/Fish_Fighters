@@ -11,12 +11,12 @@
         "attackRange": 20,
         "attackType": 1,
         "attackFrequency": 1.5,
-        "foreswing": 0.6,
-        "backswing": 0.2,
+        "foreswing": 0.3,
+        "backswing": 0.1,
 
         "movementSpeed": 5,
 
-        "knockbackCount": 3,
+        "knockbackCount": 2,
 
         "texture": "assets/images/textures/units/test_sheet.png",
         "frameCount": 6,
@@ -40,7 +40,7 @@
 
         "movementSpeed": 3,
 
-        "knockbackCount": 1,
+        "knockbackCount": 0,
 
         "texture": "assets/images/textures/units/fish2TEST.png",
         "frameCount": 6,

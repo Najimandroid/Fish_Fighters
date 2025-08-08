@@ -24,17 +24,25 @@ BattleEnemy::BattleEnemy(std::shared_ptr<EnemyData> data_, sf::Vector2f magnific
 	//Init sprite
 	bool isTextureLoaded = texture.loadFromFile(data->texture);
 	sprite.setTexture(texture, true);
-	sprite.setOrigin({ static_cast<float>(texture.getSize().x), static_cast<float>(texture.getSize().y) });
+	sprite.setOrigin({ static_cast<float>(texture.getSize().x / data->frameCount / 2), static_cast<float>(texture.getSize().y) });
+	currentFrameIndex = 0;
+	sprite.setTextureRect({ {static_cast<int>(texture.getSize().x / data->frameCount * currentFrameIndex), 0},
+	{static_cast<int>(texture.getSize().x / data->frameCount), static_cast<int>(texture.getSize().y)}
+		});
+
+	//std::cout << "Spawned rect size x: " << sprite.getTextureRect().size.x << '\n';
 
 	//Init battle zones
-	hitbox.size = { static_cast<float>(texture.getSize().x), 720.0f};
-	attackRangeZone.size = { data->attackRange + static_cast<float>(texture.getSize().x) , 720.0f };
-	damageZone.size = { data->attackRange + static_cast<float>(texture.getSize().x) , 720.0f };
+	hitbox.size = { static_cast<float>(texture.getSize().x / data->frameCount / 2), 720.0f };
+	attackRangeZone.size = { data->attackRange + static_cast<float>(texture.getSize().x / data->frameCount / 2) , 720.0f };
+	damageZone.size = { data->attackRange + static_cast<float>(texture.getSize().x / data->frameCount / 2) , 720.0f };
+
+	//std::cout << "hitbox size x: " << static_cast<float>(texture.getSize().x / data->frameCount / 2) << '\n';
 
 	//Init position
 	hitbox.position = position;
-	attackRangeZone.position = position;
-	damageZone.position = position;
+	attackRangeZone.position = { position.x + data->attackRange + hitbox.size.x, position.y };;
+	damageZone.position = { position.x + data->attackRange + hitbox.size.x, position.y };;
 
 #ifdef DEBUG_MODE
 	//Init debug rectangles
@@ -51,16 +59,20 @@ BattleEnemy::BattleEnemy(std::shared_ptr<EnemyData> data_, sf::Vector2f magnific
 
 void BattleEnemy::update(float deltaTime, const std::map<int, std::vector<std::shared_ptr<BattleEntity>>>& entityList)
 {
+	state = nextState;
+
 	//Simple state machine
 	if (state == IDLE)
 	{
 		velocity = { 0.0f, 0.0f };
-		if (currentHealth < 0.0f) state = KNOCKBACK;
-		if (currentHealth <= healthLeftBeforeNextKnockback) state = KNOCKBACK;
+		if (currentHealth < 0.0f) { state = KNOCKBACK; goto endidle; }
+		if (currentHealth <= healthLeftBeforeNextKnockback) { state = KNOCKBACK; goto endidle; }
 
 		//Check the attack range
 		for (auto& pair : entityList)
 		{
+			if (!targets.empty()) { isEntityOnRange = true; break; } //If there are already targets, no need to check the range
+
 			auto& unitList = pair.second;
 
 			for (auto& unit : unitList)
@@ -75,13 +87,14 @@ void BattleEnemy::update(float deltaTime, const std::map<int, std::vector<std::s
 			if (isEntityOnRange) break;
 		}
 
-		if (isEntityOnRange == false && targets.empty()) state = WALK;
+		if (isEntityOnRange == false) state = WALK;
 
 		if (currentAttackCooldown >= data->attackFrequency && isEntityOnRange == true)
 		{
 			state = ATTACK;
 		}
 
+	endidle:
 		isEntityOnRange = false;
 	}
 	if (state == WALK)
@@ -89,10 +102,32 @@ void BattleEnemy::update(float deltaTime, const std::map<int, std::vector<std::s
 		velocity = { data->movementSpeed * 10.0f * deltaTime, 0.0f }; //*10.0f to make them more speedy
 		position += velocity;
 		if (currentHealth < 0.0f) state = KNOCKBACK;
-		else state = IDLE;
+		else nextState = IDLE;
 	}
 	if (state == ATTACK)
 	{
+
+		if (currentAttackSwingTime <= data->foreswingTime + data->backswingTime)
+		{
+			if (currentAttackSwingTime >= data->foreswingTime && hasAttacked == true) isAttackReady = false;
+			else if (currentAttackSwingTime >= data->foreswingTime) isAttackReady = true;
+			else isAttackReady = false;
+
+			currentAttackSwingTime += deltaTime;
+			nextState = ATTACK; //Continue attack animation
+		}
+		else
+		{
+			hasAttacked = false;
+			isAttackReady = false;
+			currentAttackSwingTime = 0.0f; //Reset attack swing time
+			currentAttackCooldown = 0.0f;
+			nextState = IDLE;
+		}
+
+		if (isAttackReady == false || hasAttacked == true) goto endattack;
+		hasAttacked = true;
+
 		//Get targets in damage zone
 		for (auto& pair : entityList)
 		{
@@ -111,8 +146,8 @@ void BattleEnemy::update(float deltaTime, const std::map<int, std::vector<std::s
 
 		if (targets.empty())
 		{
-			state = IDLE; //No targets to attack
-			goto attackend;
+			nextState = IDLE; //No targets to attack
+			goto endattack;
 		}
 
 		//std::cout << "SLASH!\n";
@@ -137,10 +172,8 @@ void BattleEnemy::update(float deltaTime, const std::map<int, std::vector<std::s
 			}
 		}
 
-	attackend:
+	endattack:
 		targets.clear();
-		currentAttackCooldown = 0.0f;
-		state = IDLE;
 	}
 	if (state == KNOCKBACK)
 	{
@@ -151,6 +184,11 @@ void BattleEnemy::update(float deltaTime, const std::map<int, std::vector<std::s
 				.during(30.0f * knockbackDuration).via(tweeny::easing::quadraticOut)
 				.to(position.y - static_cast<float>(currentLayer)).during(30.0f * knockbackDuration).via(tweeny::easing::bounceOut);
 			//position.x -= knockbackDistancePx;
+
+			isAttackReady = false;
+			hasAttacked = false;
+			currentAttackSwingTime = 0.0f; //Reset attack swing time
+
 			enteredKnockback = false;
 		}
 
@@ -165,14 +203,18 @@ void BattleEnemy::update(float deltaTime, const std::map<int, std::vector<std::s
 			}
 			else
 			{
-				state = IDLE; //After knockback, the unit dies
+				nextState = IDLE; //After knockback, the unit dies
 				currentKnockbackCooldown = 0.0f; //Reset cooldown
-				healthLeftBeforeNextKnockback -= (data->health / data->knockbackCount); //Update healthLeftBeforeNextKnockback
+
 				enteredKnockback = true;
+				if (isOnShockwave == false)
+					healthLeftBeforeNextKnockback -= (data->health / data->knockbackCount); //Update healthLeftBeforeNextKnockback
+
+				isOnShockwave = false;
 			}
 		}
 		else
-			state = KNOCKBACK; //Continue knockback
+			nextState = KNOCKBACK; //Continue knockback
 	}
 	if (state == DEAD)
 	{
@@ -181,8 +223,10 @@ void BattleEnemy::update(float deltaTime, const std::map<int, std::vector<std::s
 	}
 
 	update_position();
+	update_sprite();
 
 	currentAttackCooldown += deltaTime;
+	currentFrameCooldown += deltaTime;
 }
 
 void BattleEnemy::update_position()
@@ -191,12 +235,12 @@ void BattleEnemy::update_position()
 	{
 		if (tweenX.progress() < 1.0f && tweenY.progress() < 1.0f)
 		{
-			sprite.setPosition({ tweenX.step(1) + static_cast<float>(texture.getSize().x), tweenY.step(1) });
+			sprite.setPosition({ tweenX.step(1) + static_cast<float>(texture.getSize().x / data->frameCount / 2), tweenY.step(1) });
 		}
 	}
 	else
 	{
-		sprite.setPosition({ position.x + static_cast<float>(texture.getSize().x), position.y - static_cast<float>(currentLayer) });
+		sprite.setPosition({ position.x + static_cast<float>(texture.getSize().x / data->frameCount / 2), position.y - static_cast<float>(currentLayer) });
 	}
 
 
@@ -210,4 +254,42 @@ void BattleEnemy::update_position()
 	rAttackRangeZone.setPosition(attackRangeZone.position);
 	rDamageZone.setPosition(damageZone.position);
 #endif
+}
+
+void BattleEnemy::update_sprite()
+{
+	//std::cout << "[Current State: " << state << "]\n";
+
+	if (currentFrameCooldown >= timeUntilNextFrame || state == KNOCKBACK) currentFrameCooldown = 0.0f; //the knockback animation will bypass the frame cooldown
+	else return;
+
+	//Updating to the corresponding frame
+	switch (state)
+	{
+	case IDLE:
+		//if (startedAttackAnimation = true)
+		currentFrameIndex = 0;
+		break;
+	case WALK:
+		if (currentFrameIndex < data->knockbackFrameIndex - 1) currentFrameIndex++;
+		else currentFrameIndex = 0; //Reset to the first frame
+		break;
+	case ATTACK:
+		if (currentFrameIndex <= data->knockbackFrameIndex) currentFrameIndex = data->knockbackFrameIndex;
+		if (currentFrameIndex * sprite.getTextureRect().size.x < texture.getSize().x - sprite.getTextureRect().size.x) currentFrameIndex++;
+		else currentFrameIndex = 0;//Reset to the idle frame
+		break;
+	case KNOCKBACK:
+		currentFrameIndex = data->knockbackFrameIndex;
+		break;
+	default:
+		currentFrameIndex = 0;
+		break;
+	}
+
+	//std::cout << "[Current Frame Index: " << currentFrameIndex << "]\n\n\n";
+
+	sprite.setTextureRect({ {static_cast<int>(texture.getSize().x / data->frameCount * currentFrameIndex), 0},
+		{static_cast<int>(texture.getSize().x / data->frameCount), static_cast<int>(texture.getSize().y)}
+		});
 }

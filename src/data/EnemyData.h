@@ -25,10 +25,14 @@ struct EnemyData
 	float attackRange = 1.0f;
 	AttackType attackType = static_cast<AttackType>(1);
 	float attackFrequency = 1.0f;
+	float foreswingTime = 0.0f; //Time before the attack is executed
+	float backswingTime = 0.0f; //Time after the attack is executed (before going back to idle)
 
 	float movementSpeed = 1.0f;
 
 	int knockbackCount = 1;
 
 	std::string texture;
+	int frameCount = 1;
+	int knockbackFrameIndex = 1;
 };

@@ -20,21 +20,24 @@ BattleUnit::BattleUnit(std::shared_ptr<UnitData> data_) :
 	currentAttackSwingTime = 0.f;
 
 	currentKnockbackCooldown = 0.f;
-
+	
 	//Init sprite
 	bool isTextureLoaded = texture.loadFromFile(data->texture);
 	sprite.setTexture(texture, true);
 	sprite.setOrigin({ static_cast<float>(texture.getSize().x / data->frameCount / 2), static_cast<float>(texture.getSize().y) });
 	currentFrameIndex = 0;
+	sprite.setTextureRect({ {static_cast<int>(texture.getSize().x / data->frameCount * currentFrameIndex), 0},
+	{static_cast<int>(texture.getSize().x / data->frameCount), static_cast<int>(texture.getSize().y)}
+		});
 
-	std::cout << "Spawned rect size x: " << sprite.getTextureRect().size.x << '\n';
+	//std::cout << "Spawned rect size x: " << sprite.getTextureRect().size.x << '\n';
 
 	//Init battle zones
 	hitbox.size = { static_cast<float>(texture.getSize().x / data->frameCount / 2), 720.0f };
 	attackRangeZone.size = { data->attackRange + static_cast<float>(texture.getSize().x / data->frameCount / 2) , 720.0f };
 	damageZone.size = { data->attackRange + static_cast<float>(texture.getSize().x / data->frameCount / 2) , 720.0f };
 
-	std::cout << "hitbox size x: " << static_cast<float>(texture.getSize().x / data->frameCount / 2) << '\n';
+	//std::cout << "hitbox size x: " << static_cast<float>(texture.getSize().x / data->frameCount / 2) << '\n';
 
 	//Init position
 	hitbox.position = position;
@@ -207,6 +210,7 @@ void BattleUnit::update(float deltaTime, const std::map<int, std::vector<std::sh
 				enteredKnockback = true;
 				if(isOnShockwave == false)
 					healthLeftBeforeNextKnockback -= (data->health / data->knockbackCount); //Update healthLeftBeforeNextKnockback
+
 				isOnShockwave = false;
 			}
 		}

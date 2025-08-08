@@ -79,7 +79,7 @@ public:
 	//Render
 	sf::Texture texture;
 	sf::Sprite sprite;
-	float timeUntilNextFrame = 0.2f; //used to calculate the time until the next frame is rendered (in seconds)
+	float timeUntilNextFrame = 0.1f; //used to calculate the time until the next frame is rendered (in seconds)
 	float currentFrameCooldown = 0.0f;
 	int currentFrameIndex = 0; //used to calculate the current frame of the sprite animation
 
