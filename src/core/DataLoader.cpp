@@ -42,6 +42,8 @@ bool DataLoader::load_units(const std::string& path)
         data->name = value.at("name").get<std::string>();
         data->description = value.at("description").get<std::string>();
 
+        data->cost = value.at("cost").get<int>();
+
         data->health = value.at("health").get<float>();
 
         data->attackPower = value.at("attackPower").get<float>();

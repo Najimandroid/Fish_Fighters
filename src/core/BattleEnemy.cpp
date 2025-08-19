@@ -41,8 +41,8 @@ BattleEnemy::BattleEnemy(std::shared_ptr<EnemyData> data_, sf::Vector2f magnific
 
 	//Init position
 	hitbox.position = position;
-	attackRangeZone.position = { position.x + data->attackRange + hitbox.size.x, position.y };;
-	damageZone.position = { position.x + data->attackRange + hitbox.size.x, position.y };;
+	attackRangeZone.position = position;
+	damageZone.position = position;
 
 #ifdef DEBUG_MODE
 	//Init debug rectangles
@@ -133,6 +133,7 @@ void BattleEnemy::update(float deltaTime, const std::map<int, std::vector<std::s
 		hasAttacked = true;
 
 		//Get targets in damage zone
+		std::cout << "EntityList count: " << entityList.size() << "\n";
 		for (auto& pair : entityList)
 		{
 			auto& unitList = pair.second;
@@ -143,11 +144,13 @@ void BattleEnemy::update(float deltaTime, const std::map<int, std::vector<std::s
 				if (isUnitInAttackRange && unit->state != unit->KNOCKBACK)
 				{
 					//std::cout << "UNIT FOUND >:(\n";
+					std::cout << "Inserting target at address: " << unit.get() << "\n";
 					targets.insert(unit);
 				}
 			}
 		}
 
+		std::cout << "Targets count: " << targets.size() << "\n";
 		if (targets.empty())
 		{
 			nextState = IDLE; //No targets to attack
@@ -155,6 +158,7 @@ void BattleEnemy::update(float deltaTime, const std::map<int, std::vector<std::s
 		}
 
 		//std::cout << "SLASH!\n";
+		std::cout << "Attack type: " << data->attackType << "\n";
 
 		if (data->attackType == 1) //if attackType => single
 		{

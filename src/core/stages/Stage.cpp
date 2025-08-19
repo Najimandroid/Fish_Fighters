@@ -101,9 +101,19 @@ void Stage::update(float deltaTime)
 		}
 	}
 
+	update_cash();
+
 	update_bases(deltaTime);
 	update_enemies(deltaTime);
 	update_units(deltaTime);
+}
+
+void Stage::update_cash()
+{
+	if (m_currentCash <= m_MAX_CASH)
+		m_currentCash += 1; //For testing purposes, add 10 cash every update
+
+	std::cout << "[BANK]: " << m_currentCash << "$ / " << m_MAX_CASH << "$\n";
 }
 
 void Stage::update_enemies(float deltaTime)
@@ -256,12 +266,14 @@ void Stage::spawn_enemy(std::shared_ptr<EnemyData> enemyData, sf::Vector2f magni
 	if (isBoss) generate_boss_shockwave();
 
 	m_enemiesCount++;
+
 	m_enemies[battleEnemy->currentLayer].push_back(battleEnemy);
 }
 
 void Stage::spawn_unit(std::shared_ptr<UnitData> unitData)
 {
-	if (m_unitsCount >= m_unitsLimit) return;
+	if (m_unitsCount >= m_unitsLimit) return; //return if the limit is reached
+	if (unitData->cost > m_currentCash) return; //return if the player doesn't have enough cash (broke)
 
 	std::shared_ptr<BattleUnit> battleUnit = std::make_shared<BattleUnit>(unitData);
 	battleUnit->currentLayer = generate_random_spawn_layer();
@@ -270,8 +282,9 @@ void Stage::spawn_unit(std::shared_ptr<UnitData> unitData)
 	battleUnit->update_sprite();
 
 	m_unitsCount++;
-	m_units[battleUnit->currentLayer].push_back(battleUnit);
+	m_currentCash -= unitData->cost;
 
+	m_units[battleUnit->currentLayer].push_back(battleUnit);
 }
 
 void Stage::remove_enemy(BattleEnemy battleEnemy)

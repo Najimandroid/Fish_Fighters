@@ -141,7 +141,7 @@ void BattleUnit::update(float deltaTime, const std::map<int, std::vector<std::sh
 				bool isUnitInAttackRange = damageZone.findIntersection(enemy->hitbox).has_value();
 				if (isUnitInAttackRange && enemy->state != enemy->KNOCKBACK)
 				{
-					//std::cout << "ENEMY FOUND >:(\n";
+					//std::cout << "ENEMY FOUND >:(\n";z
 					targets.insert(enemy);
 				}
 			}

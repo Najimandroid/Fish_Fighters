@@ -70,11 +70,10 @@ public:
 	sf::FloatRect damageZone;
 
 	//Targets
-	struct BattleEntityRangeComparator
-	{
+	struct WeakPtrPosXLess {
 		bool operator()(const std::weak_ptr<BattleEntity>& a, const std::weak_ptr<BattleEntity>& b) const;
 	};
-	std::set<std::weak_ptr<BattleEntity>, BattleEntityRangeComparator> targets;
+	std::set<std::weak_ptr<BattleEntity>, WeakPtrPosXLess > targets;
 
 	//Render
 	sf::Texture texture;

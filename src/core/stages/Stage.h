@@ -34,6 +34,7 @@ public:
 	void load(int uid);
 	void unload();
 	void update(float deltaTime);
+	void update_cash();
 	void render(sf::RenderWindow& window);
 
 	void spawn_enemy(std::shared_ptr<EnemyData> enemyData, sf::Vector2f magnification, int layer, bool isBoss,bool bypassLimit);
@@ -54,6 +55,9 @@ private:
 	int m_uid = -1;
 
 	std::string m_stageName = "Unknown Area ???";
+
+	int m_currentCash = 0; //current cash available to the player
+	int m_MAX_CASH = 500; //maximum cash available to the player
 
 	int m_enemiesLimit = 5;
 	int m_unitsLimit = 5;

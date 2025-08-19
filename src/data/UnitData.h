@@ -19,6 +19,8 @@ struct UnitData
 	std::string description = "???";
 
 	//Battle datas
+	int cost = 50;
+
 	float health = 1.0f;
 
 	float attackPower = 1.0f;

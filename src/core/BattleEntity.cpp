@@ -29,15 +29,18 @@ BattleEntity::BattleEntity():
 #endif
 }
 
-bool BattleEntity::BattleEntityRangeComparator::operator()(const std::weak_ptr<BattleEntity>& a, const std::weak_ptr<BattleEntity>& b) const
+bool BattleEntity::WeakPtrPosXLess::operator()(const std::weak_ptr<BattleEntity>& a, const std::weak_ptr<BattleEntity>& b) const
 {
-	//The set is sorted by attackRange so if a single attacker wants to attack, it will always attack the closest entity.
+	auto aptr = a.lock();
+	auto bptr = b.lock();
 
-	auto spA = a.lock();
-	auto spB = b.lock();
+	if (!aptr && !bptr) return false; //if the same
+	if (!aptr) return false;
+	if (!bptr) return true;
 
-	if (!spA) return false;
-	if (!spB) return true;
+	//compares their position
+	if (aptr->position.x < bptr->position.x) return true;
+	if (aptr->position.x > bptr->position.x) return false;
 
-	return spA->attackRangeZone.size.x < spB->attackRangeZone.size.x;
+	return aptr.get() < bptr.get();
 }

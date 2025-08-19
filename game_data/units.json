@@ -5,16 +5,18 @@
         "name": "Fish",
         "description": "Just a normal fish.",
 
+        "cost":  150,
+
         "health": 10,
 
-        "attackPower": 10,
-        "attackRange": 20,
+        "attackPower": 5,
+        "attackRange": 5,
         "attackType": 1,
         "attackFrequency": 1.5,
         "foreswing": 0.3,
         "backswing": 0.1,
 
-        "movementSpeed": 5,
+        "movementSpeed": 8,
 
         "knockbackCount": 2,
 
@@ -27,6 +29,8 @@
 
         "name": "Big Fish",
         "description": "Just a normal fish but bigger.",
+
+        "cost": 300,
 
         "health": 15,
 
