@@ -4,7 +4,8 @@
 
 Game::Game():
     m_dataLoader(std::make_shared<DataLoader>()),
-    m_stage(std::make_shared<Stage>())
+    m_stage(std::make_shared<Stage>()),
+	m_uiManager(std::make_shared<UIManager>())
 {
     m_window.create(sf::VideoMode(m_logicalResolution), "Fish Fighers"); //sf::Style::None
     m_window.setFramerateLimit(m_frameRate);
@@ -13,6 +14,8 @@ Game::Game():
     ImGui::SFML::Init(m_window);
 
     m_dataLoader->load_all();
+
+    m_uiManager->init(m_dataLoader);
     m_stage->init(m_dataLoader);
 
     init_camera();
@@ -72,6 +75,7 @@ void Game::run_game_loop()
     */
 
     m_stage->load(1);
+	m_uiManager->generate_battle_uis(m_stage);
 
     while (m_window.isOpen())
     {
@@ -83,6 +87,8 @@ void Game::run_game_loop()
 
         //Updating all systems
         m_stage->update(deltaTime);
+
+        m_uiManager->update_uis(deltaTime);
         //sprite.setPosition(tween.step(1));
 
         //Rendering
@@ -90,6 +96,8 @@ void Game::run_game_loop()
         //m_window.draw(shape);
         //m_window.draw(sprite);
         m_stage->render(m_window);
+		m_uiManager->render_uis(m_window);
+
         debug_ui();
         m_window.display();
     }
@@ -100,12 +108,14 @@ void Game::run_game_loop()
 void Game::poll_events()
 {
     while (const auto event = m_window.pollEvent()) {
-        ImGui::SFML::ProcessEvent(m_window, *event);
+        //ImGui::SFML::ProcessEvent(m_window, *event);
 
         if (event->is<sf::Event::Closed>())
         {
             m_window.close();
         }
+
+        m_uiManager->handle_ui_events(*event, m_window);
 
         if (const auto* e_keycode = event->getIf<sf::Event::KeyPressed>())
         {

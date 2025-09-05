@@ -223,3 +223,13 @@ const std::shared_ptr<StageData> DataLoader::get_stage_data(int uid) const
 
     return std::make_shared<StageData>();
 }
+
+std::string DataLoader::get_unit_icon_texture_path(int uid) const
+{
+    return "assets/images/textures/icons/units/icon_" + std::to_string(uid) + ".png";
+}
+
+std::string DataLoader::get_enemy_icon_texture_path(int uid) const
+{
+    return "assets/images/textures/icons/enemies/icon_" + std::to_string(uid) + ".png";
+}

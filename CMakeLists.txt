@@ -29,12 +29,16 @@ set(IMGUI_SFML_SOURCES
 # Application sources
 set(PROJECT_SOURCES
     src/main.cpp
+
     src/core/Game.cpp
+
     src/core/DataLoader.cpp
+
     src/core/entities/BattleEntity.cpp
     src/core/entities/BattleEnemy.cpp
     src/core/entities/BattleUnit.cpp
     src/core/entities/BattleBase.cpp
+
     src/core/entities/machine/StateMachine.cpp
     src/core/entities/machine/states/AttackState.cpp
     src/core/entities/machine/states/BaseState.cpp
@@ -42,7 +46,13 @@ set(PROJECT_SOURCES
     src/core/entities/machine/states/IdleState.cpp
     src/core/entities/machine/states/KnockbackState.cpp
     src/core/entities/machine/states/WalkState.cpp
+
     src/core/stages/Stage.cpp
+
+    src/core/uis/UIBattleIcon.cpp
+    src/core/uis/UIButtonElement.cpp
+    src/core/uis/UIDeploymentIcons.cpp
+    src/core/uis/UIManager.cpp
     # ← ajoute ici les futurs fichiers, par ex.:
     # src/utils/NewSystem.cpp
 )

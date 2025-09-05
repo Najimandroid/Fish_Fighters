@@ -15,6 +15,7 @@
 
 #include "DataLoader.h"
 #include "stages/Stage.h"
+#include "uis/UIManager.h"
 
 class Game
 {
@@ -53,4 +54,5 @@ private:
 
 	std::shared_ptr<DataLoader> m_dataLoader;
 	std::shared_ptr<Stage> m_stage;
+	std::shared_ptr<UIManager> m_uiManager;
 };

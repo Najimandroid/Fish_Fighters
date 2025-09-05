@@ -28,6 +28,9 @@ public:
     const std::shared_ptr<EntityData> get_enemy_data(int uid) const;
     const std::shared_ptr<StageData> get_stage_data(int uid) const;
 
+    std::string get_unit_icon_texture_path(int uid) const;
+    std::string get_enemy_icon_texture_path(int uid) const;
+
 private:
 
     bool load_units(const std::string& path);
