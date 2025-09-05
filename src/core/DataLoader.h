@@ -1,14 +1,13 @@
 #pragma once
 
-#include "../data/UnitData.h"
-#include "../data/EnemyData.h"
+#include "../data/EntityData.h"
 #include "../data/EnemyStageData.h"
 #include "../data/StageData.h"
 
 #include <unordered_map>
 #include <memory>
 
-//Enum used for UnitData and EnemyData
+//Enum used for EntityData
 enum AttackType
 {
     SINGLE = 1,
@@ -25,8 +24,8 @@ public:
 
     bool load_all();
 
-    const std::shared_ptr<UnitData> get_unit_data(int uid) const;
-    const std::shared_ptr<EnemyData> get_enemy_data(int uid) const;
+    const std::shared_ptr<EntityData> get_unit_data(int uid) const;
+    const std::shared_ptr<EntityData> get_enemy_data(int uid) const;
     const std::shared_ptr<StageData> get_stage_data(int uid) const;
 
 private:
@@ -41,9 +40,9 @@ private:
     bool m_enemiesLoaded = false;
     bool m_stagesLoaded = false;
 
-    std::unordered_map<int, std::shared_ptr<UnitData>> m_unitsDataBase;
-    std::unordered_map<int, std::shared_ptr<EnemyData>> m_enemiesDataBase;
-    std::unordered_map<int, std::shared_ptr<StageData>> m_stagesDataBase;
+    std::unordered_map<int, std::shared_ptr<EntityData>> m_unitsDatabase;
+    std::unordered_map<int, std::shared_ptr<EntityData>> m_enemiesDatabase;
+    std::unordered_map<int, std::shared_ptr<StageData>> m_stagesDatabase;
 
 
 };

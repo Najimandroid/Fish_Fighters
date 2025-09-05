@@ -1,6 +1,8 @@
 #pragma once
 
 #include "tweeny.h"
+#include "machine/StateMachine.h"
+#include "../../data/EntityData.h"
 
 #include <SFML/Graphics/Texture.hpp>
 #include <SFML/Graphics/Sprite.hpp>
@@ -8,10 +10,13 @@
 #include <SFML/Graphics/Rect.hpp>
 
 #include <set>
+#include <memory>
 //#include <vector>
 #include <map>
 
-class BattleEntity
+class Stage;
+
+class BattleEntity : public std::enable_shared_from_this<BattleEntity>
 {
 public:
 
@@ -20,42 +25,37 @@ public:
 
 	virtual void update(float deltaTime, const std::map<int, std::vector<std::shared_ptr<BattleEntity>>>& entityList) = 0; //called each frame by the stage instance
 	virtual void update_position() = 0; //used to change position of all float_rects and sprites (called inside of update)
-	virtual void update_sprite() = 0;
+	virtual void update_sprite();
+
+	void init_state_machine();
+
+	void set_current_stage(std::shared_ptr<Stage> stage);
 
 public:
+
+	//Data
+	std::shared_ptr<EntityData> data = nullptr;
+
+	//State machine
+	std::shared_ptr<StateMachine> stateMachine;
+
+	//Current Stage
+	std::shared_ptr<Stage> currentStage = nullptr;
+
 	//Data submembers
 	float currentHealth = 1.0f;
 
 	tweeny::tween<float> tweenX; //Tweens used to play the knockback animation
 	tweeny::tween<float> tweenY;
-	float knockbackDuration = 1.0f; //knockback duration in seconds
-	float knockbackDistancePx = 150.0f; //knockback distance in pixels
-	float currentKnockbackCooldown = 0.0f;
-	bool enteredKnockback = true; //used to check if the entity has entered the knockback state (to setup the tweens once)
+
 	bool isOnShockwave = false; //used to check if the entity is on a shockwave (preventing to update healthLeftBeforeNextKnockback)
 	float healthLeftBeforeNextKnockback = 0.0f; //used to calculate knockback, if currentHealth is less than this value, the entity will be knocked back
 
 	float currentAttackCooldown = 0.0f; //attack cooldown
-	float currentAttackSwingTime = 0.0f; //time used to calculate if the foreswing and backswing are finished
-	bool isEntityOnRange = false; //used to check if an entity is on range of the attack range zone (starts the attack state)
-	bool isAttackReady = false;
-	bool hasAttacked = false;
 
 	int currentLayer = 0;
 
 	bool isDead = false;
-
-	//State
-	enum State
-	{
-		IDLE = 1,
-		WALK,
-		ATTACK,
-		KNOCKBACK,
-		DEAD,
-	};
-	State state = static_cast<State>(1);
-	State nextState = static_cast<State>(1); //Used to store the state of the next frame (used to calculate the correct sprite frame for example)
 
 	//Boosts
 	sf::Vector2f magnification = { 1.f, 1.f }; // x => hp | y => attack (multiplier)

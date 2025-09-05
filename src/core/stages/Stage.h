@@ -2,7 +2,7 @@
 
 #include "../../data/EnemyStageData.h"
 #include "../DataLoader.h"
-#include "../BattleBase.h"
+#include "../entities/BattleBase.h"
 
 #include <SFML/Graphics.hpp>
 
@@ -18,12 +18,14 @@
 * The Stage class will load any level found in game_data/stages.json. Only one level can be loaded at a time.
 */
 
+using BattleEntitiesMap_t = std::map<int, std::vector<std::shared_ptr<BattleEntity>>>;
+
 class DataLoader;
 class BattleEnemy;
 class BattleUnit;
 class EnemyData;
 
-class Stage
+class Stage : public std::enable_shared_from_this<Stage>
 {
 public:
 
@@ -37,8 +39,8 @@ public:
 	void update_cash();
 	void render(sf::RenderWindow& window);
 
-	void spawn_enemy(std::shared_ptr<EnemyData> enemyData, sf::Vector2f magnification, int layer, bool isBoss,bool bypassLimit);
-	void spawn_unit(std::shared_ptr<UnitData> unitData); //Todo: add some kind of UserDatas to keep track of the level of each unit
+	void spawn_enemy(std::shared_ptr<EntityData> enemyData, sf::Vector2f magnification, int layer, bool isBoss,bool bypassLimit);
+	void spawn_unit(std::shared_ptr<EntityData> unitData); //Todo: add some kind of UserDatas to keep track of the level of each unit
 	void remove_enemy(BattleEnemy battleEnemy);
 	void remove_unit(BattleUnit battleUnit);
 
@@ -48,6 +50,9 @@ public:
 	void update_enemies(float deltaTime);
 	void update_units(float deltaTime);
 	void update_bases(float deltaTime);
+
+	BattleEntitiesMap_t& get_enemies();
+	BattleEntitiesMap_t& get_units();
 
 private:
 
@@ -69,10 +74,8 @@ private:
 	std::vector<std::shared_ptr<EnemyStageData>> m_enemyStageDatas;
 
 	//Entities
-	using BattleEnemiesMap_t  = std::map<int, std::vector<std::shared_ptr<BattleEntity>>>;
-	using BattleUnitsMap_t  = std::map<int, std::vector<std::shared_ptr<BattleEntity>>>;
-	BattleEnemiesMap_t m_enemies; //enemies are stocked in layer order (helps with rendering)
-	BattleUnitsMap_t m_units;
+	BattleEntitiesMap_t m_enemies; //enemies are stocked in layer order (helps with rendering)
+	BattleEntitiesMap_t m_units;
 
 
 	//Bases

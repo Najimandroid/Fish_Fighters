@@ -31,10 +31,17 @@ set(PROJECT_SOURCES
     src/main.cpp
     src/core/Game.cpp
     src/core/DataLoader.cpp
-    src/core/BattleEntity.cpp
-    src/core/BattleEnemy.cpp
-    src/core/BattleUnit.cpp
-    src/core/BattleBase.cpp
+    src/core/entities/BattleEntity.cpp
+    src/core/entities/BattleEnemy.cpp
+    src/core/entities/BattleUnit.cpp
+    src/core/entities/BattleBase.cpp
+    src/core/entities/machine/StateMachine.cpp
+    src/core/entities/machine/states/AttackState.cpp
+    src/core/entities/machine/states/BaseState.cpp
+    src/core/entities/machine/states/DeadState.cpp
+    src/core/entities/machine/states/IdleState.cpp
+    src/core/entities/machine/states/KnockbackState.cpp
+    src/core/entities/machine/states/WalkState.cpp
     src/core/stages/Stage.cpp
     # ← ajoute ici les futurs fichiers, par ex.:
     # src/utils/NewSystem.cpp

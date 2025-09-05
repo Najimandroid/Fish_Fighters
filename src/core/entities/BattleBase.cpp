@@ -8,8 +8,6 @@ BattleBase::BattleBase(float health_, std::string texture_)
 	maxHealth = health_;
 	currentHealth = maxHealth;
 
-	state = State::IDLE;
-
 	position = { 0.0f, 360.0f };
 
 	currentLayer = 51;

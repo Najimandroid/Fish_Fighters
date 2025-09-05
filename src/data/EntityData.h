@@ -5,20 +5,22 @@
 enum AttackType;
 
 /*
-* EnemyData is a template for all Enemies in the game.
-* Check EntityDataLoader to get the data of any enemy.
+* UnitData is a template for all Units in the game.
+* Check EntityDataLoader to get the data of any unit.
 */
 
-struct EnemyData
+struct EntityData
 {
-	//Every Enemy will have a unique ID
+	//Every Unit will have a unique ID
 	int UID = -1;
 
 	//General datas
-	std::string name = "Unknown Enemy";
+	std::string name = "Unknown Unit";
 	std::string description = "???";
 
 	//Battle datas
+	int cost = 50;
+
 	float health = 1.0f;
 
 	float attackPower = 1.0f;

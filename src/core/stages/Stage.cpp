@@ -1,7 +1,10 @@
 #include "Stage.h"
 
-#include "../BattleEnemy.h"
-#include "../BattleUnit.h"
+#include "../entities/BattleEnemy.h"
+#include "../entities/BattleUnit.h"
+
+#include "../entities/machine/states/KnockbackState.h"
+#include "../entities/machine/states/IdleState.h"
 
 #include <iostream>
 
@@ -110,10 +113,10 @@ void Stage::update(float deltaTime)
 
 void Stage::update_cash()
 {
-	if (m_currentCash <= m_MAX_CASH)
+	if (m_currentCash < m_MAX_CASH)
 		m_currentCash += 1; //For testing purposes, add 10 cash every update
 
-	std::cout << "[BANK]: " << m_currentCash << "$ / " << m_MAX_CASH << "$\n";
+	//std::cout << "[BANK]: " << m_currentCash << "$ / " << m_MAX_CASH << "$\n";
 }
 
 void Stage::update_enemies(float deltaTime)
@@ -188,6 +191,16 @@ void Stage::update_bases(float deltaTime)
 	m_fishBase->update(deltaTime, m_enemies);
 }
 
+BattleEntitiesMap_t& Stage::get_enemies()
+{
+	return m_enemies;
+}
+
+BattleEntitiesMap_t& Stage::get_units()
+{
+	return m_units;
+}
+
 void Stage::render(sf::RenderWindow& window)
 {
 	window.draw(m_backgroundSprite);
@@ -244,11 +257,14 @@ void Stage::spawn_bases(float health, std::string texture)
 	m_fishBase->position = { 1280.0f - m_fishBase->texture.getSize().x, 360.0f - m_fishBase->texture.getSize().y / 2 };
 }
 
-void Stage::spawn_enemy(std::shared_ptr<EnemyData> enemyData, sf::Vector2f magnification, int layer = -1, bool isBoss = false, bool bypassLimit = false)
+void Stage::spawn_enemy(std::shared_ptr<EntityData> enemyData, sf::Vector2f magnification, int layer = -1, bool isBoss = false, bool bypassLimit = false)
 {
 	if (m_enemiesCount >= m_enemiesLimit && bypassLimit == false) return;
 
 	std::shared_ptr<BattleEnemy> battleEnemy = std::make_shared<BattleEnemy>(enemyData, magnification);
+	battleEnemy->set_current_stage(shared_from_this());
+	battleEnemy->init_state_machine();
+	battleEnemy->stateMachine->change_state(std::make_unique<IdleState>(battleEnemy->stateMachine));
 
 	//spawn in corresponding layer
 	if (layer > 0)
@@ -270,12 +286,16 @@ void Stage::spawn_enemy(std::shared_ptr<EnemyData> enemyData, sf::Vector2f magni
 	m_enemies[battleEnemy->currentLayer].push_back(battleEnemy);
 }
 
-void Stage::spawn_unit(std::shared_ptr<UnitData> unitData)
+void Stage::spawn_unit(std::shared_ptr<EntityData> unitData)
 {
 	if (m_unitsCount >= m_unitsLimit) return; //return if the limit is reached
 	if (unitData->cost > m_currentCash) return; //return if the player doesn't have enough cash (broke)
 
 	std::shared_ptr<BattleUnit> battleUnit = std::make_shared<BattleUnit>(unitData);
+	battleUnit->set_current_stage(shared_from_this());
+	battleUnit->init_state_machine();
+	battleUnit->stateMachine->change_state(std::make_unique<IdleState>(battleUnit->stateMachine));
+
 	battleUnit->currentLayer = generate_random_spawn_layer();
 
 	battleUnit->update_position();
@@ -311,14 +331,12 @@ void Stage::generate_boss_shockwave()
 	{
 		for (auto& unit : pair.second)
 		{
-			if (unit->state == BattleEntity::State::KNOCKBACK || unit->state == BattleEntity::State::DEAD)
+			auto activeId = unit->stateMachine->get_active_state_id();
+			if (activeId == "KNOCKBACK" || activeId == "DEAD")
 				continue;
 
-			unit->nextState = BattleEntity::State::KNOCKBACK;
-			unit->enteredKnockback = true;
 			unit->isOnShockwave = true;
-
-			unit->currentKnockbackCooldown = 0.f;
+			unit->stateMachine->change_state(std::make_unique<KnockbackState>(unit->stateMachine));
 		}
 	}
 }

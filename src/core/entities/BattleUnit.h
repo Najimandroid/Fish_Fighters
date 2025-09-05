@@ -1,35 +1,28 @@
 #pragma once
 
 #include <SFML/System/Vector2.hpp>
+#include <SFML/Graphics/Rect.hpp>
 
 #include "BattleEntity.h"
-#include "../data/EnemyData.h"
 
 #include <memory>
 #include <vector>
 
-//class EnemyData;
-//class BattleUnit;
+//class UnitData;
+//class BattleEnemy;
 
 /*
-* The BattleBase represents a base in a stage
+* The BattleUnit represents the spawned unit in a stage
 */
 
-class BattleBase : public BattleEntity
+class BattleUnit: public BattleEntity
 {
 public:
 
-	BattleBase(float health_, std::string texture_);
+	BattleUnit(std::shared_ptr<EntityData> data_);
 
 	//Overrides
 	virtual void update(float deltaTime, const std::map<int, std::vector<std::shared_ptr<BattleEntity>>>& entityList) override;
-	virtual void update_sprite() override {};
-
-public:
-
-	float maxHealth = 1.0f;
-
-private:
-	//Private overrides
 	virtual void update_position() override;
+
 };

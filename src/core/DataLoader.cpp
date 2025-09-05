@@ -35,7 +35,7 @@ bool DataLoader::load_units(const std::string& path)
 
     for (auto& [_, value] : j.items()) 
     {
-        std::shared_ptr<UnitData> data = std::make_shared<UnitData>();
+        std::shared_ptr<EntityData> data = std::make_shared<EntityData>();
 
         data->UID = value.at("UID").get<int>();
 
@@ -61,7 +61,7 @@ bool DataLoader::load_units(const std::string& path)
         data->frameCount = value.at("frameCount").get<int>();
         data->knockbackFrameIndex = value.at("knockbackFrameIndex").get<int>();
 
-        m_unitsDataBase[data->UID] = data;
+        m_unitsDatabase[data->UID] = data;
     }
 
     m_unitsLoaded = true;
@@ -89,7 +89,7 @@ bool DataLoader::load_enemies(const std::string& path)
 
     for (auto& [_, value] : j.items()) 
     {
-        std::shared_ptr<EnemyData> data = std::make_shared<EnemyData>();
+        std::shared_ptr<EntityData> data = std::make_shared<EntityData>();
 
         data->UID = value.at("UID").get<int>();
 
@@ -113,7 +113,7 @@ bool DataLoader::load_enemies(const std::string& path)
         data->frameCount = value.at("frameCount").get<int>();
         data->knockbackFrameIndex = value.at("knockbackFrameIndex").get<int>();
 
-        m_enemiesDataBase[data->UID] = data;
+        m_enemiesDatabase[data->UID] = data;
     }
 
     m_enemiesLoaded = true;
@@ -184,40 +184,40 @@ bool DataLoader::load_stages(const std::string& path)
             data->enemies.push_back(enemyData);
         }
 
-        m_stagesDataBase[data->UID] = data;
+        m_stagesDatabase[data->UID] = data;
     }
 
     m_stagesLoaded = true;
     return true;
 }
 
-const std::shared_ptr<UnitData> DataLoader::get_unit_data(int uid) const
+const std::shared_ptr<EntityData> DataLoader::get_unit_data(int uid) const
 {
-    auto it = m_unitsDataBase.find(uid);
+    auto it = m_unitsDatabase.find(uid);
 
-    if (it != m_unitsDataBase.end()) {
+    if (it != m_unitsDatabase.end()) {
         return it->second;
     }
 
-    return std::make_shared<UnitData>();
+    return std::make_shared<EntityData>();
 }
 
-const std::shared_ptr<EnemyData> DataLoader::get_enemy_data(int uid) const
+const std::shared_ptr<EntityData> DataLoader::get_enemy_data(int uid) const
 {
-    auto it = m_enemiesDataBase.find(uid);
+    auto it = m_enemiesDatabase.find(uid);
 
-    if (it != m_enemiesDataBase.end()) {
+    if (it != m_enemiesDatabase.end()) {
         return it->second;
     }
 
-    return std::make_shared<EnemyData>();
+    return std::make_shared<EntityData>();
 }
 
 const std::shared_ptr<StageData> DataLoader::get_stage_data(int uid) const
 {
-    auto it = m_stagesDataBase.find(uid);
+    auto it = m_stagesDatabase.find(uid);
 
-    if (it != m_stagesDataBase.end()) {
+    if (it != m_stagesDatabase.end()) {
         return it->second;
     }
 
