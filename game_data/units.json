@@ -5,7 +5,8 @@
         "name": "Fish",
         "description": "Just a normal fish.",
 
-        "cost":  150,
+        "cost": 50,
+        "cooldown": 2,
 
         "health": 10,
 
@@ -31,6 +32,7 @@
         "description": "Just a normal fish but bigger.",
 
         "cost": 300,
+        "cooldown": 8,
 
         "health": 15,
 

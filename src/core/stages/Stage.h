@@ -53,6 +53,7 @@ public:
 
 	BattleEntitiesMap_t& get_enemies();
 	BattleEntitiesMap_t& get_units();
+	int get_cash() const;
 
 private:
 

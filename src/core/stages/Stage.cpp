@@ -201,6 +201,11 @@ BattleEntitiesMap_t& Stage::get_units()
 	return m_units;
 }
 
+int Stage::get_cash() const
+{
+	return m_currentCash;
+}
+
 void Stage::render(sf::RenderWindow& window)
 {
 	window.draw(m_backgroundSprite);

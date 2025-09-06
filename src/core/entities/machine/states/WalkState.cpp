@@ -16,12 +16,12 @@ WalkState::WalkState(std::shared_ptr<StateMachine> machine)
 
 void WalkState::enter()
 {
-	std::cout << "Entering Walk State\n";
+	//std::cout << "Entering Walk State\n";
 }
 
 void WalkState::perform(float deltaTime)
 {
-	auto entity = m_machine->get_owner();
+	auto entity = m_machine->get_owner().lock();
 
 	if (entity->currentHealth <= 0.0f) { m_machine->change_state(std::make_unique<KnockbackState>(m_machine)); return; }
 	if (entity->currentHealth <= entity->healthLeftBeforeNextKnockback) { m_machine->change_state(std::make_unique<KnockbackState>(m_machine)); return; }
@@ -31,8 +31,8 @@ void WalkState::perform(float deltaTime)
 	else
 	{
 		BattleEntitiesMap_t entityList;
-		if (std::dynamic_pointer_cast<BattleUnit>(entity)) entityList = m_machine->get_stage()->get_enemies();
-		else entityList = m_machine->get_stage()->get_units();
+		if (std::dynamic_pointer_cast<BattleUnit>(entity)) entityList = m_machine->get_stage().lock()->get_enemies();
+		else entityList = m_machine->get_stage().lock()->get_units();
 
 		for (auto& pair : entityList)
 		{
@@ -73,7 +73,7 @@ void WalkState::perform(float deltaTime)
 
 void WalkState::exit()
 {
-	std::cout << "Exiting Walk State\n";
+	//std::cout << "Exiting Walk State\n";
 }
 
 std::string WalkState::get_state_id() const

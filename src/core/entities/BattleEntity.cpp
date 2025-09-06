@@ -1,5 +1,7 @@
 #include "BattleEntity.h"
 
+#include <iostream>
+
 BattleEntity::BattleEntity():
 
 	hitbox(sf::FloatRect(position, { 1.0f, 720.0f })), attackRangeZone(sf::FloatRect(position, { 1.0f, 720.0f })),
@@ -29,6 +31,11 @@ BattleEntity::BattleEntity():
 	rDamageZone.setFillColor(sf::Color::Transparent);
 	rDamageZone.setOutlineThickness(3.f);
 #endif
+}
+
+BattleEntity::~BattleEntity()
+{
+	std::cout << "BattleEntity Destructor called\n";
 }
 
 void BattleEntity::init_state_machine()

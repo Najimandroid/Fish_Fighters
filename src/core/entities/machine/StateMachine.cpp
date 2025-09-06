@@ -28,12 +28,12 @@ void StateMachine::change_state(std::unique_ptr<BaseState> newState)
         m_activeState->enter();
 }
 
-std::shared_ptr<BattleEntity> StateMachine::get_owner() const
+std::weak_ptr<BattleEntity> StateMachine::get_owner() const
 {
 	return m_owner;
 }
 
-std::shared_ptr<Stage> StateMachine::get_stage() const
+std::weak_ptr<Stage> StateMachine::get_stage() const
 {
     return m_stage;
 }

@@ -16,12 +16,12 @@ AttackState::AttackState(std::shared_ptr<StateMachine> machine)
 
 void AttackState::enter()
 {
-	std::cout << "Entering Attack State\n";
+	//std::cout << "Entering Attack State\n";
 }
 
 void AttackState::perform(float deltaTime)
 {
-	auto entity = m_machine->get_owner();
+	auto entity = m_machine->get_owner().lock();
 
 	if (entity->currentAttackCooldown < entity->data->attackFrequency)
 	{
@@ -51,8 +51,8 @@ void AttackState::perform(float deltaTime)
 
 	//Get targets in damage zone
 	BattleEntitiesMap_t entityList;
-	if (std::dynamic_pointer_cast<BattleUnit>(entity)) entityList = m_machine->get_stage()->get_enemies();
-	else entityList = m_machine->get_stage()->get_units();
+	if (std::dynamic_pointer_cast<BattleUnit>(entity)) entityList = m_machine->get_stage().lock()->get_enemies();
+	else entityList = m_machine->get_stage().lock()->get_units();
 
 	for(auto& pair : entityList)
 	{
@@ -96,7 +96,7 @@ void AttackState::perform(float deltaTime)
 
 void AttackState::exit()
 {
-	std::cout << "Exiting Attack State\n";
+	//std::cout << "Exiting Attack State\n";
 }
 
 std::string AttackState::get_state_id() const

@@ -21,7 +21,7 @@ class BattleEntity : public std::enable_shared_from_this<BattleEntity>
 public:
 
 	BattleEntity();
-	virtual ~BattleEntity() = default;
+	virtual ~BattleEntity();
 
 	virtual void update(float deltaTime, const std::map<int, std::vector<std::shared_ptr<BattleEntity>>>& entityList) = 0; //called each frame by the stage instance
 	virtual void update_position() = 0; //used to change position of all float_rects and sprites (called inside of update)
@@ -40,7 +40,7 @@ public:
 	std::shared_ptr<StateMachine> stateMachine;
 
 	//Current Stage
-	std::shared_ptr<Stage> currentStage = nullptr;
+	std::weak_ptr<Stage> currentStage;
 
 	//Data submembers
 	float currentHealth = 1.0f;

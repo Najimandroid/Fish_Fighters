@@ -54,6 +54,11 @@ BattleUnit::BattleUnit(std::shared_ptr<EntityData> data_)
 #endif
 }
 
+BattleUnit::~BattleUnit()
+{
+	std::cout << "BattleUnit Destructor called\n";
+}
+
 void BattleUnit::update(float deltaTime, const std::map<int, std::vector<std::shared_ptr<BattleEntity>>>& entityList)
 {
 	stateMachine->update_state(deltaTime);

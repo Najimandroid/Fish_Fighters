@@ -20,6 +20,7 @@ struct EntityData
 
 	//Battle datas
 	int cost = 50;
+	int cooldown = 1; 
 
 	float health = 1.0f;
 

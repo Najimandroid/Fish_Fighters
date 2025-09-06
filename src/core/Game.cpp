@@ -138,7 +138,7 @@ void Game::poll_events()
             {
                 m_window.close();
             }
-            if (e_keycode->code == sf::Keyboard::Key::A)
+           /* if (e_keycode->code == sf::Keyboard::Key::A)
             {
                 //std::cout << "spawn fish 1\n";
                 m_stage->spawn_unit(m_dataLoader->get_unit_data(1));
@@ -147,7 +147,7 @@ void Game::poll_events()
             {
                 //std::cout << "spawn fish 2\n";
                 m_stage->spawn_unit(m_dataLoader->get_unit_data(2));
-            }
+            }*/
         }
 
         if (const auto* e_window = event->getIf<sf::Event::Resized>())

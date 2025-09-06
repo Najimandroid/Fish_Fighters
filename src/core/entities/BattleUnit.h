@@ -20,6 +20,7 @@ class BattleUnit: public BattleEntity
 public:
 
 	BattleUnit(std::shared_ptr<EntityData> data_);
+	~BattleUnit();
 
 	//Overrides
 	virtual void update(float deltaTime, const std::map<int, std::vector<std::shared_ptr<BattleEntity>>>& entityList) override;

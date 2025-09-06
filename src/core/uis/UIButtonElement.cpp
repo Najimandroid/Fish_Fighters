@@ -8,7 +8,7 @@ UIButtonElement::UIButtonElement(sf::Vector2f size, sf::Vector2f position)
 	:m_shape(size)
 {
 	m_shape.setPosition(position);
-	m_shape.setFillColor(sf::Color(0, 0, 0, 128));
+	m_shape.setFillColor(sf::Color(255, 225, 145));
 }
 
 void UIButtonElement::update(float deltaTime)

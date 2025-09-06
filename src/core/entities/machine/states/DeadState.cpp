@@ -11,9 +11,9 @@ DeadState::DeadState(std::shared_ptr<StateMachine> machine)
 
 void DeadState::enter()
 {
-	std::cout << "Entering Dead State\n";
+	//std::cout << "Entering Dead State\n";
 
-	m_machine->get_owner()->isDead = true;
+	m_machine->get_owner().lock()->isDead = true;
 }
 
 void DeadState::perform(float deltaTime)
@@ -23,7 +23,7 @@ void DeadState::perform(float deltaTime)
 
 void DeadState::exit()
 {
-	std::cout << "Exiting Dead State\n";
+	//std::cout << "Exiting Dead State\n";
 }
 
 std::string DeadState::get_state_id() const

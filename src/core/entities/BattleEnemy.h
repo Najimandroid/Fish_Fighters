@@ -19,6 +19,7 @@ class BattleEnemy: public BattleEntity
 public:
 
 	BattleEnemy(std::shared_ptr<EntityData> data_, sf::Vector2f magnification_);
+	~BattleEnemy();
 
 	//Overrides
 	virtual void update(float deltaTime, const std::map<int, std::vector<std::shared_ptr<BattleEntity>>>& entityList) override;

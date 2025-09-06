@@ -15,9 +15,9 @@ KnockbackState::KnockbackState(std::shared_ptr<StateMachine> machine)
 
 void KnockbackState::enter()
 {
-	std::cout << "Entering Knockback State\n";
+	//std::cout << "Entering Knockback State\n";
 
-	auto entity = m_machine->get_owner();
+	auto entity = m_machine->get_owner().lock();
 
 	if (std::dynamic_pointer_cast<BattleUnit>(entity))
 		entity->tweenX = tweeny::from(entity->position.x).to(entity->position.x += m_knockbackDistancePx).during(60.0f * m_knockbackDuration).via(tweeny::easing::quadraticOut);
@@ -31,7 +31,7 @@ void KnockbackState::enter()
 
 void KnockbackState::perform(float deltaTime)
 {
-	auto entity = m_machine->get_owner();
+	auto entity = m_machine->get_owner().lock();
 
 	m_currentKnockbackCooldown += deltaTime;
 
@@ -53,7 +53,7 @@ void KnockbackState::perform(float deltaTime)
 
 void KnockbackState::exit()
 {
-	auto entity = m_machine->get_owner();
+	auto entity = m_machine->get_owner().lock();
 
 	if (entity->isOnShockwave == false)
 	{
@@ -65,7 +65,7 @@ void KnockbackState::exit()
 	else
 		entity->isOnShockwave = false;
 
-	std::cout << "Exiting Knockback State\n";
+	//std::cout << "Exiting Knockback State\n";
 }
 
 std::string KnockbackState::get_state_id() const

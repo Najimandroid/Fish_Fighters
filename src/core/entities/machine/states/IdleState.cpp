@@ -18,12 +18,12 @@ IdleState::IdleState(std::shared_ptr<StateMachine> machine)
 
 void IdleState::enter()
 {
-	std::cout << "Entering Idle State\n";
+	//std::cout << "Entering Idle State\n";
 }
 
 void IdleState::perform(float deltaTime)
 {
-    auto entity = m_machine->get_owner();
+    auto entity = m_machine->get_owner().lock();
 
     // Check for knockback / death
     if (entity->currentHealth <= 0.0f || entity->currentHealth <= entity->healthLeftBeforeNextKnockback)
@@ -46,9 +46,9 @@ void IdleState::perform(float deltaTime)
     // If no targets in range, scan for enemies
     BattleEntitiesMap_t entityList;
     if (std::dynamic_pointer_cast<BattleUnit>(entity))
-        entityList = m_machine->get_stage()->get_enemies();
+        entityList = m_machine->get_stage().lock()->get_enemies();
     else
-        entityList = m_machine->get_stage()->get_units();
+        entityList = m_machine->get_stage().lock()->get_units();
 
     m_areEntitiesOnRange = false;
     for (auto& pair : entityList)
@@ -80,7 +80,7 @@ void IdleState::perform(float deltaTime)
 
 void IdleState::exit()
 {
-	std::cout << "Exiting Idle State\n";
+	//std::cout << "Exiting Idle State\n";
 }
 
 std::string IdleState::get_state_id() const
