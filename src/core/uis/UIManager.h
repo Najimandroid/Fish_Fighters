@@ -1,6 +1,7 @@
 #pragma once
 
-#include "UIDeploymentIcons.h"
+#include "UIElement.h"
+#include "../DataLoader.h"
 
 #include <SFML/Graphics.hpp>
 

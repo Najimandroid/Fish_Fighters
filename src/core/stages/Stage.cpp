@@ -113,7 +113,7 @@ void Stage::update(float deltaTime)
 
 void Stage::update_cash()
 {
-	if (m_currentCash < m_MAX_CASH)
+	if (m_currentCash < m_maxCash)
 		m_currentCash += 1; //For testing purposes, add 10 cash every update
 
 	//std::cout << "[BANK]: " << m_currentCash << "$ / " << m_MAX_CASH << "$\n";
@@ -204,6 +204,11 @@ BattleEntitiesMap_t& Stage::get_units()
 int Stage::get_cash() const
 {
 	return m_currentCash;
+}
+
+int Stage::get_max_cash() const
+{
+	return m_maxCash;
 }
 
 void Stage::render(sf::RenderWindow& window)

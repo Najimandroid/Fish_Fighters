@@ -25,5 +25,5 @@ private:
 	std::vector<std::shared_ptr<UIBattleIcon>> m_icons;
 
 	std::shared_ptr<DataLoader> m_dataLoader;
-	std::shared_ptr<Stage> m_stage;
+	std::weak_ptr<Stage> m_stage;
 };

@@ -6,6 +6,8 @@ class UIElement
 {
 public:
 
+	UIElement() = default;
+	UIElement(sf::Vector2f size, sf::Vector2f position);
 	virtual ~UIElement() = default;
 
 	virtual void update(float deltaTime) = 0;

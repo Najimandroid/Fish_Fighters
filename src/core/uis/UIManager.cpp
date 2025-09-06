@@ -1,5 +1,8 @@
 #include "UIManager.h"
 
+#include "UIDeploymentIcons.h"
+#include "UIStageCash.h"
+
 void UIManager::init(std::shared_ptr<DataLoader> dataLoader)
 {
 	m_dataLoader = dataLoader;
@@ -36,5 +39,8 @@ void UIManager::handle_ui_events(const sf::Event& event, const sf::RenderWindow&
 void UIManager::generate_battle_uis(std::shared_ptr<Stage> stage)
 {
 	auto deploymentIcons = std::make_shared<UIDeploymentIcons>(m_dataLoader, stage);
+	auto stageCash = std::make_shared<UIStageCash>(stage);
+
 	add_ui_element(deploymentIcons);
+	add_ui_element(stageCash);
 }

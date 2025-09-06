@@ -54,8 +54,8 @@ void UIDeploymentIcons::init_icons()
 
                     if (auto data = weakData.lock())
                     {
-                        if (m_stage->get_cash() < data->cost) return;
-                        m_stage->spawn_unit(data);
+                        if (m_stage.lock()->get_cash() < data->cost) return;
+                        m_stage.lock()->spawn_unit(data);
                         icon->start_cooldown();
                     }
                 });

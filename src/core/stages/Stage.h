@@ -54,6 +54,7 @@ public:
 	BattleEntitiesMap_t& get_enemies();
 	BattleEntitiesMap_t& get_units();
 	int get_cash() const;
+	int get_max_cash() const;
 
 private:
 
@@ -63,7 +64,7 @@ private:
 	std::string m_stageName = "Unknown Area ???";
 
 	int m_currentCash = 0; //current cash available to the player
-	int m_MAX_CASH = 500; //maximum cash available to the player
+	int m_maxCash = 500; //maximum cash available to the player
 
 	int m_enemiesLimit = 5;
 	int m_unitsLimit = 5;
