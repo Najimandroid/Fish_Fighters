@@ -51,6 +51,8 @@ public:
 	void update_units(float deltaTime);
 	void update_bases(float deltaTime);
 
+	bool upgrade_cash(int level, int cost);
+
 	BattleEntitiesMap_t& get_enemies();
 	BattleEntitiesMap_t& get_units();
 	int get_cash() const;

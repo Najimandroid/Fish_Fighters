@@ -54,6 +54,7 @@ set(PROJECT_SOURCES
     src/core/uis/UIDeploymentIcons.cpp
     src/core/uis/UIManager.cpp
     src/core/uis/UIStageCash.cpp
+    src/core/uis/UICashUp.cpp
     # ← ajoute ici les futurs fichiers, par ex.:
     # src/utils/NewSystem.cpp
 )

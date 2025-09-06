@@ -191,6 +191,16 @@ void Stage::update_bases(float deltaTime)
 	m_fishBase->update(deltaTime, m_enemies);
 }
 
+bool Stage::upgrade_cash(int level, int cost)
+{
+	if (m_currentCash < cost) return false;
+
+	m_currentCash -= cost;
+	m_maxCash += 150 * level;
+
+	return true;
+}
+
 BattleEntitiesMap_t& Stage::get_enemies()
 {
 	return m_enemies;
