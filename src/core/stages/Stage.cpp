@@ -15,7 +15,7 @@ void Stage::init(std::shared_ptr<DataLoader> dataLoader)
 }
 
 Stage::Stage():
-	m_enemyBase(nullptr), m_fishBase(nullptr),
+	m_enemyBase(nullptr), m_unitBase(nullptr),
 
 	//m_baseTexture(sf::Texture()), m_baseSprite(sf::Sprite(m_baseTexture)), 
 	m_backgroundTexture(sf::Texture()), m_backgroundSprite(sf::Sprite(m_backgroundTexture))
@@ -60,7 +60,7 @@ void Stage::unload()
 	m_enemyStageDatas.clear();
 
 	m_enemyBase = nullptr;
-	m_fishBase = nullptr;
+	m_unitBase = nullptr;
 
 	m_isLoaded = false;
 }
@@ -139,10 +139,10 @@ void Stage::update_enemies(float deltaTime)
 				continue;
 			}
 
-			bool isFishBaseReached = enemy->attackRangeZone.findIntersection(m_fishBase->hitbox).has_value();
+			bool isFishBaseReached = enemy->attackRangeZone.findIntersection(m_unitBase->hitbox).has_value();
 			if (isFishBaseReached)
 			{
-				enemy->targets.insert(m_fishBase);
+				enemy->targets.insert(m_unitBase);
 			}
 
 			enemy->update(deltaTime, m_units);
@@ -188,7 +188,7 @@ void Stage::update_units(float deltaTime)
 void Stage::update_bases(float deltaTime)
 {
 	m_enemyBase->update(deltaTime, m_units);
-	m_fishBase->update(deltaTime, m_enemies);
+	m_unitBase->update(deltaTime, m_enemies);
 }
 
 bool Stage::upgrade_cash(int level, int cost)
@@ -221,16 +221,36 @@ int Stage::get_max_cash() const
 	return m_maxCash;
 }
 
+int Stage::get_enemy_base_health() const
+{
+	return m_enemyBase->currentHealth;
+}
+
+int Stage::get_enemy_base_max_health() const
+{
+	return m_enemyBase->maxHealth;
+}
+
+int Stage::get_unit_base_health() const
+{
+	return m_unitBase->currentHealth;
+}
+
+int Stage::get_unit_base_max_health() const
+{
+	return m_unitBase->maxHealth;
+}
+
 void Stage::render(sf::RenderWindow& window)
 {
 	window.draw(m_backgroundSprite);
 	window.draw(m_enemyBase->sprite);
-	window.draw(m_fishBase->sprite);
+	window.draw(m_unitBase->sprite);
 
 #ifdef DEBUG_MODE
 	//Rendering the hitboxes in debug mode
 	window.draw(m_enemyBase->rHitbox);
-	window.draw(m_fishBase->rHitbox);
+	window.draw(m_unitBase->rHitbox);
 #endif
 
 	//Drawing enemies
@@ -273,8 +293,8 @@ void Stage::spawn_bases(float health, std::string texture)
 	m_enemyBase = std::make_unique<BattleBase>(health, texture);
 	m_enemyBase->position = { 0.0f, 360.0f - m_enemyBase->texture.getSize().y / 2 };
 
-	m_fishBase = std::make_unique<BattleBase>(350.0f, "assets/images/textures/bases/fishBaseTEST.png");
-	m_fishBase->position = { 1280.0f - m_fishBase->texture.getSize().x, 360.0f - m_fishBase->texture.getSize().y / 2 };
+	m_unitBase = std::make_unique<BattleBase>(350.0f, "assets/images/textures/bases/fishBaseTEST.png");
+	m_unitBase->position = { 1280.0f - m_unitBase->texture.getSize().x, 360.0f - m_unitBase->texture.getSize().y / 2 };
 }
 
 void Stage::spawn_enemy(std::shared_ptr<EntityData> enemyData, sf::Vector2f magnification, int layer = -1, bool isBoss = false, bool bypassLimit = false)
@@ -311,7 +331,30 @@ void Stage::spawn_unit(std::shared_ptr<EntityData> unitData)
 	if (m_unitsCount >= m_unitsLimit) return; //return if the limit is reached
 	if (unitData->cost > m_currentCash) return; //return if the player doesn't have enough cash (broke)
 
-	std::shared_ptr<BattleUnit> battleUnit = std::make_shared<BattleUnit>(unitData);
+	sf::Vector2f unitMagnification = { 1.f, 1.f };
+
+	//Checks if the player has the unit. If so, we'll check the level to adjust the stats of the unit
+	if (auto player = m_dataLoader->get_player_data().lock())
+	{
+		auto it = player->ownedUnits.find(unitData->UID);
+
+		if (it != player->ownedUnits.end())
+		{
+			int level = it->second; //unit level
+
+			if (level > 1)
+			{
+				//+8% HP and ATK per level
+				float growth = 0.08f;
+				float multiplier = std::pow(1.f + growth, level - 1);
+
+				unitMagnification.x = multiplier;
+				unitMagnification.y = multiplier;
+			}
+		}
+	}
+
+	std::shared_ptr<BattleUnit> battleUnit = std::make_shared<BattleUnit>(unitData, unitMagnification);
 	battleUnit->set_current_stage(shared_from_this());
 	battleUnit->init_state_machine();
 	battleUnit->stateMachine->change_state(std::make_unique<IdleState>(battleUnit->stateMachine));
@@ -320,6 +363,7 @@ void Stage::spawn_unit(std::shared_ptr<EntityData> unitData)
 
 	battleUnit->update_position();
 	battleUnit->update_sprite();
+
 
 	m_unitsCount++;
 	m_currentCash -= unitData->cost;
@@ -334,6 +378,7 @@ void Stage::remove_enemy(BattleEnemy battleEnemy)
 
 void Stage::remove_unit(BattleUnit battleUnit)
 {
+	m_units.erase(battleUnit.currentLayer);
 }
 
 int Stage::generate_random_spawn_layer()

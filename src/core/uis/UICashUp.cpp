@@ -22,7 +22,6 @@ UICashUp::UICashUp(std::shared_ptr<Stage> stage):
 
 	//Font and text
 	m_font.openFromFile("assets/fonts/MPLUSRounded1c-Medium.ttf");
-	m_text.setFont(m_font);
 	m_text.setCharacterSize(20);
 	m_text.setFillColor(sf::Color::Green);
 	m_text.setOutlineColor(sf::Color::Black);
@@ -48,6 +47,18 @@ UICashUp::UICashUp(std::shared_ptr<Stage> stage):
 
 void UICashUp::update(float deltaTime)
 {
+	if (m_stage.lock()->get_cash() >= m_cost || m_level == m_maxLevel)
+	{
+		m_texture.loadFromFile("assets/images/textures/icons/uis/cash_up.png");
+		m_text.setFillColor(sf::Color::Green);
+	}
+	else
+	{
+		m_texture.loadFromFile("assets/images/textures/icons/uis/cash_up_disabled.png");
+		m_text.setFillColor(sf::Color(135, 135, 135));
+	}
+
+
 	if(m_level >= m_maxLevel)
 	{
 		m_text.setString("\t-Cash Up-\nMAX LEVEL: "

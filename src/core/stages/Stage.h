@@ -57,6 +57,10 @@ public:
 	BattleEntitiesMap_t& get_units();
 	int get_cash() const;
 	int get_max_cash() const;
+	int get_enemy_base_health() const;
+	int get_enemy_base_max_health() const;
+	int get_unit_base_health() const;
+	int get_unit_base_max_health() const;
 
 private:
 
@@ -84,7 +88,7 @@ private:
 
 	//Bases
 	std::shared_ptr<BattleBase> m_enemyBase;
-	std::shared_ptr<BattleBase> m_fishBase;
+	std::shared_ptr<BattleBase> m_unitBase;
 
 	//Rendering
 	sf::Texture m_backgroundTexture;

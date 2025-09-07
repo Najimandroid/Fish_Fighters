@@ -105,6 +105,11 @@ void Game::run_game_loop()
     ImGui::SFML::Shutdown();
 }
 
+void Game::terminate()
+{
+	m_dataLoader->terminate();
+}
+
 void Game::poll_events()
 {
     while (const auto event = m_window.pollEvent()) {

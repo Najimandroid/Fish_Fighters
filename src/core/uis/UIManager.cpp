@@ -3,6 +3,7 @@
 #include "UIDeploymentIcons.h"
 #include "UIStageCash.h"
 #include "UICashUp.h"
+#include "UIBaseHealthInfo.h"
 
 void UIManager::init(std::shared_ptr<DataLoader> dataLoader)
 {
@@ -42,8 +43,10 @@ void UIManager::generate_battle_uis(std::shared_ptr<Stage> stage)
 	auto deploymentIcons = std::make_shared<UIDeploymentIcons>(m_dataLoader, stage);
 	auto stageCash = std::make_shared<UIStageCash>(stage);
 	auto cashUp = std::make_shared<UICashUp>(stage);
+	auto baseHealthInfo = std::make_shared<UIBaseHealthInfo>(stage);
 
 	add_ui_element(deploymentIcons);
 	add_ui_element(stageCash);
 	add_ui_element(cashUp);
+	add_ui_element(baseHealthInfo);
 }

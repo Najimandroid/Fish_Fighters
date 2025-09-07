@@ -4,5 +4,6 @@ int main()
 {
 	Game game;
 	game.run_game_loop();
+	game.terminate();
 	return 0;
 }

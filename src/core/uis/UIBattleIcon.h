@@ -15,12 +15,15 @@ public:
 
 	int get_uid() const;
 	bool get_if_on_cooldown() const;
+	int get_cost() const;
+
+	void start_cooldown();
 
 	void set_uid(int uid);
 	void set_max_cooldown(int cooldown);
 	void set_cost(int cost);
-	void start_cooldown();
 	void set_texture(const std::string& texturePath);
+	void set_darkened(bool isDarkened);
 
 private:
 

@@ -22,9 +22,9 @@ struct EntityData
 	int cost = 50;
 	int cooldown = 1; 
 
-	float health = 1.0f;
+	int health = 1.0f;
 
-	float attackPower = 1.0f;
+	int attackPower = 1.0f;
 	float attackRange = 1.0f;
 	AttackType attackType = static_cast<AttackType>(1);
 	float attackFrequency = 1.0f;

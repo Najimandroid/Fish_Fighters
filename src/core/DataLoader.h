@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../data/EntityData.h"
+#include "../data/PlayerData.h"
 #include "../data/EnemyStageData.h"
 #include "../data/StageData.h"
 
@@ -23,10 +24,12 @@ class DataLoader {
 public:
 
     bool load_all();
+	bool terminate(); //saves the data which needs to be saved
 
     const std::shared_ptr<EntityData> get_unit_data(int uid) const;
     const std::shared_ptr<EntityData> get_enemy_data(int uid) const;
     const std::shared_ptr<StageData> get_stage_data(int uid) const;
+    std::weak_ptr<PlayerData> get_player_data() const;
 
     std::string get_unit_icon_texture_path(int uid) const;
     std::string get_enemy_icon_texture_path(int uid) const;
@@ -36,16 +39,19 @@ private:
     bool load_units(const std::string& path);
     bool load_enemies(const std::string& path);
     bool load_stages(const std::string& path);
+	bool load_player(const std::string& path);
+	bool save_player(const std::string& path);
 
 private:
 
     bool m_unitsLoaded = false;
     bool m_enemiesLoaded = false;
     bool m_stagesLoaded = false;
+    bool m_playerLoaded = false;
 
     std::unordered_map<int, std::shared_ptr<EntityData>> m_unitsDatabase;
     std::unordered_map<int, std::shared_ptr<EntityData>> m_enemiesDatabase;
     std::unordered_map<int, std::shared_ptr<StageData>> m_stagesDatabase;
 
-
+	std::shared_ptr<PlayerData> m_playerData = nullptr;
 };

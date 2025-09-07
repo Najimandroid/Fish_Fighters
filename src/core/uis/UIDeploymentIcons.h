@@ -20,8 +20,6 @@ public:
 
 private:
 
-	std::set<int> m_equippedUnits;
-
 	std::vector<std::shared_ptr<UIBattleIcon>> m_icons;
 
 	std::shared_ptr<DataLoader> m_dataLoader;

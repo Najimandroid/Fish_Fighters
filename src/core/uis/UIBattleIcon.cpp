@@ -25,7 +25,7 @@ UIBattleIcon::UIBattleIcon(sf::Vector2f position, const std::string& iconTexture
 		96.f / m_texture.getSize().y
 	});
 
-	//Loading font and price text
+	//Loading font and price tag
 
 	if (!m_font.openFromFile("assets/fonts/MPLUSRounded1c-Medium.ttf"))
 	{
@@ -49,12 +49,16 @@ UIBattleIcon::UIBattleIcon(sf::Vector2f position, const std::string& iconTexture
 	m_barBackground.setFillColor(sf::Color(0, 0, 0, 0));
 	m_barBackground.setPosition({
 		position.x + (96.f - barWidth) / 2.f,
-		position.y + (96.f - barHeight - 15.f)
+		position.y + (96.f - barHeight - 5.f)
 	});
 
 	m_barFill.setSize({ 0.f, barHeight });
 	m_barFill.setFillColor(sf::Color(0, 255, 255, 0));
 	m_barFill.setPosition(m_barBackground.getPosition());
+
+	//Adding m_shape outlines
+	m_shape.setOutlineColor(sf::Color::Black);
+	m_shape.setOutlineThickness(3.f);
 }
 
 void UIBattleIcon::update(float deltaTime)
@@ -81,6 +85,9 @@ void UIBattleIcon::update(float deltaTime)
 			m_barFill.setFillColor(fillColor);
 		}
 	}
+
+	std::string priceTageText = (m_isOnCooldown || m_uid < 0) ? "" : std::to_string(m_cost) + "$";
+	m_priceTag.setString(priceTageText);
 
 	float progress = m_isOnCooldown ? (m_currentCooldown / m_maxCooldown) : 0.f;
 	progress = std::clamp(progress, 0.f, 1.f);
@@ -116,6 +123,11 @@ bool UIBattleIcon::get_if_on_cooldown() const
 	return m_isOnCooldown;
 }
 
+int UIBattleIcon::get_cost() const
+{
+	return m_cost;
+}
+
 void UIBattleIcon::set_uid(int uid)
 {
 	m_uid = uid;
@@ -131,7 +143,10 @@ void UIBattleIcon::set_cost(int cost)
 	m_cost = cost;
 
 	if (m_cost < 0)
+	{ 
 		m_priceTag.setString("");
+		m_priceTag.setFillColor(sf::Color::Transparent);
+	}
 	else
 		m_priceTag.setString(std::to_string(m_cost) + "$");
 
@@ -171,4 +186,22 @@ void UIBattleIcon::set_texture(const std::string& texturePath)
 	{
 		m_texture.loadFromFile("assets/images/textures/icons/placeholder.png");
 	}
+}
+
+void UIBattleIcon::set_darkened(bool isDarkened)
+{
+	sf::Color bgColor = m_barBackground.getFillColor();
+
+	if (isDarkened)
+	{
+		bgColor.a = 128;
+		m_priceTag.setFillColor(sf::Color(128, 128, 0));
+	}
+	else
+	{
+		bgColor.a = 0;
+		m_priceTag.setFillColor(sf::Color::Yellow);
+	}
+
+	m_blackFilter.setFillColor(bgColor);
 }

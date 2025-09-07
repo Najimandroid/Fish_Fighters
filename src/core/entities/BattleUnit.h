@@ -19,7 +19,7 @@ class BattleUnit: public BattleEntity
 {
 public:
 
-	BattleUnit(std::shared_ptr<EntityData> data_);
+	BattleUnit(std::shared_ptr<EntityData> data_, sf::Vector2f magnification_);
 	~BattleUnit();
 
 	//Overrides

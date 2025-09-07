@@ -84,7 +84,13 @@ void BattleEntity::update_sprite()
 		if (currentFrameIndex * sprite.getTextureRect().size.x < texture.getSize().x - sprite.getTextureRect().size.x) currentFrameIndex++;
 		else currentFrameIndex = 0;//Reset to the idle frame
 	}
-	else if (stateMachine->get_active_state_id() == "KNOCKBACK") currentFrameIndex = data->knockbackFrameIndex;
+	else if (stateMachine->get_active_state_id() == "KNOCKBACK")
+	{
+		if (isOnShockwave)
+			currentFrameIndex = 0;
+		else
+			currentFrameIndex = data->knockbackFrameIndex;
+	}
 
 
 	//std::cout << "[Current Frame Index: " << currentFrameIndex << "]\n\n\n";

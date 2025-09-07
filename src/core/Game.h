@@ -24,6 +24,7 @@ public:
 	Game();
 
 	void run_game_loop();
+	void terminate();
 
 	//Events
 	void poll_events();

@@ -1,0 +1,19 @@
+{
+    "money": {
+        "shells": 100
+    },
+
+    "units": {
+        "owned": {
+            "1": {
+                "uid": 1,
+                "level": 1
+            }
+        },
+        "equipped": [ 1, -1, -1, -1, -1, -1, -1, -1, -1, -1 ]
+    },
+
+    "progression": {
+        "completedStages": [ 1, 2, 3, 4, 7, 8 ]
+    }
+}

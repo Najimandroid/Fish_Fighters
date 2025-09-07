@@ -4,14 +4,14 @@
 
 //BattleEnemy::BattleEnemy() = default;
 
-BattleUnit::BattleUnit(std::shared_ptr<EntityData> data_)
+BattleUnit::BattleUnit(std::shared_ptr<EntityData> data_, sf::Vector2f magnification_)
 {
 	//Init data
 	data = data_;
 
 	//Init core datas
-	//magnification = magnification_;
-	currentHealth = data->health; //* magnification.x;
+	magnification = magnification_;
+	currentHealth = data->health * magnification.x;
 	healthLeftBeforeNextKnockback = data->health - (data->health / data->knockbackCount);
 
 	position = { 1080.0f, 720.f * 2/3 };
