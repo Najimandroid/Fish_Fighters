@@ -56,7 +56,7 @@ BattleUnit::BattleUnit(std::shared_ptr<EntityData> data_, sf::Vector2f magnifica
 
 BattleUnit::~BattleUnit()
 {
-	std::cout << "BattleUnit Destructor called\n";
+	//std::cout << "BattleUnit Destructor called\n";
 }
 
 void BattleUnit::update(float deltaTime, const std::map<int, std::vector<std::shared_ptr<BattleEntity>>>& entityList)

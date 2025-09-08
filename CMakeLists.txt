@@ -49,9 +49,11 @@ set(PROJECT_SOURCES
 
     src/core/stages/Stage.cpp
 
+    src/core/uis/UIElement.cpp
     src/core/uis/UIBattleIcon.cpp
     src/core/uis/UIButtonElement.cpp
     src/core/uis/UITextElement.cpp
+    src/core/uis/UITextureElement.cpp
     src/core/uis/UIDeploymentIcons.cpp
     src/core/uis/UIManager.cpp
     src/core/uis/UIStageCash.cpp

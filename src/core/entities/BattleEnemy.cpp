@@ -57,7 +57,7 @@ BattleEnemy::BattleEnemy(std::shared_ptr<EntityData> data_, sf::Vector2f magnifi
 
 BattleEnemy::~BattleEnemy()
 {
-	std::cout << "BattleEnemy Destructor called\n";
+	//std::cout << "BattleEnemy Destructor called\n";
 }
 
 void BattleEnemy::update(float deltaTime, const std::map<int, std::vector<std::shared_ptr<BattleEntity>>>& entityList)

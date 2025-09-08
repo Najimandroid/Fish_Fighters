@@ -48,6 +48,16 @@ void Stage::load(int uid)
 	m_backgroundSprite.setTexture(m_backgroundTexture, true);
 	m_backgroundSprite.setPosition({ 0.0f, 0.0f });
 
+	//Force background to fit 1920x1080
+	sf::Vector2u texSize = m_backgroundTexture.getSize();
+	if (texSize.x > 0 && texSize.y > 0)
+	{
+		m_backgroundSprite.setScale({
+			1920.f / texSize.x,
+			1080.f / texSize.y
+		});
+	}
+
 	m_isLoaded = true;
 }
 
@@ -233,6 +243,8 @@ int Stage::get_max_cash() const
 
 void Stage::render(sf::RenderWindow& window)
 {
+	if (!m_isLoaded) return;
+
 	window.draw(m_backgroundSprite);
 	window.draw(m_enemyBase->sprite);
 	window.draw(m_unitBase->sprite);

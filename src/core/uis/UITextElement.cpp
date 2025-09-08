@@ -33,6 +33,21 @@ UITextElement::UITextElement(sf::Vector2f size, sf::Vector2f position, const std
 	m_text.setOutlineThickness(1.5f);
 }
 
+void UITextElement::set_text(const std::string& text)
+{
+	m_text.setString(text);
+}
+
+void UITextElement::set_text_color(const sf::Color& color)
+{
+	m_text.setFillColor(color);
+}
+
+void UITextElement::set_character_size(unsigned int size)
+{
+	m_text.setCharacterSize(size);
+}
+
 void UITextElement::update(float deltaTime)
 {
 }

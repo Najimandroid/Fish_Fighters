@@ -15,7 +15,7 @@ Game::Game():
 
     m_dataLoader->load_all();
 
-    m_uiManager->init(m_dataLoader);
+    m_uiManager->init(m_dataLoader, m_stage);
     m_stage->init(m_dataLoader);
 
     init_camera();
@@ -74,8 +74,8 @@ void Game::run_game_loop()
     //backgroundMusic.play();
     */
 
-    m_stage->load(1);
-	m_uiManager->generate_battle_uis(m_stage);
+  
+	m_uiManager->generate_fish_tank_uis();
 
     while (m_window.isOpen())
     {

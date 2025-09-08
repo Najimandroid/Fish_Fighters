@@ -35,7 +35,7 @@ BattleEntity::BattleEntity():
 
 BattleEntity::~BattleEntity()
 {
-	std::cout << "BattleEntity Destructor called\n";
+	//std::cout << "BattleEntity Destructor called\n";
 }
 
 void BattleEntity::init_state_machine()
