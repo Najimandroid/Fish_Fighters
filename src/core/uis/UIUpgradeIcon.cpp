@@ -29,7 +29,7 @@ UIUpgradeIcon::UIUpgradeIcon(const std::string& iconTexturePath):
 
     m_blackFilter.setSize(m_size);
     m_blackFilter.setPosition(m_position);
-    m_blackFilter.setFillColor(sf::Color(0, 0, 0, 128));
+    m_blackFilter.setFillColor(sf::Color(0, 0, 0, 175));
 
     //texts
     m_unitName.setString("Unit Name");
@@ -93,30 +93,39 @@ void UIUpgradeIcon::update(float deltaTime)
     if (tweenWidth.progress() < 1.0f || tweenHeight.progress() < 1.0f)
         set_size({ tweenWidth.step(1), tweenHeight.step(1) });
 
+    sf::Vector2f anchorPos = { m_position.x, m_position.y - m_size.y };
+
     m_shape.setSize(m_size);
-    m_shape.setPosition(m_position);
+    m_shape.setPosition(anchorPos);
 
     m_blackFilter.setSize(m_size);
-    m_blackFilter.setPosition(m_position);
+    m_blackFilter.setPosition(anchorPos);
 
-    m_sprite.setPosition(m_position);
     apply_scale();
+
+    auto texSize = m_texture.getSize();
+    float scaledHeight = texSize.y * m_sprite.getScale().y;
+
+    m_sprite.setPosition({ anchorPos.x, anchorPos.y + m_size.y - scaledHeight });
 
     auto boundsName = m_unitName.getLocalBounds();
     m_unitName.setOrigin({
         boundsName.position.x + boundsName.size.x / 2.f,
         boundsName.position.y
-        });
-    m_unitName.setPosition({ m_position.x + m_size.x / 2.f, m_position.y - 40.f });
-
-    m_unitCurrentLevel.setPosition({
-        m_position.x + m_size.x + 10.f,
-        m_position.y + m_size.y - 30.f
     });
 
+    m_unitName.setPosition({ anchorPos.x + m_size.x / 2.f, anchorPos.y - 40.f });
+
+
+    m_unitCurrentLevel.setPosition({
+        anchorPos.x + m_size.x + 10.f,
+        anchorPos.y + m_size.y - 30.f
+    });
+
+
     m_upgradeCost.setPosition({
-        m_position.x + m_size.x + 10.f,
-        m_position.y + m_size.y
+        anchorPos.x + m_size.x + 10.f,
+        anchorPos.y + m_size.y
     });
 }
 

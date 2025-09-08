@@ -29,7 +29,7 @@
         "UID": 2,
 
         "name": "Big Fish",
-        "description": "Just a normal fish but bigger.",
+        "description": "Just a normal fish but bigger.\nIt loves eating smaller fish.\nBut its favorite meal are\nsmall shrimps and crabs!",
 
         "cost": 300,
         "cooldown": 8,
