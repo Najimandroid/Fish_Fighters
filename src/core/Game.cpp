@@ -7,7 +7,7 @@ Game::Game():
     m_stage(std::make_shared<Stage>()),
 	m_uiManager(std::make_shared<UIManager>())
 {
-    m_window.create(sf::VideoMode(m_logicalResolution), "Fish Fighers"); //sf::Style::None
+    m_window.create(sf::VideoMode::getDesktopMode(), "Fish Fighers", sf::Style::None); //sf::Style::None
     m_window.setFramerateLimit(m_frameRate);
     center_window();
 
@@ -143,6 +143,24 @@ void Game::poll_events()
             {
                 m_window.close();
             }
+            else
+            if (e_keycode->code == sf::Keyboard::Key::P)
+            {
+                m_isPaused = true;
+				m_isFaster = false;
+            }
+            else
+            if (e_keycode->code == sf::Keyboard::Key::LShift)
+            {
+                m_isPaused = false;
+                m_isFaster = true;
+            }
+            else
+            if (e_keycode->code == sf::Keyboard::Key::R)
+            {
+                m_isPaused = false;
+                m_isFaster = false;
+            }
            /* if (e_keycode->code == sf::Keyboard::Key::A)
             {
                 //std::cout << "spawn fish 1\n";
@@ -165,6 +183,11 @@ void Game::poll_events()
             center_window();
         }
     }
+
+    if(m_isPaused)
+        deltaTime = 0.f;
+    else if (m_isFaster)
+        deltaTime *= 2.f;
 }
 
 void Game::resize_window(sf::Vector2u newSize)

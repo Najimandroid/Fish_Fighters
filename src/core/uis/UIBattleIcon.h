@@ -44,8 +44,4 @@ private:
 	sf::RectangleShape m_blackFilter;
 	sf::RectangleShape m_barBackground;
 	sf::RectangleShape m_barFill;
-
-	//Price text
-	sf::Font m_font;
-	sf::Text m_priceTag;
 };

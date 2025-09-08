@@ -45,13 +45,16 @@ private:
 
 private:
 
+	bool m_isPaused = false;
+	bool m_isFaster = false;
+
 	sf::RenderWindow m_window;
 	sf::View m_camera;
 
 	sf::Clock m_deltaClock;
 
 	const int m_frameRate = 60;
-	const sf::Vector2u m_logicalResolution = {1280, 720};
+	const sf::Vector2u m_logicalResolution = {1920, 1080};
 
 	std::shared_ptr<DataLoader> m_dataLoader;
 	std::shared_ptr<Stage> m_stage;

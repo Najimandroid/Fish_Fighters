@@ -14,7 +14,7 @@ BattleUnit::BattleUnit(std::shared_ptr<EntityData> data_, sf::Vector2f magnifica
 	currentHealth = data->health * magnification.x;
 	healthLeftBeforeNextKnockback = data->health - (data->health / data->knockbackCount);
 
-	position = { 1080.0f, 720.f * 2/3 };
+	position = { 1920.f - 200.f, 1080.f * 2/3 };
 
 	currentAttackCooldown = data->attackFrequency; //Set current attack cooldown to attack frequency to make them attack instantly
 	
@@ -30,9 +30,9 @@ BattleUnit::BattleUnit(std::shared_ptr<EntityData> data_, sf::Vector2f magnifica
 	//std::cout << "Spawned rect size x: " << sprite.getTextureRect().size.x << '\n';
 
 	//Init battle zones
-	hitbox.size = { static_cast<float>(texture.getSize().x / data->frameCount / 2), 720.0f };
-	attackRangeZone.size = { data->attackRange + static_cast<float>(texture.getSize().x / data->frameCount / 2) , 720.0f };
-	damageZone.size = { data->attackRange + static_cast<float>(texture.getSize().x / data->frameCount / 2) , 720.0f };
+	hitbox.size = { static_cast<float>(texture.getSize().x / data->frameCount / 2), 1080.f };
+	attackRangeZone.size = { data->attackRange + static_cast<float>(texture.getSize().x / data->frameCount / 2) , 1080.f };
+	damageZone.size = { data->attackRange + static_cast<float>(texture.getSize().x / data->frameCount / 2) , 1080.f };
 
 	//std::cout << "hitbox size x: " << static_cast<float>(texture.getSize().x / data->frameCount / 2) << '\n';
 

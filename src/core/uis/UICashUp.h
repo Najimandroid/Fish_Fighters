@@ -22,8 +22,5 @@ private:
 	sf::Sprite m_icon;
 	sf::Texture m_texture;
 
-	sf::Font m_font;
-	sf::Text m_text;
-
 	std::weak_ptr<Stage> m_stage;
 };

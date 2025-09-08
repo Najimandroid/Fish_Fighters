@@ -14,18 +14,19 @@ void UIDeploymentIcons::init_icons()
 {
     const int rows = 2;
     const int cols = 5;
-    const float iconSize = 96.f;
-    const float spacing = 16.f;
+
+    const float iconSize = 144.f;
+    const float spacing = 24.f;
 
     float totalWidth = cols * iconSize + (cols - 1) * spacing;
-    float startX = (1280.f - totalWidth) / 2.f;
-    float startY = 500.f;
+    float startX = (1920.f - totalWidth) / 2.f;
+    float startY = 750.f;
 
     int index = 0;
 
     std::array<int, 10> equippedUnits;
     if (auto player = m_dataLoader->get_player_data().lock())
-		equippedUnits = player->equipedUnits; //getting all equipped units
+        equippedUnits = player->equipedUnits; //getting all equipped units
     else
         equippedUnits.fill(-1);
 
@@ -78,7 +79,6 @@ void UIDeploymentIcons::init_icons()
         }
     }
 }
-
 
 void UIDeploymentIcons::update(float deltaTime)
 {

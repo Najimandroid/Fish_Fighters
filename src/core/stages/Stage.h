@@ -55,12 +55,10 @@ public:
 
 	BattleEntitiesMap_t& get_enemies();
 	BattleEntitiesMap_t& get_units();
+	std::weak_ptr<BattleBase> get_enemy_base() const;
+	std::weak_ptr<BattleBase> get_unit_base() const;
 	int get_cash() const;
 	int get_max_cash() const;
-	int get_enemy_base_health() const;
-	int get_enemy_base_max_health() const;
-	int get_unit_base_health() const;
-	int get_unit_base_max_health() const;
 
 private:
 

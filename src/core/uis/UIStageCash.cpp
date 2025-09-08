@@ -4,19 +4,14 @@
 
 #include <iostream>
 
-UIStageCash::UIStageCash(std::shared_ptr<Stage> stage)
-	: m_stage(stage), m_text(m_font)
+UIStageCash::UIStageCash(std::shared_ptr<Stage> stage) :
+	UITextElement({ 1.f, 1.f }, { 1.f, 1.f }),
+	m_stage(stage)
 {
-	if (!m_font.openFromFile("assets/fonts/MPLUSRounded1c-Medium.ttf"))
-	{
-		std::cout << "Failed to load font from UIStageCash\n";
-	}
-
-	m_text.setFont(m_font);
-	m_text.setCharacterSize(48);
+	m_text.setCharacterSize(72);
 	m_text.setFillColor(sf::Color::Yellow);
 	m_text.setOutlineColor(sf::Color::Black);
-	m_text.setOutlineThickness(2.f);
+	m_text.setOutlineThickness(3.f);
 }
 
 void UIStageCash::update(float deltaTime)
@@ -33,13 +28,5 @@ void UIStageCash::update(float deltaTime)
 		bounds.position.y
 	});
 
-	m_text.setPosition({ 1280.f, 0.f });
-}
-
-void UIStageCash::render(sf::RenderWindow& window)
-{
-	if (m_isVisible)
-	{
-		window.draw(m_text);
-	}
+	m_text.setPosition({ 1920.f, 0.f });
 }

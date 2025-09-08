@@ -3,16 +3,13 @@
 #include <iostream>
 
 UIBattleIcon::UIBattleIcon(sf::Vector2f position, const std::string& iconTexturePath):
-	UIButtonElement({ 96.f, 96.f }, position),
-	m_sprite(m_texture),
-	m_priceTag(m_font, "0$", 20)
+	UIButtonElement({ 144.f, 144.f }, position, "0$"),
+	m_sprite(m_texture)
 {
-
-	//Loading texture and icon sprite
-
+	//Loading icon texture and setting up sprite
 	if(!m_texture.loadFromFile(iconTexturePath))
 	{
-		m_texture.loadFromFile("assets/images/textures/icons/placeholder.png");
+		auto success = m_texture.loadFromFile("assets/images/textures/icons/placeholder.png");
 	}
 
 	m_sprite.setTextureRect(sf::IntRect(
@@ -21,20 +18,15 @@ UIBattleIcon::UIBattleIcon(sf::Vector2f position, const std::string& iconTexture
 	}));
 	m_sprite.setPosition(position);
 	m_sprite.setScale({
-		96.f / m_texture.getSize().x,
-		96.f / m_texture.getSize().y
+		144.f / m_texture.getSize().x,
+		144.f / m_texture.getSize().y
 	});
 
-	//Loading font and price tag
-
-	if (!m_font.openFromFile("assets/fonts/MPLUSRounded1c-Medium.ttf"))
-	{
-		std::cout << "Failed to load font from UIBattleIcon\n";
-	}
-
-	m_priceTag.setFillColor(sf::Color::Yellow);
-	m_priceTag.setOutlineColor(sf::Color::Black);
-	m_priceTag.setOutlineThickness(1.f);
+	//Loading price text
+	m_text.setCharacterSize(30);
+	m_text.setFillColor(sf::Color::Yellow);
+	m_text.setOutlineColor(sf::Color::Black);
+	m_text.setOutlineThickness(1.5f);
 
 	set_cost(m_cost);
 
@@ -43,13 +35,13 @@ UIBattleIcon::UIBattleIcon(sf::Vector2f position, const std::string& iconTexture
 	m_blackFilter.setPosition(m_shape.getPosition());
 	m_blackFilter.setFillColor(sf::Color(50, 50, 50, 0));
 
-	float barWidth = m_shape.getSize().x - 10.f;
-	float barHeight = 8.f;
+	float barWidth = m_shape.getSize().x - 15.f;
+	float barHeight = 12.f;
 	m_barBackground.setSize({ barWidth, barHeight });
 	m_barBackground.setFillColor(sf::Color(0, 0, 0, 0));
 	m_barBackground.setPosition({
-		position.x + (96.f - barWidth) / 2.f,
-		position.y + (96.f - barHeight - 5.f)
+		position.x + (144.f - barWidth) / 2.f,
+		position.y + (144.f - barHeight - 7.5f)
 	});
 
 	m_barFill.setSize({ 0.f, barHeight });
@@ -58,7 +50,7 @@ UIBattleIcon::UIBattleIcon(sf::Vector2f position, const std::string& iconTexture
 
 	//Adding m_shape outlines
 	m_shape.setOutlineColor(sf::Color::Black);
-	m_shape.setOutlineThickness(3.f);
+	m_shape.setOutlineThickness(4.5f);
 }
 
 void UIBattleIcon::update(float deltaTime)
@@ -87,7 +79,7 @@ void UIBattleIcon::update(float deltaTime)
 	}
 
 	std::string priceTageText = (m_isOnCooldown || m_uid < 0) ? "" : std::to_string(m_cost) + "$";
-	m_priceTag.setString(priceTageText);
+	m_text.setString(priceTageText);
 
 	float progress = m_isOnCooldown ? (m_currentCooldown / m_maxCooldown) : 0.f;
 	progress = std::clamp(progress, 0.f, 1.f);
@@ -109,7 +101,7 @@ void UIBattleIcon::render(sf::RenderWindow& window)
 		window.draw(m_barBackground);
 		window.draw(m_barFill);
 
-		window.draw(m_priceTag);
+		window.draw(m_text);
 	}
 }
 
@@ -144,22 +136,22 @@ void UIBattleIcon::set_cost(int cost)
 
 	if (m_cost < 0)
 	{ 
-		m_priceTag.setString("");
-		m_priceTag.setFillColor(sf::Color::Transparent);
+		m_text.setString("");
+		m_text.setFillColor(sf::Color::Transparent);
 	}
 	else
-		m_priceTag.setString(std::to_string(m_cost) + "$");
+		m_text.setString(std::to_string(m_cost) + "$");
 
 	auto bounds = m_shape.getGlobalBounds();
 
-	auto textBounds = m_priceTag.getLocalBounds();
-	m_priceTag.setOrigin({
+	auto textBounds = m_text.getLocalBounds();
+	m_text.setOrigin({
 		textBounds.position.x + textBounds.size.x,
 		textBounds.position.y + textBounds.size.y
 		});
 
 	sf::Vector2f posOffset = { 5.f, 8.f };
-	m_priceTag.setPosition(bounds.position + bounds.size + posOffset);
+	m_text.setPosition(bounds.position + bounds.size + posOffset);
 }
 
 void UIBattleIcon::start_cooldown()
@@ -195,12 +187,12 @@ void UIBattleIcon::set_darkened(bool isDarkened)
 	if (isDarkened)
 	{
 		bgColor.a = 128;
-		m_priceTag.setFillColor(sf::Color(128, 128, 0));
+		m_text.setFillColor(sf::Color(128, 128, 0));
 	}
 	else
 	{
 		bgColor.a = 0;
-		m_priceTag.setFillColor(sf::Color::Yellow);
+		m_text.setFillColor(sf::Color::Yellow);
 	}
 
 	m_blackFilter.setFillColor(bgColor);

@@ -211,6 +211,16 @@ BattleEntitiesMap_t& Stage::get_units()
 	return m_units;
 }
 
+std::weak_ptr<BattleBase> Stage::get_enemy_base() const
+{
+	return m_enemyBase;
+}
+
+std::weak_ptr<BattleBase> Stage::get_unit_base() const
+{
+	return m_unitBase;
+}
+
 int Stage::get_cash() const
 {
 	return m_currentCash;
@@ -219,26 +229,6 @@ int Stage::get_cash() const
 int Stage::get_max_cash() const
 {
 	return m_maxCash;
-}
-
-int Stage::get_enemy_base_health() const
-{
-	return m_enemyBase->currentHealth;
-}
-
-int Stage::get_enemy_base_max_health() const
-{
-	return m_enemyBase->maxHealth;
-}
-
-int Stage::get_unit_base_health() const
-{
-	return m_unitBase->currentHealth;
-}
-
-int Stage::get_unit_base_max_health() const
-{
-	return m_unitBase->maxHealth;
 }
 
 void Stage::render(sf::RenderWindow& window)
@@ -291,10 +281,10 @@ void Stage::render(sf::RenderWindow& window)
 void Stage::spawn_bases(float health, std::string texture)
 {
 	m_enemyBase = std::make_unique<BattleBase>(health, texture);
-	m_enemyBase->position = { 0.0f, 360.0f - m_enemyBase->texture.getSize().y / 2 };
+	m_enemyBase->position = { 20.0f, 540.0f - m_enemyBase->texture.getSize().y / 2 }; //20px to the right
 
 	m_unitBase = std::make_unique<BattleBase>(350.0f, "assets/images/textures/bases/fishBaseTEST.png");
-	m_unitBase->position = { 1280.0f - m_unitBase->texture.getSize().x, 360.0f - m_unitBase->texture.getSize().y / 2 };
+	m_unitBase->position = { 1900.0f - m_unitBase->texture.getSize().x, 540.0f - m_unitBase->texture.getSize().y / 2 }; //20px to the left
 }
 
 void Stage::spawn_enemy(std::shared_ptr<EntityData> enemyData, sf::Vector2f magnification, int layer = -1, bool isBoss = false, bool bypassLimit = false)

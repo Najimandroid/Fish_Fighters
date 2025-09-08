@@ -4,11 +4,34 @@
 
 #include <iostream>
 
-UIButtonElement::UIButtonElement(sf::Vector2f size, sf::Vector2f position)
-	:m_shape(size)
+UIButtonElement::UIButtonElement(sf::Vector2f size, sf::Vector2f position):
+	m_shape(size),
+    m_text(m_font, "Button", 30)
 {
+    auto success = m_font.openFromFile("assets/fonts/MPLUSRounded1c-Medium.ttf");
+
+    m_text.setPosition(position);
+    m_text.setFillColor(sf::Color::White);
+    m_text.setOutlineColor(sf::Color::Black);
+    m_text.setOutlineThickness(1.5f);
+
 	m_shape.setPosition(position);
 	m_shape.setFillColor(sf::Color(255, 225, 145));
+}
+
+UIButtonElement::UIButtonElement(sf::Vector2f size, sf::Vector2f position, const std::string& text):
+    m_shape(size),
+    m_text(m_font, text, 30)
+{
+    auto success = m_font.openFromFile("assets/fonts/MPLUSRounded1c-Medium.ttf");
+
+    m_text.setPosition(position);
+    m_text.setFillColor(sf::Color::White);
+    m_text.setOutlineColor(sf::Color::Black);
+    m_text.setOutlineThickness(1.5f);
+
+    m_shape.setPosition(position);
+    m_shape.setFillColor(sf::Color(255, 225, 145));
 }
 
 void UIButtonElement::update(float deltaTime)
