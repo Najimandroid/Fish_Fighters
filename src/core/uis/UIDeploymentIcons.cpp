@@ -74,7 +74,7 @@ void UIDeploymentIcons::init_icons()
                 icon->set_max_cooldown(-1);
             }
 
-            m_icons.push_back(icon);
+            m_icons[index] = icon;
             index++;
         }
     }

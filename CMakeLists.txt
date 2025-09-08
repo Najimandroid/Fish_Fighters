@@ -59,6 +59,8 @@ set(PROJECT_SOURCES
     src/core/uis/UIStageCash.cpp
     src/core/uis/UICashUp.cpp
     src/core/uis/UIBaseHealthInfo.cpp
+    src/core/uis/UIUpgradeIcon.cpp
+    src/core/uis/UIUpgradeSlider.cpp
 
     src/data/PlayerData.cpp
     # ← ajoute ici les futurs fichiers, par ex.:

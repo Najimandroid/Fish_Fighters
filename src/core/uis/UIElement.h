@@ -14,6 +14,12 @@ public:
 	virtual void render(sf::RenderWindow& window) = 0;
 	virtual void handle_event(const sf::Event& event, const sf::RenderWindow& window) {}
 
+	virtual void set_position(sf::Vector2f newPosition);
+	virtual void set_size(sf::Vector2f newSize);
+
+	sf::Vector2f get_position() const;
+	sf::Vector2f get_size() const;
+
 protected:
 
 	sf::Vector2f m_position = { 0.0f, 0.0f };

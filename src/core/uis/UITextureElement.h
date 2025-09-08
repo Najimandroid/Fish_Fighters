@@ -12,7 +12,7 @@ public:
     void render(sf::RenderWindow& window) override;
 
     void set_texture(const std::string& texturePath);
-    void set_size(sf::Vector2f newSize);
+    void set_size(sf::Vector2f newSize) override;
 
 protected:
 

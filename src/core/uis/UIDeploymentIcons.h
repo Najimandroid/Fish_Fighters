@@ -20,7 +20,7 @@ public:
 
 private:
 
-	std::vector<std::shared_ptr<UIBattleIcon>> m_icons;
+	std::array<std::shared_ptr<UIBattleIcon>, 10> m_icons;
 
 	std::shared_ptr<DataLoader> m_dataLoader;
 	std::weak_ptr<Stage> m_stage;

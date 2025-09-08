@@ -34,7 +34,7 @@ void UIBaseHealthInfo::update(float deltaTime)
 		m_textEnemyBase.setOrigin({
 			boundsEnemy.position.x + boundsEnemy.size.x / 2.f,
 			boundsEnemy.position.y
-			});
+		});
 		m_textEnemyBase.setPosition(
 			stage->get_enemy_base().lock()->position + sf::Vector2f{ 100.f, -80.f } //centered above the base
 		);

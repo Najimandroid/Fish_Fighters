@@ -6,7 +6,7 @@
 #include "UIStageCash.h"
 #include "UICashUp.h"
 #include "UIBaseHealthInfo.h"
-#include "UITextureElement.h"
+#include "UIUpgradeSlider.h"
 
 void UIManager::init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<Stage> stage)
 {
@@ -97,11 +97,14 @@ void UIManager::generate_fish_tank_uis()
     {
 		// TODO : open upgrade menu
     });
+
+	auto upgradeSlider = std::make_shared<UIUpgradeSlider>(m_dataLoader);
     
     add_ui_element(bg);
     add_ui_element(title);
     add_ui_element(battleButton);
     add_ui_element(upgradeButton);
+    add_ui_element(upgradeSlider);
 }
 
 void UIManager::generate_battle_uis()
