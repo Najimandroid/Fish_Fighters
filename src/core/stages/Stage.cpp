@@ -43,10 +43,17 @@ void Stage::load(int uid)
 
 	spawn_bases(stageJson->baseHealth, stageJson->baseTexture);
 
-	m_enemyStageDatas = stageJson->enemies;
+	//Copying the stageData
+	m_enemyStageDatas.clear();
+	for (auto& enemy : stageJson->enemies)
+	{
+		auto enemyCopy = std::make_shared<EnemyStageData>(*enemy);
+		enemyCopy->currentTimer = enemyCopy->respawnTime;
+		m_enemyStageDatas.push_back(enemyCopy);
+	}
 
 	//Setup background
-	bool bg = m_backgroundTexture.loadFromFile(stageJson->backgroundTexture); //to do: adding default bground
+	bool bg = m_backgroundTexture.loadFromFile(stageJson->backgroundTexture); //to do: adding default background
 	m_backgroundSprite.setTexture(m_backgroundTexture, true);
 	m_backgroundSprite.setPosition({ 0.0f, 0.0f });
 
