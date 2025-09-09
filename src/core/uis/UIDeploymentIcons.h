@@ -18,6 +18,8 @@ public:
 	void render(sf::RenderWindow& window) override;
 	void handle_event(const sf::Event& event, const sf::RenderWindow& window) override;
 
+	sf::FloatRect get_bounds() const override;
+
 private:
 
 	std::array<std::shared_ptr<UIBattleIcon>, 10> m_icons;

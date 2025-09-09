@@ -19,6 +19,11 @@ public:
 
 	sf::Vector2f get_position() const;
 	sf::Vector2f get_size() const;
+	virtual sf::FloatRect get_bounds() const;
+
+public:
+
+	bool isWorldSpaceUi = false;
 
 protected:
 

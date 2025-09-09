@@ -286,6 +286,11 @@ int Stage::get_max_cash() const
 	return m_maxCash;
 }
 
+bool Stage::is_loaded() const
+{
+	return m_isLoaded;
+}
+
 void Stage::render(sf::RenderWindow& window)
 {
 	if (!m_isLoaded) return;

@@ -114,3 +114,45 @@ void UIDeploymentIcons::handle_event(const sf::Event& event, const sf::RenderWin
         icon->handle_event(event, window);
     }
 }
+
+sf::FloatRect UIDeploymentIcons::get_bounds() const
+{
+    bool first = true;
+    float minX = 0.f, minY = 0.f;
+    float maxX = 0.f, maxY = 0.f;
+
+    for (const auto& icon : m_icons)
+    {
+        if (!icon) continue;
+        sf::FloatRect b = icon->get_bounds();
+
+        float bx = b.position.x;
+        float by = b.position.y;
+        float bw = b.size.x;
+        float bh = b.size.y;
+
+        if (first)
+        {
+            minX = bx;
+            minY = by;
+            maxX = bx + bw;
+            maxY = by + bh;
+            first = false;
+        }
+        else
+        {
+            minX = std::min(minX, bx);
+            minY = std::min(minY, by);
+            maxX = std::max(maxX, bx + bw);
+            maxY = std::max(maxY, by + bh);
+        }
+    }
+
+    if (first)
+        return sf::FloatRect({ 0.f, 0.f }, { 0.f, 0.f });
+
+    return sf::FloatRect(
+        { minX, minY },
+        { maxX - minX, maxY - minY }
+    );
+}

@@ -23,3 +23,8 @@ sf::Vector2f UIElement::get_size() const
 {
 	return m_size;
 }
+
+sf::FloatRect UIElement::get_bounds() const
+{
+	return sf::FloatRect{ m_position, m_size };
+}

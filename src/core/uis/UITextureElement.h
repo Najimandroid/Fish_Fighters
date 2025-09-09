@@ -14,6 +14,8 @@ public:
     void set_texture(const std::string& texturePath);
     void set_size(sf::Vector2f newSize) override;
 
+    sf::FloatRect get_bounds() const override;
+
 protected:
 
     sf::Texture m_texture;

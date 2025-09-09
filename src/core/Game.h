@@ -39,7 +39,7 @@ public:
 
 private:
 
-	void init_camera();
+	void init_cameras();
 
 	void debug_ui();
 
@@ -49,12 +49,18 @@ private:
 	bool m_isFaster = false;
 
 	sf::RenderWindow m_window;
-	sf::View m_camera;
+	sf::View m_uiCamera; //camera used to render UIs
+	sf::View m_stageCamera; //camera used to render stages' elements
 
 	sf::Clock m_deltaClock;
 
 	const int m_frameRate = 60;
 	const sf::Vector2u m_logicalResolution = {1920, 1080};
+
+	//Mouse related
+	float m_currentZoom = 1.f;
+	bool m_isDragging = false;
+	sf::Vector2i m_lastMousePos{ 0, 0 };
 
 	std::shared_ptr<DataLoader> m_dataLoader;
 	std::shared_ptr<Stage> m_stage;

@@ -62,6 +62,7 @@ public:
 	std::weak_ptr<BattleBase> get_unit_base() const;
 	int get_cash() const;
 	int get_max_cash() const;
+	bool is_loaded() const;
 
 private:
 
@@ -98,8 +99,8 @@ private:
 	sf::Sprite m_backgroundSprite;
 
 	//Other
-	float m_elapsedTime = 0.f;
 	bool m_isLoaded = false;
+	float m_elapsedTime = 0.f;
 
 private:
 

@@ -115,3 +115,8 @@ void UIButtonElement::handle_event(const sf::Event& event, const sf::RenderWindo
         }
     }
 }
+
+sf::FloatRect UIButtonElement::get_bounds() const
+{
+    return m_shape.getGlobalBounds();
+}

@@ -18,21 +18,28 @@ Game::Game():
     m_uiManager->init(m_dataLoader, m_stage);
     m_stage->init(m_dataLoader, m_uiManager);
 
-    init_camera();
+    init_cameras();
 }
 
-void Game::init_camera()
+void Game::init_cameras()
 {
-    m_camera.setSize(static_cast<sf::Vector2f>(m_logicalResolution));
+    m_uiCamera.setSize(static_cast<sf::Vector2f>(m_logicalResolution));
+    m_uiCamera.setCenter(m_uiCamera.getSize() / 2.f);
 
-    m_camera.setCenter(m_camera.getSize() / 2.f);
+    m_stageCamera.setSize(static_cast<sf::Vector2f>(m_logicalResolution));
+    m_stageCamera.setCenter(m_stageCamera.getSize() / 2.f);
 
-    m_camera.setViewport(sf::FloatRect{
+    m_uiCamera.setViewport(sf::FloatRect{
     {0.f, 0.f},
     {1.f, 1.f}
-        });
+    });
 
-    m_window.setView(m_camera);
+    m_stageCamera.setViewport(sf::FloatRect{
+    {0.f, 0.f},
+    {1.f, 1.f}
+    });
+
+    m_stageCamera.zoom(0.9f);
 }
 
 void Game::debug_ui()
@@ -95,8 +102,11 @@ void Game::run_game_loop()
         m_window.clear();
         //m_window.draw(shape);
         //m_window.draw(sprite);
+        m_window.setView(m_stageCamera);
         m_stage->render(m_window);
-		m_uiManager->render_uis(m_window);
+
+        m_window.setView(m_uiCamera);
+		m_uiManager->render_uis(m_window, m_uiCamera, m_stageCamera);
 
         debug_ui();
         m_window.display();
@@ -173,13 +183,144 @@ void Game::poll_events()
             }*/
         }
 
+        if (const auto* e_wheel = event->getIf<sf::Event::MouseWheelScrolled>()) 
+        {
+            if (!m_stage->is_loaded()) return;
+
+            sf::Vector2i pixel = e_wheel->position;
+            sf::Vector2f uiWorldPos = m_window.mapPixelToCoords(pixel, m_uiCamera);
+
+            if (!m_uiManager->is_mouse_over_ui(static_cast<sf::Vector2i>(uiWorldPos))) 
+            {
+                float factor = (e_wheel->delta > 0.f) ? 0.9f : 1.1f;
+                float newZoom = m_currentZoom * factor;
+
+                if (newZoom < 0.9f) newZoom = 0.9f;
+                if (newZoom > 1.5f) newZoom = 1.5f;
+
+                float appliedFactor = newZoom / m_currentZoom;
+                m_stageCamera.zoom(appliedFactor);
+                m_currentZoom = newZoom;
+
+                // clamp camera after zoom
+                auto unitBase = m_stage->get_unit_base().lock();
+                auto enemyBase = m_stage->get_enemy_base().lock();
+                if (unitBase && enemyBase) 
+                {
+                    sf::Vector2f center = m_stageCamera.getCenter();
+                    float viewWidth = m_stageCamera.getSize().x;
+                    const float margin = 0.25f;
+                    const float baseWidth = 200.f;
+
+                    float minCenterX = enemyBase->position.x + baseWidth + (0.5f - margin) * viewWidth;
+                    float maxCenterX = unitBase->position.x - (0.5f - margin) * viewWidth;
+
+                    if (minCenterX > maxCenterX) 
+                    {
+                        float mid = (enemyBase->position.x + unitBase->position.x) * 0.5f;
+                        minCenterX = maxCenterX = mid;
+                    }
+
+                    center.x = std::clamp(center.x, minCenterX, maxCenterX);
+                    m_stageCamera.setCenter(center);
+                }
+            }
+        }
+
+
+        if (const auto* e_mousePressed = event->getIf<sf::Event::MouseButtonPressed>())
+        {
+            if (e_mousePressed->button == sf::Mouse::Button::Left)
+            {
+                sf::Vector2i pixelPos = e_mousePressed->position;
+                sf::Vector2f worldPos = m_window.mapPixelToCoords(pixelPos, m_uiCamera);
+
+                if (!m_uiManager->is_mouse_over_ui(static_cast<sf::Vector2i>(worldPos)))
+                {
+                    m_isDragging = true;
+                    m_lastMousePos = pixelPos;
+                }
+            }
+        }
+
+        if (const auto* e_mouseReleased = event->getIf<sf::Event::MouseButtonReleased>())
+        {
+            if (e_mouseReleased->button == sf::Mouse::Button::Left)
+            {
+                m_isDragging = false;
+            }
+        }
+
+        if (const auto* e_mouseMoved = event->getIf<sf::Event::MouseMoved>())
+        {
+            if (m_isDragging && m_stage->is_loaded())
+            {
+                sf::Vector2i currentPixel = e_mouseMoved->position;
+
+                sf::Vector2f prevWorld = m_window.mapPixelToCoords(m_lastMousePos, m_stageCamera);
+                sf::Vector2f curWorld = m_window.mapPixelToCoords(currentPixel, m_stageCamera);
+                sf::Vector2f worldDelta = prevWorld - curWorld;
+                worldDelta.y = 0.f;
+
+                auto unitBase = m_stage->get_unit_base().lock();
+                auto enemyBase = m_stage->get_enemy_base().lock();
+
+
+                if (unitBase && enemyBase) {
+                    m_stageCamera.move(worldDelta);
+
+                    sf::Vector2f center = m_stageCamera.getCenter();
+                    float viewWidth = m_stageCamera.getSize().x;
+
+                    const float margin = 0.25f;
+                    const float baseWidth = 200.f;
+
+                    float minCenterX = enemyBase->position.x + baseWidth + (0.5f - margin) * viewWidth;
+                    float maxCenterX = unitBase->position.x - (0.5f - margin) * viewWidth;
+
+                    if (minCenterX > maxCenterX) {
+                        float mid = (enemyBase->position.x + unitBase->position.x) * 0.5f;
+                        minCenterX = maxCenterX = mid;
+                    }
+
+                    center.x = std::clamp(center.x, minCenterX, maxCenterX);
+                    m_stageCamera.setCenter(center);
+                }
+
+                m_lastMousePos = currentPixel;
+            }
+        }
+
         if (const auto* e_window = event->getIf<sf::Event::Resized>())
         {
-            m_camera.setViewport(sf::FloatRect{
-                    {0.f, 0.f},
-                    {1.f, 1.f}
-                });
-            m_window.setView(m_camera);
+            auto newSize = e_window->size; // taille réelle de la fenêtre
+
+            // 1. Adapter la vue UI (toujours fixe)
+            m_uiCamera.setSize(static_cast<sf::Vector2f>(m_logicalResolution));
+            m_uiCamera.setCenter({ m_logicalResolution.x / 2.f, m_logicalResolution.y / 2.f });
+
+            // 2. Adapter la vue gameplay (respecte le ratio)
+            float windowRatio = static_cast<float>(newSize.x) / newSize.y;
+            float logicalRatio = static_cast<float>(m_logicalResolution.x) / m_logicalResolution.y;
+
+            if (windowRatio > logicalRatio)
+            {
+                // Fenêtre trop large => bandes verticales
+                float width = m_logicalResolution.y * windowRatio;
+                m_stageCamera.setSize({ width, static_cast<float>(m_logicalResolution.y) });
+            }
+            else
+            {
+                // Fenêtre trop haute => bandes horizontales
+                float height = m_logicalResolution.x / windowRatio;
+                m_stageCamera.setSize({ static_cast<float>(m_logicalResolution.x), height });
+            }
+
+            // On garde le centre actuel de la caméra gameplay (utile si l’utilisateur a bougé/zoomé)
+            // Rien à faire si tu veux garder le centre tel quel
+
+            // 3. Réappliquer la vue courante à la fenêtre
+            m_window.setView(m_uiCamera); // par défaut sur UI
             center_window();
         }
     }

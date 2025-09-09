@@ -47,6 +47,11 @@ void UITextureElement::set_size(sf::Vector2f newSize)
     apply_scale();
 }
 
+sf::FloatRect UITextureElement::get_bounds() const
+{
+    return m_sprite.getGlobalBounds();
+}
+
 void UITextureElement::apply_scale()
 {
     sf::Vector2u texSize = m_texture.getSize();

@@ -20,12 +20,14 @@ public:
 
 	void add_ui_element(std::shared_ptr<UIElement> element);
 	void update_uis(float deltaTime);
-	void render_uis(sf::RenderWindow& window);
+	void render_uis(sf::RenderWindow& window, sf::View& uiView, sf::View& worldView);
 	void handle_ui_events(const sf::Event& event, const sf::RenderWindow& window);
 
 	void generate_fish_tank_uis();
 	void generate_upgrade_menu_uis();
 	void generate_battle_uis();
+
+	bool is_mouse_over_ui(const sf::Vector2i& worldPosition) const;
 
 private:
 

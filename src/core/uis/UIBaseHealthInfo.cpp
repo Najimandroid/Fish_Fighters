@@ -5,6 +5,8 @@ UIBaseHealthInfo::UIBaseHealthInfo(std::shared_ptr<Stage> stage):
 	m_stage(stage),
 	m_textEnemyBase(m_font), m_textUnitBase(m_font)
 {
+	isWorldSpaceUi = true;
+
 	auto success = m_font.openFromFile("assets/fonts/MPLUSRounded1c-Medium.ttf");
 
 	m_textEnemyBase.setCharacterSize(20);

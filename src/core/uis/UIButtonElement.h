@@ -27,6 +27,8 @@ public:
 	void render(sf::RenderWindow& window) override;
 	void handle_event(const sf::Event& event, const sf::RenderWindow& window) override;
 
+	sf::FloatRect get_bounds() const override;
+
 protected:
 
 	sf::RectangleShape m_shape;

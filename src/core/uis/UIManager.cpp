@@ -28,11 +28,20 @@ void UIManager::update_uis(float deltaTime)
 	}
 }
 
-void UIManager::render_uis(sf::RenderWindow& window)
+void UIManager::render_uis(sf::RenderWindow& window, sf::View& uiView, sf::View& worldView)
 {
 	for(auto& element : m_uiElements)
 	{
-		element->render(window);
+        if (element->isWorldSpaceUi)
+        {
+            window.setView(worldView);
+            element->render(window);
+            window.setView(uiView);
+        }
+        else
+        {
+            element->render(window);
+        }
 	}
 }
 
@@ -171,4 +180,15 @@ void UIManager::generate_battle_uis()
 	add_ui_element(stageCash);
 	add_ui_element(cashUp);
 	add_ui_element(baseHealthInfo);
+}
+
+bool UIManager::is_mouse_over_ui(const sf::Vector2i& worldPosition) const
+{
+    for (auto& e : m_uiElements)
+    {
+        if (!e) continue;
+        sf::FloatRect b = e->get_bounds();
+        if (b.contains(static_cast<sf::Vector2f>(worldPosition))) return true;
+    }
+    return false;
 }
