@@ -7,6 +7,7 @@
 #include "UICashUp.h"
 #include "UIBaseHealthInfo.h"
 #include "UIUpgradeSlider.h"
+#include "UIPlayerShellsInfo.h"
 
 void UIManager::init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<Stage> stage)
 {
@@ -55,7 +56,6 @@ void UIManager::generate_fish_tank_uis()
     m_uiElements.clear();
 
     //background
-
     auto bg = std::make_shared<UITextureElement>(
         sf::Vector2f{ 1920.f, 1080.f },
         sf::Vector2f{ 0.f, 0.f },
@@ -84,7 +84,7 @@ void UIManager::generate_fish_tank_uis()
                 stage->load(1);
                 generate_battle_uis();
             }
-            };
+        };
     });
 
 	//upgrade button
@@ -95,16 +95,49 @@ void UIManager::generate_fish_tank_uis()
     );
     upgradeButton->set_callback([this]() 
     {
-		// TODO : open upgrade menu
+        m_pendingAction = [this]() {
+            if (auto stage = m_stage.lock())
+            {
+                generate_upgrade_menu_uis();
+            }
+        };
     });
 
-	auto upgradeSlider = std::make_shared<UIUpgradeSlider>(m_dataLoader);
     
     add_ui_element(bg);
     add_ui_element(title);
     add_ui_element(battleButton);
     add_ui_element(upgradeButton);
+
+}
+
+void UIManager::generate_upgrade_menu_uis()
+{
+    m_uiElements.clear();
+
+    //background
+    auto bg = std::make_shared<UITextureElement>(
+        sf::Vector2f{ 1920.f, 1080.f },
+        sf::Vector2f{ 0.f, 0.f },
+        "assets/images/textures/backgrounds/fish_tank.png"
+    );
+
+    //title text "Upgrades"
+    auto title = std::make_shared<UITextElement>(
+        sf::Vector2f{ 0.f, 0.f },
+        sf::Vector2f{ 50.f, 50.f },
+        "Upgrades",
+        48
+    );
+
+    //slider
+    auto upgradeSlider = std::make_shared<UIUpgradeSlider>(m_dataLoader);
+	auto shellsInfo = std::make_shared<UIPlayerShellsInfo>(m_dataLoader);
+
+    add_ui_element(bg);
+    add_ui_element(title);
     add_ui_element(upgradeSlider);
+    add_ui_element(shellsInfo);
 }
 
 void UIManager::generate_battle_uis()

@@ -22,7 +22,7 @@ void PlayerData::equip_unit(int unitUid, int slot)
 	auto it = ownedUnits.find(unitUid);
 	if (it != ownedUnits.end())
 	{
-		equipedUnits[slot] = unitUid;
+		equippedUnits[slot] = unitUid;
 	}
 }
 
@@ -30,7 +30,24 @@ void PlayerData::unequip_unit(int slot)
 {
 	if (slot < 0 || slot > 9) return;
 
-	equipedUnits[slot] = -1;
+	equippedUnits[slot] = -1;
+}
+
+bool PlayerData::is_unit_owned(int unitUid) const
+{
+	return ownedUnits.find(unitUid) != ownedUnits.end();
+}
+
+int PlayerData::get_unit_level(int unitUid) const
+{
+	auto it = ownedUnits.find(unitUid);
+
+	if (it != ownedUnits.end())
+	{
+		return it->second;
+	}
+
+	return 0;
 }
 
 void PlayerData::gain_shells(int amount)

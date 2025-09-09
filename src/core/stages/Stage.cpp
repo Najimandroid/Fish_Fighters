@@ -338,16 +338,14 @@ void Stage::spawn_unit(std::shared_ptr<EntityData> unitData)
 	//Checks if the player has the unit. If so, we'll check the level to adjust the stats of the unit
 	if (auto player = m_dataLoader->get_player_data().lock())
 	{
-		auto it = player->ownedUnits.find(unitData->UID);
-
-		if (it != player->ownedUnits.end())
+		if (player->is_unit_owned(unitData->UID))
 		{
-			int level = it->second; //unit level
+			int level = player->get_unit_level(unitData->UID);
 
 			if (level > 1)
 			{
-				//+8% HP and ATK per level
-				float growth = 0.08f;
+				//+15% for HP and DMG per level
+				float growth = 0.15f;
 				float multiplier = std::pow(1.f + growth, level - 1);
 
 				unitMagnification.x = multiplier;

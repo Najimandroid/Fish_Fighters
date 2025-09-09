@@ -38,4 +38,6 @@ struct EntityData
 	std::string texture;
 	int frameCount = 1;
 	int knockbackFrameIndex = 1;
+
+	int baseUpgradeCost = 100; //Used primaryly for units
 };

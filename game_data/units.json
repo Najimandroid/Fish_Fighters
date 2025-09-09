@@ -4,6 +4,7 @@
 
         "name": "Fish",
         "description": "Just a normal fish.",
+        "baseUpgradeCost": 100,
 
         "cost": 50,
         "cooldown": 2,
@@ -30,6 +31,7 @@
 
         "name": "Big Fish",
         "description": "Just a normal fish but bigger.\nIt loves eating smaller fish.\nBut its favorite meal are\nsmall shrimps and crabs!",
+        "baseUpgradeCost": 200,
 
         "cost": 300,
         "cooldown": 8,

@@ -5,7 +5,8 @@
 UIUpgradeSlider::UIUpgradeSlider(std::shared_ptr<DataLoader> dataLoader):
 	m_dataLoader(dataLoader),
 	m_lowerPart(sf::RectangleShape(sf::Vector2f{1920.f, 360.f})),
-	m_description(m_font)
+	m_description(m_font),
+	m_upgradeButton(UIButtonElement({200.f, 150.f}, {50.f, 800.f}, "UPGRADE"))
 {
 
 	m_lowerPart.setFillColor(sf::Color(65, 145, 195));
@@ -17,6 +18,32 @@ UIUpgradeSlider::UIUpgradeSlider(std::shared_ptr<DataLoader> dataLoader):
 	m_description.setOutlineColor(sf::Color::Black);
 	m_description.setOutlineThickness(2.f);
 
+
+	m_upgradeButton.set_callback([this]()
+		{
+			if (auto player = m_dataLoader->get_player_data().lock())
+			{
+				int unitUid = m_availableUpgrades[m_currentIndex];
+				int level = player->get_unit_level(unitUid);
+
+				int upgradeCost = calculate_upgrade_cost(unitUid, level);
+
+				if (player->spend_shells(upgradeCost))
+				{
+					if (player->is_unit_owned(unitUid)) player->upgrade_unit(unitUid);
+					else player->unlock_unit(unitUid);
+
+					//Refresh selected icon
+					auto icon = m_upgradeIcons[m_currentIndex];
+					auto unitUid = m_availableUpgrades[m_currentIndex];
+					auto unitLevel = player->get_unit_level(unitUid);
+
+					icon->set_unit_level(unitLevel);
+					icon->set_upgrade_cost(calculate_upgrade_cost(unitUid, unitLevel));
+				}
+			}
+		}
+	);
 
 	init_icons();
 }
@@ -31,14 +58,16 @@ void UIUpgradeSlider::init_icons()
 
     for (int i = 0; i < static_cast<int>(m_availableUpgrades.size()); ++i)
     {
-		auto unitData = m_dataLoader->get_unit_data(m_availableUpgrades[i]);
+		auto unitUid = m_availableUpgrades[i];
+		auto unitLevel = playerData->get_unit_level(unitUid);
+		auto unitData = m_dataLoader->get_unit_data(unitUid);
 
-        auto icon = std::make_shared<UIUpgradeIcon>(m_dataLoader->get_unit_icon_texture_path(m_availableUpgrades[i]));
+        auto icon = std::make_shared<UIUpgradeIcon>(m_dataLoader->get_unit_icon_texture_path(unitUid));
         icon->select(i == m_currentIndex);
 
 		icon->set_unit_name(unitData->name);
-		//icon->set_unit_level(playerData->ownedUnits[]);
-		//icon->set_upgrade_cost(const std::string & name);
+		icon->set_unit_level(unitLevel);
+		icon->set_upgrade_cost(calculate_upgrade_cost(unitUid, unitLevel));
 
 		float xOffset = (i - m_currentIndex) * ICON_SPACING;
 		float posX = screenCenter.x + xOffset;
@@ -55,6 +84,39 @@ void UIUpgradeSlider::init_icons()
 
         m_upgradeIcons.push_back(icon);
     }
+}
+
+int UIUpgradeSlider::calculate_upgrade_cost(int uid, int level)
+{
+	if (level <= 0) return 0;
+
+	int baseCost = m_dataLoader->get_unit_data(uid)->baseUpgradeCost;
+
+	float factor = 1.45f;
+	float evolutionDiscount = 0.7f; //reduction factor applied after a unit evolved
+
+	//Define evolution levels
+	std::array<int, 2> evolutionLevels = { 10, 30 };
+
+	//Counting how many evolutions the unit has had
+	int evolutions = 0;
+	int previousEvolutionLevel = 0;
+	for (int eLevel : evolutionLevels)
+	{
+		if (level >= eLevel)
+		{
+			evolutions++;
+			previousEvolutionLevel = eLevel;
+		}
+		else break;
+	}
+
+	int levelInCycle = (level - 1) - previousEvolutionLevel; //Level within the current evolution cycle
+
+	//Calculate the cost
+	float upgradeCost = baseCost * pow(factor, levelInCycle) * pow(evolutionDiscount, evolutions);
+		
+	return static_cast<int>(upgradeCost);
 }
 
 void UIUpgradeSlider::update(float deltaTime)
@@ -86,6 +148,8 @@ void UIUpgradeSlider::render(sf::RenderWindow& window)
 
 	window.draw(m_lowerPart);
 	window.draw(m_description);
+
+	m_upgradeButton.render(window);
 }
 
 void UIUpgradeSlider::handle_event(const sf::Event& event, const sf::RenderWindow& window)
@@ -131,4 +195,6 @@ void UIUpgradeSlider::handle_event(const sf::Event& event, const sf::RenderWindo
 
     for (auto& icon : m_upgradeIcons)
         icon->handle_event(event, window);
+
+	m_upgradeButton.handle_event(event, window);
 }

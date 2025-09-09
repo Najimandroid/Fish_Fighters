@@ -47,6 +47,7 @@ bool DataLoader::load_units(const std::string& path)
 
         data->name = value.at("name").get<std::string>();
         data->description = value.at("description").get<std::string>();
+		data->baseUpgradeCost = value.at("baseUpgradeCost").get<int>();
 
         data->cost = value.at("cost").get<int>();
         data->cooldown = value.at("cooldown").get<int>();
@@ -235,9 +236,9 @@ bool DataLoader::load_player(const std::string& path)
 
         //Equipped units
         auto equippedArray = j.at("units").at("equipped");
-        for (size_t i = 0; i < equippedArray.size() && i < m_playerData->equipedUnits.size(); i++)
+        for (size_t i = 0; i < equippedArray.size() && i < m_playerData->equippedUnits.size(); i++)
         {
-            m_playerData->equipedUnits[i] = equippedArray[i].get<int>();
+            m_playerData->equippedUnits[i] = equippedArray[i].get<int>();
         }
 
         //Completed stages
@@ -253,6 +254,7 @@ bool DataLoader::load_player(const std::string& path)
         return false;
     }
 
+    m_playerLoaded = true;
     return true;
 }
 
@@ -280,7 +282,7 @@ bool DataLoader::save_player(const std::string& path)
 
     // Equipped units
     j["units"]["equipped"] = json::array();
-    for (int uid : m_playerData->equipedUnits)
+    for (int uid : m_playerData->equippedUnits)
     {
         j["units"]["equipped"].push_back(uid);
     }

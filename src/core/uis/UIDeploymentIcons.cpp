@@ -26,7 +26,7 @@ void UIDeploymentIcons::init_icons()
 
     std::array<int, 10> equippedUnits;
     if (auto player = m_dataLoader->get_player_data().lock())
-        equippedUnits = player->equipedUnits; //getting all equipped units
+        equippedUnits = player->equippedUnits; //getting all equipped units
     else
         equippedUnits.fill(-1);
 

@@ -24,6 +24,7 @@ public:
 	void handle_ui_events(const sf::Event& event, const sf::RenderWindow& window);
 
 	void generate_fish_tank_uis();
+	void generate_upgrade_menu_uis();
 	void generate_battle_uis();
 
 private:

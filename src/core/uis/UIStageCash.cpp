@@ -28,5 +28,5 @@ void UIStageCash::update(float deltaTime)
 		bounds.position.y
 	});
 
-	m_text.setPosition({ 1920.f, 0.f });
+	m_text.setPosition({ 1920.f - OFFSET_X, 0.f + OFFSET_Y});
 }

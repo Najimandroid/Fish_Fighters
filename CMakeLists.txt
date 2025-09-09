@@ -61,6 +61,7 @@ set(PROJECT_SOURCES
     src/core/uis/UIBaseHealthInfo.cpp
     src/core/uis/UIUpgradeIcon.cpp
     src/core/uis/UIUpgradeSlider.cpp
+    src/core/uis/UIPlayerShellsInfo.cpp
 
     src/data/PlayerData.cpp
     # ← ajoute ici les futurs fichiers, par ex.:

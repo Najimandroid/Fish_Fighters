@@ -4,7 +4,7 @@
 
 UIUpgradeIcon::UIUpgradeIcon(const std::string& iconTexturePath):
 	UITextureElement({ 400.f, 400.f }, {0.f, 0.f}, "assets/images/textures/icons/placeholder.png"),
-	m_unitName(m_font), m_unitCurrentLevel(m_font), m_upgradeCost(m_font)
+	m_unitName(m_font), m_currentLevelText(m_font), m_upgradeCostText(m_font)
 {
 
     //load icon texture
@@ -33,25 +33,25 @@ UIUpgradeIcon::UIUpgradeIcon(const std::string& iconTexturePath):
 
     //texts
     m_unitName.setString("Unit Name");
-    m_unitName.setCharacterSize(40);
+    m_unitName.setCharacterSize(TITLE_BASE_TEXT_SIZE);
     m_unitName.setFillColor(sf::Color::White);
     m_unitName.setOutlineColor(sf::Color::Black);
     m_unitName.setOutlineThickness(2.f);
     m_unitName.setPosition({ m_position.x, m_position.y - 30.f });
 
-    m_unitCurrentLevel.setString("Level: -1");
-    m_unitCurrentLevel.setCharacterSize(32);
-    m_unitCurrentLevel.setFillColor(sf::Color::White);
-	m_unitCurrentLevel.setOutlineColor(sf::Color::Black);
-	m_unitCurrentLevel.setOutlineThickness(2.f);
-    m_unitCurrentLevel.setPosition({ m_position.x + m_size.x + 10.f, m_position.y + m_size.y - 30.f });
+    m_currentLevelText.setString("Level: -1");
+    m_currentLevelText.setCharacterSize(INFO_BASE_TEXT_SIZE);
+    m_currentLevelText.setFillColor(sf::Color::Green);
+    m_currentLevelText.setOutlineColor(sf::Color::Black);
+    m_currentLevelText.setOutlineThickness(2.f);
+    m_currentLevelText.setPosition({ m_position.x + m_size.x + 10.f, m_position.y + m_size.y - 30.f });
 
-    m_upgradeCost.setString("100$");
-    m_upgradeCost.setCharacterSize(32);
-    m_upgradeCost.setFillColor(sf::Color::White);
-    m_upgradeCost.setOutlineColor(sf::Color::Black);
-    m_upgradeCost.setOutlineThickness(2.f);
-    m_upgradeCost.setPosition({ m_position.x + m_size.x + 10.f, m_position.y + m_size.y });
+    m_upgradeCostText.setString("100$");
+    m_upgradeCostText.setCharacterSize(INFO_BASE_TEXT_SIZE);
+    m_upgradeCostText.setFillColor(sf::Color::Cyan);
+    m_upgradeCostText.setOutlineColor(sf::Color::Black);
+    m_upgradeCostText.setOutlineThickness(2.f);
+    m_upgradeCostText.setPosition({ m_position.x + m_size.x + 10.f, m_position.y + m_size.y });
 }
 
 int UIUpgradeIcon::get_uid() const
@@ -65,7 +65,9 @@ void UIUpgradeIcon::select(bool isSelected)
     m_shape.setOutlineThickness(isSelected ? 3.f : 0.f);
     m_shape.setOutlineColor(sf::Color::Yellow);
 
-
+	m_unitName.setCharacterSize(isSelected ? TITLE_BASE_TEXT_SIZE * ACTIVE_TEXT_SIZE_SCALE : TITLE_BASE_TEXT_SIZE * INACTIVE_TEXT_SIZE_SCALE);
+	m_currentLevelText.setCharacterSize(isSelected ? INFO_BASE_TEXT_SIZE * ACTIVE_TEXT_SIZE_SCALE : INFO_BASE_TEXT_SIZE * INACTIVE_TEXT_SIZE_SCALE);
+	m_upgradeCostText.setCharacterSize(isSelected ? INFO_BASE_TEXT_SIZE * ACTIVE_TEXT_SIZE_SCALE : INFO_BASE_TEXT_SIZE * INACTIVE_TEXT_SIZE_SCALE);
 }
 
 void UIUpgradeIcon::set_unit_name(const std::string& name)
@@ -73,14 +75,14 @@ void UIUpgradeIcon::set_unit_name(const std::string& name)
     m_unitName.setString(name);
 }
 
-void UIUpgradeIcon::set_unit_level(const std::string& level)
+void UIUpgradeIcon::set_unit_level(int level)
 {
-    m_unitCurrentLevel.setString(level);
+	m_currentLevel = level;
 }
 
-void UIUpgradeIcon::set_upgrade_cost(const std::string& cost)
+void UIUpgradeIcon::set_upgrade_cost(int cost)
 {
-    m_upgradeCost.setString(cost);
+    m_upgradeCost = cost;
 }
 
 void UIUpgradeIcon::update(float deltaTime)
@@ -109,23 +111,33 @@ void UIUpgradeIcon::update(float deltaTime)
     m_sprite.setPosition({ anchorPos.x, anchorPos.y + m_size.y - scaledHeight });
 
     auto boundsName = m_unitName.getLocalBounds();
+    float offsetYTitle = m_isSelected ? TITLE_BASE_TEXT_SIZE * ACTIVE_TEXT_SIZE_SCALE : TITLE_BASE_TEXT_SIZE * INACTIVE_TEXT_SIZE_SCALE;
     m_unitName.setOrigin({
         boundsName.position.x + boundsName.size.x / 2.f,
-        boundsName.position.y
+        boundsName.position.y + offsetYTitle / 4.f
     });
 
     m_unitName.setPosition({ anchorPos.x + m_size.x / 2.f, anchorPos.y - 40.f });
 
+    auto spriteBounds = m_sprite.getGlobalBounds();
+    float offsetY = m_isSelected ? INFO_BASE_TEXT_SIZE * ACTIVE_TEXT_SIZE_SCALE : INFO_BASE_TEXT_SIZE * INACTIVE_TEXT_SIZE_SCALE;
+	offsetY += 5.f; //small padding
+    float offsetX = 15.f;
 
-    m_unitCurrentLevel.setPosition({
-        anchorPos.x + m_size.x + 10.f,
-        anchorPos.y + m_size.y - 30.f
+	auto levelBounds = m_currentLevelText.getLocalBounds();
+    m_currentLevelText.setString((m_currentLevel > 0) ? "Lv. " + std::to_string(m_currentLevel) : "UNLOCK");
+    m_currentLevelText.setOrigin({ levelBounds.size.x, 0.f });
+    m_currentLevelText.setPosition({
+        spriteBounds.position.x + spriteBounds.size.x - offsetX,
+        spriteBounds.position.y + spriteBounds.size.y - offsetY * 2.f
     });
 
-
-    m_upgradeCost.setPosition({
-        anchorPos.x + m_size.x + 10.f,
-        anchorPos.y + m_size.y
+	auto costBounds = m_upgradeCostText.getLocalBounds();
+    m_upgradeCostText.setString("Req. " + std::to_string(m_upgradeCost) + "¤");
+    m_upgradeCostText.setOrigin({ costBounds.size.x, 0.f });
+    m_upgradeCostText.setPosition({
+        spriteBounds.position.x + spriteBounds.size.x - offsetX,
+        spriteBounds.position.y + spriteBounds.size.y - offsetY
     });
 }
 
@@ -137,8 +149,8 @@ void UIUpgradeIcon::render(sf::RenderWindow& window)
     window.draw(m_shape);
     window.draw(m_sprite);
     window.draw(m_unitName);
-    window.draw(m_unitCurrentLevel);
-    window.draw(m_upgradeCost);
+    window.draw(m_currentLevelText);
+    window.draw(m_upgradeCostText);
     if (!m_isSelected)
         window.draw(m_blackFilter);
 }

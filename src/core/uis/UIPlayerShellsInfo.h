@@ -2,19 +2,19 @@
 
 #include "UITextElement.h"
 
-class Stage;
+class DataLoader;
 
-class UIStageCash : public UITextElement
+class UIPlayerShellsInfo : public UITextElement
 {
 public:
 
-	UIStageCash(std::shared_ptr<Stage> stage);
+	UIPlayerShellsInfo(std::shared_ptr<DataLoader> dataLoader);
 
 	void update(float deltaTime) override;
 
 private:
 
-	std::weak_ptr<Stage> m_stage;
+	std::shared_ptr<DataLoader> m_dataLoader;
 
 	const float OFFSET_Y = 10.f;
 	const float OFFSET_X = 10.f;
