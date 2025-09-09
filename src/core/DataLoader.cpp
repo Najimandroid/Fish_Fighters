@@ -192,6 +192,24 @@ bool DataLoader::load_stages(const std::string& path)
             data->enemies.push_back(enemyData);
         }
 
+        for (const auto& rewardValue : value.at("rewards"))
+        {
+            std::shared_ptr<RewardData> reward = std::make_shared<RewardData>();
+
+            reward->type = rewardValue.at("type").get<std::string>();
+
+            if (reward->type == "shells")
+            {
+                reward->amount = rewardValue.at("amount").get<int>();
+            }
+            else if (reward->type == "unit")
+            {
+                reward->unitUID = rewardValue.at("UID").get<int>();
+            }
+
+            data->rewards.push_back(reward);
+        }
+
         m_stagesDatabase[data->UID] = data;
     }
 
@@ -232,6 +250,14 @@ bool DataLoader::load_player(const std::string& path)
             int uid = std::stoi(uidStr);
             int level = unitData.at("level").get<int>();
             m_playerData->ownedUnits[uid] = level;
+        }
+
+        //Units waiting to be unlocked
+        m_playerData->unitsWaitingToBeUnlocked.clear();
+        for (auto& [uidStr, _] : j.at("units").at("waitingToBeUnlocked").items())
+        {
+            int uid = std::stoi(uidStr);
+            m_playerData->unitsWaitingToBeUnlocked.insert(uid);
         }
 
         //Equipped units
@@ -278,6 +304,13 @@ bool DataLoader::save_player(const std::string& path)
             {"uid", uid},
             {"level", level}
         };
+    }
+
+    //Waiting to be unlocked units
+    j["units"]["waitingToBeUnlocked"] = json::object(); //making sure the key exists, even if empty
+    for (int uid : m_playerData->unitsWaitingToBeUnlocked)
+    {
+        j["units"]["waitingToBeUnlocked"][std::to_string(uid)] = { {"uid", uid} };
     }
 
     // Equipped units

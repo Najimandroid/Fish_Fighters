@@ -4,6 +4,8 @@
 #include <memory>
 #include <string>
 
+#include "RewardData.h"
+
 class EnemyStageData;
 
 struct StageData
@@ -21,4 +23,6 @@ struct StageData
 
 	std::string baseTexture;
 	std::string backgroundTexture;
+
+	std::vector<std::shared_ptr<RewardData>> rewards;
 };

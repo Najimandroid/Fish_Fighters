@@ -23,7 +23,7 @@ private:
 
 	int m_currentIndex = 0; //index of the upgrade being displayed
 
-	std::array<int, 6> m_availableUpgrades = { 1, 2 }; //it will be a list of all units uids that need to be displayed in the slider
+	std::vector<int> m_availableUpgrades = { 1, 2 }; //it will be a list of all units uids that need to be displayed in the slider
 	std::vector<std::shared_ptr<UIUpgradeIcon>> m_upgradeIcons;
 
 	UIButtonElement m_upgradeButton;

@@ -21,7 +21,7 @@
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
-                "magnification" :  [1, 1],
+                "magnification": [ 1, 1 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
             },
@@ -35,6 +35,17 @@
                 "magnification": [ 1, 1 ],
                 "isBoss": 1,
                 "bypassEnemyLimit": 1
+            }
+        ],
+
+        "rewards": [
+            {
+                "type": "shells",
+                "amount": 250
+            },
+            {
+                "type": "unit",
+                "UID": 2
             }
         ]
     },
@@ -64,6 +75,13 @@
                 "magnification": [ 1, 1 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
+            }
+        ],
+
+        "rewards": [
+            {
+                "type": "shells",
+                "amount": 250
             }
         ]
     }

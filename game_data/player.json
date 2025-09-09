@@ -10,6 +10,7 @@
                 "level": 1
             }
         },
+        "waitingToBeUnlocked" :  {},
         "equipped": [ 1, -1, -1, -1, -1, -1, -1, -1, -1, -1 ]
     },
 

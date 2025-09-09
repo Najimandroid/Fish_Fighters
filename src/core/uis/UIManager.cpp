@@ -103,12 +103,13 @@ void UIManager::generate_fish_tank_uis()
         };
     });
 
+    auto shellsInfo = std::make_shared<UIPlayerShellsInfo>(m_dataLoader);
     
     add_ui_element(bg);
     add_ui_element(title);
     add_ui_element(battleButton);
     add_ui_element(upgradeButton);
-
+    add_ui_element(shellsInfo);
 }
 
 void UIManager::generate_upgrade_menu_uis()
@@ -130,6 +131,22 @@ void UIManager::generate_upgrade_menu_uis()
         48
     );
 
+    //back to menu button
+    auto menuButton = std::make_shared<UIButtonElement>(
+        sf::Vector2f{ 100.f, 100.f },
+        sf::Vector2f{ 20.f, 1080.f - 100.f - 20.f },
+        "MENU"
+    );
+    menuButton->set_callback([this]()
+        {
+            m_pendingAction = [this]() {
+                if (auto stage = m_stage.lock())
+                {
+                    generate_fish_tank_uis();
+                }
+                };
+        });
+
     //slider
     auto upgradeSlider = std::make_shared<UIUpgradeSlider>(m_dataLoader);
 	auto shellsInfo = std::make_shared<UIPlayerShellsInfo>(m_dataLoader);
@@ -138,6 +155,7 @@ void UIManager::generate_upgrade_menu_uis()
     add_ui_element(title);
     add_ui_element(upgradeSlider);
     add_ui_element(shellsInfo);
+    add_ui_element(menuButton);
 }
 
 void UIManager::generate_battle_uis()

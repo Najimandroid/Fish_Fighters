@@ -16,7 +16,7 @@ Game::Game():
     m_dataLoader->load_all();
 
     m_uiManager->init(m_dataLoader, m_stage);
-    m_stage->init(m_dataLoader);
+    m_stage->init(m_dataLoader, m_uiManager);
 
     init_camera();
 }

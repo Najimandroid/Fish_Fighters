@@ -51,8 +51,34 @@ UIUpgradeSlider::UIUpgradeSlider(std::shared_ptr<DataLoader> dataLoader):
 void UIUpgradeSlider::init_icons()
 {
     m_upgradeIcons.clear();
+	m_availableUpgrades.clear();
 
 	auto playerData = m_dataLoader->get_player_data().lock();
+
+	//Init m_availableUpgrades
+	//Adding owned units
+	for (auto& [uid, _] : playerData->ownedUnits) 
+		m_availableUpgrades.push_back(uid);
+
+	//Adding units waiting to be unlocked at the end
+	for (int uid : playerData->unitsWaitingToBeUnlocked) 
+	{
+		if (playerData->ownedUnits.find(uid) == playerData->ownedUnits.end())
+			m_availableUpgrades.push_back(uid);
+	}
+
+	//Sort by UID, locked units are near the end
+	std::sort(m_availableUpgrades.begin(), m_availableUpgrades.end(),
+		[&](int a, int b) {
+			bool aOwned = playerData->is_unit_owned(a);
+			bool bOwned = playerData->is_unit_owned(b);
+
+			//unlocked units first
+			if (aOwned != bOwned) return aOwned > bOwned;
+
+			//sort by uid
+			return a < b;
+	});
 
     sf::Vector2f screenCenter(1920.f / 2.0f - baseIconSize.x / 2.f, 1080.f / 2.0f - baseIconSize.y / 2.f + 300.f);
 

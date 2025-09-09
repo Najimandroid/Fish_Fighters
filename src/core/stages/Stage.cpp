@@ -2,15 +2,17 @@
 
 #include "../entities/BattleEnemy.h"
 #include "../entities/BattleUnit.h"
+#include "../uis/UIManager.h"
 
 #include "../entities/machine/states/KnockbackState.h"
 #include "../entities/machine/states/IdleState.h"
 
 #include <iostream>
 
-void Stage::init(std::shared_ptr<DataLoader> dataLoader)
+void Stage::init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<UIManager> uiManager)
 {
 	m_dataLoader = dataLoader;
+	m_uiManager = uiManager;
 	unload();
 }
 
@@ -119,6 +121,32 @@ void Stage::update(float deltaTime)
 	update_bases(deltaTime);
 	update_enemies(deltaTime);
 	update_units(deltaTime);
+
+	//Checks if the Player has won or lost
+	if (is_enemy_base_destroyed())
+	{
+		//player has won
+		//TODO: add a winning screen
+		if (auto player = m_dataLoader->get_player_data().lock())
+		{
+			auto stageData = m_dataLoader->get_stage_data(m_uid);
+			if (stageData)
+				player->complete_stage(stageData);
+		}
+
+		unload(); //unload stage
+		m_uiManager.lock()->generate_fish_tank_uis();
+		return;
+	}
+
+	if (is_unit_base_destroyed())
+	{
+		//play has lost
+		//TODO: add a losing screen
+		unload();
+		m_uiManager.lock()->generate_fish_tank_uis();
+		return;
+	}
 }
 
 void Stage::update_cash()
@@ -209,6 +237,16 @@ bool Stage::upgrade_cash(int level, int cost)
 	m_maxCash += 150 * level;
 
 	return true;
+}
+
+bool Stage::is_unit_base_destroyed()
+{
+	return m_unitBase->currentHealth <= 0.f;
+}
+
+bool Stage::is_enemy_base_destroyed()
+{
+	return m_enemyBase->currentHealth <= 0.f;
 }
 
 BattleEntitiesMap_t& Stage::get_enemies()

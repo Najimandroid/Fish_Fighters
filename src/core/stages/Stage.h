@@ -24,6 +24,7 @@ class DataLoader;
 class BattleEnemy;
 class BattleUnit;
 class EnemyData;
+class UIManager;
 
 class Stage : public std::enable_shared_from_this<Stage>
 {
@@ -31,7 +32,7 @@ public:
 
 	Stage();
 
-	void init(std::shared_ptr<DataLoader> dataLoader);
+	void init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<UIManager> uiManager);
 
 	void load(int uid);
 	void unload();
@@ -50,8 +51,10 @@ public:
 	void update_enemies(float deltaTime);
 	void update_units(float deltaTime);
 	void update_bases(float deltaTime);
-
 	bool upgrade_cash(int level, int cost);
+
+	bool is_unit_base_destroyed(); //checks if unit base got destroyed
+	bool is_enemy_base_destroyed(); //checks if enemy base got destroyed
 
 	BattleEntitiesMap_t& get_enemies();
 	BattleEntitiesMap_t& get_units();
@@ -77,6 +80,8 @@ private:
 	int m_unitsCount = 0;
 
 	std::shared_ptr<DataLoader> m_dataLoader;
+	std::weak_ptr<UIManager> m_uiManager;
+
 	std::vector<std::shared_ptr<EnemyStageData>> m_enemyStageDatas;
 
 	//Entities

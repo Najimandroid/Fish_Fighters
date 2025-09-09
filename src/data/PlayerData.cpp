@@ -1,8 +1,21 @@
 #include "PlayerData.h"
 
+#include "../core/DataLoader.h"
+
+#include <iostream>
+
 void PlayerData::unlock_unit(int unitUid)
 {
-	ownedUnits[unitUid] = 1;
+	if (unitsWaitingToBeUnlocked.find(unitUid) != unitsWaitingToBeUnlocked.end())
+	{
+		unitsWaitingToBeUnlocked.erase(unitUid);
+		ownedUnits[unitUid] = 1;
+	}
+}
+
+void PlayerData::wait_to_be_unlocked(int unitUid)
+{
+	unitsWaitingToBeUnlocked.insert(unitUid);
 }
 
 void PlayerData::upgrade_unit(int unitUid)
@@ -10,9 +23,7 @@ void PlayerData::upgrade_unit(int unitUid)
 	auto it = ownedUnits.find(unitUid);
 
 	if (it != ownedUnits.end())
-	{
 		it->second += 1;
-	}
 }
 
 void PlayerData::equip_unit(int unitUid, int slot)
@@ -21,9 +32,7 @@ void PlayerData::equip_unit(int unitUid, int slot)
 
 	auto it = ownedUnits.find(unitUid);
 	if (it != ownedUnits.end())
-	{
 		equippedUnits[slot] = unitUid;
-	}
 }
 
 void PlayerData::unequip_unit(int slot)
@@ -66,7 +75,44 @@ bool PlayerData::spend_shells(int amount)
 	return false;
 }
 
-void PlayerData::complete_stage(int stageUid)
+void PlayerData::complete_stage(std::weak_ptr<StageData> stageData)
 {
-	completedStages.insert(stageUid);
+	if (auto stage = stageData.lock())
+	{
+		if (completedStages.find(stage->UID) != completedStages.end())
+		{
+			//Stage already completed, only giving some shells for completing the level
+
+			for (const auto& reward : stage->rewards)
+			{
+				if (reward->type == "shells")
+				{
+					gain_shells(reward->amount);
+					break;
+				}
+			}
+			return;
+		}
+
+		completedStages.insert(stage->UID);
+
+		for (const auto& reward : stage->rewards)
+		{
+			if (reward->type == "shells")
+			{
+				gain_shells(reward->amount);
+			}
+			else if (reward->type == "unit" && reward->unitUID > 0)
+			{
+				if (!is_unit_owned(reward->unitUID))
+				{
+					wait_to_be_unlocked(reward->unitUID);
+				}
+			}
+		}
+	}
+	else
+	{
+		std::cerr << "Issue while completing the stage." << std::endl;
+	}
 }
