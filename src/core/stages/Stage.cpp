@@ -2,7 +2,7 @@
 
 #include "../entities/BattleEnemy.h"
 #include "../entities/BattleUnit.h"
-#include "../uis/UIManager.h"
+#include "../../uis/UIManager.h"
 
 #include "../entities/machine/states/KnockbackState.h"
 #include "../entities/machine/states/IdleState.h"

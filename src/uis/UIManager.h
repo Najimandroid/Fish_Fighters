@@ -1,7 +1,7 @@
 #pragma once
 
 #include "UIElement.h"
-#include "../DataLoader.h"
+#include "../core/DataLoader.h"
 
 #include <SFML/Graphics.hpp>
 #include <vector>

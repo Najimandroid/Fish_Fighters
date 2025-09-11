@@ -49,22 +49,22 @@ set(PROJECT_SOURCES
 
     src/core/stages/Stage.cpp
 
-    src/core/uis/UIElement.cpp
-    src/core/uis/UIBattleIcon.cpp
-    src/core/uis/UIButtonElement.cpp
-    src/core/uis/UITextElement.cpp
-    src/core/uis/UITextureElement.cpp
-    src/core/uis/UIDeploymentIcons.cpp
-    src/core/uis/UIManager.cpp
-    src/core/uis/UIStageCash.cpp
-    src/core/uis/UICashUp.cpp
-    src/core/uis/UIBaseHealthInfo.cpp
-    src/core/uis/UIUpgradeIcon.cpp
-    src/core/uis/UIUpgradeSlider.cpp
-    src/core/uis/UIPlayerShellsInfo.cpp
-    src/core/uis/UIEquipIcon.cpp
-    src/core/uis/UIEquipSlot.cpp
-    src/core/uis/UIEquipSlider.cpp
+    src/uis/UIElement.cpp
+    src/uis/UIBattleIcon.cpp
+    src/uis/UIButtonElement.cpp
+    src/uis/UITextElement.cpp
+    src/uis/UITextureElement.cpp
+    src/uis/UIDeploymentIcons.cpp
+    src/uis/UIManager.cpp
+    src/uis/UIStageCash.cpp
+    src/uis/UICashUp.cpp
+    src/uis/UIBaseHealthInfo.cpp
+    src/uis/UIUpgradeIcon.cpp
+    src/uis/UIUpgradeSlider.cpp
+    src/uis/UIPlayerShellsInfo.cpp
+    src/uis/UIEquipIcon.cpp
+    src/uis/UIEquipSlot.cpp
+    src/uis/UIEquipSlider.cpp
 
     src/data/PlayerData.cpp
     # ← ajoute ici les futurs fichiers, par ex.:

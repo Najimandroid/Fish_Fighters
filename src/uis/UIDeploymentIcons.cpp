@@ -1,6 +1,6 @@
 #include "UIDeploymentIcons.h"
 
-#include "../stages/Stage.h"
+#include "../core/stages/Stage.h"
 
 #include <iostream>
 

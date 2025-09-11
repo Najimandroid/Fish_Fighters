@@ -1,6 +1,6 @@
 #include "UIUpgradeSlider.h"
 
-#include "../DataLoader.h"
+#include "../core/DataLoader.h"
 
 UIUpgradeSlider::UIUpgradeSlider(std::shared_ptr<DataLoader> dataLoader):
 	m_dataLoader(dataLoader),

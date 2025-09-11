@@ -1,5 +1,5 @@
 #include "UIBaseHealthInfo.h"
-#include "../stages/Stage.h"
+#include "../core/stages/Stage.h"
 
 UIBaseHealthInfo::UIBaseHealthInfo(std::shared_ptr<Stage> stage):
 	m_stage(stage),

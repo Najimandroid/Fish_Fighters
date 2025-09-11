@@ -1,5 +1,5 @@
 #include "UIEquipSlider.h"
-#include "../DataLoader.h"
+#include "../core/DataLoader.h"
 
 #include <algorithm>
 #include <cmath>

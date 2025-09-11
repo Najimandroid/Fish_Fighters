@@ -9,7 +9,7 @@
 
 #include "DataLoader.h"
 #include "stages/Stage.h"
-#include "uis/UIManager.h"
+#include "../uis/UIManager.h"
 
 /*
  * Game class manages the main game loop and all core systems.

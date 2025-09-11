@@ -1,6 +1,6 @@
 #include "UIManager.h"
 
-#include "../stages/Stage.h"
+#include "../core/stages/Stage.h"
 
 #include "UIDeploymentIcons.h"
 #include "UIStageCash.h"

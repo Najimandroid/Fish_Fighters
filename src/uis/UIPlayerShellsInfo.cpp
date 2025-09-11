@@ -1,6 +1,6 @@
 #include "UIPlayerShellsInfo.h"
 
-#include "../DataLoader.h"
+#include "../core/DataLoader.h"
 
 #include <iostream>
 

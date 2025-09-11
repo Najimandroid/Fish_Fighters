@@ -1,6 +1,6 @@
 #include "UICashUp.h"
 
-#include "../stages/Stage.h"
+#include "../core/stages/Stage.h"
 
 UICashUp::UICashUp(std::shared_ptr<Stage> stage):
 	UIButtonElement({ 300.f, 300.f }, {0.f, 780.f}),
