@@ -15,12 +15,14 @@ void UIDeploymentIcons::init_icons()
     const int rows = 2;
     const int cols = 5;
 
-    const float iconSize = 144.f;
-    const float spacing = 24.f;
+    const float iconWidth = 144.f * 1.15f;
+    const float iconHeight = 108.f * 1.15f;
+    const float spacingX = 24.f * 1.15f;
+    const float spacingY = 24.f * 1.15f;
 
-    float totalWidth = cols * iconSize + (cols - 1) * spacing;
+    float totalWidth = cols * iconWidth + (cols - 1) * spacingX;
     float startX = (1920.f - totalWidth) / 2.f;
-    float startY = 750.f;
+    float startY = 775.f;
 
     int index = 0;
 
@@ -35,8 +37,8 @@ void UIDeploymentIcons::init_icons()
         for (int col = 0; col < cols; ++col)
         {
             sf::Vector2f pos{
-                startX + col * (iconSize + spacing),
-                startY + row * (iconSize + spacing)
+                startX + col * (iconWidth + spacingX),
+                startY + row * (iconHeight + spacingY)
             };
 
             auto icon = std::make_shared<UIBattleIcon>(pos, "assets/images/textures/icons/empty.png");

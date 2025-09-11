@@ -13,7 +13,7 @@ BattleEnemy::BattleEnemy(std::shared_ptr<EntityData> data_, sf::Vector2f magnifi
 	magnification = magnification_;
 
 	currentHealth = data->health * magnification.x;
-	healthLeftBeforeNextKnockback = data->health - (data->health / data->knockbackCount);
+	healthLeftBeforeNextKnockback = data->knockbackCount > 0 ? data->health - (data->health / data->knockbackCount) : 0.f;
 
 	position = { 0.0f, 1080.0f * 2 / 3 };
 

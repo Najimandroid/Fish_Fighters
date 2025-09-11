@@ -16,10 +16,12 @@ public:
 
 	virtual void set_position(sf::Vector2f newPosition);
 	virtual void set_size(sf::Vector2f newSize);
+	virtual void set_visible(bool isVisible);
 
 	sf::Vector2f get_position() const;
 	sf::Vector2f get_size() const;
 	virtual sf::FloatRect get_bounds() const;
+	bool is_visible() const;
 
 public:
 

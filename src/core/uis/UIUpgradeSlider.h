@@ -12,6 +12,7 @@ public:
 	UIUpgradeSlider(std::shared_ptr<DataLoader> dataLoader);
 
 	void init_icons();
+	void move_to_index(int newIndex);
 	//void add_available_upgrade(int uid);
 	int calculate_upgrade_cost(int uid, int level);
 
@@ -41,5 +42,5 @@ private:
 	const float CENTER_OFFSET_X = 40.f;
 	const float CENTER_SCALE = 1.3f;
 	const float SIDE_SCALE = 1.0f;
-	const float TWEEN_DURATION = 0.3f; //secondes
+	const float TWEEN_DURATION = 0.3f; //seconds
 };

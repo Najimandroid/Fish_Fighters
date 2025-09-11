@@ -114,11 +114,11 @@ void UIUpgradeSlider::init_icons()
 
 int UIUpgradeSlider::calculate_upgrade_cost(int uid, int level)
 {
-	if (level <= 0) return 0;
-
 	int baseCost = m_dataLoader->get_unit_data(uid)->baseUpgradeCost;
 
-	float factor = 1.45f;
+	if (level <= 0) return baseCost;
+
+	float factor = 1.5f;
 	float evolutionDiscount = 0.7f; //reduction factor applied after a unit evolved
 
 	//Define evolution levels
@@ -136,8 +136,9 @@ int UIUpgradeSlider::calculate_upgrade_cost(int uid, int level)
 		}
 		else break;
 	}
+	//mm
 
-	int levelInCycle = (level - 1) - previousEvolutionLevel; //Level within the current evolution cycle
+	int levelInCycle = (level - previousEvolutionLevel); //Level within the current evolution cycle
 
 	//Calculate the cost
 	float upgradeCost = baseCost * pow(factor, levelInCycle) * pow(evolutionDiscount, evolutions);
@@ -180,47 +181,72 @@ void UIUpgradeSlider::render(sf::RenderWindow& window)
 
 void UIUpgradeSlider::handle_event(const sf::Event& event, const sf::RenderWindow& window)
 {
-	if (const auto* mouseButtonPressed = event.getIf<sf::Event::KeyPressed>())
+	//Key pressed
+	if (const auto* keyPressed = event.getIf<sf::Event::KeyPressed>())
 	{
 		int newIndex = m_currentIndex;
 
-		if (mouseButtonPressed->code == sf::Keyboard::Key::Left)
+		if (keyPressed->code == sf::Keyboard::Key::Left)
 			newIndex--;
-		else if (mouseButtonPressed->code == sf::Keyboard::Key::Right)
+		else if (keyPressed->code == sf::Keyboard::Key::Right)
 			newIndex++;
 
-		if (newIndex == m_currentIndex) return;
-		if (newIndex < 0 || newIndex >= static_cast<int>(m_upgradeIcons.size())) return;
-
-
-		sf::Vector2f screenCenter(1920.f / 2.0f - baseIconSize.x / 2.f, 1080.f / 2.0f - baseIconSize.y / 2.f + 300.f);
-
-		for (int i = 0; i < static_cast<int>(m_upgradeIcons.size()); ++i)
+		if (newIndex != m_currentIndex && newIndex >= 0 && newIndex < static_cast<int>(m_upgradeIcons.size()))
 		{
-			auto icon = m_upgradeIcons[i];
-
-			float targetX = screenCenter.x + (i - newIndex) * ICON_SPACING;
-
-			if (i == newIndex)
-				targetX -= CENTER_OFFSET_X; //apply offset to center the selected icon
-
-			sf::Vector2f targetSize = baseIconSize * ((i == newIndex) ? CENTER_SCALE : SIDE_SCALE);
-
-			icon->tweenX = tweeny::from(icon->get_position().x).to(targetX).during(TWEEN_DURATION * 60.0f).via(tweeny::easing::quadraticOut);
-			icon->tweenWidth = tweeny::from(icon->get_size().x).to(targetSize.x).during(TWEEN_DURATION * 60.0f).via(tweeny::easing::quadraticOut);
-			icon->tweenHeight = tweeny::from(icon->get_size().y).to(targetSize.y).during(TWEEN_DURATION * 60.0f).via(tweeny::easing::quadraticOut);
-
-			if(i == m_currentIndex)
-				icon->select(false);
-			else if(i == newIndex)
-				icon->select(true);
+			move_to_index(newIndex);
 		}
-
-		m_currentIndex = newIndex;
 	}
 
-    for (auto& icon : m_upgradeIcons)
-        icon->handle_event(event, window);
+	//Mouse click
+	if (const auto* mousePressed = event.getIf<sf::Event::MouseButtonPressed>())
+	{
+		if (mousePressed->button == sf::Mouse::Button::Left)
+		{
+			sf::Vector2f mousePos = window.mapPixelToCoords({ mousePressed->position.x, mousePressed->position.y });
+
+			for (int i = 0; i < static_cast<int>(m_upgradeIcons.size()); ++i)
+			{
+				auto& icon = m_upgradeIcons[i];
+				if (icon->get_bounds().contains(mousePos))
+				{
+					if (i != m_currentIndex)
+						move_to_index(i);
+				}
+			}
+		}
+	}
+
+	for (auto& icon : m_upgradeIcons)
+		icon->handle_event(event, window);
 
 	m_upgradeButton.handle_event(event, window);
+}
+
+
+void UIUpgradeSlider::move_to_index(int newIndex)
+{
+	if (newIndex < 0 || newIndex >= static_cast<int>(m_upgradeIcons.size()))
+		return;
+
+	sf::Vector2f screenCenter(1920.f / 2.0f - baseIconSize.x / 2.f,
+		1080.f / 2.0f - baseIconSize.y / 2.f + 300.f);
+
+	for (int i = 0; i < static_cast<int>(m_upgradeIcons.size()); ++i)
+	{
+		auto& icon = m_upgradeIcons[i];
+
+		float targetX = screenCenter.x + (i - newIndex) * ICON_SPACING;
+		if (i == newIndex)
+			targetX -= CENTER_OFFSET_X;
+
+		sf::Vector2f targetSize = baseIconSize * ((i == newIndex) ? CENTER_SCALE : SIDE_SCALE);
+
+		icon->tweenX = tweeny::from(icon->get_position().x).to(targetX).during(TWEEN_DURATION * 60.0f).via(tweeny::easing::quadraticOut);
+		icon->tweenWidth = tweeny::from(icon->get_size().x).to(targetSize.x).during(TWEEN_DURATION * 60.0f).via(tweeny::easing::quadraticOut);
+		icon->tweenHeight = tweeny::from(icon->get_size().y).to(targetSize.y).during(TWEEN_DURATION * 60.0f).via(tweeny::easing::quadraticOut);
+
+		icon->select(i == newIndex);
+	}
+
+	m_currentIndex = newIndex;
 }

@@ -41,6 +41,8 @@ void Stage::load(int uid)
 	m_enemiesCount = 0;
 	m_unitsCount = 0;
 
+	m_currentCash = 0;
+
 	spawn_bases(stageJson->baseHealth, stageJson->baseTexture);
 
 	//Copying the stageData
@@ -73,6 +75,8 @@ void Stage::load(int uid)
 void Stage::unload()
 {
 	m_uid = -1;
+
+	m_currentCash = 0;
 
 	m_enemies.clear();
 	m_units.clear();

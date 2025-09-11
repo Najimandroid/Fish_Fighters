@@ -22,6 +22,8 @@ public:
 	void update(float deltaTime) override;
 	void render(sf::RenderWindow& window) override;
 
+	void set_size(sf::Vector2f size) override;
+
 public:
 
 	tweeny::tween<float> tweenX;

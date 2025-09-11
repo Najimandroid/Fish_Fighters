@@ -2,25 +2,43 @@
 
 #include <iostream>
 
+/*
+ * Constructor
+ * Initializes:
+ *  - SFML window (fullscreen)
+ *  - ImGui for debug
+ *  - DataLoader, Stage, UIManager
+ *  - Cameras
+ */
 Game::Game():
     m_dataLoader(std::make_shared<DataLoader>()),
     m_stage(std::make_shared<Stage>()),
 	m_uiManager(std::make_shared<UIManager>())
 {
+    // Create fullscreen window without borders
     m_window.create(sf::VideoMode::getDesktopMode(), "Fish Fighers", sf::Style::None); //sf::Style::None
     m_window.setFramerateLimit(m_frameRate);
     center_window();
 
+    // Initialize ImGui for debug UI
     ImGui::SFML::Init(m_window);
 
+    // Load all game data (units, enemies, stages, player)
     m_dataLoader->load_all();
 
+    // Initialize UIManager and Stage with references to DataLoader
     m_uiManager->init(m_dataLoader, m_stage);
     m_stage->init(m_dataLoader, m_uiManager);
 
+    // Set up cameras for UI and stage rendering
     init_cameras();
 }
 
+/*
+ * Initialize cameras
+ * - m_uiCamera: fixed screen-space UI
+ * - m_stageCamera: world-space stage view (zoomable and pannable)
+ */
 void Game::init_cameras()
 {
     m_uiCamera.setSize(static_cast<sf::Vector2f>(m_logicalResolution));
@@ -29,19 +47,16 @@ void Game::init_cameras()
     m_stageCamera.setSize(static_cast<sf::Vector2f>(m_logicalResolution));
     m_stageCamera.setCenter(m_stageCamera.getSize() / 2.f);
 
-    m_uiCamera.setViewport(sf::FloatRect{
-    {0.f, 0.f},
-    {1.f, 1.f}
-    });
+    m_uiCamera.setViewport(sf::FloatRect{ {0.f, 0.f}, {1.f, 1.f} });
+    m_stageCamera.setViewport(sf::FloatRect{ {0.f, 0.f}, {1.f, 1.f} });
 
-    m_stageCamera.setViewport(sf::FloatRect{
-    {0.f, 0.f},
-    {1.f, 1.f}
-    });
-
-    m_stageCamera.zoom(0.9f);
+    m_stageCamera.zoom(0.9f); // initial zoom-out for better stage visibility
 }
 
+/*
+ * Renders debug UI using ImGui
+ * Only active when DEBUG_MODE is defined
+ */
 void Game::debug_ui()
 {
 #ifdef DEBUG_MODE
@@ -49,7 +64,7 @@ void Game::debug_ui()
 
     ImGui::ShowDemoWindow();
 
-    ImGui::Begin("Hello, world!");
+    ImGui::Begin("Debug Panel");
     ImGui::Button("Look at this pretty button");
     ImGui::End();
 
@@ -59,54 +74,27 @@ void Game::debug_ui()
 
 void Game::run_game_loop()
 {
-    /*
-    //Test stuff
-
-    sf::RectangleShape shape({ 500.f, 400.f });
-    shape.setFillColor(sf::Color::Green);
-
-    //Texture and Sprite test
-    const sf::Texture texture("assets/images/smile.png");
-    sf::Sprite sprite(texture);
-    sprite.setScale({ 1, 1 });
-
-    sf::Vector2f start(0.f, 0.f);
-    sf::Vector2f end(1280.f - texture.getSize().x / 2.f, 720.f - texture.getSize().y / 2.f);
-    auto tween = tweeny::from(start).to(end).during(60 * 10).via(tweeny::easing::bounceOut);
-
-    //SoundBuffer and Sound test
-    const sf::SoundBuffer buffer("assets/audios/Jazz_Background_Music.mp3");
-    sf::Sound backgroundMusic(buffer);
-    backgroundMusic.setLooping(true);
-    //backgroundMusic.play();
-    */
-
-  
-	m_uiManager->generate_fish_tank_uis();
+    // Initialize UI to Fish Tank screen
+    m_uiManager->generate_fish_tank_uis();
 
     while (m_window.isOpen())
     {
-        //Updating deltaTime
         deltaTime = m_deltaClock.restart().asSeconds();
 
-        //Poll events
         poll_events();
 
-        //Updating all systems
         m_stage->update(deltaTime);
-
         m_uiManager->update_uis(deltaTime);
-        //sprite.setPosition(tween.step(1));
 
-        //Rendering
         m_window.clear();
-        //m_window.draw(shape);
-        //m_window.draw(sprite);
+
+        // Render stage (world)
         m_window.setView(m_stageCamera);
         m_stage->render(m_window);
 
+        // Render UI (screen-space)
         m_window.setView(m_uiCamera);
-		m_uiManager->render_uis(m_window, m_uiCamera, m_stageCamera);
+        m_uiManager->render_uis(m_window, m_uiCamera, m_stageCamera);
 
         debug_ui();
         m_window.display();
@@ -115,97 +103,77 @@ void Game::run_game_loop()
     ImGui::SFML::Shutdown();
 }
 
+/*
+ * Save persistent data on game exit
+ */
 void Game::terminate()
 {
-	m_dataLoader->terminate();
+    m_dataLoader->terminate();
 }
 
+
+/*
+ * Process all pending events from the window
+ */
 void Game::poll_events()
 {
     while (const auto event = m_window.pollEvent()) {
+        // Forward event to ImGui
         //ImGui::SFML::ProcessEvent(m_window, *event);
 
+        // Window close event
         if (event->is<sf::Event::Closed>())
         {
             m_window.close();
         }
 
+        // Forward event to UIManager for UI interaction
         m_uiManager->handle_ui_events(*event, m_window);
 
+        // Keyboard input handling
         if (const auto* e_keycode = event->getIf<sf::Event::KeyPressed>())
         {
-            if (e_keycode->code == sf::Keyboard::Key::Numpad1)
-            {
-                m_window.setSize({ 1920, 1080 });
-            }
-            else
-            if (e_keycode->code == sf::Keyboard::Key::Numpad2)
-            {
-                m_window.setSize({ 1280, 720 });
-            }
-            else
-            if (e_keycode->code == sf::Keyboard::Key::Numpad3)
-            {
-                m_window.setSize({ 640, 360 });
-            }
-            else
-            if (e_keycode->code == sf::Keyboard::Key::Escape)
-            {
-                m_window.close();
-            }
-            else
-            if (e_keycode->code == sf::Keyboard::Key::P)
-            {
-                m_isPaused = true;
-				m_isFaster = false;
-            }
-            else
-            if (e_keycode->code == sf::Keyboard::Key::LShift)
-            {
-                m_isPaused = false;
-                m_isFaster = true;
-            }
-            else
-            if (e_keycode->code == sf::Keyboard::Key::R)
-            {
-                m_isPaused = false;
-                m_isFaster = false;
-            }
-           /* if (e_keycode->code == sf::Keyboard::Key::A)
-            {
-                //std::cout << "spawn fish 1\n";
-                m_stage->spawn_unit(m_dataLoader->get_unit_data(1));
-            }
-            if (e_keycode->code == sf::Keyboard::Key::E)
-            {
-                //std::cout << "spawn fish 2\n";
-                m_stage->spawn_unit(m_dataLoader->get_unit_data(2));
-            }*/
+            // Window size shortcuts
+            if (e_keycode->code == sf::Keyboard::Key::Numpad1) m_window.setSize({ 1920, 1080 });
+            else if (e_keycode->code == sf::Keyboard::Key::Numpad2) m_window.setSize({ 1280, 720 });
+            else if (e_keycode->code == sf::Keyboard::Key::Numpad3) m_window.setSize({ 640, 360 });
+            // Close game
+            else if (e_keycode->code == sf::Keyboard::Key::Escape) m_window.close();
+            // Pause and speed control
+            else if (e_keycode->code == sf::Keyboard::Key::P) { m_isPaused = true; m_isFaster = false; }
+            else if (e_keycode->code == sf::Keyboard::Key::LShift) { m_isPaused = false; m_isFaster = true; }
+            else if (e_keycode->code == sf::Keyboard::Key::R) { m_isPaused = false; m_isFaster = false; }
         }
 
-        if (const auto* e_wheel = event->getIf<sf::Event::MouseWheelScrolled>()) 
+        // Mouse wheel event for camera zoom
+        if (const auto* e_wheel = event->getIf<sf::Event::MouseWheelScrolled>())
         {
             if (!m_stage->is_loaded()) return;
 
+            // Map mouse position to UI world coordinates
             sf::Vector2i pixel = e_wheel->position;
             sf::Vector2f uiWorldPos = m_window.mapPixelToCoords(pixel, m_uiCamera);
 
-            if (!m_uiManager->is_mouse_over_ui(static_cast<sf::Vector2i>(uiWorldPos))) 
+            // Only zoom if not over UI
+            if (!m_uiManager->is_mouse_over_ui(static_cast<sf::Vector2i>(uiWorldPos)))
             {
+                // Calculate new zoom factor
                 float factor = (e_wheel->delta > 0.f) ? 0.9f : 1.1f;
                 float newZoom = m_currentZoom * factor;
 
+                // Clamp zoom limits
                 if (newZoom < 0.9f) newZoom = 0.9f;
                 if (newZoom > 1.5f) newZoom = 1.5f;
 
+                // Apply zoom
                 float appliedFactor = newZoom / m_currentZoom;
                 m_stageCamera.zoom(appliedFactor);
                 m_currentZoom = newZoom;
 
-                // clamp camera after zoom
+                // Clamp camera to keep stage within view
                 auto unitBase = m_stage->get_unit_base().lock();
                 auto enemyBase = m_stage->get_enemy_base().lock();
-                if (unitBase && enemyBase) 
+                if (unitBase && enemyBase)
                 {
                     sf::Vector2f center = m_stageCamera.getCenter();
                     float viewWidth = m_stageCamera.getSize().x;
@@ -215,7 +183,8 @@ void Game::poll_events()
                     float minCenterX = enemyBase->position.x + baseWidth + (0.5f - margin) * viewWidth;
                     float maxCenterX = unitBase->position.x - (0.5f - margin) * viewWidth;
 
-                    if (minCenterX > maxCenterX) 
+                    // Adjust center if limits overlap
+                    if (minCenterX > maxCenterX)
                     {
                         float mid = (enemyBase->position.x + unitBase->position.x) * 0.5f;
                         minCenterX = maxCenterX = mid;
@@ -227,7 +196,7 @@ void Game::poll_events()
             }
         }
 
-
+        // Mouse button pressed event (start drag)
         if (const auto* e_mousePressed = event->getIf<sf::Event::MouseButtonPressed>())
         {
             if (e_mousePressed->button == sf::Mouse::Button::Left)
@@ -235,6 +204,7 @@ void Game::poll_events()
                 sf::Vector2i pixelPos = e_mousePressed->position;
                 sf::Vector2f worldPos = m_window.mapPixelToCoords(pixelPos, m_uiCamera);
 
+                // Start dragging if mouse not over UI
                 if (!m_uiManager->is_mouse_over_ui(static_cast<sf::Vector2i>(worldPos)))
                 {
                     m_isDragging = true;
@@ -243,6 +213,7 @@ void Game::poll_events()
             }
         }
 
+        // Mouse button released event (stop drag)
         if (const auto* e_mouseReleased = event->getIf<sf::Event::MouseButtonReleased>())
         {
             if (e_mouseReleased->button == sf::Mouse::Button::Left)
@@ -251,27 +222,30 @@ void Game::poll_events()
             }
         }
 
+        // Mouse movement event (camera panning)
         if (const auto* e_mouseMoved = event->getIf<sf::Event::MouseMoved>())
         {
             if (m_isDragging && m_stage->is_loaded())
             {
                 sf::Vector2i currentPixel = e_mouseMoved->position;
 
+                // Calculate delta movement in world space
                 sf::Vector2f prevWorld = m_window.mapPixelToCoords(m_lastMousePos, m_stageCamera);
                 sf::Vector2f curWorld = m_window.mapPixelToCoords(currentPixel, m_stageCamera);
                 sf::Vector2f worldDelta = prevWorld - curWorld;
-                worldDelta.y = 0.f;
+                worldDelta.y = 0.f; // restrict vertical movement
 
                 auto unitBase = m_stage->get_unit_base().lock();
                 auto enemyBase = m_stage->get_enemy_base().lock();
 
-
-                if (unitBase && enemyBase) {
+                if (unitBase && enemyBase)
+                {
+                    // Move camera by delta
                     m_stageCamera.move(worldDelta);
 
+                    // Clamp camera within stage boundaries
                     sf::Vector2f center = m_stageCamera.getCenter();
                     float viewWidth = m_stageCamera.getSize().x;
-
                     const float margin = 0.25f;
                     const float baseWidth = 200.f;
 
@@ -291,51 +265,53 @@ void Game::poll_events()
             }
         }
 
+        // Window resize event
         if (const auto* e_window = event->getIf<sf::Event::Resized>())
         {
-            auto newSize = e_window->size; // taille réelle de la fenêtre
+            auto newSize = e_window->size; // actual new window size
 
-            // 1. Adapter la vue UI (toujours fixe)
+            // 1. Adjust UI camera (always fixed)
             m_uiCamera.setSize(static_cast<sf::Vector2f>(m_logicalResolution));
             m_uiCamera.setCenter({ m_logicalResolution.x / 2.f, m_logicalResolution.y / 2.f });
 
-            // 2. Adapter la vue gameplay (respecte le ratio)
+            // 2. Adjust stage camera while maintaining aspect ratio
             float windowRatio = static_cast<float>(newSize.x) / newSize.y;
             float logicalRatio = static_cast<float>(m_logicalResolution.x) / m_logicalResolution.y;
 
-            if (windowRatio > logicalRatio)
+            if (windowRatio > logicalRatio) // window too wide => vertical bars
             {
-                // Fenêtre trop large => bandes verticales
                 float width = m_logicalResolution.y * windowRatio;
                 m_stageCamera.setSize({ width, static_cast<float>(m_logicalResolution.y) });
             }
-            else
+            else // window too tall => horizontal bars
             {
-                // Fenêtre trop haute => bandes horizontales
                 float height = m_logicalResolution.x / windowRatio;
                 m_stageCamera.setSize({ static_cast<float>(m_logicalResolution.x), height });
             }
 
-            // On garde le centre actuel de la caméra gameplay (utile si l’utilisateur a bougé/zoomé)
-            // Rien à faire si tu veux garder le centre tel quel
-
-            // 3. Réappliquer la vue courante à la fenêtre
-            m_window.setView(m_uiCamera); // par défaut sur UI
+            // 3. Reapply UI view and center window
+            m_window.setView(m_uiCamera);
             center_window();
         }
     }
 
-    if(m_isPaused)
-        deltaTime = 0.f;
-    else if (m_isFaster)
-        deltaTime *= 2.f;
+    // Apply game speed modifiers
+    if (m_isPaused) deltaTime = 0.f;
+    else if (m_isFaster) deltaTime *= 2.f;
 }
 
+
+/*
+ * Change window size programmatically
+ */
 void Game::resize_window(sf::Vector2u newSize)
 {
     m_window.setSize(newSize);
 }
 
+/*
+ * Center window on desktop
+ */
 void Game::center_window()
 {
     sf::VideoMode desktop = sf::VideoMode::getDesktopMode();

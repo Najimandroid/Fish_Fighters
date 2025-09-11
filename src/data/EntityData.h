@@ -5,39 +5,40 @@
 enum AttackType;
 
 /*
-* UnitData is a template for all Units in the game.
-* Check EntityDataLoader to get the data of any unit.
-*/
+ * EntityData represents the template for all units in the game.
+ * Use EntityDataLoader to retrieve the data of a specific unit by UID.
+ */
 
 struct EntityData
 {
-	//Every Unit will have a unique ID
-	int UID = -1;
+    // Unique identifier for the unit
+    int UID = -1;
 
-	//General datas
-	std::string name = "Unknown Unit";
-	std::string description = "???";
+    // General information
+    std::string name = "Unknown Unit";
+    std::string description = "???";
 
-	//Battle datas
-	int cost = 50;
-	int cooldown = 1; 
+    // Battle attributes
+    int cost = 50;                             // Deployment cost
+    int cooldown = 1;                          // Deployment cooldown
 
-	int health = 1.0f;
+    int health = 1;                            // Full health
 
-	int attackPower = 1.0f;
-	float attackRange = 1.0f;
-	AttackType attackType = static_cast<AttackType>(1);
-	float attackFrequency = 1.0f;
-	float foreswingTime = 0.0f; //Time before the attack is executed
-	float backswingTime = 0.0f; //Time after the attack is executed (before going back to idle)
+    int attackPower = 1;                       // Damage dealt per attack
+    float attackRange = 1.0f;
+    AttackType attackType = static_cast<AttackType>(1); // Type of attack (single, area, etc.)
+    float attackFrequency = 1.0f;              // Attacks per second
+    float foreswingTime = 0.0f;                // Time before attack is executed
+    float backswingTime = 0.0f;                // Time after attack is executed before idle
 
-	float movementSpeed = 1.0f;
+    float movementSpeed = 1.0f;
+    int knockbackCount = 1;                    // Number of knockbacks before dying
 
-	int knockbackCount = 1;
+    // Visual attributes
+    std::string texture;                        // File path to sprite/texture
+    int frameCount = 1;                         // Number of animation frames
+    int knockbackFrameIndex = 1;                // Frame index for knockback animation
 
-	std::string texture;
-	int frameCount = 1;
-	int knockbackFrameIndex = 1;
-
-	int baseUpgradeCost = 100; //Used primaryly for units
+    // Upgrade-related
+    int baseUpgradeCost = 100;                  // Base cost for unit upgrades
 };

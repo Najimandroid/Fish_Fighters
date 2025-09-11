@@ -7,47 +7,48 @@
 
 using json = nlohmann::json;
 
-bool DataLoader::load_all() 
+/*
+ * Loads all game data: units, enemies, stages, and player data.
+ * Returns true if all data loaded successfully.
+ */
+bool DataLoader::load_all()
 {
     return load_units("game_data/units.json") &&
-           load_enemies("game_data/enemies.json") &&
-           load_stages("game_data/stages.json") &&
-		   load_player("game_data/player.json");
+        load_enemies("game_data/enemies.json") &&
+        load_stages("game_data/stages.json") &&
+        load_player("game_data/player.json");
 }
 
+/*
+ * Save any persistent data (player progression).
+ * Called when game terminates.
+ */
 bool DataLoader::terminate()
 {
     return save_player("game_data/player.json");
 }
 
+/*
+ * Load units data from JSON.
+ * Populates m_unitsDatabase with EntityData.
+ */
 bool DataLoader::load_units(const std::string& path)
 {
-    if (m_unitsLoaded)
-    {
-        std::cout << "Units data already loaded\n";
-        return false;
-    }
+    if (m_unitsLoaded) return false;
 
     std::ifstream file(path);
+    if (!file) { std::cerr << "Failed to load units\n"; return false; }
 
-    if (!file) 
-    {
-        std::cerr << "Failed to load units from: " << path << "\n";
-        return false;
-    }
-
-    json j;
-    file >> j;
+    json j; file >> j;
 
     for (auto& [_, value] : j.items()) 
     {
-        std::shared_ptr<EntityData> data = std::make_shared<EntityData>();
+        auto data = std::make_shared<EntityData>();
 
         data->UID = value.at("UID").get<int>();
 
         data->name = value.at("name").get<std::string>();
         data->description = value.at("description").get<std::string>();
-		data->baseUpgradeCost = value.at("baseUpgradeCost").get<int>();
 
         data->cost = value.at("cost").get<int>();
         data->cooldown = value.at("cooldown").get<int>();
@@ -62,12 +63,13 @@ bool DataLoader::load_units(const std::string& path)
         data->backswingTime = value.at("backswing").get<float>();
 
         data->movementSpeed = value.at("movementSpeed").get<float>();
-
         data->knockbackCount = value.at("knockbackCount").get<int>();
 
         data->texture = value.at("texture").get<std::string>();
         data->frameCount = value.at("frameCount").get<int>();
         data->knockbackFrameIndex = value.at("knockbackFrameIndex").get<int>();
+
+        data->baseUpgradeCost = value.at("baseUpgradeCost").get<int>();
 
         m_unitsDatabase[data->UID] = data;
     }
@@ -76,21 +78,16 @@ bool DataLoader::load_units(const std::string& path)
     return true;
 }
 
+/*
+ * Load enemies data from JSON.
+ * Populates m_enemiesDatabase with EntityData.
+ */
 bool DataLoader::load_enemies(const std::string& path)
 {
-    if (m_enemiesLoaded)
-    {
-        std::cout << "Enemies data already loaded\n";
-        return false;
-    }
+    if (m_enemiesLoaded) return false;
 
     std::ifstream file(path);
-
-    if (!file) 
-    {
-        std::cerr << "Failed to load enemies from: " << path << "\n";
-        return false;
-    }
+    if (!file) { std::cerr << "Failed to load enemies\n"; return false; }
 
     json j;
     file >> j;
@@ -114,7 +111,6 @@ bool DataLoader::load_enemies(const std::string& path)
         data->backswingTime = value.at("backswing").get<float>();
 
         data->movementSpeed = value.at("movementSpeed").get<float>();
-
         data->knockbackCount = value.at("knockbackCount").get<int>();
 
         data->texture = value.at("texture").get<std::string>();
@@ -128,21 +124,16 @@ bool DataLoader::load_enemies(const std::string& path)
     return true;
 }
 
+/*
+ * Load stages data from JSON.
+ * Populates m_stagesDatabase with StageData.
+ */
 bool DataLoader::load_stages(const std::string& path)
 {
-    if (m_stagesLoaded)
-    {
-        std::cout << "Stages data already loaded\n";
-        return false;
-    }
+    if (m_stagesLoaded) return false;
 
     std::ifstream file(path);
-
-    if (!file)
-    {
-        std::cerr << "Failed to load stages from: " << path << "\n";
-        return false;
-    }
+    if (!file) { std::cerr << "Failed to load stages\n"; return false; }
 
     json j;
     file >> j;
@@ -163,7 +154,7 @@ bool DataLoader::load_stages(const std::string& path)
         data->baseTexture = value.at("baseTexture").get<std::string>();
         data->backgroundTexture = value.at("backgroundTexture").get<std::string>();
         
-        //Just to avoid resizing the vector too many times
+        // Just to avoid resizing the vector too many times
         size_t numberOfDifferentEnemies = value.at("numberOfDifferentEnemies").get<size_t>();
         data->enemies.reserve(numberOfDifferentEnemies);
 
@@ -217,20 +208,16 @@ bool DataLoader::load_stages(const std::string& path)
     return true;
 }
 
+/*
+ * Load player data from JSON
+ * Populates shells, owned units, equipped units, completed stages
+ */
 bool DataLoader::load_player(const std::string& path)
 {
-    if (m_playerData)
-    {
-        std::cout << "Player data already loaded\n";
-        return false;
-    }
+    if (m_playerLoaded) return false;
 
     std::ifstream file(path);
-    if (!file)
-    {
-        std::cerr << "Failed to load player data from: " << path << "\n";
-        return false;
-    }
+    if (!file) { std::cerr << "Failed to load the player\n"; return false; }
 
     json j;
     file >> j;
@@ -240,10 +227,10 @@ bool DataLoader::load_player(const std::string& path)
     //Tries to load the data:
     try
     {
-        //Shells
+        // Shells
         m_playerData->shells = j.at("money").at("shells").get<int>();
 
-        //Owned units
+        // Owned units
         m_playerData->ownedUnits.clear();
         for (auto& [uidStr, unitData] : j.at("units").at("owned").items())
         {
@@ -252,7 +239,7 @@ bool DataLoader::load_player(const std::string& path)
             m_playerData->ownedUnits[uid] = level;
         }
 
-        //Units waiting to be unlocked
+        // Units waiting to be unlocked
         m_playerData->unitsWaitingToBeUnlocked.clear();
         for (auto& [uidStr, _] : j.at("units").at("waitingToBeUnlocked").items())
         {
@@ -260,14 +247,14 @@ bool DataLoader::load_player(const std::string& path)
             m_playerData->unitsWaitingToBeUnlocked.insert(uid);
         }
 
-        //Equipped units
+        // Equipped units
         auto equippedArray = j.at("units").at("equipped");
         for (size_t i = 0; i < equippedArray.size() && i < m_playerData->equippedUnits.size(); i++)
         {
             m_playerData->equippedUnits[i] = equippedArray[i].get<int>();
         }
 
-        //Completed stages
+        // Completed stages
         m_playerData->completedStages.clear();
         for (auto& stageUid : j.at("progression").at("completedStages"))
         {
@@ -284,6 +271,10 @@ bool DataLoader::load_player(const std::string& path)
     return true;
 }
 
+/*
+ * Save player data and write the new data into player.json
+ * Saves shells, owned units, equipped units, completed stages etc...
+ */
 bool DataLoader::save_player(const std::string& path)
 {
     if(!m_playerLoaded) 

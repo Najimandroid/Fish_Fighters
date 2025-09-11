@@ -3,24 +3,11 @@
 #include <iostream>
 
 UIBattleIcon::UIBattleIcon(sf::Vector2f position, const std::string& iconTexturePath):
-	UIButtonElement({ 144.f, 144.f }, position, "0$"),
+	UIButtonElement({ 144.f * 1.15f, 108.f * 1.15f }, position, "0$"),
 	m_sprite(m_texture)
 {
 	//Loading icon texture and setting up sprite
-	if(!m_texture.loadFromFile(iconTexturePath))
-	{
-		auto success = m_texture.loadFromFile("assets/images/textures/icons/placeholder.png");
-	}
-
-	m_sprite.setTextureRect(sf::IntRect(
-		{ 0, 0 }, 
-		{static_cast<int>(m_texture.getSize().x), static_cast<int>(m_texture.getSize().y)
-	}));
-	m_sprite.setPosition(position);
-	m_sprite.setScale({
-		144.f / m_texture.getSize().x,
-		144.f / m_texture.getSize().y
-	});
+	set_texture(iconTexturePath);
 
 	//Loading price text
 	m_text.setCharacterSize(30);
@@ -31,17 +18,15 @@ UIBattleIcon::UIBattleIcon(sf::Vector2f position, const std::string& iconTexture
 	set_cost(m_cost);
 
 	//Setting up cooldown overlay
-	m_blackFilter.setSize(m_shape.getSize());
-	m_blackFilter.setPosition(m_shape.getPosition());
-	m_blackFilter.setFillColor(sf::Color(50, 50, 50, 0));
-
 	float barWidth = m_shape.getSize().x - 15.f;
-	float barHeight = 12.f;
+	float barHeight = m_shape.getSize().y * 0.1f;
+
 	m_barBackground.setSize({ barWidth, barHeight });
 	m_barBackground.setFillColor(sf::Color(0, 0, 0, 0));
+
 	m_barBackground.setPosition({
-		position.x + (144.f - barWidth) / 2.f,
-		position.y + (144.f - barHeight - 7.5f)
+		position.x + (m_shape.getSize().x - barWidth) / 2.f,
+		position.y + m_shape.getSize().y - barHeight - 7.5f //offset of 7.5f
 	});
 
 	m_barFill.setSize({ 0.f, barHeight });
@@ -51,6 +36,10 @@ UIBattleIcon::UIBattleIcon(sf::Vector2f position, const std::string& iconTexture
 	//Adding m_shape outlines
 	m_shape.setOutlineColor(sf::Color::Black);
 	m_shape.setOutlineThickness(4.5f);
+
+	//Setting up the black filter
+	m_blackFilter.setSize(m_shape.getSize());
+	m_blackFilter.setPosition(m_shape.getPosition());
 }
 
 void UIBattleIcon::update(float deltaTime)
@@ -98,6 +87,7 @@ void UIBattleIcon::render(sf::RenderWindow& window)
 		window.draw(m_sprite);
 
 		window.draw(m_blackFilter);
+
 		window.draw(m_barBackground);
 		window.draw(m_barFill);
 
@@ -135,23 +125,31 @@ void UIBattleIcon::set_cost(int cost)
 	m_cost = cost;
 
 	if (m_cost < 0)
-	{ 
+	{
 		m_text.setString("");
 		m_text.setFillColor(sf::Color::Transparent);
 	}
 	else
+	{
 		m_text.setString(std::to_string(m_cost) + "$");
+		m_text.setFillColor(sf::Color::Yellow);
+	}
 
 	auto bounds = m_shape.getGlobalBounds();
-
 	auto textBounds = m_text.getLocalBounds();
+
 	m_text.setOrigin({
 		textBounds.position.x + textBounds.size.x,
 		textBounds.position.y + textBounds.size.y
-		});
+	});
 
-	sf::Vector2f posOffset = { 5.f, 8.f };
-	m_text.setPosition(bounds.position + bounds.size + posOffset);
+	float paddingX = -5.f;
+	float paddingY = -5.f;
+
+	m_text.setPosition({
+		bounds.position.x + bounds.size.x - paddingX,
+		bounds.position.y + bounds.size.y - paddingY
+	});
 }
 
 void UIBattleIcon::start_cooldown()
@@ -175,9 +173,31 @@ void UIBattleIcon::start_cooldown()
 void UIBattleIcon::set_texture(const std::string& texturePath)
 {
 	if(!m_texture.loadFromFile(texturePath))
-	{
 		m_texture.loadFromFile("assets/images/textures/icons/placeholder.png");
-	}
+
+	m_sprite.setTextureRect(sf::IntRect(
+		{ 0, 0 },
+		{ static_cast<int>(m_texture.getSize().x), static_cast<int>(m_texture.getSize().y)
+	}));
+
+	//Fit icon inside the icon
+	sf::Vector2f targetSize = m_shape.getSize();
+	sf::Vector2u texSize = m_texture.getSize();
+
+	float scaleX = targetSize.x / texSize.x;
+	float scaleY = targetSize.y / texSize.y;
+
+	m_sprite.setScale({ scaleX, scaleY });
+
+	// centrer l’image dans le bouton
+	sf::FloatRect bounds = m_sprite.getGlobalBounds();
+	sf::Vector2f spritePos = m_shape.getPosition();
+
+	// Décalage pour centrer
+	spritePos.x += (targetSize.x - bounds.size.x) / 2.f;
+	spritePos.y += (targetSize.y - bounds.size.y) / 2.f;
+
+	m_sprite.setPosition(spritePos);
 }
 
 void UIBattleIcon::set_darkened(bool isDarkened)

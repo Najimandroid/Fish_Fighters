@@ -14,6 +14,11 @@ void UIElement::set_size(sf::Vector2f newSize)
 	m_size = newSize;
 }
 
+void UIElement::set_visible(bool isVisible)
+{
+	m_isVisible = isVisible;
+}
+
 sf::Vector2f UIElement::get_position() const
 {
 	return m_position;
@@ -27,4 +32,9 @@ sf::Vector2f UIElement::get_size() const
 sf::FloatRect UIElement::get_bounds() const
 {
 	return sf::FloatRect{ m_position, m_size };
+}
+
+bool UIElement::is_visible() const
+{
+	return m_isVisible;
 }

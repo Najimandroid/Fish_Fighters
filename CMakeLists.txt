@@ -62,6 +62,9 @@ set(PROJECT_SOURCES
     src/core/uis/UIUpgradeIcon.cpp
     src/core/uis/UIUpgradeSlider.cpp
     src/core/uis/UIPlayerShellsInfo.cpp
+    src/core/uis/UIEquipIcon.cpp
+    src/core/uis/UIEquipSlot.cpp
+    src/core/uis/UIEquipSlider.cpp
 
     src/data/PlayerData.cpp
     # ← ajoute ici les futurs fichiers, par ex.:

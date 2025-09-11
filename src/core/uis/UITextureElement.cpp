@@ -60,6 +60,11 @@ void UITextureElement::apply_scale()
     float scaleX = m_size.x / static_cast<float>(texSize.x);
     float scaleY = m_size.y / static_cast<float>(texSize.y);
 
-    m_sprite.setScale({ scaleX, scaleY });
-    m_sprite.setPosition(m_position);
+    float scale = std::min(scaleX, scaleY);
+    m_sprite.setScale({ scale, scale });
+
+    m_sprite.setTextureRect(sf::IntRect(
+        { 0, 0 },
+        { static_cast<int>(m_texture.getSize().x), static_cast<int>(m_texture.getSize().y)
+    }));
 }

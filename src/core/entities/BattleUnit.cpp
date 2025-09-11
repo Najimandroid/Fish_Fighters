@@ -12,7 +12,7 @@ BattleUnit::BattleUnit(std::shared_ptr<EntityData> data_, sf::Vector2f magnifica
 	//Init core datas
 	magnification = magnification_;
 	currentHealth = data->health * magnification.x;
-	healthLeftBeforeNextKnockback = data->health - (data->health / data->knockbackCount);
+	healthLeftBeforeNextKnockback = data->knockbackCount > 0? data->health - (data->health / data->knockbackCount) : 0.f;
 
 	position = { 1920.f - 200.f, 1080.f * 2/3 };
 

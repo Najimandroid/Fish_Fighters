@@ -57,7 +57,7 @@ void KnockbackState::exit()
 
 	if (entity->isOnShockwave == false)
 	{
-		float step = entity->data->health / entity->data->knockbackCount;
+		float step = entity->data->knockbackCount > 0 ? entity->data->health / entity->data->knockbackCount : 0.f;
 
 		while (entity->healthLeftBeforeNextKnockback >= entity->currentHealth && entity->healthLeftBeforeNextKnockback > 0.0f)
 			entity->healthLeftBeforeNextKnockback -= step;
