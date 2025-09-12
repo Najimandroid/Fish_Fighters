@@ -2,99 +2,133 @@
 
 #include <iostream>
 
-//BattleEnemy::BattleEnemy() = default;
-
+// ==================
+// Constructor
+// ==================
 BattleUnit::BattleUnit(std::shared_ptr<EntityData> data_, sf::Vector2f magnification_)
 {
-	//Init data
-	data = data_;
+    // ===== Core Stats =====
+    data = data_;
+    magnification = magnification_;
 
-	//Init core datas
-	magnification = magnification_;
-	currentHealth = data->health * magnification.x;
-	healthLeftBeforeNextKnockback = data->knockbackCount > 0? data->health - (data->health / data->knockbackCount) : 0.f;
+    // Scale health by magnification
+    currentHealth = data->health * magnification.x;
 
-	position = { 1920.f - 200.f, 1080.f * 2/3 };
+    // Determine first knockback threshold
+    healthLeftBeforeNextKnockback =
+        data->knockbackCount > 0 ? data->health - (data->health / data->knockbackCount) : 0.f;
 
-	currentAttackCooldown = data->attackFrequency; //Set current attack cooldown to attack frequency to make them attack instantly
-	
-	//Init sprite
-	bool isTextureLoaded = texture.loadFromFile(data->texture);
-	sprite.setTexture(texture, true);
-	sprite.setOrigin({ static_cast<float>(texture.getSize().x / data->frameCount / 2), static_cast<float>(texture.getSize().y) });
-	currentFrameIndex = 0;
-	sprite.setTextureRect({ {static_cast<int>(texture.getSize().x / data->frameCount * currentFrameIndex), 0},
-	{static_cast<int>(texture.getSize().x / data->frameCount), static_cast<int>(texture.getSize().y)}
-		});
+    // Initial spawn position (hardcoded: right side of screen, bottom 2/3)
+    position = { 1920.f - 200.f, 1080.f * 2 / 3 };
 
-	//std::cout << "Spawned rect size x: " << sprite.getTextureRect().size.x << '\n';
+    // Start with attack cooldown ready (so unit can attack instantly)
+    currentAttackCooldown = data->attackFrequency;
 
-	//Init battle zones
-	hitbox.size = { static_cast<float>(texture.getSize().x / data->frameCount / 2), 1080.f };
-	attackRangeZone.size = { data->attackRange + static_cast<float>(texture.getSize().x / data->frameCount / 2) , 1080.f };
-	damageZone.size = { data->attackRange + static_cast<float>(texture.getSize().x / data->frameCount / 2) , 1080.f };
+    // ===== Sprite & Texture =====
+    bool isTextureLoaded = texture.loadFromFile(data->texture);
+    sprite.setTexture(texture, true);
 
-	//std::cout << "hitbox size x: " << static_cast<float>(texture.getSize().x / data->frameCount / 2) << '\n';
+    // Origin at sprite center (x) and bottom (y)
+    sprite.setOrigin({
+        static_cast<float>(texture.getSize().x / data->frameCount / 2),
+        static_cast<float>(texture.getSize().y)
+        });
 
-	//Init position
-	hitbox.position = position;
-	attackRangeZone.position = {position.x - data->attackRange + hitbox.size.x, position.y};
-	damageZone.position = { position.x - data->attackRange + hitbox.size.x, position.y };;
+    // Initialize first frame of animation
+    currentFrameIndex = 0;
+    sprite.setTextureRect({
+        { static_cast<int>(texture.getSize().x / data->frameCount * currentFrameIndex), 0 },
+        { static_cast<int>(texture.getSize().x / data->frameCount), static_cast<int>(texture.getSize().y) }
+        });
+
+    // ===== Combat Zones =====
+    // Hitbox: half the sprite width, full vertical coverage
+    hitbox.size = {
+        static_cast<float>(texture.getSize().x / data->frameCount / 2),
+        1080.f
+    };
+
+    // Attack and damage zones: extend forward by attack range
+    attackRangeZone.size = { data->attackRange + hitbox.size.x, 1080.f };
+    damageZone.size = { data->attackRange + hitbox.size.x, 1080.f };
+
+    // ===== Initial Positions =====
+    hitbox.position = position;
+    attackRangeZone.position = { position.x - data->attackRange + hitbox.size.x, position.y };
+    damageZone.position = { position.x - data->attackRange + hitbox.size.x, position.y };
 
 #ifdef DEBUG_MODE
-	//Init debug rectangles
-	rHitbox.setSize(hitbox.size);
-	rHitbox.setPosition(position);
+    // ===== Debug Rendering =====
+    rHitbox.setSize(hitbox.size);
+    rHitbox.setPosition(position);
 
-	rAttackRangeZone.setSize(attackRangeZone.size);
-	rAttackRangeZone.setPosition(position);
+    rAttackRangeZone.setSize(attackRangeZone.size);
+    rAttackRangeZone.setPosition(position);
 
-	rDamageZone.setSize(damageZone.size);
-	rDamageZone.setPosition(position);
+    rDamageZone.setSize(damageZone.size);
+    rDamageZone.setPosition(position);
 #endif
 }
 
+// ==================
+// Destructor
+// ==================
 BattleUnit::~BattleUnit()
 {
-	//std::cout << "BattleUnit Destructor called\n";
+    // Optional debug
+    // std::cout << "BattleUnit Destructor called\n";
 }
 
-void BattleUnit::update(float deltaTime, const std::map<int, std::vector<std::shared_ptr<BattleEntity>>>& entityList)
+// ==================
+// Update
+// ==================
+void BattleUnit::update(
+    float deltaTime,
+    const std::map<int, std::vector<std::shared_ptr<BattleEntity>>>& entityList
+)
 {
-	stateMachine->update_state(deltaTime);
+    // Advance state machine (handles attack/walk/idle transitions)
+    stateMachine->update_state(deltaTime);
 
-	update_position();
-	update_sprite();
+    // Update position (including knockback and hitboxes)
+    update_position();
 
-	//std::cout << "[Current Swing Time: " << currentAttackSwingTime << "]\n";
+    // Update sprite animation
+    update_sprite();
 
-	currentAttackCooldown += deltaTime;
-	currentFrameCooldown += deltaTime;
+    // Progress attack and animation timers
+    currentAttackCooldown += deltaTime;
+    currentFrameCooldown += deltaTime;
 }
 
+// ==================
+// Position Update
+// ==================
 void BattleUnit::update_position()
 {
-	if (stateMachine->get_active_state_id() == "KNOCKBACK")
-	{
-		if (tweenX.progress() < 1.0f && tweenY.progress() < 1.0f)
-		{
-			sprite.setPosition({ tweenX.step(1), tweenY.step(1) });
-		}
-	}
-	else
-	{
-		sprite.setPosition({ position.x, position.y - static_cast<float>(currentLayer) });
-	}
+    if (stateMachine->get_active_state_id() == "KNOCKBACK")
+    {
+        // Knockback uses tween animations
+        if (tweenX.progress() < 1.0f && tweenY.progress() < 1.0f)
+        {
+            sprite.setPosition({ tweenX.step(1), tweenY.step(1) });
+        }
+    }
+    else
+    {
+        // Normal position: x,y minus current layer (layer = depth offset)
+        sprite.setPosition({ position.x, position.y - static_cast<float>(currentLayer) });
+    }
 
-	hitbox.position = position;
-	attackRangeZone.position = { position.x - data->attackRange, position.y };
-	damageZone.position = { position.x - data->attackRange, position.y };
+    // Sync combat zones with position
+    hitbox.position = position;
+    attackRangeZone.position = { position.x - data->attackRange, position.y };
+    damageZone.position = { position.x - data->attackRange, position.y };
 
 #ifdef DEBUG_MODE
-	//Update debug rectangles' position
-	rHitbox.setPosition(hitbox.position);
-	rAttackRangeZone.setPosition(attackRangeZone.position);
-	rDamageZone.setPosition(damageZone.position);
+    // Update debug rectangles to follow entity
+    rHitbox.setPosition(hitbox.position);
+    rAttackRangeZone.setPosition(attackRangeZone.position);
+    rDamageZone.setPosition(damageZone.position);
 #endif
 }
-

@@ -12,6 +12,8 @@
 #include "../uis/UIManager.h"
 
 /*
+ * Game class
+ * -----------
  * Game class manages the main game loop and all core systems.
  * Responsibilities include:
  *   - Creating and managing the SFML window
@@ -57,11 +59,11 @@ private:
     void debug_ui();
 
 private:
-    // Game state flags
+    // ----- Game State -----
     bool m_isPaused = false;       // If true, game updates are paused
     bool m_isFaster = false;       // If true, game updates run at double speed
 
-    // Window and camera management
+    // ----- Window and Cameras (Views) -----
     sf::RenderWindow m_window;
     sf::View m_uiCamera;           // Camera used to render UI elements
     sf::View m_stageCamera;        // Camera used to render the gameplay/stage
@@ -71,12 +73,12 @@ private:
     const int m_frameRate = 60;    // Maximum framerate
     const sf::Vector2u m_logicalResolution = { 1920, 1080 }; // Reference resolution
 
-    // Mouse and input handling
+    // ----- Mouse and Inputs -----
     float m_currentZoom = 1.f;     // Current zoom level of the stage camera
     bool m_isDragging = false;     // Indicates if the user is dragging the camera
     sf::Vector2i m_lastMousePos{ 0, 0 };
 
-    // Core game systems
+    // ----- Systems -----
     std::shared_ptr<DataLoader> m_dataLoader; // Loads unit and game data
     std::shared_ptr<Stage> m_stage;           // Handles gameplay and units
     std::shared_ptr<UIManager> m_uiManager;   // Handles UI elements and interactions

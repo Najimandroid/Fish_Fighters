@@ -2,13 +2,17 @@
 
 #include "../entities/BattleEnemy.h"
 #include "../entities/BattleUnit.h"
-#include "../../uis/UIManager.h"
 
 #include "../entities/machine/states/KnockbackState.h"
 #include "../entities/machine/states/IdleState.h"
 
+#include "../../uis/UIManager.h"
+
 #include <iostream>
 
+/*
+* Initializes the stage with the DataLoader and UIManager
+*/
 void Stage::init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<UIManager> uiManager)
 {
 	m_dataLoader = dataLoader;
@@ -16,6 +20,9 @@ void Stage::init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<UIManag
 	unload();
 }
 
+/*
+* Constructor: initialize pointers and textures
+*/
 Stage::Stage():
 	m_enemyBase(nullptr), m_unitBase(nullptr),
 
@@ -23,55 +30,56 @@ Stage::Stage():
 	m_backgroundTexture(sf::Texture()), m_backgroundSprite(sf::Sprite(m_backgroundTexture))
 {}
 
+/*
+* Load a stage by its UIDs
+*/
 void Stage::load(int uid)
 {
-	if (m_uid != -1) unload();
-
-	//Loading stage with the StageData uid
+	if (m_uid != -1) unload(); // Unload previous stage
 
 	std::shared_ptr<const StageData> stageJson = m_dataLoader->get_stage_data(uid);
 
-	//setup stage data
+	// Setup stage properties
 	m_uid = uid;
 	m_stageName = stageJson->name;
-
 	m_enemiesLimit = stageJson->enemiesLimit;
 	m_unitsLimit = stageJson->unitsLimit;
-
 	m_enemiesCount = 0;
 	m_unitsCount = 0;
-
 	m_currentCash = 0;
 
+	// Spawn bases with provided health and texture
 	spawn_bases(stageJson->baseHealth, stageJson->baseTexture);
 
-	//Copying the stageData
+	// Copy enemy spawn data from stage JSON
 	m_enemyStageDatas.clear();
 	for (auto& enemy : stageJson->enemies)
 	{
 		auto enemyCopy = std::make_shared<EnemyStageData>(*enemy);
-		enemyCopy->currentTimer = enemyCopy->respawnTime;
+		enemyCopy->currentTimer = enemyCopy->respawnTime; // initialize spawn timer
 		m_enemyStageDatas.push_back(enemyCopy);
 	}
 
-	//Setup background
-	bool bg = m_backgroundTexture.loadFromFile(stageJson->backgroundTexture); //to do: adding default background
+	// Load background texture and scale to 1920x1080
+	bool bg = m_backgroundTexture.loadFromFile(stageJson->backgroundTexture);
 	m_backgroundSprite.setTexture(m_backgroundTexture, true);
 	m_backgroundSprite.setPosition({ 0.0f, 0.0f });
 
-	//Force background to fit 1920x1080
 	sf::Vector2u texSize = m_backgroundTexture.getSize();
 	if (texSize.x > 0 && texSize.y > 0)
 	{
 		m_backgroundSprite.setScale({
 			1920.f / texSize.x,
 			1080.f / texSize.y
-		});
+			});
 	}
 
 	m_isLoaded = true;
 }
 
+/*
+* Unload all stage data and entities
+*/
 void Stage::unload()
 {
 	m_uid = -1;
@@ -88,6 +96,9 @@ void Stage::unload()
 	m_isLoaded = false;
 }
 
+/*
+* Main update function: spawn enemies, update entities, check win/loss
+*/
 void Stage::update(float deltaTime)
 {
 	if (!m_isLoaded) return;
@@ -99,24 +110,24 @@ void Stage::update(float deltaTime)
 	for (auto& spawnEnemyData : m_enemyStageDatas)
 	{
 
-		//Checks if the base health correspond to the baseHealthThreshold data
+		// Checks if the base health correspond to the baseHealthThreshold data
 		if (m_enemyBase->maxHealth * (spawnEnemyData->baseHealthThreshold/100.0f) < m_enemyBase->currentHealth) continue;
 
-		//Checks if elapsed time >= spawnStart
+		// Checks if elapsed time >= spawnStart
 		if (m_elapsedTime >= spawnEnemyData->spawnStart) { spawnEnemyData->hasStarted = true; }
 
-		//Checks if started
+		// Checks if started
 		if (!spawnEnemyData->hasStarted) continue;
 
-		//Checks if the spawnEnemyData already spawned all enemies it was supposed to make spawn (-1 == infinite spawn)
+		// Checks if the spawnEnemyData already spawned all enemies it was supposed to make spawn (-1 == infinite spawn)
 		if (spawnEnemyData->amount != -1 && spawnEnemyData->spawnedCount >= spawnEnemyData->amount ) continue;
 
-		//Updates the enemy internal clock
+		// Updates the enemy internal clock
 		spawnEnemyData->currentTimer += deltaTime;
 
 		if (spawnEnemyData->currentTimer >= spawnEnemyData->respawnTime)
 		{
-			//Spawn enemy
+			// Spawn enemy
 			auto data = m_dataLoader->get_enemy_data(spawnEnemyData->UID);
 
 			//std::cout << "Spawned enemy: " << data->name << "\n";*
@@ -133,11 +144,11 @@ void Stage::update(float deltaTime)
 	update_enemies(deltaTime);
 	update_units(deltaTime);
 
-	//Checks if the Player has won or lost
+	// Checks if the Player has won or lost
 	if (is_enemy_base_destroyed())
 	{
-		//player has won
-		//TODO: add a winning screen
+		// Player has won
+		// TODO: add a winning screen
 		if (auto player = m_dataLoader->get_player_data().lock())
 		{
 			auto stageData = m_dataLoader->get_stage_data(m_uid);
@@ -152,22 +163,28 @@ void Stage::update(float deltaTime)
 
 	if (is_unit_base_destroyed())
 	{
-		//play has lost
-		//TODO: add a losing screen
+		// Player has lost
+		// TODO: add a losing screen
 		unload();
 		m_uiManager.lock()->generate_fish_tank_uis();
 		return;
 	}
 }
 
+/*
+* Increment cash over time
+*/
 void Stage::update_cash()
 {
 	if (m_currentCash < m_maxCash)
-		m_currentCash += 1; //For testing purposes, add 10 cash every update
+		m_currentCash += 1; // TEMPORARY: increase 1 cash per update
 
 	//std::cout << "[BANK]: " << m_currentCash << "$ / " << m_MAX_CASH << "$\n";
 }
 
+/*
+* Update all enemies: remove dead, check base reach, calls update() individually
+*/
 void Stage::update_enemies(float deltaTime)
 {
 	if (m_enemies.empty()) return;
@@ -183,7 +200,7 @@ void Stage::update_enemies(float deltaTime)
 			{
 				//remove enemy from map
 				std::cout << "Enemy dead\n";
-				itvec = enemyList.erase(itvec); //Todo: create remove_enemy();
+				itvec = enemyList.erase(itvec); // TODO: create remove_enemy();
 				m_enemiesCount--;
 				continue;
 			}
@@ -201,6 +218,9 @@ void Stage::update_enemies(float deltaTime)
 	}
 }
 
+/*
+* Update all units: remove dead, check base reach, calls update() individually
+*/
 void Stage::update_units(float deltaTime)
 {
 	if (m_units.empty()) return;
@@ -214,9 +234,9 @@ void Stage::update_units(float deltaTime)
 			auto unit = itvec.operator*();
 			if (unit->isDead)
 			{
-				//remove enemy from map
+				// Remove unit from map
 				std::cout << "Unit dead\n";
-				itvec = unitList.erase(itvec); //Todo: create remove_enemy();
+				itvec = unitList.erase(itvec); //Todo: create remove_unit();
 				m_unitsCount--;
 				continue;
 			}
@@ -234,12 +254,18 @@ void Stage::update_units(float deltaTime)
 	}
 }
 
+/*
+* Update both bases
+*/
 void Stage::update_bases(float deltaTime)
 {
 	m_enemyBase->update(deltaTime, m_units);
 	m_unitBase->update(deltaTime, m_enemies);
 }
 
+/*
+* Upgrade cash capacity if player has enough
+*/
 bool Stage::upgrade_cash(int level, int cost)
 {
 	if (m_currentCash < cost) return false;
@@ -250,11 +276,17 @@ bool Stage::upgrade_cash(int level, int cost)
 	return true;
 }
 
+/*
+* Check if player base is destroyed
+*/
 bool Stage::is_unit_base_destroyed()
 {
 	return m_unitBase->currentHealth <= 0.f;
 }
 
+/*
+* Check if enemy base is destroyed
+*/
 bool Stage::is_enemy_base_destroyed()
 {
 	return m_enemyBase->currentHealth <= 0.f;
@@ -295,21 +327,25 @@ bool Stage::is_loaded() const
 	return m_isLoaded;
 }
 
+/*
+* Render all stage elements
+*/
 void Stage::render(sf::RenderWindow& window)
 {
 	if (!m_isLoaded) return;
 
+	// Draw background and bases
 	window.draw(m_backgroundSprite);
 	window.draw(m_enemyBase->sprite);
 	window.draw(m_unitBase->sprite);
 
 #ifdef DEBUG_MODE
-	//Rendering the hitboxes in debug mode
+	// Draw hitboxes for debugging
 	window.draw(m_enemyBase->rHitbox);
 	window.draw(m_unitBase->rHitbox);
 #endif
 
-	//Drawing enemies
+	// Draw enemies (back to front)
 	for (auto& [layer, enemyList] : std::ranges::reverse_view(m_enemies))
 	{
 
@@ -318,7 +354,7 @@ void Stage::render(sf::RenderWindow& window)
 			window.draw(enemy->sprite);
 
 #ifdef DEBUG_MODE
-			//Rendering the hitboxes in debug mode
+			// Draw hitboxes for debugging
 			window.draw(enemy->rDamageZone);
 			window.draw(enemy->rAttackRangeZone);
 			window.draw(enemy->rHitbox);
@@ -326,7 +362,7 @@ void Stage::render(sf::RenderWindow& window)
 		}
 	}
 
-	//Drawing units
+	// Draw units (back to front)
 	for (auto& [layer, unitList] : std::ranges::reverse_view(m_units))
 	{
 
@@ -335,7 +371,7 @@ void Stage::render(sf::RenderWindow& window)
 			window.draw(unit->sprite);
 
 #ifdef DEBUG_MODE
-			//Rendering the hitboxes in debug mode
+			// Draw hitboxes for debugging
 			window.draw(unit->rDamageZone);
 			window.draw(unit->rAttackRangeZone);
 			window.draw(unit->rHitbox);
@@ -344,6 +380,9 @@ void Stage::render(sf::RenderWindow& window)
 	}
 }
 
+/*
+* Spawn the two bases in their positions
+*/
 void Stage::spawn_bases(float health, std::string texture)
 {
 	m_enemyBase = std::make_unique<BattleBase>(health, texture);
@@ -353,55 +392,49 @@ void Stage::spawn_bases(float health, std::string texture)
 	m_unitBase->position = { 1900.0f - m_unitBase->texture.getSize().x, 540.0f - m_unitBase->texture.getSize().y / 2 }; //20px to the left
 }
 
+/*
+* Spawn a new enemy
+*/
 void Stage::spawn_enemy(std::shared_ptr<EntityData> enemyData, sf::Vector2f magnification, int layer = -1, bool isBoss = false, bool bypassLimit = false)
 {
-	if (m_enemiesCount >= m_enemiesLimit && bypassLimit == false) return;
+	if (m_enemiesCount >= m_enemiesLimit && !bypassLimit) return;
 
 	std::shared_ptr<BattleEnemy> battleEnemy = std::make_shared<BattleEnemy>(enemyData, magnification);
 	battleEnemy->set_current_stage(shared_from_this());
 	battleEnemy->init_state_machine();
 	battleEnemy->stateMachine->change_state(std::make_unique<IdleState>(battleEnemy->stateMachine));
 
-	//spawn in corresponding layer
-	if (layer > 0)
-	{
-		battleEnemy->currentLayer = layer;
-	}
-	else
-	{
-		battleEnemy->currentLayer = generate_random_spawn_layer();
-	}
-
+	// Assign layer
+	battleEnemy->currentLayer = (layer > 0) ? layer : generate_random_spawn_layer();
 	battleEnemy->update_position();
 	battleEnemy->update_sprite();
 
 	if (isBoss) generate_boss_shockwave();
 
 	m_enemiesCount++;
-
 	m_enemies[battleEnemy->currentLayer].push_back(battleEnemy);
 }
 
+/*
+* Spawn a new unit
+*/
 void Stage::spawn_unit(std::shared_ptr<EntityData> unitData)
 {
-	if (m_unitsCount >= m_unitsLimit) return; //return if the limit is reached
-	if (unitData->cost > m_currentCash) return; //return if the player doesn't have enough cash (broke)
+	if (m_unitsCount >= m_unitsLimit) return;
+	if (unitData->cost > m_currentCash) return;
 
 	sf::Vector2f unitMagnification = { 1.f, 1.f };
 
-	//Checks if the player has the unit. If so, we'll check the level to adjust the stats of the unit
+	// Adjust unit stats based on player level
 	if (auto player = m_dataLoader->get_player_data().lock())
 	{
 		if (player->is_unit_owned(unitData->UID))
 		{
 			int level = player->get_unit_level(unitData->UID);
-
 			if (level > 1)
 			{
-				//+15% for HP and DMG per level
 				float growth = 0.15f;
 				float multiplier = std::pow(1.f + growth, level - 1);
-
 				unitMagnification.x = multiplier;
 				unitMagnification.y = multiplier;
 			}
@@ -414,27 +447,33 @@ void Stage::spawn_unit(std::shared_ptr<EntityData> unitData)
 	battleUnit->stateMachine->change_state(std::make_unique<IdleState>(battleUnit->stateMachine));
 
 	battleUnit->currentLayer = generate_random_spawn_layer();
-
 	battleUnit->update_position();
 	battleUnit->update_sprite();
 
-
 	m_unitsCount++;
 	m_currentCash -= unitData->cost;
-
 	m_units[battleUnit->currentLayer].push_back(battleUnit);
 }
 
+/*
+* Remove enemy from stage
+*/
 void Stage::remove_enemy(BattleEnemy battleEnemy)
 {
 	m_enemies.erase(battleEnemy.currentLayer);
 }
 
+/*
+* Remove unit from stage
+*/
 void Stage::remove_unit(BattleUnit battleUnit)
 {
 	m_units.erase(battleUnit.currentLayer);
 }
 
+/*
+* Generate random spawn layer for entities
+*/
 int Stage::generate_random_spawn_layer()
 {
 	static std::random_device rd;
@@ -444,6 +483,9 @@ int Stage::generate_random_spawn_layer()
 	return distrib(gen);
 }
 
+/*
+* Apply shockwave effect to all units when a boss spawns
+*/
 void Stage::generate_boss_shockwave()
 {
 	for (auto& pair : m_units)

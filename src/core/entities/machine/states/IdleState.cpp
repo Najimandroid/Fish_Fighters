@@ -8,42 +8,55 @@
 #include "WalkState.h"
 #include "AttackState.h"
 
-
 #include <iostream>
 
+// ==================
+// Constructor
+// ==================
 IdleState::IdleState(std::shared_ptr<StateMachine> machine)
 {
-	m_machine = machine;
+    m_machine = machine;
 }
 
+// ==================
+// Enter
+// ==================
 void IdleState::enter()
 {
-	//std::cout << "Entering Idle State\n";
+    // Reset flags when entering idle
+    m_areEntitiesOnRange = false;
+
+    // std::cout << "Entering Idle State\n";
 }
 
+// ==================
+// Perform
+// ==================
 void IdleState::perform(float deltaTime)
 {
     auto entity = m_machine->get_owner().lock();
+    if (!entity) return;
 
-    // Check for knockback / death
-    if (entity->currentHealth <= 0.0f || entity->currentHealth <= entity->healthLeftBeforeNextKnockback)
+    // ===== Death / Knockback Check =====
+    if (entity->currentHealth <= 0.0f ||
+        entity->currentHealth <= entity->healthLeftBeforeNextKnockback)
     {
         m_machine->change_state(std::make_unique<KnockbackState>(m_machine));
         return;
     }
 
-    // Check if there are targets
+    // ===== Already Has Targets? =====
     if (!entity->targets.empty())
     {
-        // Stay in Idle until attack cooldown is ready
+        // If cooldown is ready -> attack
         if (entity->currentAttackCooldown >= entity->data->attackFrequency)
         {
             m_machine->change_state(std::make_unique<AttackState>(m_machine));
         }
-        return; // Do not go back to Walk
+        return; // Otherwise remain idle
     }
 
-    // If no targets in range, scan for enemies
+    // ===== Scan for Enemies =====
     BattleEntitiesMap_t entityList;
     if (std::dynamic_pointer_cast<BattleUnit>(entity))
         entityList = m_machine->get_stage().lock()->get_enemies();
@@ -64,12 +77,12 @@ void IdleState::perform(float deltaTime)
         if (m_areEntitiesOnRange) break;
     }
 
-    // Decide next state
+    // ===== Decide Next State =====
     if (m_areEntitiesOnRange)
     {
         if (entity->currentAttackCooldown >= entity->data->attackFrequency)
             m_machine->change_state(std::make_unique<AttackState>(m_machine));
-        // else stay Idle
+        // else -> remain Idle until cooldown ready
     }
     else
     {
@@ -77,13 +90,19 @@ void IdleState::perform(float deltaTime)
     }
 }
 
-
+// ==================
+// Exit
+// ==================
 void IdleState::exit()
 {
-	//std::cout << "Exiting Idle State\n";
+    m_areEntitiesOnRange = false;
+    // std::cout << "Exiting Idle State\n";
 }
 
+// ==================
+// Identifier
+// ==================
 std::string IdleState::get_state_id() const
 {
-	return "IDLE";
+    return "IDLE";
 }

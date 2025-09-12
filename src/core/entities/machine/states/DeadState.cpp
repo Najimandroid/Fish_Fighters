@@ -4,29 +4,47 @@
 
 #include <iostream>
 
+// ==================
+// Constructor
+// ==================
 DeadState::DeadState(std::shared_ptr<StateMachine> machine)
 {
-	m_machine = machine;
+    m_machine = machine;
 }
 
+// ==================
+// Enter
+// ==================
 void DeadState::enter()
 {
-	//std::cout << "Entering Dead State\n";
+    // std::cout << "Entering Dead State\n";
 
-	m_machine->get_owner().lock()->isDead = true;
+    auto entity = m_machine->get_owner().lock();
+    if (entity)
+        entity->isDead = true; // -> Mark as dead
 }
 
+// ==================
+// Perform
+// ==================
 void DeadState::perform(float deltaTime)
 {
-	//Entity is dead, do nothing
+    // Dead entities perform no actions
 }
 
+// ==================
+// Exit
+// ==================
 void DeadState::exit()
 {
-	//std::cout << "Exiting Dead State\n";
+    // Normally entities should never exit the Dead state.
+    // std::cout << "Exiting Dead State\n";
 }
 
+// ==================
+// Identifier
+// ==================
 std::string DeadState::get_state_id() const
 {
-	return "DEAD";
+    return "DEAD";
 }

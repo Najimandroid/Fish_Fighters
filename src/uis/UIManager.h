@@ -10,6 +10,8 @@
 class Stage;
 
 /*
+ * UIManager class
+ * ----------------
  * UIManager handles all User Interface (UI) elements in the game.
  * Responsibilities include:
  *   - Initializing UI elements with references to game data and stage
@@ -18,8 +20,8 @@ class Stage;
  *   - Generating different UI screens (Fish Tank, Upgrades, Equip, Battle)
  *
  * UI elements can be either:
- *   - Screen-space (HUD, menus) or
- *   - World-space (attached to the game world, e.g., unit deployment icons)
+ *   - Screen-space or
+ *   - World-space (attached to the game world, e.g., UIBaseHealthInfo)
  *
  * Example usage:
  *   auto uiManager = std::make_shared<UIManager>();

@@ -7,36 +7,67 @@
 
 class StageData;
 
+/*
+ * PlayerData
+ * ----------
+ * Stores all persistent player-related data:
+ * - Owned units and their levels
+ * - Equipped units for stages
+ * - Currency (shells)
+ * - Completed stages
+ *
+ * Provides methods for unit management, currency management, and progression tracking.
+ */
+
 class PlayerData
 {
 public:
 
-	//Units
-	void unlock_unit(int unitUid);
-	void wait_to_be_unlocked(int unitUid);
-	void upgrade_unit(int unitUid);
-	void equip_unit(int unitUid, int slot); //slot: 0-9
-	void unequip_unit(int slot); //slot: 0-9
+    // ===== Units =====
 
-	bool is_unit_owned(int unitUid) const;
-	int get_unit_level(int unitUid) const;
+    // Unlocks a unit from the "waiting to unlock" list
+    void unlock_unit(int unitUid); 
 
-	//Shells
-	void gain_shells(int amount);
-	bool spend_shells(int amount); //returns false if not enough shells
+    // Adds a unit to the waiting list (to be unlocked later)
+    void wait_to_be_unlocked(int unitUid);   
 
-	//Progression
-	void complete_stage(std::weak_ptr<StageData> stageData);
+    // Increases the level of an owned unit
+    void upgrade_unit(int unitUid);         
+
+    // Equips a unit to a specific slot (0-9)
+    void equip_unit(int unitUid, int slot);    
+
+    // Removes a unit from a slot
+    void unequip_unit(int slot);                   
+    
+    // Checks if the player owns the unit
+    bool is_unit_owned(int unitUid) const;
+
+    // Returns the level of the unit, 0 if not owned
+    int get_unit_level(int unitUid) const;
+
+    // ===== Shells (currency) =====
+
+    // Increases the player's shell count
+    void gain_shells(int amount);
+
+    // Decreases shells if enough, returns false if insufficient
+    bool spend_shells(int amount);
+
+    // ===== Progression =====
+
+    // Marks a stage as completed and applies rewards
+    void complete_stage(std::weak_ptr<StageData> stageData);
 
 public:
-	//Money
-	int shells = 0;
+    // Currency
+    int shells = 0;
 
-	//Units
-	std::unordered_map<int, int> ownedUnits; //first: unit uid, second: level
-	std::unordered_set<int> unitsWaitingToBeUnlocked; //those units will wait to be unlocked in the UPGRADE menu
-	std::array<int, 10> equippedUnits; //max 10 units can be equipped at once, -1 means empty slot. It stores the unit uid.
-	
-	//Progression
-	std::unordered_set<int> completedStages; //Stage uids of completed stages
+    // Units
+    std::unordered_map<int, int> ownedUnits;      // Key: unit UID, Value: unit level
+    std::unordered_set<int> unitsWaitingToBeUnlocked; // Units awaiting unlock in the upgrade menu
+    std::array<int, 10> equippedUnits;            // Equipped units in slots (max 10). -1 = empty slot
+
+    // Progression
+    std::unordered_set<int> completedStages;      // Set of stage UIDs completed by the player
 };

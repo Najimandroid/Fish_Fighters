@@ -14,9 +14,17 @@
 #include <random>
 
 /*
-* The Stage class is used to handle everything regarding the currently loaded level. It handles enemies, units, bases, etc...
-* The Stage class will load any level found in game_data/stages.json. Only one level can be loaded at a time.
-*/
+ * Stage class
+ * -----------
+ * Manages the currently loaded game level.
+ * Responsibilities include:
+ *   - Loading and unloading a stage
+ *   - Managing enemies, player units, and bases
+ *   - Handling enemy spawn logic and timers
+ *   - Updating game entities each frame
+ *   - Rendering the stage background and entities
+ * Only one stage can be active at a time.
+ */
 
 using BattleEntitiesMap_t = std::map<int, std::vector<std::shared_ptr<BattleEntity>>>;
 
@@ -30,79 +38,116 @@ class Stage : public std::enable_shared_from_this<Stage>
 {
 public:
 
-	Stage();
+    // Constructor
+    Stage();
 
-	void init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<UIManager> uiManager);
+    // Initialize stage with references to DataLoader and UIManager
+    void init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<UIManager> uiManager);
 
-	void load(int uid);
-	void unload();
-	void update(float deltaTime);
-	void update_cash();
-	void render(sf::RenderWindow& window);
+    // Load a stage by its unique ID
+    void load(int uid);
 
-	void spawn_enemy(std::shared_ptr<EntityData> enemyData, sf::Vector2f magnification, int layer, bool isBoss,bool bypassLimit);
-	void spawn_unit(std::shared_ptr<EntityData> unitData); //Todo: add some kind of UserDatas to keep track of the level of each unit
-	void remove_enemy(BattleEnemy battleEnemy);
-	void remove_unit(BattleUnit battleUnit);
+    // Unload the current stage and clear all entities
+    void unload();
 
-	int generate_random_spawn_layer();
-	void generate_boss_shockwave();
+    // Update stage state each frame
+    void update(float deltaTime);
 
-	void update_enemies(float deltaTime);
-	void update_units(float deltaTime);
-	void update_bases(float deltaTime);
-	bool upgrade_cash(int level, int cost);
+    // Increment cash available to the player
+    void update_cash();
 
-	bool is_unit_base_destroyed(); //checks if unit base got destroyed
-	bool is_enemy_base_destroyed(); //checks if enemy base got destroyed
+    // Render the stage (background, bases, units, enemies)
+    void render(sf::RenderWindow& window);
 
-	BattleEntitiesMap_t& get_enemies();
-	BattleEntitiesMap_t& get_units();
-	std::weak_ptr<BattleBase> get_enemy_base() const;
-	std::weak_ptr<BattleBase> get_unit_base() const;
-	int get_cash() const;
-	int get_max_cash() const;
-	bool is_loaded() const;
+    // Spawn a new enemy in the stage
+    void spawn_enemy(std::shared_ptr<EntityData> enemyData, sf::Vector2f magnification, int layer, bool isBoss, bool bypassLimit);
+
+    // Spawn a new player unit in the stage
+    void spawn_unit(std::shared_ptr<EntityData> unitData);
+
+    // Remove an enemy from the stage
+    void remove_enemy(BattleEnemy battleEnemy);
+
+    // Remove a unit from the stage
+    void remove_unit(BattleUnit battleUnit);
+
+    // Generate a random layer for entity spawning
+    int generate_random_spawn_layer();
+
+    // Apply boss shockwave effect to all player units
+    void generate_boss_shockwave();
+
+    // Update all enemies
+    void update_enemies(float deltaTime);
+
+    // Update all player units
+    void update_units(float deltaTime);
+
+    // Update both player and enemy bases
+    void update_bases(float deltaTime);
+
+    // Upgrade available cash; returns false if insufficient funds
+    bool upgrade_cash(int level, int cost);
+
+    // Check if the player base has been destroyed
+    bool is_unit_base_destroyed();
+
+    // Check if the enemy base has been destroyed
+    bool is_enemy_base_destroyed();
+
+    // Get references to enemy and unit entities
+    BattleEntitiesMap_t& get_enemies();
+    BattleEntitiesMap_t& get_units();
+
+    // Get weak pointers to bases
+    std::weak_ptr<BattleBase> get_enemy_base() const;
+    std::weak_ptr<BattleBase> get_unit_base() const;
+
+    // Get current and maximum cash
+    int get_cash() const;
+    int get_max_cash() const;
+
+    // Check if a stage is currently loaded
+    bool is_loaded() const;
 
 private:
 
-	//Stage Data
-	int m_uid = -1;
+    // ----- Stage Data -----
+    int m_uid = -1;
+    std::string m_stageName = "Unknown Area ???";
 
-	std::string m_stageName = "Unknown Area ???";
+    int m_currentCash = 0;                   // Current cash available to the player
+    int m_maxCash = 500;                     // Maximum cash allowed
 
-	int m_currentCash = 0; //current cash available to the player
-	int m_maxCash = 500; //maximum cash available to the player
+    int m_enemiesLimit = 5;                  // Maximum number of enemies
+    int m_unitsLimit = 5;                    // Maximum number of units
 
-	int m_enemiesLimit = 5;
-	int m_unitsLimit = 5;
+    int m_enemiesCount = 0;                  // Current number of enemies
+    int m_unitsCount = 0;                    // Current number of units
 
-	int m_enemiesCount = 0;
-	int m_unitsCount = 0;
+    std::shared_ptr<DataLoader> m_dataLoader;
+    std::weak_ptr<UIManager> m_uiManager;
 
-	std::shared_ptr<DataLoader> m_dataLoader;
-	std::weak_ptr<UIManager> m_uiManager;
+    std::vector<std::shared_ptr<EnemyStageData>> m_enemyStageDatas; // Enemy spawn datas
 
-	std::vector<std::shared_ptr<EnemyStageData>> m_enemyStageDatas;
+    // ----- Entities -----
+    BattleEntitiesMap_t m_enemies;           // Enemy entities, stored by layer for rendering
+    BattleEntitiesMap_t m_units;             // Unit entities, stored by layer
 
-	//Entities
-	BattleEntitiesMap_t m_enemies; //enemies are stocked in layer order (helps with rendering)
-	BattleEntitiesMap_t m_units;
+    // ----- Bases -----
+    std::shared_ptr<BattleBase> m_enemyBase; // Enemy base
+    std::shared_ptr<BattleBase> m_unitBase;  // Player base
 
+    // ----- Rendering -----
+    sf::Texture m_backgroundTexture;         // Stage background texture
+    sf::Sprite m_backgroundSprite;           // Background sprite
 
-	//Bases
-	std::shared_ptr<BattleBase> m_enemyBase;
-	std::shared_ptr<BattleBase> m_unitBase;
-
-	//Rendering
-	sf::Texture m_backgroundTexture;
-	sf::Sprite m_backgroundSprite;
-
-	//Other
-	bool m_isLoaded = false;
-	float m_elapsedTime = 0.f;
+    // ----- State -----
+    bool m_isLoaded = false;                 // Is a stage currently loaded
+    float m_elapsedTime = 0.f;               // Time elapsed since stage load
 
 private:
 
-	void spawn_bases(float health, std::string texture);
+    // Internal helper: spawn bases at the start of the stage
+    void spawn_bases(float health, std::string texture);
 };

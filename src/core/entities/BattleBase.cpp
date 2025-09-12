@@ -2,70 +2,94 @@
 
 #include <iostream>
 
+// ==================
+// Constructor
+// ==================
 BattleBase::BattleBase(float health_, std::string texture_)
 {
-	//Init core datas
-	maxHealth = health_;
-	currentHealth = maxHealth;
+    // ===== Core Stats =====
+    maxHealth = health_;
+    currentHealth = maxHealth;
 
-	position = { 0.0f, 360.0f };
+    // Base positioned near left side (default),
+    // but can be shifted externally (e.g., enemy base on the right)
+    position = { 0.0f, 360.0f };
 
-	currentLayer = 51;
+    // Layer determines rendering depth
+    currentLayer = 51;
 
+    // ===== Combat Zones =====
+    // Bases only act as hit targets (no attack range/damage zone)
+    hitbox.size = { 200.0f, 720.0f };
+    attackRangeZone.size = { 0.0f, 720.0f };
+    damageZone.size = { 0.0f, 720.0f };
 
-	//Init battle zones
-	hitbox.size = { 200.0f, 720.0f };
-	attackRangeZone.size = { 0.0f , 720.0f };
-	damageZone.size = { 0.0f  , 720.0f };
+    // Initial zone positions
+    hitbox.position = position;
+    attackRangeZone.position = position;
+    damageZone.position = position;
 
-	//Init position
-	hitbox.position = position;
-	attackRangeZone.position = position;
-	damageZone.position = position;
-
-	//Init sprite
-	bool isTextureLoaded = texture.loadFromFile(texture_);
-	sprite.setTexture(texture, true);
+    // ===== Sprite =====
+    bool isTextureLoaded = texture.loadFromFile(texture_);
+    sprite.setTexture(texture, true);
 
 #ifdef DEBUG_MODE
-	//Init debug rectangles
-	rHitbox.setSize(hitbox.size);
-	rHitbox.setPosition(position);
+    // ===== Debug Rectangles =====
+    rHitbox.setSize(hitbox.size);
+    rHitbox.setPosition(position);
 
-	rAttackRangeZone.setSize(attackRangeZone.size);
-	rAttackRangeZone.setPosition(position);
+    rAttackRangeZone.setSize(attackRangeZone.size);
+    rAttackRangeZone.setPosition(position);
 
-	rDamageZone.setSize(damageZone.size);
-	rDamageZone.setPosition(position);
+    rDamageZone.setSize(damageZone.size);
+    rDamageZone.setPosition(position);
 #endif
 }
 
-void BattleBase::update(float deltaTime, const std::map<int, std::vector<std::shared_ptr<BattleEntity>>>& entityList)
+// ==================
+// Update
+// ==================
+void BattleBase::update(
+    float deltaTime,
+    const std::map<int, std::vector<std::shared_ptr<BattleEntity>>>& entityList
+)
 {
-	if (currentHealth < 0.0f)
-	{
-		//std::cout << "Base destroyed x_x\n";
-	}
+    // If destroyed
+    if (currentHealth < 0.0f)
+    {
+        // TODO: trigger stage loss/win depending on whose base this is
+        // std::cout << "Base destroyed x_x\n";
+    }
 
 #ifdef DEBUG_MODE
-	//std::cout << "[Fish Base Health] = " << currentHealth << "\n";
+    // Debugging health in console
+    // std::cout << "[Base Health] = " << currentHealth << "\n";
 #endif
 
-	update_position();
+    // Sync sprite + hitboxes
+    update_position();
 }
 
+// ==================
+// Position Update
+// ==================
 void BattleBase::update_position()
 {
-	sprite.setPosition({ position.x, position.y - static_cast<float>(currentLayer) });
+    // Base is static, only shifted vertically by layer offset
+    sprite.setPosition({
+        position.x,
+        position.y - static_cast<float>(currentLayer)
+        });
 
-	hitbox.position = position;
-	attackRangeZone.position = position;
-	damageZone.position = position;
+    // Sync combat zones with position
+    hitbox.position = position;
+    attackRangeZone.position = position;
+    damageZone.position = position;
 
 #ifdef DEBUG_MODE
-	//Update debug rectangles' position
-	rHitbox.setPosition(position);
-	rAttackRangeZone.setPosition(position);
-	rDamageZone.setPosition(position);
+    // Update debug rectangle positions
+    rHitbox.setPosition(position);
+    rAttackRangeZone.setPosition(position);
+    rDamageZone.setPosition(position);
 #endif
 }

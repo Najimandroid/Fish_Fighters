@@ -5,40 +5,47 @@
 enum AttackType;
 
 /*
- * EntityData represents the template for all units in the game.
- * Use EntityDataLoader to retrieve the data of a specific unit by UID.
+ * EntityData
+ * ----------
+ * Defines the base/template data for a unit or entity in the game.
+ *
+ * This struct is not used directly during gameplay — instead, it provides
+ * the "blueprint" for instantiating units. For example, units on the field
+ * will reference values from their EntityData.
+ *
+ * Use EntityDataLoader to retrieve EntityData by UID.
  */
 
 struct EntityData
 {
-    // Unique identifier for the unit
-    int UID = -1;
+    // ===== Identification =====
+    int UID = -1;                               // Unique identifier for this unit
 
-    // General information
+    // ===== General Information =====
     std::string name = "Unknown Unit";
-    std::string description = "???";
+    std::string description = "???";            // Short description (e.g., summary)
 
-    // Battle attributes
-    int cost = 50;                             // Deployment cost
-    int cooldown = 1;                          // Deployment cooldown
+    // ===== Battle Attributes =====
+    int cost = 50;                              // Deployment cost (currency required to spawn)
+    int cooldown = 1;                           // Time (in seconds) before unit can be deployed again
 
-    int health = 1;                            // Full health
+    int health = 1;                             // Maximum health of the unit
 
-    int attackPower = 1;                       // Damage dealt per attack
-    float attackRange = 1.0f;
-    AttackType attackType = static_cast<AttackType>(1); // Type of attack (single, area, etc.)
-    float attackFrequency = 1.0f;              // Attacks per second
-    float foreswingTime = 0.0f;                // Time before attack is executed
-    float backswingTime = 0.0f;                // Time after attack is executed before idle
+    int attackPower = 1;                        // Base damage per attack
+    float attackRange = 1.0f;                   // Effective attack range
+    AttackType attackType = static_cast<AttackType>(1); // Attack style/type (single, AoE, etc.)
+    float attackFrequency = 1.0f;               // Attacks per second
+    float foreswingTime = 0.0f;                 // Delay before attack is executed (wind-up)
+    float backswingTime = 0.0f;                 // Delay after attack before returning to idle
 
-    float movementSpeed = 1.0f;
-    int knockbackCount = 1;                    // Number of knockbacks before dying
+    float movementSpeed = 1.0f;                 // Movement speed across the battlefield
+    int knockbackCount = 1;                     // Number of knockbacks the unit can sustain before dying
 
-    // Visual attributes
-    std::string texture;                        // File path to sprite/texture
+    // ===== Visual Attributes =====
+    std::string texture;                        // File path to the sprite/texture
     int frameCount = 1;                         // Number of animation frames
-    int knockbackFrameIndex = 1;                // Frame index for knockback animation
+    int knockbackFrameIndex = 1;                // Animation frame used during knockback
 
-    // Upgrade-related
-    int baseUpgradeCost = 100;                  // Base cost for unit upgrades
+    // ===== Upgrade Attributes =====
+    int baseUpgradeCost = 100;                  // Base cost for upgrading this unit
 };

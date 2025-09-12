@@ -4,18 +4,34 @@
 
 class Stage;
 
+/*
+ * UIStageCash
+ * -----------
+ * Displays the player's current cash and maximum cash during a stage.
+ * Inherits from UITextElement to leverage text rendering in the UI.
+ */
+
 class UIStageCash : public UITextElement
 {
 public:
 
-	UIStageCash(std::shared_ptr<Stage> stage);
+    /*
+     * @param stage - shared pointer to the current Stage
+     * Initializes the weak reference to the stage and prepares the text element.
+     */
+    UIStageCash(std::shared_ptr<Stage> stage);
 
-	void update(float deltaTime) override;
+    /*
+     * Updates the displayed cash value every frame.
+     * Positions the text in the top-right corner of the screen.
+     */
+    void update(float deltaTime) override;
 
 private:
 
-	std::weak_ptr<Stage> m_stage;
+    std::weak_ptr<Stage> m_stage; // Weak pointer to avoid ownership
 
-	const float OFFSET_Y = 10.f;
-	const float OFFSET_X = 10.f;
+    // Text offsets from top-right corner
+    const float OFFSET_Y = 10.f;
+    const float OFFSET_X = 10.f;
 };

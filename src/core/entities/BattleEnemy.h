@@ -7,22 +7,28 @@
 #include <memory>
 #include <vector>
 
-//class EnemyData;
-//class BattleUnit;
-
 /*
-* The BattleEnemy represents the spawned enemy in a stage
-*/
+ * BattleEnemy
+ * -----------
+ * Represents an enemy spawned during a stage.
+ *
+ * Responsibilities:
+ *  - Initializes itself from EntityData (stats, sprite, attack range...)
+ *  - Updates its state each frame (movement, attack, knockback...)
+ *  - Handles position and hitbox updates
+ *
+ * Like BattleUnit, but positioned at the left side of the battlefield
+ * and with slightly different sprite offset logic.
+ */
 
-class BattleEnemy: public BattleEntity
+class BattleEnemy : public BattleEntity
 {
 public:
+    BattleEnemy(std::shared_ptr<EntityData> data_, sf::Vector2f magnification_);
+    ~BattleEnemy();
 
-	BattleEnemy(std::shared_ptr<EntityData> data_, sf::Vector2f magnification_);
-	~BattleEnemy();
+    // ===== Overrides =====
+    void update(float deltaTime, const std::map<int, std::vector<std::shared_ptr<BattleEntity>>>& entityList) override;
 
-	//Overrides
-	virtual void update(float deltaTime, const std::map<int, std::vector<std::shared_ptr<BattleEntity>>>& entityList) override;
-	virtual void update_position() override;
-
+    void update_position() override;
 };

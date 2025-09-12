@@ -18,6 +18,8 @@ enum AttackType
 };
 
 /*
+ * DataLoader class
+ * -----------------
  * DataLoader manages the loading, saving, and access of all game data.
  * Responsibilities include:
  *   - Loading units, enemies, stages, and player progress from JSON files
@@ -60,17 +62,18 @@ private:
     bool save_player(const std::string& path);
 
 private:
-    // Flags to ensure each dataset is only loaded once
+
+    // ----- Flags -----
     bool m_unitsLoaded = false;
     bool m_enemiesLoaded = false;
     bool m_stagesLoaded = false;
     bool m_playerLoaded = false;
 
-    // Databases storing loaded data
+    // ----- Databases -----
     std::unordered_map<int, std::shared_ptr<EntityData>> m_unitsDatabase;
     std::unordered_map<int, std::shared_ptr<EntityData>> m_enemiesDatabase;
     std::unordered_map<int, std::shared_ptr<StageData>> m_stagesDatabase;
 
-    // Player data
+    // ----- Player Data -----
     std::shared_ptr<PlayerData> m_playerData = nullptr;
 };

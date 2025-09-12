@@ -1,15 +1,23 @@
 #include "UIDeploymentIcons.h"
-
 #include "../core/stages/Stage.h"
 
 #include <iostream>
 
-UIDeploymentIcons::UIDeploymentIcons(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<Stage> stage):
-	m_dataLoader(dataLoader), m_stage(stage)
+/*
+ * Stores references to the DataLoader and Stage, then initializes the icons grid.
+ */
+UIDeploymentIcons::UIDeploymentIcons(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<Stage> stage) :
+    m_dataLoader(dataLoader), m_stage(stage)
 {
-	init_icons();
+    init_icons();
 }
 
+/*
+ * Creates a grid of icons for unit deployment.
+ * - Arranges icons in 2 rows and 5 columns
+ * - Reads equipped units from player data
+ * - Sets textures, cooldowns, costs, and click callbacks for each icon
+ */
 void UIDeploymentIcons::init_icons()
 {
     const int rows = 2;
@@ -21,16 +29,16 @@ void UIDeploymentIcons::init_icons()
     const float spacingY = 24.f * 1.15f;
 
     float totalWidth = cols * iconWidth + (cols - 1) * spacingX;
-    float startX = (1920.f - totalWidth) / 2.f;
-    float startY = 775.f;
+    float startX = (1920.f - totalWidth) / 2.f; // center horizontally
+    float startY = 775.f; // vertical position for icons
 
     int index = 0;
 
     std::array<int, 10> equippedUnits;
     if (auto player = m_dataLoader->get_player_data().lock())
-        equippedUnits = player->equippedUnits; //getting all equipped units
+        equippedUnits = player->equippedUnits; // retrieve equipped unit IDs
     else
-        equippedUnits.fill(-1);
+        equippedUnits.fill(-1); // no units equipped
 
     for (int row = 0; row < rows; ++row)
     {
@@ -47,6 +55,7 @@ void UIDeploymentIcons::init_icons()
 
             if (uid >= 0)
             {
+                // Load the unit's texture and data
                 std::string texturePath = m_dataLoader->get_unit_icon_texture_path(uid);
                 std::shared_ptr<EntityData> unitData = m_dataLoader->get_unit_data(uid);
 
@@ -57,6 +66,7 @@ void UIDeploymentIcons::init_icons()
 
                 std::weak_ptr<EntityData> weakData = unitData;
 
+                // Set callback to spawn unit when icon is clicked
                 icon->set_callback([this, icon, weakData]()
                     {
                         if (icon->get_if_on_cooldown()) return;
@@ -71,6 +81,7 @@ void UIDeploymentIcons::init_icons()
             }
             else
             {
+                // No unit equipped in this slot
                 icon->set_uid(-1);
                 icon->set_cost(-1);
                 icon->set_max_cooldown(-1);
@@ -82,26 +93,34 @@ void UIDeploymentIcons::init_icons()
     }
 }
 
+/*
+ * Updates each icon's state:
+ * - Darkens icons if unit cannot be deployed (insufficient cash, cooldown, or empty slot)
+ * - Updates cooldown timers
+ */
 void UIDeploymentIcons::update(float deltaTime)
 {
     for (auto& icon : m_icons)
     {
-        if(m_stage.lock()->get_cash() < icon->get_cost() || icon->get_if_on_cooldown() || icon->get_uid() < 0)
+        if (m_stage.lock()->get_cash() < icon->get_cost() || icon->get_if_on_cooldown() || icon->get_uid() < 0)
         {
             icon->set_darkened(true);
         }
         else
         {
             icon->set_darkened(false);
-		}
+        }
 
         icon->update(deltaTime);
     }
 }
 
+/*
+ * Draws all icons to the window if visible.
+ */
 void UIDeploymentIcons::render(sf::RenderWindow& window)
 {
-	if (m_isVisible == false) return;
+    if (!m_isVisible) return;
 
     for (auto& icon : m_icons)
     {
@@ -109,6 +128,9 @@ void UIDeploymentIcons::render(sf::RenderWindow& window)
     }
 }
 
+/*
+ * Delegates input events to each icon for interaction handling.
+ */
 void UIDeploymentIcons::handle_event(const sf::Event& event, const sf::RenderWindow& window)
 {
     for (auto& icon : m_icons)
@@ -117,6 +139,10 @@ void UIDeploymentIcons::handle_event(const sf::Event& event, const sf::RenderWin
     }
 }
 
+/*
+ * Returns the bounding rectangle that encompasses all icons.
+ * Useful for detecting if the mouse is over the deployment area.
+ */
 sf::FloatRect UIDeploymentIcons::get_bounds() const
 {
     bool first = true;
@@ -150,7 +176,7 @@ sf::FloatRect UIDeploymentIcons::get_bounds() const
         }
     }
 
-    if (first)
+    if (first) // No icons
         return sf::FloatRect({ 0.f, 0.f }, { 0.f, 0.f });
 
     return sf::FloatRect(
