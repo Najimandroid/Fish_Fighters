@@ -55,5 +55,7 @@ std::weak_ptr<Stage> StateMachine::get_stage() const
 
 std::string StateMachine::get_active_state_id() const
 {
+    if (m_activeState == nullptr) return "NONE";
     return m_activeState->get_state_id();
 }
+
