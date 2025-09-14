@@ -1,13 +1,14 @@
 {
     "money": {
-        "shells": 10000
+        "shells": 15000
     },
 
     "units": {
         "owned": {
             "1": {
                 "uid": 1,
-                "level": 1
+                "level": 1,
+                "form":  0
             }
         },
         "waitingToBeUnlocked" :  {},

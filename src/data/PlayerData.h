@@ -46,6 +46,9 @@ public:
     // Returns the level of the unit, 0 if not owned
     int get_unit_level(int unitUid) const;
 
+    // Returns the form of the unit, 0 being its default form
+    int get_unit_form(int unitUid) const;
+
     // ===== Shells (currency) =====
 
     // Increases the player's shell count
@@ -64,7 +67,13 @@ public:
     int shells = 0;
 
     // Units
-    std::unordered_map<int, int> ownedUnits;      // Key: unit UID, Value: unit level
+    struct OwnedUnit 
+    {
+        int level = 1;
+        int form = 0;
+    };
+
+    std::unordered_map<int, OwnedUnit> ownedUnits;      // Key: unit UID, Value: unit infos
     std::unordered_set<int> unitsWaitingToBeUnlocked; // Units awaiting unlock in the upgrade menu
     std::array<int, 10> equippedUnits;            // Equipped units in slots (max 10). -1 = empty slot
 

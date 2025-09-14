@@ -43,6 +43,15 @@ UIUpgradeSlider::UIUpgradeSlider(std::shared_ptr<DataLoader> dataLoader) :
 					// Refresh the selected icon
 					auto icon = m_upgradeIcons[m_currentIndex];
 					auto unitLevel = player->get_unit_level(unitUid);
+					auto unitForm = player->get_unit_form(unitUid);
+					auto unitData = m_dataLoader->get_unit_data(unitUid, unitForm);
+
+					icon->set_unit_level(unitLevel);
+					icon->set_upgrade_cost(calculate_upgrade_cost(unitUid, unitLevel));
+					icon->set_unit_name(unitData->name);
+					icon->set_texture(m_dataLoader->get_unit_icon_texture_path(unitUid, unitForm));
+
+					m_description.setString(unitData->description);
 
 					icon->set_unit_level(unitLevel);
 					icon->set_upgrade_cost(calculate_upgrade_cost(unitUid, unitLevel));
@@ -95,9 +104,10 @@ void UIUpgradeSlider::init_icons()
 	{
 		auto unitUid = m_availableUpgrades[i];
 		auto unitLevel = playerData->get_unit_level(unitUid);
-		auto unitData = m_dataLoader->get_unit_data(unitUid);
+		auto unitForm = playerData->get_unit_form(unitUid);
+		auto unitData = m_dataLoader->get_unit_data(unitUid, unitForm);
 
-		auto icon = std::make_shared<UIUpgradeIcon>(m_dataLoader->get_unit_icon_texture_path(unitUid));
+		auto icon = std::make_shared<UIUpgradeIcon>(m_dataLoader->get_unit_icon_texture_path(unitUid, unitForm));
 		icon->select(i == m_currentIndex);
 
 		icon->set_unit_name(unitData->name);
@@ -129,7 +139,7 @@ void UIUpgradeSlider::init_icons()
  */
 int UIUpgradeSlider::calculate_upgrade_cost(int uid, int level)
 {
-	int baseCost = m_dataLoader->get_unit_data(uid)->baseUpgradeCost;
+	int baseCost = m_dataLoader->get_unit_data(uid, 0)->baseUpgradeCost;
 
 	if (level <= 0) return baseCost;
 
@@ -138,21 +148,21 @@ int UIUpgradeSlider::calculate_upgrade_cost(int uid, int level)
 
 	std::array<int, 2> evolutionLevels = { 10, 30 }; // Levels at which unit evolves
 	int evolutions = 0;
-	int previousEvolutionLevel = 0;
 
 	// Count how many evolutions have occurred
 	for (int eLevel : evolutionLevels)
 	{
 		if (level >= eLevel)
-		{
 			evolutions++;
-			previousEvolutionLevel = eLevel;
-		}
-		else break;
+		else
+			break;
 	}
 
-	int levelInCycle = (level - previousEvolutionLevel); // Level within current evolution
-	float upgradeCost = baseCost * pow(factor, levelInCycle) * pow(evolutionDiscount, evolutions);
+	// Compute cost based on full level progression
+	float normalCost = baseCost * std::pow(factor, level);
+
+	// Apply evolution discounts
+	float upgradeCost = normalCost * std::pow(evolutionDiscount, evolutions);
 
 	return static_cast<int>(upgradeCost);
 }
@@ -168,7 +178,7 @@ void UIUpgradeSlider::update(float deltaTime)
 	}
 
 	// Update unit description
-	m_description.setString(m_dataLoader->get_unit_data(m_availableUpgrades[m_currentIndex])->description);
+	m_description.setString(m_dataLoader->get_unit_data(m_availableUpgrades[m_currentIndex], m_dataLoader->get_player_data().lock()->get_unit_form(m_availableUpgrades[m_currentIndex]))->description);
 
 	auto bounds = m_description.getLocalBounds();
 	m_description.setOrigin({

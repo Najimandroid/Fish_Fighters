@@ -11,7 +11,7 @@ void PlayerData::unlock_unit(int unitUid)
     if (unitsWaitingToBeUnlocked.find(unitUid) != unitsWaitingToBeUnlocked.end())
     {
         unitsWaitingToBeUnlocked.erase(unitUid);
-        ownedUnits[unitUid] = 1;
+        ownedUnits[unitUid] = { 1, 0 };
     }
 }
 
@@ -25,12 +25,24 @@ void PlayerData::wait_to_be_unlocked(int unitUid)
 
 /*
  * Upgrades an owned unit by incrementing its level.
+ * Updates its form if evolving
  */
 void PlayerData::upgrade_unit(int unitUid)
 {
     auto it = ownedUnits.find(unitUid);
-    if (it != ownedUnits.end())
-        it->second += 1;
+    if (it == ownedUnits.end()) return;
+
+    // Gain a level
+    it->second.level += 1;
+
+    // Evolution check
+    int lvl = it->second.level;
+    if (lvl >= 30)
+        it->second.form = 2;
+    else if (lvl >= 10)
+        it->second.form = 1;
+    else
+        it->second.form = 0;
 }
 
 /*
@@ -66,7 +78,13 @@ bool PlayerData::is_unit_owned(int unitUid) const
 int PlayerData::get_unit_level(int unitUid) const
 {
     auto it = ownedUnits.find(unitUid);
-    return (it != ownedUnits.end()) ? it->second : 0;
+    return (it != ownedUnits.end()) ? it->second.level : 0;
+}
+
+int PlayerData::get_unit_form(int unitUid) const
+{
+    auto it = ownedUnits.find(unitUid);
+    return (it != ownedUnits.end()) ? it->second.form : 0;
 }
 
 /*

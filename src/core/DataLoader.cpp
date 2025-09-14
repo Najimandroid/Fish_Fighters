@@ -41,37 +41,42 @@ bool DataLoader::load_units(const std::string& path)
 
     json j; file >> j;
 
-    for (auto& [_, value] : j.items()) 
+    for (auto& [_, value] : j.items())
     {
-        auto data = std::make_shared<EntityData>();
+        int UID = value.at("UID").get<int>();
+        int baseUpgradeCost = value.at("baseUpgradeCost").get<int>();
 
-        data->UID = value.at("UID").get<int>();
+        for (auto& formValue : value.at("forms"))
+        {
+            auto data = std::make_shared<EntityData>();
 
-        data->name = value.at("name").get<std::string>();
-        data->description = value.at("description").get<std::string>();
+            data->UID = UID;
+            data->baseUpgradeCost = baseUpgradeCost;
 
-        data->cost = value.at("cost").get<int>();
-        data->cooldown = value.at("cooldown").get<int>();
+            data->name = formValue.at("name").get<std::string>();
+            data->description = formValue.at("description").get<std::string>();
 
-        data->health = value.at("health").get<int>();
+            data->cost = formValue.at("cost").get<int>();
+            data->cooldown = formValue.at("cooldown").get<int>();
 
-        data->attackPower = value.at("attackPower").get<int>();
-        data->attackRange = value.at("attackRange").get<float>();
-        data->attackType = static_cast<AttackType>(value.at("attackType").get<int>());
-        data->attackFrequency = value.at("attackFrequency").get<float>();
-        data->foreswingTime = value.at("foreswing").get<float>();
-        data->backswingTime = value.at("backswing").get<float>();
+            data->health = formValue.at("health").get<int>();
+            data->attackPower = formValue.at("attackPower").get<int>();
+            data->attackRange = formValue.at("attackRange").get<float>();
+            data->attackType = static_cast<AttackType>(formValue.at("attackType").get<int>());
+            data->attackFrequency = formValue.at("attackFrequency").get<float>();
+            data->foreswingTime = formValue.at("foreswing").get<float>();
+            data->backswingTime = formValue.at("backswing").get<float>();
 
-        data->movementSpeed = value.at("movementSpeed").get<float>();
-        data->knockbackCount = value.at("knockbackCount").get<int>();
+            data->movementSpeed = formValue.at("movementSpeed").get<float>();
+            data->knockbackCount = formValue.at("knockbackCount").get<int>();
 
-        data->texture = value.at("texture").get<std::string>();
-        data->frameCount = value.at("frameCount").get<int>();
-        data->knockbackFrameIndex = value.at("knockbackFrameIndex").get<int>();
+            data->texture = formValue.at("texture").get<std::string>();
+            data->frameCount = formValue.at("frameCount").get<int>();
+            data->knockbackFrameIndex = formValue.at("knockbackFrameIndex").get<int>();
 
-        data->baseUpgradeCost = value.at("baseUpgradeCost").get<int>();
-
-        m_unitsDatabase[data->UID] = data;
+            int formID = formValue.at("form").get<int>();
+            m_unitsFormsDatabase[{UID, formID}] = data;
+        }
     }
 
     m_unitsLoaded = true;
@@ -236,7 +241,9 @@ bool DataLoader::load_player(const std::string& path)
         {
             int uid = std::stoi(uidStr);
             int level = unitData.at("level").get<int>();
-            m_playerData->ownedUnits[uid] = level;
+            int form = unitData.contains("form") ? unitData.at("form").get<int>() : 0;
+
+            m_playerData->ownedUnits[uid] = { level, form };
         }
 
         // Units waiting to be unlocked
@@ -289,11 +296,12 @@ bool DataLoader::save_player(const std::string& path)
     j["money"]["shells"] = m_playerData->shells;
 
     // Owned units
-    for (auto& [uid, level] : m_playerData->ownedUnits)
+    for (auto& [uid, unitInfo] : m_playerData->ownedUnits)
     {
         j["units"]["owned"][std::to_string(uid)] = {
             {"uid", uid},
-            {"level", level}
+            {"level", unitInfo.level},
+            {"form", unitInfo.form}
         };
     }
 
@@ -329,11 +337,11 @@ bool DataLoader::save_player(const std::string& path)
     return true;
 }
 
-const std::shared_ptr<EntityData> DataLoader::get_unit_data(int uid) const
+const std::shared_ptr<EntityData> DataLoader::get_unit_data(int uid, int form = 0) const
 {
-    auto it = m_unitsDatabase.find(uid);
+    auto it = m_unitsFormsDatabase.find({ uid, form });
 
-    if (it != m_unitsDatabase.end()) {
+    if (it != m_unitsFormsDatabase.end()) {
         return it->second;
     }
 
@@ -367,9 +375,9 @@ std::weak_ptr<PlayerData> DataLoader::get_player_data() const
     return m_playerData;
 }
 
-std::string DataLoader::get_unit_icon_texture_path(int uid) const
+std::string DataLoader::get_unit_icon_texture_path(int uid, int form = 0) const
 {
-    return "assets/images/textures/icons/units/icon_" + std::to_string(uid) + ".png";
+    return "assets/images/textures/icons/units/icon_" + std::to_string(uid) + '_' + std::to_string(form) + ".png";
 }
 
 std::string DataLoader::get_enemy_icon_texture_path(int uid) const

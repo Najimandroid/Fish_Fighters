@@ -2,56 +2,105 @@
     "UID_1": {
         "UID": 1,
 
-        "name": "Fish",
-        "description": "Just a normal fish.",
         "baseUpgradeCost": 100,
 
-        "cost": 50,
-        "cooldown": 2,
+        "forms": [
+            {
+                "form": 0,
+                "minLevel": 0,
+                "maxLevel": 9,
 
-        "health": 10,
+                "name": "Fish",
+                "description": "Just a normal fish.",
 
-        "attackPower": 5,
-        "attackRange": 5,
-        "attackType": 1,
-        "attackFrequency": 1.5,
-        "foreswing": 0.3,
-        "backswing": 0.1,
 
-        "movementSpeed": 8,
+                "cost": 50,
+                "cooldown": 2,
 
-        "knockbackCount": 2,
+                "health": 10,
 
-        "texture": "assets/images/textures/units/test_sheet.png",
-        "frameCount": 6,
-        "knockbackFrameIndex": 2
+                "attackPower": 5,
+                "attackRange": 5,
+                "attackType": 1,
+                "attackFrequency": 1.5,
+                "foreswing": 0.3,
+                "backswing": 0.1,
+
+                "movementSpeed": 8,
+
+                "knockbackCount": 2,
+
+                "texture": "assets/images/textures/units/test_sheet.png",
+                "frameCount": 6,
+                "knockbackFrameIndex": 2
+            },
+            {
+                "form": 1,
+                "minLevel": 10,
+                "maxLevel": 29,
+
+                "name": "Better Fish",
+                "description": "Just a better fish.",
+
+
+                "cost": 50,
+                "cooldown": 1.5,
+
+                "health": 20,
+
+                "attackPower": 10,
+                "attackRange": 15,
+                "attackType": 1,
+                "attackFrequency": 1.5,
+                "foreswing": 0.3,
+                "backswing": 0.1,
+
+                "movementSpeed": 16,
+
+                "knockbackCount": 2,
+
+                "texture": "assets/images/textures/units/test_sheet_evo.png",
+                "frameCount": 6,
+                "knockbackFrameIndex": 2
+            }
+        ]
     },
     "UID_2": {
         "UID": 2,
 
-        "name": "Big Fish",
-        "description": "Just a normal fish but bigger.\nIt loves eating smaller fish.\nBut its favorite meal are\nsmall shrimps and crabs!",
         "baseUpgradeCost": 200,
 
-        "cost": 300,
-        "cooldown": 8,
+        "forms": [
+            {
+                "form": 0,
+                "minLevel": 0,
+                "maxLevel": 29,
 
-        "health": 15,
-
-        "attackPower": 6,
-        "attackRange": 50,
-        "attackType": 2,
-        "attackFrequency": 3,
-        "foreswing": 1.5,
-        "backswing": 0.25,
+                "name": "Big Fish",
+                "description": "Just a normal fish but bigger.\nIt loves eating smaller fish.\nBut its favorite meal are\nsmall shrimps and crabs!",
 
 
-        "movementSpeed": 3,
+                "cost": 300,
+                "cooldown": 8,
 
-        "knockbackCount": 0,
+                "health": 15,
 
-        "texture": "assets/images/textures/units/fish2TEST.png",
-        "frameCount": 6,
-        "knockbackFrameIndex": 2
+                "attackPower": 6,
+                "attackRange": 50,
+                "attackType": 2,
+                "attackFrequency": 3,
+                "foreswing": 1.5,
+                "backswing": 0.25,
+
+
+                "movementSpeed": 3,
+
+                "knockbackCount": 0,
+
+                "texture": "assets/images/textures/units/fish2TEST.png",
+                "frameCount": 6,
+                "knockbackFrameIndex": 2
+            }
+        ]
     }
 }

@@ -41,6 +41,9 @@ public:
     // Moves the slider focus to a specific index (animated)
     void move_to_index(int newIndex);
 
+    // Refresh all equipped slots after an unequip action
+    void refresh_slots_after_unequip();
+
     // Standard UI loop methods
     void update(float deltaTime) override;
     void render(sf::RenderWindow& window) override;

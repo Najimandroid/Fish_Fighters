@@ -167,14 +167,12 @@ void UIBattleIcon::set_texture(const std::string& texturePath)
     sf::Vector2u texSize = m_texture.getSize();
     float scaleX = targetSize.x / texSize.x;
     float scaleY = targetSize.y / texSize.y;
-    m_sprite.setScale({ scaleX, scaleY });
+    float uniformScale = std::min(scaleX, scaleY);
+
+    m_sprite.setScale({ uniformScale, uniformScale });
 
     // Center sprite inside the button
-    sf::FloatRect bounds = m_sprite.getGlobalBounds();
-    sf::Vector2f spritePos = m_shape.getPosition();
-    spritePos.x += (targetSize.x - bounds.size.x) / 2.f;
-    spritePos.y += (targetSize.y - bounds.size.y) / 2.f;
-    m_sprite.setPosition(spritePos);
+    m_sprite.setPosition(m_shape.getPosition());
 }
 
 /*

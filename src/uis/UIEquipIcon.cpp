@@ -178,18 +178,24 @@ void UIEquipIcon::update(float deltaTime)
         });
     m_unitName.setPosition({ anchorPos.x + m_size.x / 2.f, anchorPos.y - 40.f });
 
-    // Current level
+    // Position level text at bottom-right
+    float offsetY = (m_isSelected ? INFO_BASE_TEXT_SIZE * ACTIVE_TEXT_SIZE_SCALE : INFO_BASE_TEXT_SIZE * INACTIVE_TEXT_SIZE_SCALE) + 5.f;
+    float offsetX = 15.f;
+    auto levelBounds = m_currentLevelText.getLocalBounds();
     m_currentLevelText.setString("Lv. " + std::to_string(m_currentLevel));
+    m_currentLevelText.setOrigin({ levelBounds.size.x, 0.f });
     m_currentLevelText.setPosition({
-        anchorPos.x + 15.f,
-        anchorPos.y + m_size.y - 60.f
+        anchorPos.x + m_size.x - offsetX,
+        anchorPos.y + m_size.y - offsetY * 2.f
         });
 
-    // Deployment cost
+    // Position upgrade cost text below level text
+    auto costBounds = m_deploymentCostText.getLocalBounds();
     m_deploymentCostText.setString("Cost: " + std::to_string(m_deploymentCost) + "$");
+    m_deploymentCostText.setOrigin({ costBounds.size.x, 0.f });
     m_deploymentCostText.setPosition({
-        anchorPos.x + 15.f,
-        anchorPos.y + m_size.y - 30.f
+        anchorPos.x + m_size.x - offsetX,
+        anchorPos.y + m_size.y - offsetY
         });
 }
 

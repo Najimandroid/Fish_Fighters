@@ -52,12 +52,13 @@ void UIDeploymentIcons::init_icons()
             auto icon = std::make_shared<UIBattleIcon>(pos, "assets/images/textures/icons/empty.png");
 
             int uid = equippedUnits[index];
+            int form = m_dataLoader->get_player_data().lock()->get_unit_form(uid);
 
             if (uid >= 0)
             {
                 // Load the unit's texture and data
-                std::string texturePath = m_dataLoader->get_unit_icon_texture_path(uid);
-                std::shared_ptr<EntityData> unitData = m_dataLoader->get_unit_data(uid);
+                std::string texturePath = m_dataLoader->get_unit_icon_texture_path(uid, form);
+                std::shared_ptr<EntityData> unitData = m_dataLoader->get_unit_data(uid, form);
 
                 icon->set_texture(texturePath);
                 icon->set_uid(uid);

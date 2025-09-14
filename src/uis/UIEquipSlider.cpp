@@ -92,34 +92,55 @@ void UIEquipSlider::init_icons()
         }
     }
 
-    // Load currently equipped units into the slots
-    if (auto player = m_dataLoader->get_player_data().lock()) {
+    // Load currently equipped units into compacted slots
+    if (auto player = m_dataLoader->get_player_data().lock())
+    {
+        // Collect all equipped units without gaps
+        std::vector<int> equipped;
         for (int i = 0; i < static_cast<int>(m_slots.size()); ++i) {
             int uid = player->equippedUnits[i];
             if (uid >= 0) {
-                auto unitData = m_dataLoader->get_unit_data(uid);
-
-                // Create UIEquipSlot for equipped unit
-                auto slotGhost = std::make_shared<UIEquipSlot>(
-                    unitData->UID,
-                    unitData->cost,
-                    m_dataLoader->get_unit_icon_texture_path(uid),
-                    i
-                );
-
-                slotGhost->set_position({ m_slots[i].bounds.position.x, m_slots[i].bounds.position.y });
-                slotGhost->set_size({ m_slots[i].bounds.size.x, m_slots[i].bounds.size.y });
-
-                // Define unequip callback
-                slotGhost->set_callback([this](int slotIndex) {
-                    if (auto player = m_dataLoader->get_player_data().lock()) {
-                        player->unequip_unit(slotIndex);
-                        m_slots[slotIndex].ghost = nullptr;
-                    }
-                    });
-
-                m_slots[i].ghost = slotGhost;
+                equipped.push_back(uid);
             }
+        }
+
+        // Reassign them from slot 0 to avoid empty gaps
+        for (int i = 0; i < static_cast<int>(equipped.size()); ++i) {
+            int uid = equipped[i];
+            int form = player->get_unit_form(uid);
+            auto unitData = m_dataLoader->get_unit_data(uid, form);
+
+            // Create UIEquipSlot for equipped unit
+            auto slotGhost = std::make_shared<UIEquipSlot>(
+                unitData->UID,
+                unitData->cost,
+                m_dataLoader->get_unit_icon_texture_path(uid, form),
+                i
+            );
+
+            slotGhost->set_position({ m_slots[i].bounds.position.x, m_slots[i].bounds.position.y });
+            slotGhost->set_size({ m_slots[i].bounds.size.x, m_slots[i].bounds.size.y });
+
+            // Define unequip callback
+            slotGhost->set_callback([this](int slotIndex) {
+                if (auto player = m_dataLoader->get_player_data().lock()) {
+                    // Unequip the clicked slot
+                    player->unequip_unit(slotIndex);
+
+                    // Refresh all slots and redraw ghosts in order
+                    refresh_slots_after_unequip();
+                }
+                });
+
+            m_slots[i].ghost = slotGhost;
+        }
+
+        // Update PlayerData with the compacted slot order
+        for (int i = 0; i < static_cast<int>(m_slots.size()); ++i) {
+            if (i < static_cast<int>(equipped.size()))
+                player->equippedUnits[i] = equipped[i];
+            else
+                player->equippedUnits[i] = -1;
         }
     }
 
@@ -128,10 +149,11 @@ void UIEquipSlider::init_icons()
     {
         int unitUid = m_availableEquips[i];
         int unitLevel = playerData->get_unit_level(unitUid);
-        auto unitData = m_dataLoader->get_unit_data(unitUid);
+        int unitForm = playerData->get_unit_form(unitUid);
+        auto unitData = m_dataLoader->get_unit_data(unitUid, unitForm);
 
         auto icon = std::make_shared<UIEquipIcon>(
-            m_dataLoader->get_unit_icon_texture_path(unitUid),
+            m_dataLoader->get_unit_icon_texture_path(unitUid, unitForm),
             unitData->UID,
             unitData->cost
         );
@@ -162,6 +184,7 @@ void UIEquipSlider::init_icons()
     }
 }
 
+
 /*
  * update
  * ------
@@ -184,7 +207,7 @@ void UIEquipSlider::update(float deltaTime)
                 DragInfo dragInfo;
                 int uid = m_equipIcons[m_currentIndex]->get_uid();
                 dragInfo.uid = uid;
-                dragInfo.cost = m_dataLoader->get_unit_data(uid)->cost;
+                dragInfo.cost = m_dataLoader->get_unit_data(uid, m_dataLoader->get_player_data().lock()->get_unit_form(uid))->cost;
                 dragInfo.level = m_dataLoader->get_player_data().lock()->get_unit_level(uid);
 
                 // Load texture into cache if needed
@@ -192,7 +215,7 @@ void UIEquipSlider::update(float deltaTime)
                 if (it == m_unitTextures.end())
                 {
                     sf::Texture tex;
-                    if (!tex.loadFromFile(m_dataLoader->get_unit_icon_texture_path(uid)))
+                    if (!tex.loadFromFile(m_dataLoader->get_unit_icon_texture_path(uid, m_dataLoader->get_player_data().lock()->get_unit_form(uid))))
                         tex = m_placeholderTexture;
                     auto [insertIt, _] = m_unitTextures.emplace(uid, std::move(tex));
                     dragInfo.texture = &insertIt->second;
@@ -222,16 +245,15 @@ void UIEquipSlider::update(float deltaTime)
         m_tempGhost->levelText.setCharacterSize(m_tempGhost->INFO_BASE_TEXT_SIZE * m_tempGhost->currentScale);
 
         // Adjust sprite to fit ghost shape
-        sf::FloatRect spriteLocal = m_tempGhost->sprite.getLocalBounds();
+        sf::Vector2u texSize = m_tempGhost->texture.getSize();
         sf::Vector2f shapeBaseSize = m_tempGhost->shape.getSize();
-        float effectiveW = shapeBaseSize.x * m_tempGhost->currentScale;
-        float effectiveH = shapeBaseSize.y * m_tempGhost->currentScale;
 
-        if (spriteLocal.size.x > 0.f && spriteLocal.size.y > 0.f)
+        if (texSize.x > 0 && texSize.y > 0)
         {
-            float sx = effectiveW / spriteLocal.size.x;
-            float sy = effectiveH / spriteLocal.size.y;
-            m_tempGhost->sprite.setScale({ sx, sy });
+            float scaleX = shapeBaseSize.x / static_cast<float>(texSize.x);
+            float scaleY = shapeBaseSize.y / static_cast<float>(texSize.y);
+            float uniformScale = std::min(scaleX, scaleY) * m_tempGhost->currentScale; // If the texture is not 4:3 ratio
+            m_tempGhost->sprite.setScale({ uniformScale, uniformScale });
         }
     }
     else
@@ -371,14 +393,15 @@ void UIEquipSlider::handle_event(const sf::Event& event, const sf::RenderWindow&
                     DragInfo dragInfo;
                     int uid = m_equipIcons[m_currentIndex]->get_uid();
                     dragInfo.uid = uid;
-                    dragInfo.cost = m_dataLoader->get_unit_data(uid)->cost;
+                    dragInfo.cost = m_dataLoader->get_unit_data(uid, m_dataLoader->get_player_data().lock()->get_unit_form(uid))->cost;
+                    dragInfo.level = m_dataLoader->get_player_data().lock()->get_unit_level(uid);
 
                     // Load/cached texture for ghost
                     auto it = m_unitTextures.find(uid);
                     if (it == m_unitTextures.end())
                     {
                         sf::Texture tex;
-                        if (!tex.loadFromFile(m_dataLoader->get_unit_icon_texture_path(uid)))
+                        if (!tex.loadFromFile(m_dataLoader->get_unit_icon_texture_path(uid, m_dataLoader->get_player_data().lock()->get_unit_form(uid))))
                             tex = m_placeholderTexture;
                         auto [insertIt, _] = m_unitTextures.emplace(uid, std::move(tex));
                         dragInfo.texture = &insertIt->second;
@@ -505,10 +528,7 @@ void UIEquipSlider::start_drag(const DragInfo& dragInfo, const sf::Vector2f& sta
         static_cast<float>(tg.texture.getSize().x) / 2.f,
         static_cast<float>(tg.texture.getSize().y) / 2.f
         });
-    tg.sprite.setScale({
-        shapeSize.x / tg.texture.getSize().x,
-        shapeSize.y / tg.texture.getSize().y
-        });
+    tg.sprite.setScale({ 1.f, 1.f });
     tg.sprite.setColor(sf::Color(255, 255, 255, 200));
     tg.sprite.setPosition(startPos);
 
@@ -618,6 +638,7 @@ void UIEquipSlider::end_drag(const sf::Vector2f& pos)
         }
     }
 
+    // If released on any slot area
     if (targetSlot != -1)
     {
         // Prevent duplicates: unit already equipped?
@@ -635,32 +656,48 @@ void UIEquipSlider::end_drag(const sf::Vector2f& pos)
             }
         }
 
-        // If not already equipped -> assign unit to slot
+        // If not already equipped -> assign unit to the first available slot
         if (!alreadyEquipped)
         {
-            if (auto player = m_dataLoader->get_player_data().lock())
+            int finalSlot = -1;
+            for (int i = 0; i < static_cast<int>(m_slots.size()); ++i)
             {
-                player->equip_unit(m_tempGhost->uid, targetSlot);
+                if (!m_slots[i].ghost)
+                {
+                    finalSlot = i;
+                    break;
+                }
+            }
 
-                auto slotGhost = std::make_shared<UIEquipSlot>(
-                    m_tempGhost->uid,
-                    m_tempGhost->cost,
-                    m_dataLoader->get_unit_icon_texture_path(m_tempGhost->uid),
-                    targetSlot
-                );
+            if (finalSlot != -1)
+            {
+                if (auto player = m_dataLoader->get_player_data().lock())
+                {
+                    player->equip_unit(m_tempGhost->uid, finalSlot);
 
-                slotGhost->set_position({ m_slots[targetSlot].bounds.position.x, m_slots[targetSlot].bounds.position.y });
-                slotGhost->set_size({ m_slots[targetSlot].bounds.size.x, m_slots[targetSlot].bounds.size.y });
+                    auto slotGhost = std::make_shared<UIEquipSlot>(
+                        m_tempGhost->uid,
+                        m_tempGhost->cost,
+                        m_dataLoader->get_unit_icon_texture_path(m_tempGhost->uid, m_dataLoader->get_player_data().lock()->get_unit_form(m_tempGhost->uid)),
+                        finalSlot
+                    );
 
-                // Define unequip callback
-                slotGhost->set_callback([this](int slotIndex) {
-                    if (auto player = m_dataLoader->get_player_data().lock()) {
-                        player->unequip_unit(slotIndex);
-                        m_slots[slotIndex].ghost = nullptr;
-                    }
-                    });
+                    slotGhost->set_position({ m_slots[finalSlot].bounds.position.x, m_slots[finalSlot].bounds.position.y });
+                    slotGhost->set_size({ m_slots[finalSlot].bounds.size.x, m_slots[finalSlot].bounds.size.y });
 
-                m_slots[targetSlot].ghost = slotGhost;
+                    // Define unequip callback
+                    slotGhost->set_callback([this](int slotIndex) {
+                        if (auto player = m_dataLoader->get_player_data().lock()) {
+                            // Unequip the clicked slot
+                            player->unequip_unit(slotIndex);
+
+                            // Refresh all slots and redraw ghosts in order
+                            refresh_slots_after_unequip();
+                        }
+                        });
+
+                    m_slots[finalSlot].ghost = slotGhost;
+                }
             }
         }
 
@@ -671,6 +708,75 @@ void UIEquipSlider::end_drag(const sf::Vector2f& pos)
     // If dropped in empty space -> shrink out animations
     m_tempGhost->scaleTween = tweeny::from(m_tempGhost->currentScale).to(0.f).during(12).via(tweeny::easing::quadraticIn);
 }
+
+/*
+ * refresh_slots_after_unequip
+ * --------
+ * - Refresh all equipped slots after an unequip action
+ * - Updates equipedUnits from PlayerData
+ */
+void UIEquipSlider::refresh_slots_after_unequip()
+{
+    auto player = m_dataLoader->get_player_data().lock();
+    if (!player) return;
+
+    // Collect all equipped units in order without gaps
+    std::vector<int> equipped;
+    for (int uid : player->equippedUnits)
+        if (uid >= 0)
+            equipped.push_back(uid);
+
+    // Clear all ghosts (visuals) first
+    for (auto& slot : m_slots)
+        slot.ghost = nullptr;
+
+    // Reassign units starting from slot 0
+    int newSlot = 0;
+    for (int uid : equipped)
+    {
+        if (newSlot >= static_cast<int>(m_slots.size()))
+            break;
+
+        int form = player->get_unit_form(uid);
+        auto unitData = m_dataLoader->get_unit_data(uid, form);
+
+        // Create new ghost
+        auto newGhost = std::make_shared<UIEquipSlot>(
+            uid,
+            unitData->cost,
+            m_dataLoader->get_unit_icon_texture_path(uid, form),
+            newSlot
+        );
+
+        newGhost->set_position({ m_slots[newSlot].bounds.position.x, m_slots[newSlot].bounds.position.y });
+        newGhost->set_size({ m_slots[newSlot].bounds.size.x, m_slots[newSlot].bounds.size.y });
+
+        // Set unequip callback
+        newGhost->set_callback([this](int slotIndex) {
+            auto player = m_dataLoader->get_player_data().lock();
+            if (!player) return;
+
+            // Unequip from PlayerData
+            player->unequip_unit(slotIndex);
+
+            // Refresh all slots
+            this->refresh_slots_after_unequip();
+            });
+
+        m_slots[newSlot].ghost = newGhost;
+        newSlot++;
+    }
+
+    // 4. Update PlayerData equippedUnits after all ghosts are recreated
+    for (int i = 0; i < static_cast<int>(m_slots.size()); ++i)
+    {
+        if (i < static_cast<int>(equipped.size()))
+            player->equippedUnits[i] = equipped[i];
+        else
+            player->equippedUnits[i] = -1;
+    }
+}
+
 
 UIEquipSlider::TempGhost::TempGhost(const sf::Font& font, const sf::Texture& placeholder)
     : texture(placeholder)

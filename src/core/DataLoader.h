@@ -6,6 +6,7 @@
 #include "../data/StageData.h"
 
 #include <unordered_map>
+#include <map>
 #include <memory>
 
 /*
@@ -42,13 +43,13 @@ public:
     bool terminate();
 
     // Accessors
-    const std::shared_ptr<EntityData> get_unit_data(int uid) const;
+    const std::shared_ptr<EntityData> get_unit_data(int uid, int form) const;
     const std::shared_ptr<EntityData> get_enemy_data(int uid) const;
     const std::shared_ptr<StageData> get_stage_data(int uid) const;
     std::weak_ptr<PlayerData> get_player_data() const;
 
     // Returns file paths for unit/enemy icons
-    std::string get_unit_icon_texture_path(int uid) const;
+    std::string get_unit_icon_texture_path(int uid, int form) const;
     std::string get_enemy_icon_texture_path(int uid) const;
 
 private:
@@ -70,7 +71,7 @@ private:
     bool m_playerLoaded = false;
 
     // ----- Databases -----
-    std::unordered_map<int, std::shared_ptr<EntityData>> m_unitsDatabase;
+    std::map<std::pair<int, int>, std::shared_ptr<EntityData>> m_unitsFormsDatabase;
     std::unordered_map<int, std::shared_ptr<EntityData>> m_enemiesDatabase;
     std::unordered_map<int, std::shared_ptr<StageData>> m_stagesDatabase;
 
