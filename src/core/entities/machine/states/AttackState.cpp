@@ -132,6 +132,10 @@ void AttackState::exit()
     m_hasAttacked = false;
     m_currentAttackSwingTime = 0.0f;
 
+    auto entity = m_machine->get_owner().lock();
+    if(entity)
+        entity->targets.clear();
+
     // std::cout << "Exiting Attack State\n";
 }
 

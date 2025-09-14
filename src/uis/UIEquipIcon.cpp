@@ -2,6 +2,13 @@
 
 #include <iostream>
 
+/*
+ * Constructor
+ * -----------
+ * - Loads the icon texture (falls back to placeholder if missing)
+ * - Loads the font for text rendering
+ * - Initializes shape, black overlay, and text fields
+ */
 UIEquipIcon::UIEquipIcon(const std::string& iconTexturePath, int uid, int cost) :
     UITextureElement({ 400.f, 300.f }, { 0.f, 0.f }, "assets/images/textures/icons/placeholder.png"),
     m_uid(uid),
@@ -17,22 +24,23 @@ UIEquipIcon::UIEquipIcon(const std::string& iconTexturePath, int uid, int cost) 
     m_sprite.setTexture(m_texture);
     apply_scale();
 
-    // Font
+    // Load font
     if (!m_font.openFromFile("assets/fonts/MPLUSRounded1c-Medium.ttf"))
     {
         std::cerr << "Failed to load font assets/MPLUSRounded1c-Medium.ttf\n";
     }
 
-    // Shape
+    // Base rectangle (background of the icon)
     m_shape.setSize(m_size);
     m_shape.setPosition(m_position);
     m_shape.setFillColor(sf::Color::White);
 
+    // Semi-transparent dark overlay (used when not selected)
     m_blackFilter.setSize(m_size);
     m_blackFilter.setPosition(m_position);
     m_blackFilter.setFillColor(sf::Color(0, 0, 0, 175));
 
-    // Texts
+    // Default text values
     m_unitName.setString("Unit Name");
     m_unitName.setCharacterSize(TITLE_BASE_TEXT_SIZE);
     m_unitName.setFillColor(sf::Color::White);
@@ -52,41 +60,74 @@ UIEquipIcon::UIEquipIcon(const std::string& iconTexturePath, int uid, int cost) 
     m_deploymentCostText.setOutlineThickness(2.f);
 }
 
+/*
+ * get_uid
+ * -------
+ * Returns the unique ID of the unit represented by this icon.
+ */
 int UIEquipIcon::get_uid() const
 {
     return m_uid;
 }
 
+/*
+ * select
+ * ------
+ * - Marks the icon as selected/deselected
+ * - Changes outline and text scaling depending on state
+ */
 void UIEquipIcon::select(bool isSelected)
 {
     m_isSelected = isSelected;
     m_shape.setOutlineThickness(isSelected ? 3.f : 0.f);
     m_shape.setOutlineColor(sf::Color::Yellow);
 
+    // Larger text when selected, smaller when not
     m_unitName.setCharacterSize(isSelected ? TITLE_BASE_TEXT_SIZE * ACTIVE_TEXT_SIZE_SCALE : TITLE_BASE_TEXT_SIZE * INACTIVE_TEXT_SIZE_SCALE);
     m_currentLevelText.setCharacterSize(isSelected ? INFO_BASE_TEXT_SIZE * ACTIVE_TEXT_SIZE_SCALE : INFO_BASE_TEXT_SIZE * INACTIVE_TEXT_SIZE_SCALE);
     m_deploymentCostText.setCharacterSize(isSelected ? INFO_BASE_TEXT_SIZE * ACTIVE_TEXT_SIZE_SCALE : INFO_BASE_TEXT_SIZE * INACTIVE_TEXT_SIZE_SCALE);
 }
 
+/*
+ * set_unit_name
+ * -------------
+ * Updates the displayed unit name.
+ */
 void UIEquipIcon::set_unit_name(const std::string& name)
 {
     m_unitName.setString(name);
 }
 
+/*
+ * set_unit_level
+ * --------------
+ * Updates the displayed unit level.
+ */
 void UIEquipIcon::set_unit_level(int level)
 {
     m_currentLevel = level;
 }
 
+/*
+ * set_deployment_cost
+ * -------------------
+ * Updates the displayed unit cost.
+ */
 void UIEquipIcon::set_deployment_cost(int cost)
 {
     m_deploymentCost = cost;
 }
 
+/*
+ * set_size
+ * --------
+ * - Resizes the icon, keeping a fixed 4:3 aspect ratio
+ * - Updates the background shape and filter sizes
+ */
 void UIEquipIcon::set_size(sf::Vector2f size)
 {
     float width = size.x;
-    float height = width * (3.f / 4.f); // ratio 4:3
+    float height = width * (3.f / 4.f); // enforce 4:3 ratio
 
     m_size = { width, height };
     m_shape.setSize(m_size);
@@ -95,16 +136,23 @@ void UIEquipIcon::set_size(sf::Vector2f size)
     apply_scale();
 }
 
+/*
+ * update
+ * ------
+ * - Advances tween animations for position/size
+ * - Updates text and sprite layout relative to current size and position
+ */
 void UIEquipIcon::update(float deltaTime)
 {
-    // Tween position X
+    // Tween X position
     if (tweenX.progress() < 1.0f)
         m_position.x = tweenX.step(1);
 
-    // Tween size
+    // Tween width/height
     if (tweenWidth.progress() < 1.0f || tweenHeight.progress() < 1.0f)
         set_size({ tweenWidth.step(1), tweenHeight.step(1) });
 
+    // Anchor above base Y position
     sf::Vector2f anchorPos = { m_position.x, m_position.y - m_size.y };
 
     m_shape.setSize(m_size);
@@ -115,13 +163,13 @@ void UIEquipIcon::update(float deltaTime)
 
     apply_scale();
 
+    // Center sprite inside the shape
     sf::FloatRect bounds = m_sprite.getGlobalBounds();
     sf::Vector2f spritePos = anchorPos;
     spritePos.y += (m_size.y - bounds.size.y) / 2.f;
-
     m_sprite.setPosition(spritePos);
 
-    // Title
+    // Unit name (title)
     auto boundsName = m_unitName.getLocalBounds();
     float offsetYTitle = m_isSelected ? TITLE_BASE_TEXT_SIZE * ACTIVE_TEXT_SIZE_SCALE : TITLE_BASE_TEXT_SIZE * INACTIVE_TEXT_SIZE_SCALE;
     m_unitName.setOrigin({
@@ -130,14 +178,14 @@ void UIEquipIcon::update(float deltaTime)
         });
     m_unitName.setPosition({ anchorPos.x + m_size.x / 2.f, anchorPos.y - 40.f });
 
-    // Level
+    // Current level
     m_currentLevelText.setString("Lv. " + std::to_string(m_currentLevel));
     m_currentLevelText.setPosition({
         anchorPos.x + 15.f,
         anchorPos.y + m_size.y - 60.f
         });
 
-    // Cost
+    // Deployment cost
     m_deploymentCostText.setString("Cost: " + std::to_string(m_deploymentCost) + "$");
     m_deploymentCostText.setPosition({
         anchorPos.x + 15.f,
@@ -145,6 +193,12 @@ void UIEquipIcon::update(float deltaTime)
         });
 }
 
+/*
+ * render
+ * ------
+ * - Draws icon shape, sprite, and text to the window
+ * - If not selected, draws a dark filter over the icon
+ */
 void UIEquipIcon::render(sf::RenderWindow& window)
 {
     if (!m_isVisible) return;
@@ -159,6 +213,13 @@ void UIEquipIcon::render(sf::RenderWindow& window)
         window.draw(m_blackFilter);
 }
 
+/*
+ * check_drag_start
+ * ----------------
+ * - Checks if left mouse button was pressed on this icon
+ * - If so, fills DragInfo with unit data (uid, cost, texturePath)
+ * - Returns true if drag should begin
+ */
 bool UIEquipIcon::check_drag_start(const sf::Event& event, const sf::RenderWindow& window, DragInfo& outDrag)
 {
     if (const auto* mousePressed = event.getIf<sf::Event::MouseButtonPressed>())

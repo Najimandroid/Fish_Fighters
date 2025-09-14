@@ -25,6 +25,9 @@ void KnockbackState::enter()
     auto entity = m_machine->get_owner().lock();
     if (!entity) return;
 
+    // Clearing all the targets
+    entity->targets.clear();
+
     // Horizontal knockback:
     // -> Units knocked back to the right
     // -> Enemies knocked back to the left

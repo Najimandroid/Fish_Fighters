@@ -66,8 +66,8 @@ void UIBattleIcon::update(float deltaTime)
     }
 
     // Update price text
-    std::string priceTageText = (m_isOnCooldown || m_uid < 0) ? "" : std::to_string(m_cost) + "$";
-    m_text.setString(priceTageText);
+    std::string priceTagText = (m_isOnCooldown || m_uid < 0) ? "" : std::to_string(m_cost) + "$";
+    m_text.setString(priceTagText);
 
     // Update cooldown bar
     float progress = m_isOnCooldown ? (m_currentCooldown / m_maxCooldown) : 0.f;
@@ -130,8 +130,8 @@ void UIBattleIcon::set_cost(int cost)
         textBounds.position.y + textBounds.size.y
         });
 
-    float paddingX = -5.f;
-    float paddingY = -5.f;
+    float paddingX = 2.f;
+    float paddingY = 2.f;
 
     m_text.setPosition({
         bounds.position.x + bounds.size.x - paddingX,

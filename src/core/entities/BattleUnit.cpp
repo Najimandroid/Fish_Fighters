@@ -92,7 +92,6 @@ void BattleUnit::update(
 
     // Update position (including knockback and hitboxes)
     update_position();
-
     // Update sprite animation
     update_sprite();
 

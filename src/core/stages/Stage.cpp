@@ -206,7 +206,7 @@ void Stage::update_enemies(float deltaTime)
 			}
 
 			bool isFishBaseReached = enemy->attackRangeZone.findIntersection(m_unitBase->hitbox).has_value();
-			if (isFishBaseReached)
+			if (isFishBaseReached && enemy->stateMachine->get_active_state_id() != "KNOCKBACK")
 			{
 				enemy->targets.insert(m_unitBase);
 			}
@@ -242,7 +242,7 @@ void Stage::update_units(float deltaTime)
 			}
 
 			bool isEnemyBaseReached = unit->attackRangeZone.findIntersection(m_enemyBase->hitbox).has_value();
-			if (isEnemyBaseReached)
+			if (isEnemyBaseReached && unit->stateMachine->get_active_state_id() != "KNOCKBACK")
 			{
 				unit->targets.insert(m_enemyBase);
 			}

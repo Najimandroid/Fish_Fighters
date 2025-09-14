@@ -32,5 +32,5 @@ public:
 private:
     float m_currentKnockbackCooldown = 0.0f;     // Time spent in knockback so far
     float m_knockbackDuration = 1.0f;            // Knockback duration in seconds
-    float m_knockbackDistancePx = 150.0f;        // Knockback distance in pixels
+    float m_knockbackDistancePx = 200.0f;        // Knockback distance in pixels
 };
