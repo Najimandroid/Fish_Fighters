@@ -1,0 +1,22 @@
+{
+    "Chapter_1": {
+        "UID": 1,
+        "name": "Shallow Waters",
+        "description": "The beginning of the journey in the coral reefs.",
+        "mapTexture":  "assets/images/textures/backgrounds/chapter_map.png",
+        "stages": [
+            { "UID": 1, "x": 300, "y": 500 },
+            { "UID": 2, "x": 600, "y": 450 }
+        ]
+    },
+    "Chapter_2": {
+        "UID": 2,
+        "name": "Deep Ocean",
+        "description": "Mysterious depths with stronger enemies.",
+        "mapTexture":  "assets/images/textures/backgrounds/chapter_map2.png",
+        "stages": [
+            { "UID": 3, "x": 300, "y": 500 },
+            { "UID": 4, "x": 600, "y": 450 }
+        ]
+    }
+}

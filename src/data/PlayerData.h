@@ -62,6 +62,18 @@ public:
     // Marks a stage as completed and applies rewards
     void complete_stage(std::weak_ptr<StageData> stageData);
 
+    // Returns true if the player has completed the given stage
+    bool has_completed_stage(int stageUID);
+
+    // Marks a chapter as completed
+    void complete_chapter(int chapterUID);
+
+    // Sets the currentChapter to the new chapter uid
+    void enter_chapter(int chapterUID);
+
+    // Returns true if the player has completed the given chapter
+    bool has_completed_chapter(int chapterUID);
+
 public:
     // Currency
     int shells = 0;
@@ -79,4 +91,6 @@ public:
 
     // Progression
     std::unordered_set<int> completedStages;      // Set of stage UIDs completed by the player
+    std::unordered_set<int> completedChapters;      // Set of chapter UIDs completed by the player
+    int currentChapter = 1;                         // Current chapter selected by the player
 };

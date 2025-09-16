@@ -16,6 +16,7 @@ bool DataLoader::load_all()
     return load_units("game_data/units.json") &&
         load_enemies("game_data/enemies.json") &&
         load_stages("game_data/stages.json") &&
+        load_chapters("game_data/chapters.json") &&
         load_player("game_data/player.json");
 }
 
@@ -214,6 +215,46 @@ bool DataLoader::load_stages(const std::string& path)
 }
 
 /*
+ * Load chapters data from JSON.
+ * Populates m_chaptersDatabase with ChapterData.
+ */
+bool DataLoader::load_chapters(const std::string& path)
+{
+    std::ifstream file(path);
+    if (!file.is_open()) return false;
+
+    nlohmann::json data;
+    file >> data;
+
+    for (auto& [key, value] : data.items())
+    {
+        auto chapter = std::make_shared<ChapterData>();
+
+        chapter->UID = value["UID"];
+
+        chapter->name = value["name"];
+        chapter->description = value["description"];
+
+        chapter->mapTexture = value["mapTexture"].get<std::string>();
+
+        for (const auto& stageJson : value["stages"])
+        {
+            ChapterData::StageMapData stageMapData;
+
+            stageMapData.UID = stageJson["UID"].get<int>();
+            stageMapData.position = { stageJson["x"].get<float>(), stageJson["y"].get<float>() };
+
+            chapter->stages.push_back(stageMapData);
+        }
+
+        m_chaptersDatabase[chapter->UID] = chapter;
+    }
+
+    m_chaptersLoaded = true;
+    return true;
+}
+
+/*
  * Load player data from JSON
  * Populates shells, owned units, equipped units, completed stages
  */
@@ -267,6 +308,9 @@ bool DataLoader::load_player(const std::string& path)
         {
             m_playerData->completedStages.insert(stageUid.get<int>());
         }
+
+        // Current chapter
+        m_playerData->currentChapter = j.at("progression").at("currentChapter").get<int>();
     }
     catch (const std::exception& e)
     {
@@ -326,7 +370,10 @@ bool DataLoader::save_player(const std::string& path)
         j["progression"]["completedStages"].push_back(stageUid);
     }
 
-    std::ofstream file(path, std::ios::trunc); // écrase le fichier existant
+    // Current chapter
+    j["progression"]["currentChapter"] = m_playerData->currentChapter;
+
+    std::ofstream file(path, std::ios::trunc); // Write onto the existing file
     if (!file)
     {
         std::cerr << "Failed to open player data file for saving: " << path << "\n";
@@ -368,6 +415,17 @@ const std::shared_ptr<StageData> DataLoader::get_stage_data(int uid) const
     }
 
     return std::make_shared<StageData>();
+}
+
+const std::shared_ptr<ChapterData> DataLoader::get_chapter_data(int uid) const
+{
+    auto it = m_chaptersDatabase.find(uid);
+
+    if (it != m_chaptersDatabase.end()) {
+        return it->second;
+    }
+
+    return std::make_shared<ChapterData>();
 }
 
 std::weak_ptr<PlayerData> DataLoader::get_player_data() const

@@ -65,6 +65,7 @@ set(PROJECT_SOURCES
     src/uis/UIEquipIcon.cpp
     src/uis/UIEquipSlot.cpp
     src/uis/UIEquipSlider.cpp
+    src/uis/UIChapterMap.cpp
 
     src/data/PlayerData.cpp
     # ← ajoute ici les futurs fichiers, par ex.:

@@ -63,6 +63,7 @@ void UITextElement::set_character_size(unsigned int size)
 // Update function called every frame
 void UITextElement::update(float deltaTime)
 {
+    m_text.setPosition(m_position);
 }
 
 // Render the text if visible
@@ -70,4 +71,9 @@ void UITextElement::render(sf::RenderWindow& window)
 {
     if (m_isVisible)
         window.draw(m_text);
+}
+
+sf::Text& UITextElement::get_text()
+{
+    return m_text;
 }

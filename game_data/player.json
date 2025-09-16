@@ -16,6 +16,7 @@
     },
 
     "progression": {
+        "currentChapter":  1,
         "completedStages": []
     }
 }

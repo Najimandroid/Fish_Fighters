@@ -153,3 +153,38 @@ void PlayerData::complete_stage(std::weak_ptr<StageData> stageData)
         std::cerr << "Issue while completing the stage." << std::endl;
     }
 }
+
+/*
+ * Returns true if the player has completed the given stage.
+ */
+bool PlayerData::has_completed_stage(int stageUID)
+{
+    return completedStages.find(stageUID) != completedStages.end();
+}
+
+/*
+ * Marks a chapter as completed.
+ * If already completed, does nothing.
+ */
+void PlayerData::complete_chapter(int chapterUID)
+{
+    if (completedChapters.find(chapterUID) != completedChapters.end()) return;
+
+    completedChapters.insert(chapterUID);
+}
+
+/*
+ * Sets the currentChapter to the new chapter uid.
+ */
+void PlayerData::enter_chapter(int chapterUID)
+{
+    currentChapter = chapterUID;
+}
+
+/*
+ * Returns true if the player has completed the given chapter.
+ */
+bool PlayerData::has_completed_chapter(int chapterUID)
+{
+    return completedChapters.find(chapterUID) != completedChapters.end();
+}

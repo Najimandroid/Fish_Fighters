@@ -9,6 +9,7 @@
 #include "UIUpgradeSlider.h"
 #include "UIEquipSlider.h"
 #include "UIPlayerShellsInfo.h"
+#include "UIChapterMap.h"
 
 // Initialize the manager with references to the data loader and current stage
 void UIManager::init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<Stage> stage)
@@ -101,11 +102,7 @@ void UIManager::generate_fish_tank_uis()
     battleButton->set_callback([this]()
         {
             m_pendingAction = [this]() {
-                if (auto stage = m_stage.lock())
-                {
-                    stage->load(1);
-                    generate_battle_uis();
-                }
+                    generate_chapter_map_uis();
                 };
         });
 
@@ -254,6 +251,168 @@ void UIManager::generate_battle_uis()
 	add_ui_element(stageCash);
 	add_ui_element(cashUp);
 	add_ui_element(baseHealthInfo);
+}
+
+void UIManager::generate_chapter_map_uis()
+{
+    m_uiElements.clear();
+
+    auto chapterMap = std::make_shared<UIChapterMap>(m_dataLoader);
+
+    // Battle button triggers stage load and switches UI
+    auto battleButton = std::make_shared<UIButtonElement>(
+        sf::Vector2f{ 200.f, 80.f },
+        sf::Vector2f{ 1620.f, 900.f },
+        "BATTLE"
+    );
+    battleButton->set_callback([this, chapterMap]()
+        {
+            m_pendingAction = [this, chapterMap]() {
+                if (auto stage = m_stage.lock())
+                {
+                    stage->load(chapterMap->get_selected_stage_uid());
+                    generate_battle_uis();
+                }
+                };
+        });
+
+    chapterMap->load_chapter(m_dataLoader->get_player_data().lock()->currentChapter);
+
+    //back to menu button
+    auto menuButton = std::make_shared<UIButtonElement>(
+        sf::Vector2f{ 100.f, 100.f },
+        sf::Vector2f{ 20.f, 1080.f - 100.f - 20.f },
+        "MENU"
+    );
+    menuButton->set_callback([this]()
+        {
+            m_pendingAction = [this]() {
+                if (auto stage = m_stage.lock())
+                {
+                    generate_fish_tank_uis();
+                }
+                };
+        });
+
+    add_ui_element(chapterMap);
+    add_ui_element(battleButton);
+    add_ui_element(menuButton);
+}
+
+void UIManager::generate_victory_uis()
+{
+    m_uiElements.clear();
+
+    // Victory Text
+    auto title = std::make_shared<UITextElement>(
+        sf::Vector2f{ 200.f, 100.f },
+        sf::Vector2f{ 0.f, 0.f },
+        "Victory!",
+        72
+    );
+
+    sf::FloatRect textBounds = title->get_text().getLocalBounds();
+    title->get_text().setOrigin({
+        textBounds.position.x + textBounds.size.x / 2.f,
+        textBounds.position.y + textBounds.size.y / 2.f
+        });
+    title->set_position({ 1920.f / 2.f, 1080.f / 2.f });
+
+    //back to menu button
+    auto menuButton = std::make_shared<UIButtonElement>(
+        sf::Vector2f{ 100.f, 100.f },
+        sf::Vector2f{ 20.f, 1080.f - 100.f - 20.f },
+        "MENU"
+    );
+    menuButton->set_callback([this]()
+        {
+            m_pendingAction = [this]() {
+                if (auto stage = m_stage.lock())
+                {
+                    m_stage.lock()->unload();
+                    generate_fish_tank_uis();
+                }
+                };
+        });
+
+    //back to map button
+    auto mapButton = std::make_shared<UIButtonElement>(
+        sf::Vector2f{ 100.f, 100.f },
+        sf::Vector2f{ 150.f, 1080.f - 100.f - 20.f },
+        "MAP"
+    );
+    mapButton->set_callback([this]()
+        {
+            m_pendingAction = [this]() {
+                if (auto stage = m_stage.lock())
+                {
+                    m_stage.lock()->unload();
+                    generate_chapter_map_uis();
+                }
+                };
+        });
+
+    add_ui_element(title);
+    add_ui_element(menuButton);
+    add_ui_element(mapButton);
+}
+
+void UIManager::generate_defeat_uis()
+{
+    m_uiElements.clear();
+
+    // Victory Text
+    auto title = std::make_shared<UITextElement>(
+        sf::Vector2f{ 200.f, 100.f },
+        sf::Vector2f{ 0.f, 0.f },
+        "Defeat...",
+        72
+    );
+
+    sf::FloatRect textBounds = title->get_text().getLocalBounds();
+    title->get_text().setOrigin({
+        textBounds.position.x + textBounds.size.x / 2.f,
+        textBounds.position.y + textBounds.size.y / 2.f
+        });
+    title->set_position({ 1920.f / 2.f, 1080.f / 2.f });
+
+    //back to menu button
+    auto menuButton = std::make_shared<UIButtonElement>(
+        sf::Vector2f{ 100.f, 100.f },
+        sf::Vector2f{ 20.f, 1080.f - 100.f - 20.f },
+        "MENU"
+    );
+    menuButton->set_callback([this]()
+        {
+            m_pendingAction = [this]() {
+                if (auto stage = m_stage.lock())
+                {
+                    m_stage.lock()->unload();
+                    generate_fish_tank_uis();
+                }
+                };
+        });
+
+    //back to map button
+    auto mapButton = std::make_shared<UIButtonElement>(
+        sf::Vector2f{ 100.f, 100.f },
+        sf::Vector2f{ 150.f, 1080.f - 100.f - 20.f },
+        "MAP"
+    );
+    mapButton->set_callback([this]()
+        {
+            m_pendingAction = [this]() {
+                if (auto stage = m_stage.lock())
+                {
+                    m_stage.lock()->unload();
+                    generate_chapter_map_uis();
+                }
+                };
+        });
+
+    add_ui_element(title);
+    add_ui_element(menuButton);
+    add_ui_element(mapButton);
 }
 
 bool UIManager::is_mouse_over_ui(const sf::Vector2i& worldPosition) const

@@ -162,6 +162,12 @@ void UIUpgradeIcon::update(float deltaTime)
         });
     m_unitName.setPosition({ anchorPos.x + m_size.x / 2.f, anchorPos.y - 40.f });
 
+    // Darken sprite if not unlocked
+    if (m_currentLevel <= 0)
+        m_sprite.setColor(sf::Color::Black);
+    else
+        m_sprite.setColor(sf::Color::White);
+
     // Position level text at bottom-right
     float offsetY = (m_isSelected ? INFO_BASE_TEXT_SIZE * ACTIVE_TEXT_SIZE_SCALE : INFO_BASE_TEXT_SIZE * INACTIVE_TEXT_SIZE_SCALE) + 5.f;
     float offsetX = 15.f;

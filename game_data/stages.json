@@ -41,7 +41,7 @@
         "rewards": [
             {
                 "type": "shells",
-                "amount": 250
+                "amount": 200
             },
             {
                 "type": "unit",
@@ -81,7 +81,7 @@
         "rewards": [
             {
                 "type": "shells",
-                "amount": 250
+                "amount": 300
             }
         ]
     }

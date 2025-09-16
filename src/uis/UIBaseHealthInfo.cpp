@@ -37,7 +37,7 @@ void UIBaseHealthInfo::update(float deltaTime)
     {
         // Enemy base health display
         m_textEnemyBase.setString(
-            "Health: " + std::to_string((int)stage->get_enemy_base().lock()->currentHealth)
+            "Health: " + std::to_string(std::max(0, (int)stage->get_enemy_base().lock()->currentHealth))
             + " / " + std::to_string((int)stage->get_enemy_base().lock()->maxHealth)
         );
 
@@ -52,7 +52,7 @@ void UIBaseHealthInfo::update(float deltaTime)
 
         // Player unit base health display
         m_textUnitBase.setString(
-            "Health: " + std::to_string((int)stage->get_unit_base().lock()->currentHealth)
+            "Health: " + std::to_string(std::max(0, (int)stage->get_unit_base().lock()->currentHealth))
             + " / " + std::to_string((int)stage->get_unit_base().lock()->maxHealth)
         );
 

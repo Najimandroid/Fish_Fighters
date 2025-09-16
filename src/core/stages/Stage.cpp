@@ -94,6 +94,7 @@ void Stage::unload()
 	m_unitBase = nullptr;
 
 	m_isLoaded = false;
+	m_isOnEndScreen = false;
 }
 
 /*
@@ -148,7 +149,6 @@ void Stage::update(float deltaTime)
 	if (is_enemy_base_destroyed())
 	{
 		// Player has won
-		// TODO: add a winning screen
 		if (auto player = m_dataLoader->get_player_data().lock())
 		{
 			auto stageData = m_dataLoader->get_stage_data(m_uid);
@@ -156,17 +156,21 @@ void Stage::update(float deltaTime)
 				player->complete_stage(stageData);
 		}
 
-		unload(); //unload stage
-		m_uiManager.lock()->generate_fish_tank_uis();
+		m_enemies.clear();
+
+		m_isOnEndScreen = true;
+		m_uiManager.lock()->generate_victory_uis();
 		return;
 	}
 
 	if (is_unit_base_destroyed())
 	{
 		// Player has lost
-		// TODO: add a losing screen
-		unload();
-		m_uiManager.lock()->generate_fish_tank_uis();
+
+		m_units.clear();
+
+		m_isOnEndScreen = true;
+		m_uiManager.lock()->generate_defeat_uis();
 		return;
 	}
 }
@@ -398,6 +402,7 @@ void Stage::spawn_bases(float health, std::string texture)
 void Stage::spawn_enemy(std::shared_ptr<EntityData> enemyData, sf::Vector2f magnification, int layer = -1, bool isBoss = false, bool bypassLimit = false)
 {
 	if (m_enemiesCount >= m_enemiesLimit && !bypassLimit) return;
+	if (m_isOnEndScreen == true) return;
 
 	std::shared_ptr<BattleEnemy> battleEnemy = std::make_shared<BattleEnemy>(enemyData, magnification);
 	battleEnemy->set_current_stage(shared_from_this());
@@ -422,6 +427,7 @@ void Stage::spawn_unit(std::shared_ptr<EntityData> unitData)
 {
 	if (m_unitsCount >= m_unitsLimit) return;
 	if (unitData->cost > m_currentCash) return;
+	if (m_isOnEndScreen == true) return;
 
 	sf::Vector2f unitMagnification = { 1.f, 1.f };
 

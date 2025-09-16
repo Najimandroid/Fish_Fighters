@@ -57,6 +57,9 @@ public:
     void generate_upgrade_menu_uis();
     void generate_equip_menu_uis();
     void generate_battle_uis();
+    void generate_chapter_map_uis();
+    void generate_victory_uis();
+    void generate_defeat_uis();
 
     // Returns true if a given world position overlaps any UI element
     bool is_mouse_over_ui(const sf::Vector2i& worldPosition) const;

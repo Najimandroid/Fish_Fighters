@@ -145,6 +145,7 @@ private:
     // ----- State -----
     bool m_isLoaded = false;                 // Is a stage currently loaded
     float m_elapsedTime = 0.f;               // Time elapsed since stage load
+    bool m_isOnEndScreen = false;            // Is the victory/defeat screen visible
 
 private:
 

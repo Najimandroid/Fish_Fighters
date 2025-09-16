@@ -74,8 +74,10 @@ void UIEquipSlider::init_icons()
 
     // Create slot rectangles and visuals
     int index = 0;
-    for (int row = 0; row < rows; ++row) {
-        for (int col = 0; col < cols; ++col) {
+    for (int row = 0; row < rows; ++row) 
+    {
+        for (int col = 0; col < cols; ++col) 
+        {
             sf::Vector2f pos{ startX + col * (iconWidth + spacingX), startY + row * (iconHeight + spacingY) };
             sf::Vector2f size{ iconWidth, iconHeight };
 
@@ -97,7 +99,8 @@ void UIEquipSlider::init_icons()
     {
         // Collect all equipped units without gaps
         std::vector<int> equipped;
-        for (int i = 0; i < static_cast<int>(m_slots.size()); ++i) {
+        for (int i = 0; i < static_cast<int>(m_slots.size()); ++i) 
+        {
             int uid = player->equippedUnits[i];
             if (uid >= 0) {
                 equipped.push_back(uid);
@@ -105,7 +108,8 @@ void UIEquipSlider::init_icons()
         }
 
         // Reassign them from slot 0 to avoid empty gaps
-        for (int i = 0; i < static_cast<int>(equipped.size()); ++i) {
+        for (int i = 0; i < static_cast<int>(equipped.size()); ++i) 
+        {
             int uid = equipped[i];
             int form = player->get_unit_form(uid);
             auto unitData = m_dataLoader->get_unit_data(uid, form);
@@ -122,8 +126,10 @@ void UIEquipSlider::init_icons()
             slotGhost->set_size({ m_slots[i].bounds.size.x, m_slots[i].bounds.size.y });
 
             // Define unequip callback
-            slotGhost->set_callback([this](int slotIndex) {
-                if (auto player = m_dataLoader->get_player_data().lock()) {
+            slotGhost->set_callback([this](int slotIndex) 
+                {
+                if (auto player = m_dataLoader->get_player_data().lock()) 
+                {
                     // Unequip the clicked slot
                     player->unequip_unit(slotIndex);
 
@@ -136,7 +142,8 @@ void UIEquipSlider::init_icons()
         }
 
         // Update PlayerData with the compacted slot order
-        for (int i = 0; i < static_cast<int>(m_slots.size()); ++i) {
+        for (int i = 0; i < static_cast<int>(m_slots.size()); ++i) 
+        {
             if (i < static_cast<int>(equipped.size()))
                 player->equippedUnits[i] = equipped[i];
             else
@@ -686,7 +693,8 @@ void UIEquipSlider::end_drag(const sf::Vector2f& pos)
                     slotGhost->set_size({ m_slots[finalSlot].bounds.size.x, m_slots[finalSlot].bounds.size.y });
 
                     // Define unequip callback
-                    slotGhost->set_callback([this](int slotIndex) {
+                    slotGhost->set_callback([this](int slotIndex) 
+                        {
                         if (auto player = m_dataLoader->get_player_data().lock()) {
                             // Unequip the clicked slot
                             player->unequip_unit(slotIndex);

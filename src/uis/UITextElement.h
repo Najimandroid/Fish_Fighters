@@ -38,6 +38,9 @@ public:
     // Draw the text to the given window
     void render(sf::RenderWindow& window) override;
 
+    // Getter
+    sf::Text& get_text();
+
 protected:
 
     sf::Text m_text;

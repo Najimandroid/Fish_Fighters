@@ -4,6 +4,7 @@
 #include "../data/PlayerData.h"
 #include "../data/EnemyStageData.h"
 #include "../data/StageData.h"
+#include "../data/ChapterData.h"
 
 #include <unordered_map>
 #include <map>
@@ -46,6 +47,7 @@ public:
     const std::shared_ptr<EntityData> get_unit_data(int uid, int form) const;
     const std::shared_ptr<EntityData> get_enemy_data(int uid) const;
     const std::shared_ptr<StageData> get_stage_data(int uid) const;
+    const std::shared_ptr<ChapterData> get_chapter_data(int uid) const;
     std::weak_ptr<PlayerData> get_player_data() const;
 
     // Returns file paths for unit/enemy icons
@@ -58,6 +60,7 @@ private:
     bool load_enemies(const std::string& path);
     bool load_stages(const std::string& path);
     bool load_player(const std::string& path);
+    bool load_chapters(const std::string& path);
 
     // Internal saving method
     bool save_player(const std::string& path);
@@ -68,12 +71,14 @@ private:
     bool m_unitsLoaded = false;
     bool m_enemiesLoaded = false;
     bool m_stagesLoaded = false;
+    bool m_chaptersLoaded = false;
     bool m_playerLoaded = false;
 
     // ----- Databases -----
     std::map<std::pair<int, int>, std::shared_ptr<EntityData>> m_unitsFormsDatabase;
     std::unordered_map<int, std::shared_ptr<EntityData>> m_enemiesDatabase;
     std::unordered_map<int, std::shared_ptr<StageData>> m_stagesDatabase;
+    std::unordered_map<int, std::shared_ptr<ChapterData>> m_chaptersDatabase;
 
     // ----- Player Data -----
     std::shared_ptr<PlayerData> m_playerData = nullptr;
