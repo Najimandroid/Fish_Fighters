@@ -105,7 +105,7 @@ void UIChapterMap::build_stage_icons()
         if (icon.completed)
             icon.circle.setFillColor(sf::Color::Green);
         else if (icon.unlocked)
-            icon.circle.setFillColor(sf::Color::White);
+            icon.circle.setFillColor(sf::Color::Black);
 
         if (icon.unlocked || icon.completed) {
             m_stageIcons.push_back(std::move(icon));
@@ -223,7 +223,7 @@ void UIChapterMap::update(float deltaTime)
         }
         else if (icon.completed)
         {
-            icon.circle.setOutlineColor(sf::Color::Black);
+            icon.circle.setOutlineColor(sf::Color::Green);
             icon.circle.setOutlineThickness(1.5f);
         }
         else

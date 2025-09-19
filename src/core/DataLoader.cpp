@@ -157,6 +157,8 @@ bool DataLoader::load_stages(const std::string& path)
 
         data->baseHealth = value.at("baseHealth").get<float>();
 
+        data->length = value.at("length").get<float>();
+
         data->baseTexture = value.at("baseTexture").get<std::string>();
         data->backgroundTexture = value.at("backgroundTexture").get<std::string>();
         

@@ -42,7 +42,7 @@ public:
     Stage();
 
     // Initialize stage with references to DataLoader and UIManager
-    void init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<UIManager> uiManager);
+    void init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<UIManager> uiManager, sf::View* stageCamera);
 
     // Load a stage by its unique ID
     void load(int uid);
@@ -89,6 +89,15 @@ public:
     // Upgrade available cash; returns false if insufficient funds
     bool upgrade_cash(int level, int cost);
 
+    // Apply zoom to the stage view
+    void apply_zoom(float zoom);
+
+    // Focus on the player base (when entering a stage)
+    void focus_on_player_base();
+
+    // Clamp the camera
+    void clamp_camera();
+
     // Check if the player base has been destroyed
     bool is_unit_base_destroyed();
 
@@ -125,6 +134,8 @@ private:
     int m_enemiesCount = 0;                  // Current number of enemies
     int m_unitsCount = 0;                    // Current number of units
 
+    float m_length = 0.f;                    // Distance between the enemy and player bases
+
     std::shared_ptr<DataLoader> m_dataLoader;
     std::weak_ptr<UIManager> m_uiManager;
 
@@ -142,6 +153,10 @@ private:
     sf::Texture m_backgroundTexture;         // Stage background texture
     sf::Sprite m_backgroundSprite;           // Background sprite
 
+    // ----- Camera -----
+    sf::View* m_stageCamera;                 // Stage camera
+    float m_currentZoom = 1.f;               // Camera zoom
+
     // ----- State -----
     bool m_isLoaded = false;                 // Is a stage currently loaded
     float m_elapsedTime = 0.f;               // Time elapsed since stage load
@@ -149,6 +164,6 @@ private:
 
 private:
 
-    // Internal helper: spawn bases at the start of the stage
+    // Spawn bases at the start of the stage
     void spawn_bases(float health, std::string texture);
 };

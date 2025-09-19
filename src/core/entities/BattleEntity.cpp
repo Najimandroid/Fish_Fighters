@@ -124,8 +124,7 @@ void BattleEntity::update_sprite()
             currentFrameIndex = data->knockbackFrameIndex;
 
         // Advance frames if within texture bounds
-        if (currentFrameIndex * sprite.getTextureRect().size.x <
-            texture.getSize().x - sprite.getTextureRect().size.x)
+        if (currentFrameIndex * sprite.getTextureRect().size.x <  texture.getSize().x - sprite.getTextureRect().size.x)
         {
             currentFrameIndex++;
         }

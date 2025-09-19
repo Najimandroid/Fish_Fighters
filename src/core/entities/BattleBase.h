@@ -35,11 +35,10 @@ public:
     // Bases use a static sprite (no animation)
     void update_sprite() override {};
 
+    // Update the position
+    void update_position() override;
+
 public:
     // Maximum health (used to reset or display a health bar)
     float maxHealth = 1.0f;
-
-private:
-    // Internal position updater (keeps sprite & hitboxes aligned)
-    void update_position() override;
 };

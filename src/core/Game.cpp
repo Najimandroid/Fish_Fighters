@@ -28,7 +28,7 @@ Game::Game():
 
     // Initialize UIManager and Stage with references to DataLoader
     m_uiManager->init(m_dataLoader, m_stage);
-    m_stage->init(m_dataLoader, m_uiManager);
+    m_stage->init(m_dataLoader, m_uiManager, &m_stageCamera);
 
     // Set up cameras for UI and stage rendering
     init_cameras();
@@ -158,17 +158,7 @@ void Game::poll_events()
             if (!m_uiManager->is_mouse_over_ui(static_cast<sf::Vector2i>(uiWorldPos)))
             {
                 // Calculate new zoom factor
-                float factor = (e_wheel->delta > 0.f) ? 0.9f : 1.1f;
-                float newZoom = m_currentZoom * factor;
-
-                // Clamp zoom limits
-                if (newZoom < 0.9f) newZoom = 0.9f;
-                if (newZoom > 1.5f) newZoom = 1.5f;
-
-                // Apply zoom
-                float appliedFactor = newZoom / m_currentZoom;
-                m_stageCamera.zoom(appliedFactor);
-                m_currentZoom = newZoom;
+                m_stage->apply_zoom((e_wheel->delta > 0.f) ? 0.9f : 1.1f);
 
                 // Clamp camera to keep stage within view
                 auto unitBase = m_stage->get_unit_base().lock();

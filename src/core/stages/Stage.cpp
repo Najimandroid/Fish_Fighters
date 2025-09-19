@@ -13,10 +13,11 @@
 /*
 * Initializes the stage with the DataLoader and UIManager
 */
-void Stage::init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<UIManager> uiManager)
+void Stage::init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<UIManager> uiManager, sf::View* stageCamera)
 {
 	m_dataLoader = dataLoader;
 	m_uiManager = uiManager;
+	m_stageCamera = stageCamera;
 	unload();
 }
 
@@ -47,6 +48,7 @@ void Stage::load(int uid)
 	m_enemiesCount = 0;
 	m_unitsCount = 0;
 	m_currentCash = 0;
+	m_length = stageJson->length;
 
 	// Spawn bases with provided health and texture
 	spawn_bases(stageJson->baseHealth, stageJson->baseTexture);
@@ -74,6 +76,13 @@ void Stage::load(int uid)
 			});
 	}
 
+	if (!m_stageCamera) std::cerr << "Stage camera not found\n";
+
+	m_stageCamera->setSize({ 1920.f, 1080.f });
+	m_stageCamera->setCenter({ 1920.f / 2.f, 1080.f / 2.f });
+	m_currentZoom = 1.f;
+	focus_on_player_base(); // Focus camera
+
 	m_isLoaded = true;
 }
 
@@ -92,6 +101,8 @@ void Stage::unload()
 
 	m_enemyBase = nullptr;
 	m_unitBase = nullptr;
+
+	m_elapsedTime = 0.f;
 
 	m_isLoaded = false;
 	m_isOnEndScreen = false;
@@ -144,6 +155,9 @@ void Stage::update(float deltaTime)
 	update_bases(deltaTime);
 	update_enemies(deltaTime);
 	update_units(deltaTime);
+
+	// Doesn't need to check the bases if the player is on an end screen
+	if (m_isOnEndScreen) return;
 
 	// Checks if the Player has won or lost
 	if (is_enemy_base_destroyed())
@@ -280,6 +294,69 @@ bool Stage::upgrade_cash(int level, int cost)
 	return true;
 }
 
+void Stage::apply_zoom(float zoom)
+{
+	if (!m_stageCamera) return;
+
+	float newZoom = m_currentZoom * zoom;
+	newZoom = std::clamp(newZoom, 0.9f, 1.5f);
+
+	float appliedFactor = newZoom / m_currentZoom;
+
+	m_stageCamera->zoom(appliedFactor);
+	m_currentZoom = newZoom;
+
+	clamp_camera();
+}
+
+void Stage::focus_on_player_base()
+{
+	if (!m_stageCamera || !is_loaded()) return;
+	if (!m_unitBase || !m_enemyBase) return;
+
+	// Max Zoom
+	sf::Vector2f logicalWindowSize({ 1920.f, 1080.f });
+	m_stageCamera->setSize(logicalWindowSize / 1.5f);
+	m_currentZoom = 1.5f;
+
+	// Move to player base
+	sf::FloatRect baseBounds = m_unitBase->sprite.getGlobalBounds();
+	float baseCenterX = baseBounds.position.x + baseBounds.size.x * 0.5f;
+
+	sf::Vector2f center = m_stageCamera->getCenter();
+	float viewWidth = m_stageCamera->getSize().x;
+
+	center.x = baseCenterX - viewWidth * 0.25f;
+
+	m_stageCamera->setCenter(center);
+	
+	clamp_camera();
+}
+
+void Stage::clamp_camera()
+{
+	if (!m_stageCamera || !is_loaded()) return;
+	if (!m_unitBase || !m_enemyBase) return;
+
+	sf::Vector2f center = m_stageCamera->getCenter();
+	float viewWidth = m_stageCamera->getSize().x;
+
+	const float margin = 0.25f;
+	const float baseWidth = 200.f; // Width of a base in pixels
+
+	float minCenterX = m_enemyBase->position.x + baseWidth + (0.5f - margin) * viewWidth;
+	float maxCenterX = m_unitBase->position.x - (0.5f - margin) * viewWidth;
+
+	if (minCenterX > maxCenterX)
+	{
+		minCenterX = maxCenterX = (m_enemyBase->position.x + m_unitBase->position.x) * 0.5f;
+	}
+
+	center.x = std::clamp(center.x, minCenterX, maxCenterX);
+
+	m_stageCamera->setCenter(center);
+}
+
 /*
 * Check if player base is destroyed
 */
@@ -390,10 +467,12 @@ void Stage::render(sf::RenderWindow& window)
 void Stage::spawn_bases(float health, std::string texture)
 {
 	m_enemyBase = std::make_unique<BattleBase>(health, texture);
-	m_enemyBase->position = { 20.0f, 540.0f - m_enemyBase->texture.getSize().y / 2 }; //20px to the right
+	m_enemyBase->position = { 0.0f, 540.0f - m_enemyBase->texture.getSize().y / 2 };
+	m_enemyBase->update_position();
 
 	m_unitBase = std::make_unique<BattleBase>(350.0f, "assets/images/textures/bases/fishBaseTEST.png");
-	m_unitBase->position = { 1900.0f - m_unitBase->texture.getSize().x, 540.0f - m_unitBase->texture.getSize().y / 2 }; //20px to the left
+	m_unitBase->position = { m_length, 540.0f - m_unitBase->texture.getSize().y / 2 };
+	m_unitBase->update_position();
 }
 
 /*
@@ -411,6 +490,7 @@ void Stage::spawn_enemy(std::shared_ptr<EntityData> enemyData, sf::Vector2f magn
 
 	// Assign layer
 	battleEnemy->currentLayer = (layer > 0) ? layer : generate_random_spawn_layer();
+	battleEnemy->position.x = 0.f;
 	battleEnemy->update_position();
 	battleEnemy->update_sprite();
 
@@ -453,6 +533,7 @@ void Stage::spawn_unit(std::shared_ptr<EntityData> unitData)
 	battleUnit->stateMachine->change_state(std::make_unique<IdleState>(battleUnit->stateMachine));
 
 	battleUnit->currentLayer = generate_random_spawn_layer();
+	battleUnit->position.x = m_length;
 	battleUnit->update_position();
 	battleUnit->update_sprite();
 

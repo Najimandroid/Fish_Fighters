@@ -47,7 +47,6 @@ public:
     // Handles sprite frame updates (animation)
     virtual void update_sprite();
 
-
     // ====== Initialization ======
 
     // Attaches StateMachine to this entity

@@ -74,7 +74,6 @@ private:
     const sf::Vector2u m_logicalResolution = { 1920, 1080 }; // Reference resolution
 
     // ----- Mouse and Inputs -----
-    float m_currentZoom = 1.f;     // Current zoom level of the stage camera
     bool m_isDragging = false;     // Indicates if the user is dragging the camera
     sf::Vector2i m_lastMousePos{ 0, 0 };
 

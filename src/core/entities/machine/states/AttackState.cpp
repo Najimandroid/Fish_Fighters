@@ -64,7 +64,8 @@ void AttackState::perform(float deltaTime)
     }
     else
     {
-        // After swing ends, return to idle
+        // After swing ends, reset attack cooldown and return to idle
+        entity->currentAttackCooldown = 0.0f;
         m_machine->change_state(std::make_unique<IdleState>(m_machine));
         return;
     }
@@ -97,7 +98,7 @@ void AttackState::perform(float deltaTime)
     // ===== No Targets? =====
     if (entity->targets.empty())
     {
-        m_machine->change_state(std::make_unique<WalkState>(m_machine));
+        // Doesn't apply damage but still does the attack animation (attack missed)
         return;
     }
 
@@ -117,8 +118,7 @@ void AttackState::perform(float deltaTime)
         }
     }
 
-    // Reset attack cooldown and clear targets
-    entity->currentAttackCooldown = 0.0f;
+    // Clear targets
     entity->targets.clear();
 }
 
