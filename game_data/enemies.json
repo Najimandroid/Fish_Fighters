@@ -76,12 +76,12 @@
 
         "health": 250,
 
-        "attackPower": 100,
+        "attackPower": 35,
         "attackRange": 5,
-        "attackFrequency": 1,
+        "attackFrequency": 0.1,
         "attackType": 1,
         "foreswing": 0.3,
-        "backswing": 0.4,
+        "backswing": 0.5,
 
         "movementSpeed": 7,
 

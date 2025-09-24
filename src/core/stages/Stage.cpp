@@ -76,11 +76,6 @@ void Stage::load(int uid)
 			});
 	}
 
-	if (!m_stageCamera) std::cerr << "Stage camera not found\n";
-
-	m_stageCamera->setSize({ 1920.f, 1080.f });
-	m_stageCamera->setCenter({ 1920.f / 2.f, 1080.f / 2.f });
-	m_currentZoom = 1.f;
 	focus_on_player_base(); // Focus camera
 
 	m_isLoaded = true;
@@ -103,6 +98,9 @@ void Stage::unload()
 	m_unitBase = nullptr;
 
 	m_elapsedTime = 0.f;
+
+	apply_zoom(1.f / m_currentZoom);
+	m_currentZoom = 1.f;
 
 	m_isLoaded = false;
 	m_isOnEndScreen = false;
@@ -311,13 +309,11 @@ void Stage::apply_zoom(float zoom)
 
 void Stage::focus_on_player_base()
 {
-	if (!m_stageCamera || !is_loaded()) return;
+	if (!m_stageCamera) return;
 	if (!m_unitBase || !m_enemyBase) return;
 
 	// Max Zoom
-	sf::Vector2f logicalWindowSize({ 1920.f, 1080.f });
-	m_stageCamera->setSize(logicalWindowSize / 1.5f);
-	m_currentZoom = 1.5f;
+	apply_zoom(0.9f);
 
 	// Move to player base
 	sf::FloatRect baseBounds = m_unitBase->sprite.getGlobalBounds();
@@ -327,7 +323,7 @@ void Stage::focus_on_player_base()
 	float viewWidth = m_stageCamera->getSize().x;
 
 	center.x = baseCenterX - viewWidth * 0.25f;
-
+	
 	m_stageCamera->setCenter(center);
 	
 	clamp_camera();
@@ -335,7 +331,7 @@ void Stage::focus_on_player_base()
 
 void Stage::clamp_camera()
 {
-	if (!m_stageCamera || !is_loaded()) return;
+	if (!m_stageCamera) return;
 	if (!m_unitBase || !m_enemyBase) return;
 
 	sf::Vector2f center = m_stageCamera->getCenter();
@@ -588,3 +584,4 @@ void Stage::generate_boss_shockwave()
 		}
 	}
 }
+
