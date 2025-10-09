@@ -19,6 +19,5 @@ CMakeCache.txt
 CMakeUserPresets.json
 
 # SFML / assets
-*.dll
 *.log
 *.tmp
