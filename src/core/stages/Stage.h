@@ -53,9 +53,6 @@ public:
     // Update stage state each frame
     void update(float deltaTime);
 
-    // Increment cash available to the player
-    void update_cash();
-
     // Render the stage (background, bases, units, enemies)
     void render(sf::RenderWindow& window);
 
@@ -85,6 +82,9 @@ public:
 
     // Update both player and enemy bases
     void update_bases(float deltaTime);
+
+    // Increment cash available to the player
+    void update_cash(float deltaTime);
 
     // Upgrade available cash; returns false if insufficient funds
     bool upgrade_cash(int level, int cost);
@@ -116,6 +116,9 @@ public:
     int get_cash() const;
     int get_max_cash() const;
 
+    // Get the loaded stage's id
+	int get_current_uid() const;
+
     // Check if a stage is currently loaded
     bool is_loaded() const;
 
@@ -127,6 +130,7 @@ private:
 
     int m_currentCash = 0;                   // Current cash available to the player
     int m_maxCash = 500;                     // Maximum cash allowed
+	int m_cashPerSecond = 50;                // Cash gained per second (with no upgrades)
 
     int m_enemiesLimit = 5;                  // Maximum number of enemies
     int m_unitsLimit = 5;                    // Maximum number of units
@@ -151,7 +155,7 @@ private:
 
     // ----- Rendering -----
     sf::Texture m_backgroundTexture;         // Stage background texture
-    sf::Sprite m_backgroundSprite;           // Background sprite
+    std::vector<sf::Sprite> m_backgroundSprites; // Background sprites
 
     // ----- Camera -----
     sf::View* m_stageCamera;                 // Stage camera
@@ -165,5 +169,7 @@ private:
 private:
 
     // Spawn bases at the start of the stage
-    void spawn_bases(float health, std::string texture);
+    void spawn_bases(float health, const std::string& texture);
+
+    void init_background(const std::string& texturePath);
 };

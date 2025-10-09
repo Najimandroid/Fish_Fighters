@@ -6,7 +6,8 @@
         "mapTexture":  "assets/images/textures/backgrounds/chapter_map.png",
         "stages": [
             { "UID": 1, "x": 300, "y": 500 },
-            { "UID": 2, "x": 600, "y": 450 }
+            { "UID": 2, "x": 600, "y": 450 },
+            { "UID": 3, "x": 900, "y": 700 }
         ]
     },
     "Chapter_2": {

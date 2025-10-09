@@ -8,7 +8,6 @@ class Stage;
  * UIStageCash
  * -----------
  * Displays the player's current cash and maximum cash during a stage.
- * Inherits from UITextElement to leverage text rendering in the UI.
  */
 
 class UIStageCash : public UITextElement
@@ -16,7 +15,6 @@ class UIStageCash : public UITextElement
 public:
 
     /*
-     * @param stage - shared pointer to the current Stage
      * Initializes the weak reference to the stage and prepares the text element.
      */
     UIStageCash(std::shared_ptr<Stage> stage);

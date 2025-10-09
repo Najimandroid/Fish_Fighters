@@ -28,7 +28,7 @@ Stage::Stage():
 	m_enemyBase(nullptr), m_unitBase(nullptr),
 
 	//m_baseTexture(sf::Texture()), m_baseSprite(sf::Sprite(m_baseTexture)), 
-	m_backgroundTexture(sf::Texture()), m_backgroundSprite(sf::Sprite(m_backgroundTexture))
+	m_backgroundTexture(sf::Texture())
 {}
 
 /*
@@ -63,18 +63,8 @@ void Stage::load(int uid)
 	}
 
 	// Load background texture and scale to 1920x1080
-	bool bg = m_backgroundTexture.loadFromFile(stageJson->backgroundTexture);
-	m_backgroundSprite.setTexture(m_backgroundTexture, true);
-	m_backgroundSprite.setPosition({ 0.0f, 0.0f });
-
-	sf::Vector2u texSize = m_backgroundTexture.getSize();
-	if (texSize.x > 0 && texSize.y > 0)
-	{
-		m_backgroundSprite.setScale({
-			1920.f / texSize.x,
-			1080.f / texSize.y
-			});
-	}
+	bool success = m_backgroundTexture.loadFromFile(stageJson->backgroundTexture);
+	init_background(stageJson->backgroundTexture);
 
 	focus_on_player_base(); // Focus camera
 
@@ -148,7 +138,7 @@ void Stage::update(float deltaTime)
 		}
 	}
 
-	update_cash();
+	update_cash(deltaTime);
 
 	update_bases(deltaTime);
 	update_enemies(deltaTime);
@@ -167,7 +157,7 @@ void Stage::update(float deltaTime)
 			if (stageData)
 				player->complete_stage(stageData);
 		}
-
+		
 		m_enemies.clear();
 
 		m_isOnEndScreen = true;
@@ -190,12 +180,17 @@ void Stage::update(float deltaTime)
 /*
 * Increment cash over time
 */
-void Stage::update_cash()
+void Stage::update_cash(float deltaTime)
 {
-	if (m_currentCash < m_maxCash)
-		m_currentCash += 1; // TEMPORARY: increase 1 cash per update
+	if (deltaTime <= 0.0f) return;
+	if (m_currentCash >= m_maxCash) return;
 
-	//std::cout << "[BANK]: " << m_currentCash << "$ / " << m_MAX_CASH << "$\n";
+	m_currentCash += std::ceil(m_cashPerSecond * deltaTime);
+
+	if(m_currentCash > m_maxCash)
+		m_currentCash = m_maxCash;
+
+	//std::cout << "[CURRENT BANK]: " << m_currentCash << "$ / " << m_maxCash << "$\n";
 }
 
 /*
@@ -288,6 +283,9 @@ bool Stage::upgrade_cash(int level, int cost)
 
 	m_currentCash -= cost;
 	m_maxCash += 150 * level;
+
+	// Increase cash per second by 50% per level
+	m_cashPerSecond = 50.0f * std::pow(1.5f, static_cast<float>(level));
 
 	return true;
 }
@@ -399,6 +397,11 @@ int Stage::get_max_cash() const
 	return m_maxCash;
 }
 
+int Stage::get_current_uid() const
+{
+	return m_uid;
+}
+
 bool Stage::is_loaded() const
 {
 	return m_isLoaded;
@@ -412,7 +415,8 @@ void Stage::render(sf::RenderWindow& window)
 	if (!m_isLoaded) return;
 
 	// Draw background and bases
-	window.draw(m_backgroundSprite);
+	for (auto& bgSprite : m_backgroundSprites)
+		window.draw(bgSprite);
 	window.draw(m_enemyBase->sprite);
 	window.draw(m_unitBase->sprite);
 
@@ -460,7 +464,7 @@ void Stage::render(sf::RenderWindow& window)
 /*
 * Spawn the two bases in their positions
 */
-void Stage::spawn_bases(float health, std::string texture)
+void Stage::spawn_bases(float health, const std::string& texture)
 {
 	m_enemyBase = std::make_unique<BattleBase>(health, texture);
 	m_enemyBase->position = { 0.0f, 540.0f - m_enemyBase->texture.getSize().y / 2 };
@@ -469,6 +473,28 @@ void Stage::spawn_bases(float health, std::string texture)
 	m_unitBase = std::make_unique<BattleBase>(350.0f, "assets/images/textures/bases/fishBaseTEST.png");
 	m_unitBase->position = { m_length, 540.0f - m_unitBase->texture.getSize().y / 2 };
 	m_unitBase->update_position();
+}
+
+void Stage::init_background(const std::string& texturePath)
+{
+	int numberOfSprites = (m_length / 1920) + 1;
+
+	for (int i = 0; i <= numberOfSprites; i++)
+	{
+		sf::Sprite m_backgroundSprite(m_backgroundTexture);
+
+		m_backgroundSprite.setTexture(m_backgroundTexture, true);
+		m_backgroundSprite.setPosition({ -1920.f + i * 1920.f, -200.0f }); // 150 pixels up
+
+		// Scale to 1.5f
+		sf::Vector2u texSize = m_backgroundTexture.getSize();
+		if (texSize.x > 0 && texSize.y > 0)
+		{
+			m_backgroundSprite.setScale({1.5f, 1.5f});
+		}
+
+		m_backgroundSprites.push_back(m_backgroundSprite);
+	}
 }
 
 /*

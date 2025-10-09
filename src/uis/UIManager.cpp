@@ -11,6 +11,8 @@
 #include "UIPlayerShellsInfo.h"
 #include "UIChapterMap.h"
 
+#include <iostream>
+
 // Initialize the manager with references to the data loader and current stage
 void UIManager::init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<Stage> stage)
 {
@@ -303,6 +305,8 @@ void UIManager::generate_victory_uis()
 {
     m_uiElements.clear();
 
+	std::cout << m_stage.lock()->get_current_uid() << "\n";
+
     // Victory Text
     auto title = std::make_shared<UITextElement>(
         sf::Vector2f{ 200.f, 100.f },
@@ -318,7 +322,65 @@ void UIManager::generate_victory_uis()
         });
     title->set_position({ 1920.f / 2.f, 1080.f / 2.f });
 
-    //back to menu button
+    // Rewards
+    auto rewards = m_dataLoader->get_stage_data(m_stage.lock()->get_current_uid())->rewards;
+    int gainedShells = 0;
+	bool isNewUnitAvailable = false;
+
+    for (auto& reward : rewards)
+    {
+        if(reward->type == "shells")
+        {
+            gainedShells += reward->amount;
+            continue;
+		}
+
+        if (reward->type == "unit")
+        {
+            isNewUnitAvailable = true;
+			continue;
+        }
+    }
+
+	// Shells Reward Text
+    auto shellRewardText = std::make_shared<UITextElement>(
+        sf::Vector2f{ 200.f, 100.f },
+        sf::Vector2f{ 0.f, 0.f },
+        '+' + std::to_string(gainedShells) + " ¤",
+        60
+    );
+
+    sf::FloatRect shellsTextBound = shellRewardText->get_text().getLocalBounds();
+    shellRewardText->get_text().setOrigin({
+        shellsTextBound.position.x + shellsTextBound.size.x / 2.f,
+        shellsTextBound.position.y + shellsTextBound.size.y / 2.f
+        });
+    shellRewardText->set_position({ 1920.f / 2.f, 1080.f / 2.f + 100.f});
+
+    shellRewardText->set_text_color(sf::Color(0, 255, 255, 255));
+
+	// New Unit Available Text
+    auto newUnitText = std::make_shared<UITextElement>(
+        sf::Vector2f{ 200.f, 100.f },
+        sf::Vector2f{ 0.f, 0.f },
+        "A NEW UNIT IS AVAILABLE IN THE UPGRADES MENU!",
+        46
+    );
+
+    sf::FloatRect unitTextBound = newUnitText->get_text().getLocalBounds();
+    newUnitText->get_text().setOrigin({
+        unitTextBound.position.x + unitTextBound.size.x / 2.f,
+        unitTextBound.position.y + unitTextBound.size.y / 2.f
+        });
+    newUnitText->set_position({ 1920.f / 2.f, 1080.f / 2.f + 200.f });
+
+    if(isNewUnitAvailable)
+        newUnitText->set_text_color(sf::Color(255, 0, 255, 255));
+    else
+        newUnitText->set_text_color(sf::Color(255, 0, 255, 0));
+
+
+    // Back to menu button
     auto menuButton = std::make_shared<UIButtonElement>(
         sf::Vector2f{ 100.f, 100.f },
         sf::Vector2f{ 20.f, 1080.f - 100.f - 20.f },
@@ -353,6 +415,9 @@ void UIManager::generate_victory_uis()
         });
 
     add_ui_element(title);
+    add_ui_element(shellRewardText);
+    add_ui_element(newUnitText);
+
     add_ui_element(menuButton);
     add_ui_element(mapButton);
 }

@@ -52,6 +52,9 @@ void UITextElement::set_text(const std::string& text)
 void UITextElement::set_text_color(const sf::Color& color)
 {
     m_text.setFillColor(color);
+
+    if(color.a == 0)
+        m_text.setOutlineColor(sf::Color(0, 0, 0, 0));
 }
 
 // Set the character size of the text
