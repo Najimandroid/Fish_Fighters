@@ -32,8 +32,9 @@ enum class GameSpeedState
  *   - Updating and rendering game objects each frame
  *
  * Example usage:
- *   std::shared_ptr<Game> game = std::make_shared<Game>();
- *   game->run_game_loop();
+ *   Game game = Game();
+ *   game.run_game_loop();
+ *   game.terminate();
  */
 class Game
 {
@@ -58,6 +59,9 @@ public:
 
 	// Set the game speed (0 = paused, 1 = normal, 2 = faster)
 	void set_game_speed(GameSpeedState speedState);
+
+	// Get current game speed state
+    GameSpeedState get_game_speed() const;
 
     // Get delta time
     float get_delta_time() const;

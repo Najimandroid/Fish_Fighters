@@ -8,6 +8,7 @@
 #include <functional>
 
 class Stage;
+enum class GameSpeedState;
 
 /*
  * UIManager class
@@ -64,6 +65,10 @@ public:
     // Returns true if a given world position overlaps any UI element
     bool is_mouse_over_ui(const sf::Vector2i& worldPosition) const;
 
+	// Callbacks for getting and setting game speed
+    void set_game_speed_callback(std::function<void(GameSpeedState)> callback);
+    void set_get_game_speed_callback(std::function<GameSpeedState()> callback);
+
 private:
     std::shared_ptr<DataLoader> m_dataLoader = nullptr;  // Reference to game data
     std::weak_ptr<Stage> m_stage;                        // Reference to current game stage
@@ -71,4 +76,7 @@ private:
     std::vector<std::shared_ptr<UIElement>> m_uiElements; // All active UI elements
 
     std::function<void()> m_pendingAction;              // Deferred action triggered by UI
+
+	std::function<void(GameSpeedState)> m_setGameSpeedCallback; // Callback to set game speed state
+    std::function<GameSpeedState()> m_getGameSpeedCallback; // Callback to get current game speed state
 };

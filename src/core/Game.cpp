@@ -28,6 +28,15 @@ Game::Game():
 
     // Initialize UIManager and Stage with references to DataLoader
     m_uiManager->init(m_dataLoader, m_stage);
+
+	// Set up game speed callbacks for UIManager
+    m_uiManager->set_game_speed_callback([this](GameSpeedState s) {
+        set_game_speed(s);
+    });
+    m_uiManager->set_get_game_speed_callback([this]() -> GameSpeedState {
+        return m_speedState;
+    });
+
     m_stage->init(m_dataLoader, m_uiManager, &m_stageCamera);
 
     // Set up cameras for UI and stage rendering
@@ -336,6 +345,11 @@ void Game::center_window()
 void Game::set_game_speed(GameSpeedState speedState)
 {
 	m_speedState = speedState;
+}
+
+GameSpeedState Game::get_game_speed() const
+{
+    return m_speedState;
 }
 
 float Game::get_delta_time() const

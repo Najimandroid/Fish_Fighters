@@ -1,6 +1,7 @@
 #include "UIManager.h"
 
 #include "../core/stages/Stage.h"
+#include "../core/Game.h"
 
 #include "UIDeploymentIcons.h"
 #include "UIStageCash.h"
@@ -244,11 +245,48 @@ void UIManager::generate_battle_uis()
 {
 	m_uiElements.clear();
 
+    // Pause button
+    auto pauseButton = std::make_shared<UIButtonElement>(
+        sf::Vector2f{ 120.f, 60.f },
+        sf::Vector2f{ 20.f, 20.f },
+        "PAUSE"
+    );
+    pauseButton->set_callback([this]() {
+        // defer to main loop to avoid changing state during event iteration
+        m_pendingAction = [this]() {
+            if (!m_getGameSpeedCallback || !m_setGameSpeedCallback) return;
+            auto current = m_getGameSpeedCallback();
+            if (current == GameSpeedState::PAUSED)
+                m_setGameSpeedCallback(GameSpeedState::NORMAL);
+            else
+                m_setGameSpeedCallback(GameSpeedState::PAUSED);
+            };
+        });
+
+	// Speed up button
+    auto speedButton = std::make_shared<UIButtonElement>(
+        sf::Vector2f{ 120.f, 60.f },
+        sf::Vector2f{ 160.f, 20.f },
+        "SPEED UP"
+    );
+    speedButton->set_callback([this]() {
+        m_pendingAction = [this]() {
+            if (!m_getGameSpeedCallback || !m_setGameSpeedCallback) return;
+            auto current = m_getGameSpeedCallback();
+            if (current == GameSpeedState::FASTER)
+                m_setGameSpeedCallback(GameSpeedState::NORMAL);
+            else
+                m_setGameSpeedCallback(GameSpeedState::FASTER);
+            };
+        });
+
 	auto deploymentIcons = std::make_shared<UIDeploymentIcons>(m_dataLoader, m_stage.lock());
 	auto stageCash = std::make_shared<UIStageCash>(m_stage.lock());
 	auto cashUp = std::make_shared<UICashUp>(m_stage.lock());
 	auto baseHealthInfo = std::make_shared<UIBaseHealthInfo>(m_stage.lock());
 
+    add_ui_element(pauseButton);
+    add_ui_element(speedButton);
 	add_ui_element(deploymentIcons);
 	add_ui_element(stageCash);
 	add_ui_element(cashUp);
@@ -305,7 +343,9 @@ void UIManager::generate_victory_uis()
 {
     m_uiElements.clear();
 
-	std::cout << m_stage.lock()->get_current_uid() << "\n";
+	//std::cout << m_stage.lock()->get_current_uid() << "\n";
+
+    m_setGameSpeedCallback(GameSpeedState::NORMAL);
 
     // Victory Text
     auto title = std::make_shared<UITextElement>(
@@ -426,6 +466,8 @@ void UIManager::generate_defeat_uis()
 {
     m_uiElements.clear();
 
+    m_setGameSpeedCallback(GameSpeedState::NORMAL);
+
     // Victory Text
     auto title = std::make_shared<UITextElement>(
         sf::Vector2f{ 200.f, 100.f },
@@ -489,4 +531,14 @@ bool UIManager::is_mouse_over_ui(const sf::Vector2i& worldPosition) const
         if (b.contains(static_cast<sf::Vector2f>(worldPosition))) return true;
     }
     return false;
+}
+
+void UIManager::set_game_speed_callback(std::function<void(GameSpeedState)> callback)
+{
+    m_setGameSpeedCallback = callback;
+}
+
+void UIManager::set_get_game_speed_callback(std::function<GameSpeedState()> callback)
+{
+    m_getGameSpeedCallback = callback;
 }
