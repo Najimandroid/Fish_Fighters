@@ -87,7 +87,7 @@ void BattleEnemy::update(
     stateMachine->update_state(deltaTime);
 
     // Update position & sprite
-    update_position();
+    update_position(deltaTime);
     update_sprite();
 
     // Progress attack and animation timers
@@ -98,24 +98,25 @@ void BattleEnemy::update(
 // ==================
 // Position Update
 // ==================
-void BattleEnemy::update_position()
+void BattleEnemy::update_position(float deltaTime)
 {
+    float halfFrameWidth = static_cast<float>(texture.getSize().x / data->frameCount / 2);
+
     if (stateMachine->get_active_state_id() == "KNOCKBACK")
     {
-        // Knockback uses tweens, with sprite offset
         if (tweenX.progress() < 1.0f && tweenY.progress() < 1.0f)
         {
-            sprite.setPosition({
-                tweenX.step(1) + static_cast<float>(texture.getSize().x / data->frameCount / 2),
-                tweenY.step(1)
-                });
+            sprite.setPosition({ 
+                tweenX.peek() + halfFrameWidth,
+                tweenY.peek() 
+            });
+			std::cout << "Knockback Position: (" << tweenX.peek() + halfFrameWidth << ", " << tweenY.peek() << ")\n";
         }
     }
     else
     {
-        // Normal position: shifted by half sprite width, minus layer offset
         sprite.setPosition({
-            position.x + static_cast<float>(texture.getSize().x / data->frameCount / 2),
+            position.x + halfFrameWidth,
             position.y - static_cast<float>(currentLayer)
             });
     }

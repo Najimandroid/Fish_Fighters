@@ -42,7 +42,7 @@ public:
     virtual void update(float deltaTime, const std::map<int, std::vector<std::shared_ptr<BattleEntity>>>& entityList) = 0;
 
     // Updates the position of hitboxes/sprites based on entity movement
-    virtual void update_position() = 0;
+    virtual void update_position(float deltaTime) = 0;
 
     // Handles sprite frame updates (animation)
     virtual void update_sprite();

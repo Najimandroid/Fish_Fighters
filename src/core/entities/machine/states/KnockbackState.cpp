@@ -28,26 +28,30 @@ void KnockbackState::enter()
     // Clearing all the targets
     entity->targets.clear();
 
+    // Convert duration in seconds to milliseconds for tweeny::during (expects integer-like durations)
+    uint32_t totalMs = static_cast<uint32_t>(m_KNOCKBACK_DURATION * 1000.0f);
+    uint32_t halfMs = totalMs / 2;
+
     // Horizontal knockback:
     // -> Units knocked back to the right
     // -> Enemies knocked back to the left
     if (std::dynamic_pointer_cast<BattleUnit>(entity))
         entity->tweenX = tweeny::from(entity->position.x)
-        .to(entity->position.x += m_knockbackDistancePx)
-        .during(60.0f * m_knockbackDuration)
+        .to(entity->position.x += m_KNOCKBACK_DISTANCE_PX)
+        .during(static_cast<int>(totalMs))
         .via(tweeny::easing::quadraticOut);
     else
         entity->tweenX = tweeny::from(entity->position.x)
-        .to(entity->position.x -= m_knockbackDistancePx)
-        .during(60.0f * m_knockbackDuration)
+        .to(entity->position.x -= m_KNOCKBACK_DISTANCE_PX)
+        .during(static_cast<int>(totalMs))
         .via(tweeny::easing::quadraticOut);
 
-    // Vertical bounce effect
+    // Vertical bounce effect (use integer ms durations)
     entity->tweenY = tweeny::from(entity->position.y - static_cast<float>(entity->currentLayer))
         .to(entity->position.y - static_cast<float>(entity->currentLayer) - 50.0f)
-        .during(30.0f * m_knockbackDuration).via(tweeny::easing::quadraticOut)
+        .during(static_cast<int>(halfMs)).via(tweeny::easing::quadraticOut)
         .to(entity->position.y - static_cast<float>(entity->currentLayer))
-        .during(30.0f * m_knockbackDuration).via(tweeny::easing::bounceOut);
+        .during(static_cast<int>(halfMs)).via(tweeny::easing::bounceOut);
 }
 
 // ==================
@@ -60,17 +64,18 @@ void KnockbackState::perform(float deltaTime)
 
     m_currentKnockbackCooldown += deltaTime;
 
+    // Step using milliseconds (using the tweeny overload step(int32_t))
+    int32_t dt_ms = static_cast<int32_t>(deltaTime * 1000.0f);
+    entity->tweenX.step(dt_ms);
+    entity->tweenY.step(dt_ms);
+
     // Once knockback duration has passed, decide next state
-    if (m_currentKnockbackCooldown >= m_knockbackDuration)
+    if (m_currentKnockbackCooldown >= m_KNOCKBACK_DURATION)
     {
         if (entity->currentHealth <= 0.0f)
-        {
-            m_machine->change_state(std::make_unique<DeadState>(m_machine)); // -> death
-        }
+			m_machine->change_state(std::make_unique<DeadState>(m_machine)); // -> death
         else
-        {
-            m_machine->change_state(std::make_unique<IdleState>(m_machine)); // -> idle recovery
-        }
+			m_machine->change_state(std::make_unique<IdleState>(m_machine)); // -> idle recovery
     }
 }
 

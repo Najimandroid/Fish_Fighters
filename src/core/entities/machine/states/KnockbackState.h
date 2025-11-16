@@ -31,6 +31,6 @@ public:
 
 private:
     float m_currentKnockbackCooldown = 0.0f;     // Time spent in knockback so far
-    float m_knockbackDuration = 1.0f;            // Knockback duration in seconds
-    float m_knockbackDistancePx = 200.0f;        // Knockback distance in pixels
+    const float m_KNOCKBACK_DURATION = 0.75f;     // Knockback duration in seconds
+    const float m_KNOCKBACK_DISTANCE_PX = 200.0f;// Knockback distance in pixels
 };

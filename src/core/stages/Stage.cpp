@@ -247,7 +247,7 @@ void Stage::update_units(float deltaTime)
 			{
 				// Remove unit from map
 				std::cout << "Unit dead\n";
-				itvec = unitList.erase(itvec); //Todo: create remove_unit();
+				itvec = unitList.erase(itvec); // TODO: create remove_unit();
 				m_unitsCount--;
 				continue;
 			}
@@ -468,11 +468,11 @@ void Stage::spawn_bases(float health, const std::string& texture)
 {
 	m_enemyBase = std::make_unique<BattleBase>(health, texture);
 	m_enemyBase->position = { 0.0f, 540.0f - m_enemyBase->texture.getSize().y / 2 };
-	m_enemyBase->update_position();
+	m_enemyBase->update_position(1/60.f);
 
 	m_unitBase = std::make_unique<BattleBase>(350.0f, "assets/images/textures/bases/fishBaseTEST.png");
 	m_unitBase->position = { m_length, 540.0f - m_unitBase->texture.getSize().y / 2 };
-	m_unitBase->update_position();
+	m_unitBase->update_position(1 / 60.f);
 }
 
 void Stage::init_background(const std::string& texturePath)
@@ -513,7 +513,7 @@ void Stage::spawn_enemy(std::shared_ptr<EntityData> enemyData, sf::Vector2f magn
 	// Assign layer
 	battleEnemy->currentLayer = (layer > 0) ? layer : generate_random_spawn_layer();
 	battleEnemy->position.x = 0.f;
-	battleEnemy->update_position();
+	battleEnemy->update_position(1.f/60.f);
 	battleEnemy->update_sprite();
 
 	if (isBoss) generate_boss_shockwave();
@@ -556,7 +556,7 @@ void Stage::spawn_unit(std::shared_ptr<EntityData> unitData)
 
 	battleUnit->currentLayer = generate_random_spawn_layer();
 	battleUnit->position.x = m_length;
-	battleUnit->update_position();
+	battleUnit->update_position(1.f / 60.f);
 	battleUnit->update_sprite();
 
 	m_unitsCount++;

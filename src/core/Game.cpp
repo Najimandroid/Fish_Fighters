@@ -72,19 +72,43 @@ void Game::debug_ui()
 #endif
 }
 
+void Game::calculate_delta_time()
+{
+    m_deltaTime = m_deltaClock.restart().asSeconds();
+
+    switch (m_speedState)
+    {
+    case GameSpeedState::PAUSED:
+        m_deltaTime = 0.f;
+		break;
+
+    case GameSpeedState::NORMAL:
+        // No modification
+		break;
+
+    case GameSpeedState::FASTER:
+		m_deltaTime *= 2.f;
+        break;
+
+    default:
+		// Should not reach here
+		break;
+    }
+}
+
 void Game::run_game_loop()
 {
     // Initialize UI to Fish Tank screen
-    m_uiManager->generate_fish_tank_uis();
+	m_uiManager->generate_fish_tank_uis(); // TODO: add a main menu before this
 
     while (m_window.isOpen())
     {
-        deltaTime = m_deltaClock.restart().asSeconds();
+        calculate_delta_time();
 
         poll_events();
 
-        m_stage->update(deltaTime);
-        m_uiManager->update_uis(deltaTime);
+        m_stage->update(m_deltaTime);
+        m_uiManager->update_uis(m_deltaTime);
 
         m_window.clear();
 
@@ -140,9 +164,9 @@ void Game::poll_events()
             // Close game
             else if (e_keycode->code == sf::Keyboard::Key::Escape) m_window.close();
             // Pause and speed control
-            else if (e_keycode->code == sf::Keyboard::Key::P) { m_isPaused = true; m_isFaster = false; }
-            else if (e_keycode->code == sf::Keyboard::Key::LShift) { m_isPaused = false; m_isFaster = true; }
-            else if (e_keycode->code == sf::Keyboard::Key::R) { m_isPaused = false; m_isFaster = false; }
+            else if (e_keycode->code == sf::Keyboard::Key::P) { m_speedState = GameSpeedState::PAUSED; }
+            else if (e_keycode->code == sf::Keyboard::Key::LShift) { m_speedState = GameSpeedState::FASTER; }
+            else if (e_keycode->code == sf::Keyboard::Key::R) { m_speedState = GameSpeedState::NORMAL; }
         }
 
         // Mouse wheel event for camera zoom
@@ -284,10 +308,6 @@ void Game::poll_events()
             center_window();
         }
     }
-
-    // Apply game speed modifiers
-    if (m_isPaused) deltaTime = 0.f;
-    else if (m_isFaster) deltaTime *= 2.f;
 }
 
 
@@ -311,4 +331,14 @@ void Game::center_window()
     int posY = (desktop.size.y - windowSize.y) / 2;
 
     m_window.setPosition(sf::Vector2i(posX, posY));
+}
+
+void Game::set_game_speed(GameSpeedState speedState)
+{
+	m_speedState = speedState;
+}
+
+float Game::get_delta_time() const
+{
+    return m_deltaTime;
 }

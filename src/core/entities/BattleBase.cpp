@@ -67,13 +67,13 @@ void BattleBase::update(
 #endif
 
     // Sync sprite + hitboxes
-    update_position();
+    update_position(deltaTime);
 }
 
 // ==================
 // Position Update
 // ==================
-void BattleBase::update_position()
+void BattleBase::update_position(float deltaTime)
 {
     // Base is static, only shifted vertically by layer offset
     sprite.setPosition({

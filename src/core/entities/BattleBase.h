@@ -36,7 +36,7 @@ public:
     void update_sprite() override {};
 
     // Update the position
-    void update_position() override;
+    void update_position(float deltaTime) override;
 
 public:
     // Maximum health (used to reset or display a health bar)

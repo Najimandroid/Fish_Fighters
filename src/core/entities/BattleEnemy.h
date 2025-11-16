@@ -30,5 +30,5 @@ public:
     // ===== Overrides =====
     void update(float deltaTime, const std::map<int, std::vector<std::shared_ptr<BattleEntity>>>& entityList) override;
 
-    void update_position() override;
+    void update_position(float deltaTime) override;
 };

@@ -91,7 +91,7 @@ void BattleUnit::update(
     stateMachine->update_state(deltaTime);
 
     // Update position (including knockback and hitboxes)
-    update_position();
+    update_position(deltaTime);
     // Update sprite animation
     update_sprite();
 
@@ -103,19 +103,17 @@ void BattleUnit::update(
 // ==================
 // Position Update
 // ==================
-void BattleUnit::update_position()
+void BattleUnit::update_position(float deltaTime)
 {
     if (stateMachine->get_active_state_id() == "KNOCKBACK")
     {
-        // Knockback uses tween animations
         if (tweenX.progress() < 1.0f && tweenY.progress() < 1.0f)
         {
-            sprite.setPosition({ tweenX.step(1), tweenY.step(1) });
+            sprite.setPosition({ tweenX.peek(), tweenY.peek()});
         }
     }
     else
     {
-        // Normal position: x,y minus current layer (layer = depth offset)
         sprite.setPosition({ position.x, position.y - static_cast<float>(currentLayer) });
     }
 

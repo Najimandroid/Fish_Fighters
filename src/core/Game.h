@@ -12,6 +12,16 @@
 #include "../uis/UIManager.h"
 
 /*
+* GameSpeedState enumerates the possible game speed states.
+*/
+enum class GameSpeedState
+{
+    PAUSED = -1,
+    NORMAL,
+    FASTER
+};
+
+/*
  * Game class
  * -----------
  * Game class manages the main game loop and all core systems.
@@ -25,7 +35,6 @@
  *   std::shared_ptr<Game> game = std::make_shared<Game>();
  *   game->run_game_loop();
  */
-
 class Game
 {
 public:
@@ -47,9 +56,11 @@ public:
     // Centers the game window on the user's desktop
     void center_window();
 
-public:
-    // Delta time in seconds since the last frame
-    float deltaTime = 0.0f;
+	// Set the game speed (0 = paused, 1 = normal, 2 = faster)
+	void set_game_speed(GameSpeedState speedState);
+
+    // Get delta time
+    float get_delta_time() const;
 
 private:
     // Initializes UI and stage cameras with correct viewports and zoom
@@ -58,10 +69,12 @@ private:
     // Renders debug UI when DEBUG_MODE is enabled
     void debug_ui();
 
+	// Calculates delta time and applies pause/speed modifiers
+	void calculate_delta_time();
+
 private:
     // ----- Game State -----
-    bool m_isPaused = false;       // If true, game updates are paused
-    bool m_isFaster = false;       // If true, game updates run at double speed
+	GameSpeedState m_speedState = GameSpeedState::NORMAL; // Current game speed state
 
     // ----- Window and Cameras (Views) -----
     sf::RenderWindow m_window;
@@ -69,6 +82,7 @@ private:
     sf::View m_stageCamera;        // Camera used to render the gameplay/stage
 
     sf::Clock m_deltaClock;        // Clock to compute deltaTime between frames
+    float m_deltaTime = 0.0f;      // Delta time in seconds since the last frame
 
     const int m_frameRate = 60;    // Maximum framerate
     const sf::Vector2u m_logicalResolution = { 1920, 1080 }; // Reference resolution
