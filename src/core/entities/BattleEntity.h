@@ -84,7 +84,7 @@ public:
 
     // ====== Collision & Ranges ======
     sf::FloatRect hitbox;                          // Entity's body for collisions
-    sf::FloatRect attackRangeZone;                 // Range in which it can hit enemies
+    sf::FloatRect attackRangeZone;                 // Range in which it can start attacking enemies
     sf::FloatRect damageZone;                      // Area where its attack actually deals damage
 
     // ====== Target Tracking ======

@@ -38,6 +38,8 @@ struct EntityData
     float foreswingTime = 0.0f;                 // Delay before attack is executed (wind-up)
     float backswingTime = 0.0f;                 // Delay after attack before returning to idle
 
+	std::pair<float, float> damageZone = { 0.f, 0.f }; // Damage zone offsets (start, end) relative to unit position
+
     float movementSpeed = 1.0f;                 // Movement speed across the battlefield
     int knockbackCount = 1;                     // Number of knockbacks the unit can sustain before dying
 

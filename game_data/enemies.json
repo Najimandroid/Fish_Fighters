@@ -14,6 +14,8 @@
         "foreswing": 0.1,
         "backswing": 0.3,
 
+        "damageZone": [ 0, 10 ],
+
         "movementSpeed": 10,
 
         "knockbackCount": 1,
@@ -37,6 +39,8 @@
         "foreswing": 0.6,
         "backswing": 0.3,
 
+        "damageZone": [ 0, 110 ],
+
         "movementSpeed": 4,
 
         "knockbackCount": 5,
@@ -54,11 +58,13 @@
         "health": 500,
 
         "attackPower": 1000,
-        "attackRange": 10,
+        "attackRange": 15,
         "attackFrequency": 10,
         "attackType": 2,
         "foreswing": 0.8,
         "backswing": 0.2,
+
+        "damageZone": [ 0, 18 ],
 
         "movementSpeed": 5,
 
@@ -83,6 +89,8 @@
         "foreswing": 0.3,
         "backswing": 0.5,
 
+        "damageZone": [ 0, 5 ],
+
         "movementSpeed": 7,
 
         "knockbackCount": 2,
@@ -106,6 +114,8 @@
         "foreswing": 0.0,
         "backswing": 0.2,
 
+        "damageZone": [ 0, 50 ],
+
         "movementSpeed": 9,
 
         "knockbackCount": 3,
@@ -128,6 +138,8 @@
         "attackType": 1,
         "foreswing": 0.0,
         "backswing": 0.2,
+
+        "damageZone": [ 0, 10 ],
 
         "movementSpeed": 2,
 

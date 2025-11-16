@@ -26,6 +26,8 @@
                 "foreswing": 0.3,
                 "backswing": 0.1,
 
+                "damageZone": [ 0, 10 ],
+
                 "movementSpeed": 8,
 
                 "knockbackCount": 2,
@@ -54,6 +56,8 @@
                 "attackFrequency": 1.5,
                 "foreswing": 0.3,
                 "backswing": 0.1,
+
+                "damageZone": [ 0, 15 ],
 
                 "movementSpeed": 16,
 
@@ -92,6 +96,7 @@
                 "foreswing": 1.5,
                 "backswing": 0.25,
 
+                "damageZone": [ 0, 55 ],
 
                 "movementSpeed": 3,
 

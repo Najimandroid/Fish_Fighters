@@ -48,14 +48,19 @@ BattleUnit::BattleUnit(std::shared_ptr<EntityData> data_, sf::Vector2f magnifica
         1080.f
     };
 
+    float halfFrameWidth = hitbox.size.x;
+
     // Attack and damage zones: extend forward by attack range
     attackRangeZone.size = { data->attackRange + hitbox.size.x, 1080.f };
-    damageZone.size = { data->attackRange + hitbox.size.x, 1080.f };
 
-    // ===== Initial Positions =====
+    float dmgZoneStartPos = data->damageZone.first;
+    float dmgZoneWidth = data->damageZone.second;
+    damageZone.size = { dmgZoneWidth, 1080.f };
+
+    // ===== Init Positions =====
     hitbox.position = position;
-    attackRangeZone.position = { position.x - data->attackRange + hitbox.size.x, position.y };
-    damageZone.position = { position.x - data->attackRange + hitbox.size.x, position.y };
+    attackRangeZone.position = { position.x - data->attackRange, position.y };
+    damageZone.position = { position.x - dmgZoneWidth - dmgZoneStartPos, position.y };
 
 #ifdef DEBUG_MODE
     // ===== Debug Rendering =====
@@ -120,7 +125,7 @@ void BattleUnit::update_position(float deltaTime)
     // Sync combat zones with position
     hitbox.position = position;
     attackRangeZone.position = { position.x - data->attackRange, position.y };
-    damageZone.position = { position.x - data->attackRange, position.y };
+    damageZone.position = { position.x - data->damageZone.second - data->damageZone.first, position.y };
 
 #ifdef DEBUG_MODE
     // Update debug rectangles to follow entity

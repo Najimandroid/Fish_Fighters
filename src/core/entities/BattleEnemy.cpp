@@ -45,13 +45,19 @@ BattleEnemy::BattleEnemy(std::shared_ptr<EntityData> data_, sf::Vector2f magnifi
         static_cast<float>(texture.getSize().x / data->frameCount / 2),
         1080.0f
     };
+
+    float halfFrameWidth = hitbox.size.x;
+
     attackRangeZone.size = { data->attackRange + hitbox.size.x, 1080.0f };
-    damageZone.size = { data->attackRange + hitbox.size.x, 1080.0f };
+
+    float dmgZoneStartPos = data->damageZone.first;
+    float dmgZoneWidth = data->damageZone.second;
+    damageZone.size = { dmgZoneWidth, 1080.f };
 
     // ===== Initial Positions =====
     hitbox.position = position;
     attackRangeZone.position = position;
-    damageZone.position = position;
+    damageZone.position = { position.x + halfFrameWidth + dmgZoneStartPos, position.y };
 
 #ifdef DEBUG_MODE
     // ===== Debug Rectangles =====
@@ -110,7 +116,7 @@ void BattleEnemy::update_position(float deltaTime)
                 tweenX.peek() + halfFrameWidth,
                 tweenY.peek() 
             });
-			std::cout << "Knockback Position: (" << tweenX.peek() + halfFrameWidth << ", " << tweenY.peek() << ")\n";
+			//std::cout << "Knockback Position: (" << tweenX.peek() + halfFrameWidth << ", " << tweenY.peek() << ")\n";
         }
     }
     else
@@ -124,7 +130,7 @@ void BattleEnemy::update_position(float deltaTime)
     // Sync combat zones
     hitbox.position = position;
     attackRangeZone.position = position;
-    damageZone.position = position;
+    damageZone.position = { position.x + hitbox.size.x + data->damageZone.first, position.y };
 
 #ifdef DEBUG_MODE
     // Update debug rectangles

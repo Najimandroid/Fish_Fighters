@@ -68,6 +68,17 @@ bool DataLoader::load_units(const std::string& path)
             data->foreswingTime = formValue.at("foreswing").get<float>();
             data->backswingTime = formValue.at("backswing").get<float>();
 
+            if(formValue.contains("damageZone") && formValue["damageZone"].is_array() && formValue["damageZone"].size() == 2)
+            {
+                data->damageZone.first = formValue["damageZone"][0].get<float>();
+                data->damageZone.second = formValue["damageZone"][1].get<float>();
+			}
+            else
+            {
+                data->damageZone.first = 0.f;
+                data->damageZone.second = data->attackRange;
+            }
+
             data->movementSpeed = formValue.at("movementSpeed").get<float>();
             data->knockbackCount = formValue.at("knockbackCount").get<int>();
 
@@ -115,6 +126,17 @@ bool DataLoader::load_enemies(const std::string& path)
         data->attackFrequency = value.at("attackFrequency").get<float>();
         data->foreswingTime = value.at("foreswing").get<float>();
         data->backswingTime = value.at("backswing").get<float>();
+
+        if (value.contains("damageZone") && value["damageZone"].is_array() && value["damageZone"].size() == 2)
+        {
+            data->damageZone.first = value["damageZone"][0].get<float>();
+            data->damageZone.second = value["damageZone"][1].get<float>();
+        }
+        else
+        {
+            data->damageZone.first = 0.f;
+            data->damageZone.second = data->attackRange;
+        }
 
         data->movementSpeed = value.at("movementSpeed").get<float>();
         data->knockbackCount = value.at("knockbackCount").get<int>();
