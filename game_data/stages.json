@@ -1,4 +1,30 @@
 {
+    "UID_-1": {
+        "UID": -1,
+
+        "stageName": "DEBUG",
+
+        "enemiesLimit": 20,
+        "unitsLimit": 20,
+
+        "baseHealth": 10000,
+
+        "length": 1280,
+
+        "baseTexture": "assets/images/textures/bases/starBase.png",
+        "backgroundTexture": "assets/images/textures/backgrounds/backgroundTEST.png",
+
+        "numberOfDifferentEnemies": 0,
+        "enemies": [
+        ],
+
+        "rewards": [
+            {
+                "type": "shells",
+                "amount": 0
+            }
+        ]
+    },
     "UID_3": {
         "UID": 3,
 
@@ -14,7 +40,7 @@
         "baseTexture": "assets/images/textures/bases/crabBase.png",
         "backgroundTexture": "assets/images/textures/backgrounds/backgroundTEST.png",
 
-        "numberOfDifferentEnemies": 2,
+        "numberOfDifferentEnemies": 6,
         "enemies": [
             {
                 "UID": 4,
@@ -122,7 +148,7 @@
         "baseTexture": "assets/images/textures/bases/enemyBaseTEST.png",
         "backgroundTexture": "assets/images/textures/backgrounds/backgroundTEST.png",
 
-        "numberOfDifferentEnemies": 1,
+        "numberOfDifferentEnemies": 2,
         "enemies": [
             {
                 "UID": 1,
@@ -171,7 +197,7 @@
         "baseTexture": "assets/images/textures/bases/starBase.png",
         "backgroundTexture": "assets/images/textures/backgrounds/backgroundTEST.png",
 
-        "numberOfDifferentEnemies": 1,
+        "numberOfDifferentEnemies": 2,
         "enemies": [
             {
                 "UID": 3,

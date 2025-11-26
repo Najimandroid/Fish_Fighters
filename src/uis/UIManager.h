@@ -70,13 +70,13 @@ public:
     void set_get_game_speed_callback(std::function<GameSpeedState()> callback);
 
 private:
-    std::shared_ptr<DataLoader> m_dataLoader = nullptr;  // Reference to game data
-    std::weak_ptr<Stage> m_stage;                        // Reference to current game stage
+    std::shared_ptr<DataLoader> m_dataLoader = nullptr;         // Reference to game data
+    std::weak_ptr<Stage> m_stage;                               // Reference to current game stage
 
-    std::vector<std::shared_ptr<UIElement>> m_uiElements; // All active UI elements
+    std::vector<std::shared_ptr<UIElement>> m_uiElements;       // All active UI elements
 
-    std::function<void()> m_pendingAction;              // Deferred action triggered by UI
+    std::function<void()> m_pendingAction;                      // Deferred action triggered by UI
 
 	std::function<void(GameSpeedState)> m_setGameSpeedCallback; // Callback to set game speed state
-    std::function<GameSpeedState()> m_getGameSpeedCallback; // Callback to get current game speed state
+    std::function<GameSpeedState()> m_getGameSpeedCallback;     // Callback to get current game speed state
 };

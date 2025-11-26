@@ -21,8 +21,14 @@ Game::Game():
     center_window();
 
     // Initialize ImGui for debug UI
+#ifdef DEBUG_MODE
     ImGui::SFML::Init(m_window);
 
+    ImGuiIO& io = ImGui::GetIO();
+    io.Fonts->Clear();
+    io.Fonts->AddFontFromFileTTF("assets/fonts/MPLUSRounded1c-Medium.ttf", 24.0f);
+    ImGui::SFML::UpdateFontTexture();
+#endif
     // Load all game data (units, enemies, stages, player)
     m_dataLoader->load_all();
 
@@ -69,13 +75,58 @@ void Game::init_cameras()
 void Game::debug_ui()
 {
 #ifdef DEBUG_MODE
-    ImGui::SFML::Update(m_window, m_deltaClock.restart());
+    ImGui::SFML::Update(m_window, m_deltaClockDebug.restart());
 
-    ImGui::ShowDemoWindow();
+	bool isStageLoaded = m_stage->is_loaded();
 
-    ImGui::Begin("Debug Panel");
-    ImGui::Button("Look at this pretty button");
+    /*
+    * ======================================================================================================
+    * DEBUG TIME AND PERFORMANCE PANEL
+    * ---------------------------------------
+    * FPS, delta time, pause game
+    */
+	const ImVec2 timeWindowSize = isStageLoaded ? ImVec2(500.f, 200.f) : ImVec2(500.f, 100.f);
+    ImGui::SetNextWindowSize(timeWindowSize, ImGuiCond_Always);
+    ImGui::SetNextWindowPos(ImVec2(1920.f / 2.f - timeWindowSize.x / 2.f, 0.f), ImGuiCond_Always);
+    ImGui::Begin("Time & Performance");
+
+    // FPS
+    const float fps = (m_debugDeltaTime > 0.f) ? (1.f / m_debugDeltaTime) : 0.f;
+    ImGui::Text("FPS: %.1f", fps);
+	// Delta time
+	ImGui::Text("Delta Time: %.4f s", m_debugDeltaTime);
+
+    // Stage specific parameters
+    if (isStageLoaded)
+    {
+        // Pause button
+        static bool isPaused = false;
+        if (ImGui::Checkbox("Pause", &isPaused))
+            m_speedState = isPaused ? GameSpeedState::PAUSED : GameSpeedState::NORMAL; // Toggle pause
+
+        // Frame step button
+        if (isPaused)
+        {
+            if (ImGui::Button("Step One Frame"))
+            {
+                m_deltaTime = 1.f / static_cast<float>(m_frameRate); // Advance one frame
+            }
+        }
+    }
+
     ImGui::End();
+    //======================================================================================================
+
+    /*
+    * Render Menu UIs if m_stage->is_loaded() == false:
+    * Load level (write id + 'load' button)
+	* Modify player shells (write amount + 'set' button) (m_dataLoader->get_player_data().lock()->gain_shells(x))
+    * 
+	* Render Stage UIs if m_stage->is_loaded() == true:
+	* Spawn unit (write unit id + 'spawn' button) (m_stage->spawn_unit(m_dataLoader->get_unit_data(id)))
+	* Spawn enemy (write enemy id + 'spawn' button) (m_stage->spawn_enemy(m_dataLoader->get_enemy_data(id)))
+	* Exit level ('exit' button) (m_stage->unload())
+    */
 
     ImGui::SFML::Render(m_window);
 #endif
@@ -84,6 +135,10 @@ void Game::debug_ui()
 void Game::calculate_delta_time()
 {
     m_deltaTime = m_deltaClock.restart().asSeconds();
+
+#ifdef DEBUG_MODE
+    m_debugDeltaTime = m_deltaClockDebug.restart().asSeconds();
+#endif
 
     switch (m_speedState)
     {
@@ -130,6 +185,7 @@ void Game::run_game_loop()
         m_uiManager->render_uis(m_window, m_uiCamera, m_stageCamera);
 
         debug_ui();
+
         m_window.display();
     }
 
@@ -151,8 +207,10 @@ void Game::terminate()
 void Game::poll_events()
 {
     while (const auto event = m_window.pollEvent()) {
-        // Forward event to ImGui
-        //ImGui::SFML::ProcessEvent(m_window, *event);
+
+#ifdef DEBUG_MODE
+        ImGui::SFML::ProcessEvent(m_window, *event);
+#endif 
 
         // Window close event
         if (event->is<sf::Event::Closed>())

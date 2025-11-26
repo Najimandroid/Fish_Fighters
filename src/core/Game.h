@@ -87,6 +87,10 @@ private:
 
     sf::Clock m_deltaClock;        // Clock to compute deltaTime between frames
     float m_deltaTime = 0.0f;      // Delta time in seconds since the last frame
+#ifdef DEBUG_MODE
+	sf::Clock m_deltaClockDebug;   // Clock for debug UI timing
+	float m_debugDeltaTime = 0.0f; // Delta time for debug UI
+#endif
 
     const int m_frameRate = 60;    // Maximum framerate
     const sf::Vector2u m_logicalResolution = { 1920, 1080 }; // Reference resolution
