@@ -99,6 +99,8 @@ void Game::debug_ui()
     // Stage specific parameters
     if (isStageLoaded)
     {
+        ImGui::Separator();
+
         // Pause button
         static bool isPaused = false;
         if (ImGui::Checkbox("Pause", &isPaused))
@@ -115,18 +117,137 @@ void Game::debug_ui()
     }
 
     ImGui::End();
-    //======================================================================================================
 
     /*
-    * Render Menu UIs if m_stage->is_loaded() == false:
-    * Load level (write id + 'load' button)
-	* Modify player shells (write amount + 'set' button) (m_dataLoader->get_player_data().lock()->gain_shells(x))
-    * 
-	* Render Stage UIs if m_stage->is_loaded() == true:
-	* Spawn unit (write unit id + 'spawn' button) (m_stage->spawn_unit(m_dataLoader->get_unit_data(id)))
-	* Spawn enemy (write enemy id + 'spawn' button) (m_stage->spawn_enemy(m_dataLoader->get_enemy_data(id)))
-	* Exit level ('exit' button) (m_stage->unload())
+	* =======================================================================================================
+	* Game Data / Stage Control Panel
+    * -----------------------------------------------------------------
+	* Control stage loading, spawn units/enemies, modify player shells
     */
+
+    ImGui::SetNextWindowSize(ImVec2(500.f, 400.f), ImGuiCond_Always);
+    ImGui::SetNextWindowPos(ImVec2(1920.f - 500.f, 0.f), ImGuiCond_Always);
+
+    ImGui::Begin("Game Data Tools");
+
+    if (!isStageLoaded)
+    {
+        ImGui::Text("Main Menu Debug Tools");
+
+        static int levelToLoad = 0;
+        ImGui::InputInt("Level ID", &levelToLoad);
+
+        if (ImGui::Button("Load Level"))
+        {
+            m_stage->load(levelToLoad);
+            m_uiManager->generate_battle_uis();
+        }
+
+        ImGui::Separator();
+
+        static int shellAmount = 0;
+        ImGui::InputInt("Add Shells To Player", &shellAmount);
+
+        if (ImGui::Button("Add Shells"))
+        {
+            auto playerData = m_dataLoader->get_player_data().lock();
+            if (playerData) playerData->gain_shells(shellAmount);
+        }
+    }
+    else
+    {
+        ImGui::Text("Spawn Units");
+
+        /*
+        * =======================================================================================================
+        * Spawn Unit
+        * -------------------------------------------------------------------------------------------------------
+        * Allows spawning any unit by ID and form (0 or 1).
+        */
+        static int unitId = 0;
+        ImGui::InputInt("Unit ID", &unitId);
+
+        static int unitForm = 0;
+        const char* formOptions[] = { "Base", "Evolved" };
+        ImGui::Combo("Unit Form", &unitForm, formOptions, IM_ARRAYSIZE(formOptions));
+
+        if (ImGui::Button("Spawn Unit"))
+        {
+            auto data = m_dataLoader->get_unit_data(unitId, unitForm);
+            m_stage->spawn_unit(data);
+        }
+
+        ImGui::Separator();
+        ImGui::Text("Spawn Enemies");
+
+        /*
+        * =======================================================================================================
+        * Spawn Enemy
+        * -------------------------------------------------------------------------------------------------------
+        * Controls all spawn_enemy parameters:
+        * - magnification.x = HP multiplier
+        * - magnification.y = Attack multiplier
+        * - layer: -1 to 50 (-1 means random)
+        * - isBoss
+        * - generateShockwave
+        * - bypassEnemyLimit
+        */
+
+        static int enemyId = 0;
+        ImGui::InputInt("Enemy ID", &enemyId);
+
+        // Magnification
+        static float hpMultiplier = 1.0f;
+        static float attackMultiplier = 1.0f;
+
+        ImGui::SliderFloat("HP Multiplier", &hpMultiplier, 1.f, 100.0f);
+        ImGui::SliderFloat("Attack Multiplier", &attackMultiplier, 1.f, 100.0f);
+
+        // Layer
+        static int enemyLayer = -1;
+        ImGui::SliderInt("Layer", &enemyLayer, -1, 50);
+
+        // Flags
+        static bool isBoss = false;
+        ImGui::Checkbox("Is Boss", &isBoss);
+
+        static bool bypassEnemyLimit = false;
+        ImGui::Checkbox("Bypass Enemy Limit", &bypassEnemyLimit);
+
+        if (ImGui::Button("Spawn Enemy"))
+        {
+            // Retrieve enemy data
+            auto data = m_dataLoader->get_enemy_data(enemyId);
+
+            // Build magnification vector
+            sf::Vector2f magnification(hpMultiplier, attackMultiplier);
+
+            // Spawn enemy with full parameter set
+            m_stage->spawn_enemy(
+                data,
+                magnification,
+                enemyLayer,
+                isBoss,
+                bypassEnemyLimit
+            );
+        }
+
+        ImGui::Separator();
+
+        /*
+        * =======================================================================================================
+        * Exit current stage
+        */
+        if (ImGui::Button("Exit Stage"))
+        {
+            m_stage->unload();
+            m_uiManager->generate_fish_tank_uis();
+        }
+    }
+
+    ImGui::End();
+
+    //======================================================================================================
 
     ImGui::SFML::Render(m_window);
 #endif
