@@ -1,5 +1,5 @@
 #include "UIUpgradeSlider.h"
-#include "../core/DataLoader.h"
+#include "../../core/DataLoader.h"
 
 /*
  * Initializes the upgrade slider UI component.

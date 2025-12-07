@@ -3,14 +3,14 @@
 #include "../core/stages/Stage.h"
 #include "../core/Game.h"
 
-#include "UIDeploymentIcons.h"
-#include "UIStageCash.h"
-#include "UICashUp.h"
-#include "UIBaseHealthInfo.h"
-#include "UIUpgradeSlider.h"
-#include "UIEquipSlider.h"
-#include "UIPlayerShellsInfo.h"
-#include "UIChapterMap.h"
+#include "widgets/UIDeploymentIcons.h"
+#include "widgets/UIStageCash.h"
+#include "widgets/UICashUp.h"
+#include "widgets/UIBaseHealthInfo.h"
+#include "widgets/UIUpgradeSlider.h"
+#include "widgets/UIEquipSlider.h"
+#include "widgets/UIPlayerShellsInfo.h"
+#include "widgets/UIChapterMap.h"
 
 #include <iostream>
 

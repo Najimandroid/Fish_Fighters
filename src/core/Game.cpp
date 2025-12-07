@@ -62,8 +62,13 @@ void Game::init_cameras()
     m_stageCamera.setSize(static_cast<sf::Vector2f>(m_logicalResolution));
     m_stageCamera.setCenter(m_stageCamera.getSize() / 2.f);
 
+#ifdef DEBUG_MODE
+    m_uiCamera.setViewport(sf::FloatRect{ {0.25f, 0.25f}, {0.5f, 0.5f} });
+    m_stageCamera.setViewport(sf::FloatRect{ {0.25f, 0.25f}, {0.5f, 0.5f} });
+#else
     m_uiCamera.setViewport(sf::FloatRect{ {0.f, 0.f}, {1.f, 1.f} });
     m_stageCamera.setViewport(sf::FloatRect{ {0.f, 0.f}, {1.f, 1.f} });
+#endif
 
     m_stageCamera.zoom(0.9f); // initial zoom-out for better stage visibility
 }
@@ -91,7 +96,7 @@ void Game::debug_ui()
     ImGui::Begin("Time & Performance");
 
     // FPS
-    const float fps = (m_debugDeltaTime > 0.f) ? (1.f / m_debugDeltaTime) : 0.f;
+    const float fps = (m_deltaTime > 0.f) ? (1.f / m_deltaTime) : 0.f;
     ImGui::Text("FPS: %.1f", fps);
 	// Delta time
 	ImGui::Text("Delta Time: %.4f s", m_debugDeltaTime);
@@ -120,13 +125,14 @@ void Game::debug_ui()
 
     /*
 	* =======================================================================================================
-	* Game Data / Stage Control Panel
+	* Game Parameters / Stage Control Panel
     * -----------------------------------------------------------------
 	* Control stage loading, spawn units/enemies, modify player shells
     */
 
-    ImGui::SetNextWindowSize(ImVec2(500.f, 400.f), ImGuiCond_Always);
-    ImGui::SetNextWindowPos(ImVec2(1920.f - 500.f, 0.f), ImGuiCond_Always);
+    const ImVec2 gameParametersWindowSize = ImVec2(480.f, 1080.f);
+    ImGui::SetNextWindowSize(gameParametersWindowSize, ImGuiCond_Always);
+    ImGui::SetNextWindowPos(ImVec2(1920.f - gameParametersWindowSize.x, 0.f), ImGuiCond_Always);
 
     ImGui::Begin("Game Data Tools");
 
@@ -164,17 +170,43 @@ void Game::debug_ui()
         * -------------------------------------------------------------------------------------------------------
         * Allows spawning any unit by ID and form (0 or 1).
         */
-        static int unitId = 0;
+        static int unitId = 1;
         ImGui::InputInt("Unit ID", &unitId);
 
         static int unitForm = 0;
         const char* formOptions[] = { "Base", "Evolved" };
         ImGui::Combo("Unit Form", &unitForm, formOptions, IM_ARRAYSIZE(formOptions));
 
+        auto unitData = m_dataLoader->get_unit_data(unitId, unitForm);
+
+        if (unitData)
+        {
+            static sf::Texture previewTexture;
+
+            // Load only once or when ID changes (optional optimization)
+            previewTexture.loadFromFile(unitData->texture);
+
+            int frameWidth = previewTexture.getSize().x / unitData->frameCount;
+            int frameHeight = previewTexture.getSize().y;
+
+            sf::Sprite sprite(previewTexture, sf::IntRect({ 0, 0 }, { frameWidth, frameHeight }));
+
+            ImTextureID imguiTex = ImGui::SFML::TextureToImTextureID(previewTexture);
+
+            ImVec2 size(frameWidth, frameHeight);
+
+            float maxPreviewSize = 150.f;
+            float scale = std::min(maxPreviewSize / size.x, maxPreviewSize / size.y);
+
+            size.x *= scale;
+            size.y *= scale;
+
+            ImGui::Image(imguiTex, size);
+        }
+
         if (ImGui::Button("Spawn Unit"))
         {
-            auto data = m_dataLoader->get_unit_data(unitId, unitForm);
-            m_stage->spawn_unit(data);
+            m_stage->spawn_unit(unitData);
         }
 
         ImGui::Separator();
@@ -193,7 +225,7 @@ void Game::debug_ui()
         * - bypassEnemyLimit
         */
 
-        static int enemyId = 0;
+        static int enemyId = 1;
         ImGui::InputInt("Enemy ID", &enemyId);
 
         // Magnification
@@ -233,6 +265,7 @@ void Game::debug_ui()
         }
 
         ImGui::Separator();
+        ImGui::Text("Stage Parameters");
 
         /*
         * =======================================================================================================
@@ -281,6 +314,18 @@ void Game::calculate_delta_time()
     }
 }
 
+#ifdef DEBUG_MODE
+ImTextureID Game::get_imgui_texture(const sf::Texture& texture)
+{
+    const sf::Texture* key = &texture;
+    auto it = m_imguiTextureCache.find(key);
+    if (it != m_imguiTextureCache.end())
+        return it->second;
+
+	// TODO: Texture SFML => IMGUI conversion
+}
+#endif
+
 void Game::run_game_loop()
 {
     // Initialize UI to Fish Tank screen
@@ -305,12 +350,15 @@ void Game::run_game_loop()
         m_window.setView(m_uiCamera);
         m_uiManager->render_uis(m_window, m_uiCamera, m_stageCamera);
 
+#ifdef DEBUG_MODE
         debug_ui();
-
+#endif
         m_window.display();
     }
 
+#ifdef DEBUG_MODE
     ImGui::SFML::Shutdown();
+#endif
 }
 
 /*

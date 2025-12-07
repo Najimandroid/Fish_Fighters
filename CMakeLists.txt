@@ -49,23 +49,24 @@ set(PROJECT_SOURCES
 
     src/core/stages/Stage.cpp
 
-    src/uis/UIElement.cpp
-    src/uis/UIBattleIcon.cpp
-    src/uis/UIButtonElement.cpp
-    src/uis/UITextElement.cpp
-    src/uis/UITextureElement.cpp
-    src/uis/UIDeploymentIcons.cpp
     src/uis/UIManager.cpp
-    src/uis/UIStageCash.cpp
-    src/uis/UICashUp.cpp
-    src/uis/UIBaseHealthInfo.cpp
-    src/uis/UIUpgradeIcon.cpp
-    src/uis/UIUpgradeSlider.cpp
-    src/uis/UIPlayerShellsInfo.cpp
-    src/uis/UIEquipIcon.cpp
-    src/uis/UIEquipSlot.cpp
-    src/uis/UIEquipSlider.cpp
-    src/uis/UIChapterMap.cpp
+
+    src/uis/widgets/UIElement.cpp
+    src/uis/widgets/UIBattleIcon.cpp
+    src/uis/widgets/UIButtonElement.cpp
+    src/uis/widgets/UITextElement.cpp
+    src/uis/widgets/UITextureElement.cpp
+    src/uis/widgets/UIDeploymentIcons.cpp
+    src/uis/widgets/UIStageCash.cpp
+    src/uis/widgets/UICashUp.cpp
+    src/uis/widgets/UIBaseHealthInfo.cpp
+    src/uis/widgets/UIUpgradeIcon.cpp
+    src/uis/widgets/UIUpgradeSlider.cpp
+    src/uis/widgets/UIPlayerShellsInfo.cpp
+    src/uis/widgets/UIEquipIcon.cpp
+    src/uis/widgets/UIEquipSlot.cpp
+    src/uis/widgets/UIEquipSlider.cpp
+    src/uis/widgets/UIChapterMap.cpp
 
     src/data/PlayerData.cpp
     # ← ajoute ici les futurs fichiers, par ex.:

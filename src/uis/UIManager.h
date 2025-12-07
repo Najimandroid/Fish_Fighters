@@ -1,6 +1,6 @@
 #pragma once
 
-#include "UIElement.h"
+#include "widgets/UIElement.h"
 #include "../core/DataLoader.h"
 
 #include <SFML/Graphics.hpp>

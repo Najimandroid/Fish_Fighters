@@ -1,7 +1,7 @@
 #pragma once
 
 #include "UIBattleIcon.h"
-#include "../core/DataLoader.h"
+#include "../../core/DataLoader.h"
 
 #include <set>
 

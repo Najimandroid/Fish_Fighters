@@ -1,5 +1,5 @@
 #include "UICashUp.h"
-#include "../core/stages/Stage.h"
+#include "../../core/stages/Stage.h"
 
 /*
  * Sets up the button size, position, icon, text, and callback for handling upgrades.

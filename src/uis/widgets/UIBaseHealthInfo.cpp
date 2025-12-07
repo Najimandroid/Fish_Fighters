@@ -1,5 +1,5 @@
 #include "UIBaseHealthInfo.h"
-#include "../core/stages/Stage.h"
+#include "../../core/stages/Stage.h"
 
 /*
  * Initializes the UI element with font and text styling.

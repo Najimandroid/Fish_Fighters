@@ -76,6 +76,11 @@ private:
 	// Calculates delta time and applies pause/speed modifiers
 	void calculate_delta_time();
 
+#ifdef DEBUG_MODE
+    // Caches ImGui texture IDs for SFML textures
+	ImTextureID get_imgui_texture(const sf::Texture& texture);
+#endif
+
 private:
     // ----- Game State -----
 	GameSpeedState m_speedState = GameSpeedState::NORMAL; // Current game speed state
@@ -92,7 +97,7 @@ private:
 	float m_debugDeltaTime = 0.0f; // Delta time for debug UI
 #endif
 
-    const int m_frameRate = 60;    // Maximum framerate
+    const int m_frameRate = 120;    // Maximum framerate
     const sf::Vector2u m_logicalResolution = { 1920, 1080 }; // Reference resolution
 
     // ----- Mouse and Inputs -----
@@ -103,4 +108,9 @@ private:
     std::shared_ptr<DataLoader> m_dataLoader; // Loads unit and game data
     std::shared_ptr<Stage> m_stage;           // Handles gameplay and units
     std::shared_ptr<UIManager> m_uiManager;   // Handles UI elements and interactions
+
+	// ----- Debug -----
+#ifdef DEBUG_MODE
+    std::unordered_map<const sf::Texture*, ImTextureID> m_imguiTextureCache;
+#endif
 };
