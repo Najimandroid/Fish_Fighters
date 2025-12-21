@@ -179,32 +179,41 @@ void Game::debug_ui()
 
         auto unitData = m_dataLoader->get_unit_data(unitId, unitForm);
 
-        if (unitData)
+        // Display unit preview
+       if (unitData)
         {
             static sf::Texture previewTexture;
+			static sf::Sprite sprite(previewTexture);
+			static int previousUnitId = -1;
+			static int previousUnitForm = 0;
 
-            // Load only once or when ID changes (optional optimization)
-            previewTexture.loadFromFile(unitData->texture);
+            if(previousUnitId != unitId || previousUnitForm != unitForm)
+            {
+                previewTexture.loadFromFile(unitData->texture);
 
-            int frameWidth = previewTexture.getSize().x / unitData->frameCount;
-            int frameHeight = previewTexture.getSize().y;
+                int frameWidth = previewTexture.getSize().x / unitData->frameCount;
+                int frameHeight = previewTexture.getSize().y;
 
-            sf::Sprite sprite(previewTexture, sf::IntRect({ 0, 0 }, { frameWidth, frameHeight }));
+				sprite.setTexture(previewTexture);
+				sprite.setTextureRect(sf::IntRect({ 0, 0 }, { frameWidth, frameHeight }));
 
-            ImTextureID imguiTex = ImGui::SFML::TextureToImTextureID(previewTexture);
+                ImVec2 size(frameWidth, frameHeight);
+            
+                float maxPreviewSize = 200.f;
+                float scale = std::min(maxPreviewSize / size.x, maxPreviewSize / size.y);
 
-            ImVec2 size(frameWidth, frameHeight);
+                size.x *= scale;
+                size.y *= scale;
 
-            float maxPreviewSize = 150.f;
-            float scale = std::min(maxPreviewSize / size.x, maxPreviewSize / size.y);
+                sprite.setScale({ scale, scale });
+			}
 
-            size.x *= scale;
-            size.y *= scale;
-
-            ImGui::Image(imguiTex, size);
+            ImGui::Image(sprite);
+			previousUnitId = unitId;
+			previousUnitForm = unitForm;
         }
 
-        if (ImGui::Button("Spawn Unit"))
+        if (ImGui::Button("Spawn Unit") && unitData)
         {
             m_stage->spawn_unit(unitData);
         }
@@ -246,11 +255,42 @@ void Game::debug_ui()
         static bool bypassEnemyLimit = false;
         ImGui::Checkbox("Bypass Enemy Limit", &bypassEnemyLimit);
 
-        if (ImGui::Button("Spawn Enemy"))
-        {
-            // Retrieve enemy data
-            auto data = m_dataLoader->get_enemy_data(enemyId);
+        auto data = m_dataLoader->get_enemy_data(enemyId);
 
+		// Display enemy preview
+        if (data)
+        {
+            static sf::Texture previewTexture;
+            static sf::Sprite sprite(previewTexture);
+            static int previousEnemyId = -1;
+
+            if (previousEnemyId != enemyId)
+            {
+                previewTexture.loadFromFile(data->texture);
+
+                int frameWidth = previewTexture.getSize().x / data->frameCount;
+                int frameHeight = previewTexture.getSize().y;
+
+                sprite.setTexture(previewTexture);
+                sprite.setTextureRect(sf::IntRect({ 0, 0 }, { frameWidth, frameHeight }));
+
+                ImVec2 size(frameWidth, frameHeight);
+
+                float maxPreviewSize = 200.f;
+                float scale = std::min(maxPreviewSize / size.x, maxPreviewSize / size.y);
+
+                size.x *= scale;
+                size.y *= scale;
+
+                sprite.setScale({ scale, scale });
+            }
+
+            ImGui::Image(sprite);
+            previousEnemyId = enemyId;
+        }
+
+        if (ImGui::Button("Spawn Enemy") && data)
+        {
             // Build magnification vector
             sf::Vector2f magnification(hpMultiplier, attackMultiplier);
 
