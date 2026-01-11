@@ -32,6 +32,9 @@ UIUpgradeSlider::UIUpgradeSlider(std::shared_ptr<DataLoader> dataLoader) :
 				int level = player->get_unit_level(unitUid);           // Current level
 				int upgradeCost = calculate_upgrade_cost(unitUid, level); // Calculate cost
 
+				// Check level cap (max 30)
+				if (level >= 30) return;
+
 				// Attempt to spend shells to upgrade/unlock unit
 				if (player->spend_shells(upgradeCost))
 				{

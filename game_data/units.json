@@ -24,7 +24,7 @@
                 "attackType": 1,
                 "attackFrequency": 1.5,
                 "foreswing": 0.3,
-                "backswing": 0.1,
+                "backswing": 0.3,
 
                 "damageZone": [ 0, 10 ],
 
@@ -32,14 +32,14 @@
 
                 "knockbackCount": 2,
 
-                "texture": "assets/images/textures/units/test_sheet.png",
-                "frameCount": 6,
-                "knockbackFrameIndex": 2
+                "texture": "assets/images/textures/units/fish_sheet.png",
+                "frameCount": 11,
+                "knockbackFrameIndex": 4
             },
             {
                 "form": 1,
                 "minLevel": 10,
-                "maxLevel": 999,
+                "maxLevel": 30,
 
                 "name": "Better Fish",
                 "description": "Just a better fish.",
@@ -78,23 +78,23 @@
             {
                 "form": 0,
                 "minLevel": 0,
-                "maxLevel": 999,
+                "maxLevel": 9,
 
-                "name": "Big Fish",
-                "description": "Just a normal fish but bigger.\nIt loves eating smaller fish.\nBut its favorite meal are\nsmall shrimps and crabs!",
+                "name": "Chomper",
+                "description": "He is a hungry boy.\nHe loves biting everything he comes across\nto see if they are edible!",
 
 
                 "cost": 300,
                 "cooldown": 8,
 
-                "health": 15,
+                "health": 30,
 
-                "attackPower": 6,
+                "attackPower": 20,
                 "attackRange": 50,
-                "attackType": 2,
+                "attackType": 1,
                 "attackFrequency": 3,
-                "foreswing": 1.5,
-                "backswing": 0.25,
+                "foreswing": 0.4,
+                "backswing": 0.1,
 
                 "damageZone": [ 0, 55 ],
 
@@ -102,9 +102,110 @@
 
                 "knockbackCount": 0,
 
-                "texture": "assets/images/textures/units/fish2TEST.png",
-                "frameCount": 6,
-                "knockbackFrameIndex": 2
+                "texture": "assets/images/textures/units/chomper_sheet.png",
+                "frameCount": 10,
+                "knockbackFrameIndex": 4
+            },
+            {
+                "form": 1,
+                "minLevel": 10,
+                "maxLevel": 30,
+
+                "name": "Metal Jaw",
+                "description": "He was so hungry he ended up breaking his jaw...\nBut no worries, it has been replaced by a metal one!\nHe is now more resistant and hits harder!\n[Area attack]",
+
+
+                "cost": 300,
+                "cooldown": 8,
+
+                "health": 80,
+
+                "attackPower": 50,
+                "attackRange": 70,
+                "attackType": 2,
+                "attackFrequency": 3,
+                "foreswing": 0.4,
+                "backswing": 0.1,
+
+                "damageZone": [ 0, 75 ],
+
+                "movementSpeed": 6,
+
+                "knockbackCount": 0,
+
+                "texture": "assets/images/textures/units/metaljaw_sheet.png",
+                "frameCount": 10,
+                "knockbackFrameIndex": 4
+            }
+        ]
+    },
+    "UID_3": {
+        "UID": 3,
+
+        "baseUpgradeCost": 150,
+
+        "forms": [
+            {
+                "form": 0,
+                "minLevel": 0,
+                "maxLevel": 9,
+
+                "name": "Sardine",
+                "description": "Smoll fish.",
+
+
+                "cost": 25,
+                "cooldown": 1,
+
+                "health": 5,
+
+                "attackPower": 0,
+                "attackRange": 0,
+                "attackType": 1,
+                "attackFrequency": 100,
+                "foreswing": 0,
+                "backswing": 0,
+
+                "damageZone": [ 0, 0 ],
+
+                "movementSpeed": 25,
+
+                "knockbackCount": 0,
+
+                "texture": "assets/images/textures/units/sardine_sheet.png",
+                "frameCount": 5,
+                "knockbackFrameIndex": 4
+            },
+            {
+                "form": 1,
+                "minLevel": 10,
+                "maxLevel": 30,
+
+                "name": "Shrimp Fish",
+                "description": "Smoll fish..? Or shrimp..? I'm confused..'",
+
+
+                "cost": 25,
+                "cooldown": 0.75,
+
+                "health": 15,
+
+                "attackPower": 0,
+                "attackRange": 0,
+                "attackType": 1,
+                "attackFrequency": 100,
+                "foreswing": 0,
+                "backswing": 0,
+
+                "damageZone": [ 0, 0 ],
+
+                "movementSpeed": 35,
+
+                "knockbackCount": 0,
+
+                "texture": "assets/images/textures/units/shrimpfish_sheet.png",
+                "frameCount": 5,
+                "knockbackFrameIndex": 4
             }
         ]
     }

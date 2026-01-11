@@ -366,6 +366,7 @@ void UIManager::generate_victory_uis()
     auto rewards = m_dataLoader->get_stage_data(m_stage.lock()->get_current_uid())->rewards;
     int gainedShells = 0;
 	bool isNewUnitAvailable = false;
+	int newUnitUID = -1;
 
     for (auto& reward : rewards)
     {
@@ -378,6 +379,7 @@ void UIManager::generate_victory_uis()
         if (reward->type == "unit")
         {
             isNewUnitAvailable = true;
+			newUnitUID = reward->unitUID;
 			continue;
         }
     }
@@ -414,7 +416,8 @@ void UIManager::generate_victory_uis()
         });
     newUnitText->set_position({ 1920.f / 2.f, 1080.f / 2.f + 200.f });
 
-    if(isNewUnitAvailable)
+	// Show the new unit text only if a new unit is available and not already owned by the player
+    if(isNewUnitAvailable && !(m_dataLoader->get_player_data().lock()->is_unit_owned(newUnitUID)))
         newUnitText->set_text_color(sf::Color(255, 0, 255, 255));
     else
         newUnitText->set_text_color(sf::Color(255, 0, 255, 0));

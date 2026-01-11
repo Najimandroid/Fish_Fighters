@@ -178,6 +178,10 @@
             {
                 "type": "shells",
                 "amount": 300
+            },
+            {
+                "type": "unit",
+                "UID": 3
             }
         ]
     },

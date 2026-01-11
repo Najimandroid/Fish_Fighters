@@ -32,12 +32,15 @@ void PlayerData::upgrade_unit(int unitUid)
     auto it = ownedUnits.find(unitUid);
     if (it == ownedUnits.end()) return;
 
+	// Checks if max level reached
+    if (it->second.level >= 30) return;
+
     // Gain a level
     it->second.level += 1;
 
     // Evolution check
     int lvl = it->second.level;
-    if (lvl >= 30)
+    if (lvl >= 31) // TODO: Lower it to 30 and add a third form for each unit
         it->second.form = 2;
     else if (lvl >= 10)
         it->second.form = 1;

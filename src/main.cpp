@@ -5,14 +5,20 @@
 * -------------
 * By Najimandroid
 * ---------------
-* TODO: Write game description here and a few words for the code readers
+* Fish Fighters is a horizontal tower defense game inspired by The Battle Cats.
+*
+* This project was made for fun and as a way to practice game programming in C++
+* and project architecture.
+* It is written in C++20 and uses SFML 3.0.
+* 
+* ---------------
+* Project creation: July 2025
 */
 int main()
 {
     Game game;
 
     // Start the main game loop
-    // This will handle events, updates, and rendering
     game.run_game_loop();
 
     // Clean up resources and terminate subsystems (e.g., DataLoader)

@@ -181,7 +181,7 @@ void UIUpgradeIcon::update(float deltaTime)
 
     // Position upgrade cost text below level text
     auto costBounds = m_upgradeCostText.getLocalBounds();
-    m_upgradeCostText.setString("Req. " + std::to_string(m_upgradeCost) + "¤");
+    m_upgradeCostText.setString((m_currentLevel < 30) ? "Req. " + std::to_string(m_upgradeCost) + "¤" : "MAXED");
     m_upgradeCostText.setOrigin({ costBounds.size.x, 0.f });
     m_upgradeCostText.setPosition({
         anchorPos.x + m_size.x - offsetX,
