@@ -7,7 +7,7 @@ This repository exists primarily as a code showcase.
 A full presentation of the project — including gameplay, technical breakdown, and design decisions — is available on my portfolio.
 
 👉 **Project page:**  
-https://najimandroid.github.io/projects/project-fish-fighters.html
+https://najimandroid.github.io/projects/project-fishfighters.html
 
 ---
 
@@ -23,3 +23,4 @@ The project was designed to deepen my understanding of game architecture, state 
 ---
 
 For more details, screenshots, and explanations, please refer to the portfolio page linked above.
+
