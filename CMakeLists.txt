@@ -109,9 +109,9 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 # ---------------------------------------------------------------------
 # Debug macro
 # ---------------------------------------------------------------------
-target_compile_definitions(${PROJECT_NAME} PRIVATE
-    $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:DEBUG_MODE>
-)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_definitions(${PROJECT_NAME} PRIVATE DEBUG_MODE)
+endif()
 
 # ---------------------------------------------------------------------
 # DLLs copy configuration
@@ -119,40 +119,32 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 set(SFML_DLL_DIR "${CMAKE_SOURCE_DIR}/external/SFML-3.0.0/bin")
 
 set(SFML_DLLS_DEBUG
-    sfml-graphics-d-3.dll
-    sfml-window-d-3.dll
-    sfml-audio-d-3.dll
-    sfml-system-d-3.dll
+    "${SFML_DLL_DIR}/sfml-graphics-d-3.dll"
+    "${SFML_DLL_DIR}/sfml-window-d-3.dll"
+    "${SFML_DLL_DIR}/sfml-audio-d-3.dll"
+    "${SFML_DLL_DIR}/sfml-system-d-3.dll"
 )
 
 set(SFML_DLLS_RELEASE
-    sfml-graphics-3.dll
-    sfml-window-3.dll
-    sfml-audio-3.dll
-    sfml-system-3.dll
+    "${SFML_DLL_DIR}/sfml-graphics-3.dll"
+    "${SFML_DLL_DIR}/sfml-window-3.dll"
+    "${SFML_DLL_DIR}/sfml-audio-3.dll"
+    "${SFML_DLL_DIR}/sfml-system-3.dll"
 )
 
-foreach(dll ${SFML_DLLS_DEBUG})
-    add_custom_command(
-        TARGET ${PROJECT_NAME}
-        POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${SFML_DLL_DIR}/${dll}"
-            $<TARGET_FILE_DIR:${PROJECT_NAME}>
-        CONFIGURATIONS Debug RelWithDebInfo
-    )
-endforeach()
-
-foreach(dll ${SFML_DLLS_RELEASE})
-    add_custom_command(
-        TARGET ${PROJECT_NAME}
-        POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${SFML_DLL_DIR}/${dll}"
-            $<TARGET_FILE_DIR:${PROJECT_NAME}>
-        CONFIGURATIONS Release MinSizeRel
-    )
-endforeach()
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    foreach(dll ${SFML_DLLS_DEBUG})
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${dll}" $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        )
+    endforeach()
+else()
+    foreach(dll ${SFML_DLLS_RELEASE})
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${dll}" $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        )
+    endforeach()
+endif()
 
 # ---------------------------------------------------------------------
 # Copy assets folder to output
@@ -171,5 +163,6 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     ${CMAKE_SOURCE_DIR}/game_data
     $<TARGET_FILE_DIR:${PROJECT_NAME}>/game_data
 )
+
 
 
