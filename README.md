@@ -37,7 +37,6 @@ This project uses CMake and is configured to build automatically.
 Clone the project:
 ```bash
 git clone https://github.com/Najimandroid/Fish_Fighters.git
-cmake -S . -B build
 ```
 #
 Make sure to be located in the project directory, then:
@@ -58,5 +57,6 @@ cmake --build build --config Debug
 ---
 
 For more details, screenshots, and explanations, please refer to the portfolio page linked above.
+
 
 
