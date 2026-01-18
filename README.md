@@ -22,5 +22,41 @@ The project was designed to deepen my understanding of game architecture, state 
 
 ---
 
+## Building the project
+
+This project uses CMake and is configured to build automatically.
+
+### Requirements
+- Git
+- CMake 3.15 or newer
+- A C++20 compatible compiler
+- Windows (currently the only supported platform)
+
+### Build steps (Windows)
+
+Clone the project:
+```bash
+git clone https://github.com/Najimandroid/Fish_Fighters.git
+cmake -S . -B build
+```
+#
+Make sure to be located in the project directory, then:
+```bash
+cmake -S . -B build
+```
+Note: the .exe files will be located inside the build folder.
+#
+For the release version:
+```bash
+cmake --build build --config Release
+```
+#
+For the debug version:
+```bash
+cmake --build build --config Debug
+```
+---
+
 For more details, screenshots, and explanations, please refer to the portfolio page linked above.
+
 
