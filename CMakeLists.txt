@@ -132,19 +132,23 @@ set(SFML_DLLS_RELEASE
     "${SFML_DLL_DIR}/sfml-system-3.dll"
 )
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-    foreach(dll ${SFML_DLLS_DEBUG})
-        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${dll}" $<TARGET_FILE_DIR:${PROJECT_NAME}>
-        )
-    endforeach()
-else()
-    foreach(dll ${SFML_DLLS_RELEASE})
-        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${dll}" $<TARGET_FILE_DIR:${PROJECT_NAME}>
-        )
-    endforeach()
-endif()
+foreach(dll ${SFML_DLLS_DEBUG})
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${dll}"
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        CONFIGURATIONS Debug RelWithDebInfo
+    )
+endforeach()
+
+foreach(dll ${SFML_DLLS_RELEASE})
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${dll}"
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        CONFIGURATIONS Release MinSizeRel
+    )
+endforeach()
 
 # ---------------------------------------------------------------------
 # Copy assets folder to output
@@ -163,3 +167,4 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     ${CMAKE_SOURCE_DIR}/game_data
     $<TARGET_FILE_DIR:${PROJECT_NAME}>/game_data
 )
+
