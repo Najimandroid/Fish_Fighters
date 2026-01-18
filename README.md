@@ -42,21 +42,13 @@ git clone https://github.com/Najimandroid/Fish_Fighters.git
 Make sure to be located in the project directory, then:
 ```bash
 cmake -S . -B build
-```
-Note: the .exe files will be located inside the build folder.
-#
-For the release version:
-```bash
 cmake --build build --config Release
 ```
-#
-For the debug version:
-```bash
-cmake --build build --config Debug
-```
+Note: the .exe file will be located inside the build/Release folder.
 ---
 
 For more details, screenshots, and explanations, please refer to the portfolio page linked above.
+
 
 
 
