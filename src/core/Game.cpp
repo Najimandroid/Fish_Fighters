@@ -35,13 +35,14 @@ Game::Game():
     // Initialize UIManager and Stage with references to DataLoader
     m_uiManager->init(m_dataLoader, m_stage);
 
-	// Set up game speed callbacks for UIManager
+	// Set up game speed and quit callbacks for UIManager
     m_uiManager->set_game_speed_callback([this](GameSpeedState s) {
         set_game_speed(s);
     });
     m_uiManager->set_get_game_speed_callback([this]() -> GameSpeedState {
         return m_speedState;
     });
+    m_uiManager->set_quit_game_callback([this]() {m_window.close();});
 
     m_stage->init(m_dataLoader, m_uiManager, &m_stageCamera);
 
@@ -437,8 +438,8 @@ void Game::poll_events()
             if (e_keycode->code == sf::Keyboard::Key::Numpad1) m_window.setSize({ 1920, 1080 });
             else if (e_keycode->code == sf::Keyboard::Key::Numpad2) m_window.setSize({ 1280, 720 });
             else if (e_keycode->code == sf::Keyboard::Key::Numpad3) m_window.setSize({ 640, 360 });
-            // Close game
-            else if (e_keycode->code == sf::Keyboard::Key::Escape) m_window.close();
+            // Close game (removed)
+            //else if (e_keycode->code == sf::Keyboard::Key::Escape) m_window.close();
             // Pause and speed control
             else if (e_keycode->code == sf::Keyboard::Key::P) { m_speedState = GameSpeedState::PAUSED; }
             else if (e_keycode->code == sf::Keyboard::Key::LShift) { m_speedState = GameSpeedState::FASTER; }

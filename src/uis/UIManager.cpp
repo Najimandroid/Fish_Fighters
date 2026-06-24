@@ -135,6 +135,22 @@ void UIManager::generate_fish_tank_uis()
                 };
         });
 
+    // Quit button closes the game
+    auto quitButton = std::make_shared<UIButtonElement>(
+        sf::Vector2f{ 200.f, 80.f },
+        sf::Vector2f{ 100.f, 600.f },
+        "QUIT"
+    );
+    quitButton->set_callback([this]()
+        {
+            m_pendingAction = [this]() {
+                if (m_quitGameCallback)
+                {
+                    m_quitGameCallback();
+                }
+                };
+        });
+
     auto shellsInfo = std::make_shared<UIPlayerShellsInfo>(m_dataLoader);
 
     add_ui_element(bg);
@@ -142,6 +158,7 @@ void UIManager::generate_fish_tank_uis()
     add_ui_element(battleButton);
     add_ui_element(upgradeButton);
     add_ui_element(equipButton);
+    add_ui_element(quitButton);
     add_ui_element(shellsInfo);
 }
 
@@ -544,4 +561,9 @@ void UIManager::set_game_speed_callback(std::function<void(GameSpeedState)> call
 void UIManager::set_get_game_speed_callback(std::function<GameSpeedState()> callback)
 {
     m_getGameSpeedCallback = callback;
+}
+
+void UIManager::set_quit_game_callback(std::function<void()> callback)
+{
+    m_quitGameCallback = callback;
 }

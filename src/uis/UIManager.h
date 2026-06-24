@@ -68,6 +68,7 @@ public:
 	// Callbacks for getting and setting game speed
     void set_game_speed_callback(std::function<void(GameSpeedState)> callback);
     void set_get_game_speed_callback(std::function<GameSpeedState()> callback);
+    void set_quit_game_callback(std::function<void()> callback);
 
 private:
     std::shared_ptr<DataLoader> m_dataLoader = nullptr;         // Reference to game data
@@ -79,4 +80,5 @@ private:
 
 	std::function<void(GameSpeedState)> m_setGameSpeedCallback; // Callback to set game speed state
     std::function<GameSpeedState()> m_getGameSpeedCallback;     // Callback to get current game speed state
+    std::function<void()> m_quitGameCallback;                   // Callback to quit game
 };
