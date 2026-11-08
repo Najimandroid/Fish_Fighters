@@ -61,6 +61,72 @@ namespace
         if (value.is_boolean()) return value.get<bool>();
         return read_int_value(value, key) != 0;
     }
+
+    /*
+     * Entity types, e.g. "types": [ -1, 0 ].
+     * Optional: a missing list means no type. -1 (EntityType::NONE) entries are skipped.
+     */
+    std::vector<EntityType> read_types(const json& object, const std::string& key)
+    {
+        std::vector<EntityType> types;
+        if (!object.contains(key)) return types;
+
+        const json& list = object.at(key);
+        if (!list.is_array()) throw std::runtime_error("\"" + key + "\" must be a list, got " + list.dump());
+
+        for (const json& value : list)
+        {
+            int number = read_int_value(value, key);
+            if (number < static_cast<int>(EntityType::NONE) || number >= static_cast<int>(EntityType::COUNT))
+                throw std::runtime_error("\"" + key + "\" contains an unknown entity type: " + std::to_string(number));
+
+            EntityType type = static_cast<EntityType>(number);
+            if (type != EntityType::NONE) types.push_back(type);
+        }
+        return types;
+    }
+
+    // Ability types are written by name in the JSON so they stay readable
+    AbilityType read_ability_type(const json& ability)
+    {
+        static const std::unordered_map<std::string, AbilityType> names =
+        {
+            { "STRONG_AGAINST", AbilityType::STRONG_AGAINST },
+            { "RESISTANT_AGAINST", AbilityType::RESISTANT_AGAINST },
+            { "FREEZE_ATTACK", AbilityType::FREEZE_ATTACK },
+            { "SLOW_ATTACK", AbilityType::SLOW_ATTACK },
+            { "ATTACK_DOWN_ATTACK", AbilityType::ATTACK_DOWN_ATTACK }
+        };
+
+        const std::string name = ability.at("type").get<std::string>();
+        auto it = names.find(name);
+        if (it == names.end()) throw std::runtime_error("Unknown ability type \"" + name + "\"");
+        return it->second;
+    }
+
+    /*
+     * Abilities, e.g. "abilities": [ { "type": "STRONG_AGAINST", "targetTypes": [ 0 ] } ].
+     * Optional. value, chance and duration are only needed by on-hit abilities.
+     */
+    std::vector<AbilityData> read_abilities(const json& object)
+    {
+        std::vector<AbilityData> abilities;
+        if (!object.contains("abilities")) return abilities;
+
+        for (const json& abilityValue : object.at("abilities"))
+        {
+            AbilityData ability;
+            ability.type = read_ability_type(abilityValue);
+            ability.targetTypes = read_types(abilityValue, "targetTypes");
+
+            if (abilityValue.contains("value")) ability.value = read_float(abilityValue, "value");
+            if (abilityValue.contains("chance")) ability.chance = read_float(abilityValue, "chance");
+            if (abilityValue.contains("duration")) ability.duration = read_float(abilityValue, "duration");
+
+            abilities.push_back(ability);
+        }
+        return abilities;
+    }
 }
 
 /*
@@ -160,16 +226,8 @@ bool DataLoader::load_units(const std::string& path)
                 data->damageZone.second = data->attackRange;
             }
 
-            if (formValue.contains("types") && formValue["types"].is_array() && formValue["types"].size() == 2)
-            {
-                data->types.first = static_cast<EntityType>(read_int_value(formValue["types"][0], "types"));
-                data->types.second = static_cast<EntityType>(read_int_value(formValue["types"][1], "types"));
-            }
-            else
-            {
-                data->types.first = EntityType::NONE;
-                data->types.second = EntityType::NONE;
-            }
+            data->types = read_types(formValue, "types");
+            data->abilities = read_abilities(formValue);
 
             data->movementSpeed = read_float(formValue, "movementSpeed");
             data->knockbackCount = read_int(formValue, "knockbackCount");
@@ -230,16 +288,8 @@ bool DataLoader::load_enemies(const std::string& path)
             data->damageZone.second = data->attackRange;
         }
 
-        if (value.contains("types") && value["types"].is_array() && value["types"].size() == 2)
-        {
-            data->types.first = static_cast<EntityType>(read_int_value(value["types"][0], "types"));
-            data->types.second = static_cast<EntityType>(read_int_value(value["types"][1], "types"));
-        }
-        else
-        {
-            data->types.first = EntityType::NONE;
-            data->types.second = EntityType::NONE;
-        }
+        data->types = read_types(value, "types");
+        data->abilities = read_abilities(value);
 
         data->movementSpeed = read_float(value, "movementSpeed");
         data->knockbackCount = read_int(value, "knockbackCount");

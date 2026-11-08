@@ -10,5 +10,7 @@
 enum class EntityType
 {
 	NONE = -1,
-	SHELLED
+	SHELLED,
+
+	COUNT // Not a type: keep it last, the loader uses it to reject unknown type numbers
 };

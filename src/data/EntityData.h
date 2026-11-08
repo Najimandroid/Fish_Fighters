@@ -44,7 +44,7 @@ struct EntityData
 
 	std::pair<float, float> damageZone = { 0.f, 0.f }; // Damage zone offsets (start, end) relative to unit position
 
-    std::pair<EntityType, EntityType> types = {EntityType::NONE, EntityType::NONE}; // Entity's type
+    std::vector<EntityType> types;              // Entity's types (abilities target them), empty = no type
     std::vector<AbilityData> abilities;         // Entity's abilities
 
     float movementSpeed = 1.0f;                 // Movement speed across the battlefield
