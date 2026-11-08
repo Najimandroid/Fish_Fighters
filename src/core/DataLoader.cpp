@@ -382,7 +382,13 @@ bool DataLoader::load_stages(const std::string& path)
 
         data->baseTexture = value.at("baseTexture").get<std::string>();
         data->backgroundTexture = value.at("backgroundTexture").get<std::string>();
-        
+        if (value.contains("backgroundGroundRow"))
+        {
+            data->backgroundGroundRow = read_float(value, "backgroundGroundRow");
+            if (data->backgroundGroundRow < 0.f)
+                throw std::runtime_error(data->name + ": \"backgroundGroundRow\" must be 0 or more (a row of the background image)");
+        }
+
         // Just to avoid resizing the vector too many times
         size_t numberOfDifferentEnemies = value.at("numberOfDifferentEnemies").get<size_t>();
         data->enemies.reserve(numberOfDifferentEnemies);

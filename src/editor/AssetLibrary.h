@@ -50,7 +50,7 @@ public:
     static std::optional<ImageFolder> folder_of(const std::string& path); // Folder an "assets/..." image is in
     static std::string unit_icon_path(int uid, int form); // Same path as DataLoader::get_unit_icon_texture_path
 
-    // Every .png of the folder ("assets/..." paths), sorted. Cached until refresh()
+    // Every .png of the folder ("assets/..." paths), sorted, without the "(old)" backups. Cached until refresh()
     const std::vector<std::string>& list(ImageFolder folder);
     void refresh();
 
@@ -61,6 +61,12 @@ public:
     // Writes `source` at `relativePath`, keeping the previous file as "name(old).png"
     bool replace(const std::string& relativePath, const std::filesystem::path& source, std::string& error);
     bool replace(const std::string& relativePath, const sf::Image& image, std::string& error);
+
+    // The most recent backup of a file ("name(old).png", "name(old 2).png"...), if any
+    std::optional<std::filesystem::path> latest_backup(const std::string& relativePath) const;
+
+    // Puts the most recent backup back in place of the file (the current version is deleted)
+    bool restore_backup(const std::string& relativePath, std::string& error);
 
     // A deploy icon made from the first frame of a sprite sheet, centered on a transparent background
     static std::optional<sf::Image> make_icon(const sf::Texture& sheet, int frameCount);

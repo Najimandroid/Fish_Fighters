@@ -1,5 +1,7 @@
 #include "ProjectQueries.h"
 
+#include "../data/StageData.h"
+
 namespace
 {
     std::string string_of(const ordered_json& object, const char* key)
@@ -158,5 +160,20 @@ namespace ProjectQueries
             });
 
         return uses;
+    }
+
+    // ==================
+    // Backgrounds
+    // ==================
+    float background_ground_row(const ProjectData& project, const std::string& path, float imageHeight)
+    {
+        for (int uid : project.sorted_uids(DataFile::STAGES))
+        {
+            const ordered_json& stage = *project.find_uid(DataFile::STAGES, uid);
+            auto row = stage.find("backgroundGroundRow");
+            if (string_of(stage, "backgroundTexture") == path && row != stage.end() && row->is_number())
+                return row->get<float>();
+        }
+        return ::background_ground_row(-1.f, imageHeight);
     }
 }

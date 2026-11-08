@@ -30,4 +30,9 @@ namespace ProjectQueries
     std::vector<Reference> uses_of_enemy(const ProjectData& project, int uid);   // Stage waves
     std::vector<Reference> uses_of_stage(const ProjectData& project, int uid);   // Chapter maps
     std::vector<Reference> uses_of_image(const ProjectData& project, const std::string& path);
+
+    // ===== Backgrounds =====
+    // Row of a stage background units stand on: from the first stage using it that sets one,
+    // else the template's ratio of the image height (background_ground_row in StageData.h)
+    float background_ground_row(const ProjectData& project, const std::string& path, float imageHeight);
 }

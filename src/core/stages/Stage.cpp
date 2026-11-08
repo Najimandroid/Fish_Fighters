@@ -66,9 +66,9 @@ void Stage::load(int uid)
 		m_enemyStageDatas.push_back(enemyCopy);
 	}
 
-	// Load background texture and scale to 1920x1080
+	// Load the background (any size) and repeat it along the stage
 	bool success = m_backgroundTexture.loadFromFile(stageJson->backgroundTexture);
-	init_background(stageJson->backgroundTexture);
+	init_background(stageJson->backgroundGroundRow);
 
 	focus_on_player_base(); // Focus camera
 
@@ -491,43 +491,47 @@ void Stage::render(sf::RenderWindow& window)
 }
 
 /*
-* Spawn the two bases in their positions
+* Spawn the two bases in their positions.
+* They stand on the same ground as the units (their bottom on BATTLE_GROUND_Y),
+* where the background's ground line is placed.
 */
 void Stage::spawn_bases(float health, float playerBaseHealth, const std::string& texture)
 {
 	m_enemyBase = std::make_unique<BattleBase>(health, texture);
-	m_enemyBase->position = { 0.0f, 540.0f - m_enemyBase->texture.getSize().y / 2 };
+	m_enemyBase->position = { 0.0f, BATTLE_GROUND_Y - m_enemyBase->texture.getSize().y };
 	m_enemyBase->uniqueId = m_nextEntityId++;
 	m_enemyBase->update_position(1/60.f);
 
 	m_unitBase = std::make_unique<BattleBase>(playerBaseHealth, "assets/images/textures/bases/fishBaseTEST.png");
-	m_unitBase->position = { m_length, 540.0f - m_unitBase->texture.getSize().y / 2 };
+	m_unitBase->position = { m_length, BATTLE_GROUND_Y - m_unitBase->texture.getSize().y };
 	m_unitBase->uniqueId = m_nextEntityId++;
 	m_unitBase->update_position(1 / 60.f);
 }
 
-void Stage::init_background(const std::string& texturePath)
+/*
+* Copies of the background side by side along the whole stage.
+* Works with any image size: a copy every (image width x BACKGROUND_SCALE) pixels, and the image's
+* ground row (the stage's, or the template's ratio) on the line units stand on.
+* With the 1280 x 1120 template: a copy every 1920 px, top at y = -200.
+*/
+void Stage::init_background(float groundRow)
 {
-	int numberOfSprites = (m_length / 1920) + 1;
-
 	// Rebuilt from scratch on every load
 	m_backgroundSprites.clear();
 
+	const sf::Vector2u textureSize = m_backgroundTexture.getSize();
+	if (textureSize.x == 0 || textureSize.y == 0) return;
+
+	const float tileWidth = textureSize.x * BACKGROUND_SCALE;
+	const float top = BATTLE_GROUND_Y - background_ground_row(groundRow, static_cast<float>(textureSize.y)) * BACKGROUND_SCALE;
+	const int numberOfSprites = static_cast<int>(m_length / tileWidth) + 2; // One more past each base
+
 	for (int i = 0; i <= numberOfSprites; i++)
 	{
-		sf::Sprite m_backgroundSprite(m_backgroundTexture);
-
-		m_backgroundSprite.setTexture(m_backgroundTexture, true);
-		m_backgroundSprite.setPosition({ -1920.f + i * 1920.f, -200.0f }); // 150 pixels up
-
-		// Scale to 1.5f
-		sf::Vector2u texSize = m_backgroundTexture.getSize();
-		if (texSize.x > 0 && texSize.y > 0)
-		{
-			m_backgroundSprite.setScale({1.5f, 1.5f});
-		}
-
-		m_backgroundSprites.push_back(m_backgroundSprite);
+		sf::Sprite backgroundSprite(m_backgroundTexture);
+		backgroundSprite.setScale({ BACKGROUND_SCALE, BACKGROUND_SCALE });
+		backgroundSprite.setPosition({ -tileWidth + i * tileWidth, top });
+		m_backgroundSprites.push_back(backgroundSprite);
 	}
 }
 

@@ -96,6 +96,7 @@ const std::vector<std::string>& AssetLibrary::list(ImageFolder imageFolder)
     for (const auto& entry : fs::directory_iterator(directory, error))
     {
         if (!entry.is_regular_file() || !is_png(entry.path())) continue;
+        if (entry.path().stem().string().find("(old") != std::string::npos) continue; // Backups of replaced files
         m_lists[i].push_back(std::string(folder(imageFolder)) + "/" + entry.path().filename().generic_string());
     }
     std::sort(m_lists[i].begin(), m_lists[i].end());
@@ -196,6 +197,44 @@ bool AssetLibrary::replace(const std::string& relativePath, const sf::Image& ima
     if (!image.saveToFile(destination))
     {
         error = "Can't write " + destination.string();
+        return false;
+    }
+
+    refresh();
+    return true;
+}
+
+std::optional<fs::path> AssetLibrary::latest_backup(const std::string& relativePath) const
+{
+    // back_up() names them "name(old)", then "name(old 2)", "name(old 3)"...: the highest number is the latest
+    const fs::path path = m_project.resolve(relativePath);
+    std::optional<fs::path> latest;
+    for (int i = 1; ; ++i)
+    {
+        const std::string suffix = i == 1 ? "(old)" : "(old " + std::to_string(i) + ")";
+        const fs::path candidate = path.parent_path() / (path.stem().string() + suffix + path.extension().string());
+        if (!fs::exists(candidate)) break;
+        latest = candidate;
+    }
+    return latest;
+}
+
+bool AssetLibrary::restore_backup(const std::string& relativePath, std::string& error)
+{
+    const auto backup = latest_backup(relativePath);
+    if (!backup)
+    {
+        error = "No previous version of " + relativePath;
+        return false;
+    }
+
+    const fs::path path = m_project.resolve(relativePath);
+    std::error_code fsError;
+    fs::remove(path, fsError);
+    fs::rename(*backup, path, fsError);
+    if (fsError)
+    {
+        error = "Can't restore " + backup->filename().string() + ": " + fsError.message();
         return false;
     }
 

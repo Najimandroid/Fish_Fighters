@@ -146,6 +146,7 @@ set(EDITOR_SOURCES
     src/editor/ProjectQueries.cpp
     src/editor/TextureCache.cpp
     src/editor/AssetLibrary.cpp
+    src/editor/ImageTools.cpp
     src/editor/FileDialog.cpp
     src/editor/GameBuilds.cpp
     src/editor/Validator.cpp

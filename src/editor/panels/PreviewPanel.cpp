@@ -2,6 +2,7 @@
 
 #include "../EditorWidgets.h"
 #include "../ProjectQueries.h"
+#include "../../data/StageData.h"
 #include "../../uis/widgets/UIStatusIcons.h"
 
 #include <algorithm>
@@ -24,11 +25,24 @@ namespace
 
     const char* PLAYER_BASE_TEXTURE = "assets/images/textures/bases/fishBaseTEST.png"; // Stage::spawn_bases
 
-    // Stage::init_background: tiles every 1920 px from x = -1920, 200 px above the top, x1.5
-    constexpr float BACKGROUND_STEP = 1920.f;
-    constexpr float BACKGROUND_TOP = -200.f;
-    constexpr float BACKGROUND_SCALE = 1.5f;
     constexpr float SCENE_WORLD_X = 960.f;   // World x of the edited entity (lines the background up like a battle)
+
+    // Draws copies of a background between two world x, placed like Stage::init_background
+    // (a copy every width x BACKGROUND_SCALE from -width, the ground row on BATTLE_GROUND_Y)
+    template<typename ToScreen>
+    void draw_background_copies(ImDrawList* drawList, const sf::Texture& background, float groundRow, float worldLeft, float worldRight, ToScreen toScreen)
+    {
+        const float tileWidth = background.getSize().x * BACKGROUND_SCALE;
+        const float tileHeight = background.getSize().y * BACKGROUND_SCALE;
+        const float top = BATTLE_GROUND_Y - groundRow * BACKGROUND_SCALE;
+        const int first = static_cast<int>(std::floor((worldLeft + tileWidth) / tileWidth)) - 1;
+        const int last = static_cast<int>(std::floor((worldRight + tileWidth) / tileWidth));
+        for (int i = first; i <= last; ++i)
+        {
+            const float x = -tileWidth + i * tileWidth;
+            drawList->AddImage(texture_id(background), toScreen(x, top), toScreen(x + tileWidth, top + tileHeight));
+        }
+    }
 
     ImU32 with_alpha(ImU32 color, int alpha)
     {
@@ -442,20 +456,13 @@ void PreviewPanel::draw_scene(EditorContext& ctx, const SceneEntity& edited, con
     drawList->PushClipRect(origin, ImVec2(origin.x + width, origin.y + height), true);
     drawList->AddRectFilled(origin, ImVec2(origin.x + width, origin.y + height), IM_COL32(8, 16, 20, 255));
 
-    // ----- Background, placed like Stage::init_background -----
-    if (const sf::Texture* background = ctx.textures.get(background_path(ctx)))
+    // ----- Background, placed like Stage::init_background (ground line of the stages using it) -----
+    const std::string backgroundPath = background_path(ctx);
+    if (const sf::Texture* background = ctx.textures.get(backgroundPath))
     {
-        const float tileWidth = background->getSize().x * BACKGROUND_SCALE;
-        const float tileHeight = background->getSize().y * BACKGROUND_SCALE;
-        const float absoluteLeft = m_viewLeft + SCENE_WORLD_X;
-        const float absoluteRight = worldRight + SCENE_WORLD_X;
-        const int first = static_cast<int>(std::floor((absoluteLeft + BACKGROUND_STEP) / BACKGROUND_STEP)) - 1;
-        const int last = static_cast<int>(std::floor((absoluteRight + BACKGROUND_STEP) / BACKGROUND_STEP));
-        for (int i = first; i <= last; ++i)
-        {
-            const float x = -BACKGROUND_STEP + i * BACKGROUND_STEP - SCENE_WORLD_X;
-            drawList->AddImage(texture_id(*background), toScreen(x, BACKGROUND_TOP), toScreen(x + tileWidth, BACKGROUND_TOP + tileHeight));
-        }
+        const float groundRow = ProjectQueries::background_ground_row(ctx.project, backgroundPath, static_cast<float>(background->getSize().y));
+        draw_background_copies(drawList, *background, groundRow, m_viewLeft + SCENE_WORLD_X, worldRight + SCENE_WORLD_X,
+            [&](float x, float y) { return toScreen(x - SCENE_WORLD_X, y); });
     }
 
     const float tallest = std::max(sprite_height(edited.sheet), opponent ? sprite_height(opponent->sheet) : 0.f);
@@ -682,49 +689,53 @@ void PreviewPanel::draw_stage(EditorContext& ctx, const ordered_json& stage)
     const sf::Texture* enemyBase = ctx.textures.get(read_string(stage, "baseTexture"));
     const sf::Texture* playerBase = ctx.textures.get(PLAYER_BASE_TEXTURE);
 
+    // The whole stage in world coordinates, the camera's height at the default zoom (y 54 to 1026)
     const float length = std::max(100.f, static_cast<float>(read_number(stage, "length", 960.0)));
-    const float worldHeight = 1080.f;                      // The game's view height
-    const ImVec2 worldSize(length + 400.f, worldHeight);   // A bit of room around the bases
+    const float worldLeft = -300.f;
+    const float worldRight = length + 500.f;
+    const float worldTop = 54.f;
+    const float worldBottom = 1026.f;
 
-    const float width = ImGui::GetContentRegionAvail().x;
-    const float scale = width / worldSize.x;
-    const ImVec2 size(width, worldSize.y * scale);
+    const float width = std::max(200.f, ImGui::GetContentRegionAvail().x);
+    const float scale = width / (worldRight - worldLeft);
+    const ImVec2 size(width, (worldBottom - worldTop) * scale);
     const ImVec2 origin = ImGui::GetCursorScreenPos();
     ImGui::Dummy(size);
+    auto toScreen = [&](float x, float y) { return ImVec2(origin.x + (x - worldLeft) * scale, origin.y + (y - worldTop) * scale); };
 
     ImDrawList* drawList = ImGui::GetWindowDrawList();
     drawList->PushClipRect(origin, ImVec2(origin.x + size.x, origin.y + size.y), true);
     drawList->AddRectFilled(origin, ImVec2(origin.x + size.x, origin.y + size.y), IM_COL32(8, 16, 20, 255));
 
-    // Background repeated along the stage, at the view's height
+    // Background copies with the stage's ground line, like Stage::init_background
     if (background)
     {
-        const float tileHeight = size.y;
-        const float tileWidth = background->getSize().x * (tileHeight / background->getSize().y);
-        for (float x = origin.x; x < origin.x + size.x; x += tileWidth)
-            drawList->AddImage(texture_id(*background), ImVec2(x, origin.y), ImVec2(x + tileWidth, origin.y + tileHeight));
+        const auto row = stage.find("backgroundGroundRow");
+        const float groundRow = background_ground_row(row != stage.end() && row->is_number() ? row->get<float>() : -1.f,
+            static_cast<float>(background->getSize().y));
+        draw_background_copies(drawList, *background, groundRow, worldLeft, worldRight, toScreen);
     }
 
-    // Bases at the middle of the view: enemy at 0 (left), player at the stage length (right)
+    // Bases standing on the ground: enemy at x 0 (left), player at the stage length (right), like Stage::spawn_bases
     auto drawBase = [&](const sf::Texture* texture, float worldX)
         {
             if (!texture) return;
-            const ImVec2 baseSize(texture->getSize().x * scale, texture->getSize().y * scale);
-            const ImVec2 min(origin.x + (200.f + worldX) * scale - baseSize.x / 2.f, origin.y + size.y / 2.f - baseSize.y / 2.f);
-            drawList->AddImage(texture_id(*texture), min, ImVec2(min.x + baseSize.x, min.y + baseSize.y));
+            const float height = static_cast<float>(texture->getSize().y);
+            drawList->AddImage(texture_id(*texture), toScreen(worldX, BATTLE_GROUND_Y - height),
+                toScreen(worldX + texture->getSize().x, BATTLE_GROUND_Y));
         };
     drawBase(enemyBase, 0.f);
     drawBase(playerBase, length);
 
-    // Length
-    const float y = origin.y + size.y * 0.8f;
-    const float left = origin.x + 200.f * scale;
-    const float right = origin.x + (200.f + length) * scale;
-    drawList->AddLine(ImVec2(left, y), ImVec2(right, y), IM_COL32(255, 160, 115, 255), 2.f);
+    // Ground line and length
+    drawList->AddLine(toScreen(worldLeft, BATTLE_GROUND_Y), toScreen(worldRight, BATTLE_GROUND_Y), IM_COL32(255, 80, 80, 150), 1.f);
+    const ImVec2 left = toScreen(0.f, BATTLE_GROUND_Y + 160.f);
+    const ImVec2 right = toScreen(length, BATTLE_GROUND_Y + 160.f);
+    drawList->AddLine(left, right, IM_COL32(255, 160, 115, 255), 2.f);
     const std::string label = "length " + std::to_string(static_cast<int>(length));
     const ImVec2 labelSize = ImGui::CalcTextSize(label.c_str());
-    drawList->AddText(ImVec2((left + right - labelSize.x) / 2.f, y - labelSize.y - 2.f), IM_COL32(255, 160, 115, 255), label.c_str());
+    drawList->AddText(ImVec2((left.x + right.x - labelSize.x) / 2.f, left.y - labelSize.y - 2.f), IM_COL32(255, 160, 115, 255), label.c_str());
     drawList->PopClipRect();
 
-    ImGui::TextDisabled("Approximate battlefield: enemy base on the left, player base on the right.");
+    ImGui::TextDisabled("The whole stage at the default camera height. Red: the ground the units and bases stand on.");
 }

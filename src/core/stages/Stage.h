@@ -194,5 +194,6 @@ private:
     // Spawn bases at the start of the stage
     void spawn_bases(float health, float playerBaseHealth, const std::string& texture);
 
-    void init_background(const std::string& texturePath);
+    // Background copies along the stage (any image size), ground row from StageData (-1 = template ratio)
+    void init_background(float groundRow);
 };

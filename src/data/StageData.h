@@ -40,9 +40,27 @@ struct StageData
 
     // ===== Visuals =====
     std::string baseTexture;               // Texture used for the enemy base in this stage
-    std::string backgroundTexture;         // Background image for the battlefield
+    std::string backgroundTexture;         // Background image for the battlefield (any size)
+    float backgroundGroundRow = -1.f;      // Row of the background image units stand on (optional "backgroundGroundRow"),
+                                           // -1 = same place as the 1280 x 1120 template (see background_ground_row)
 
     // ===== Rewards =====
     std::vector<std::shared_ptr<RewardData>> rewards;
     // Rewards given to the player after completing the stage
 };
+
+/*
+ * Background placement
+ * --------------------
+ * Used by Stage::init_background and FishEditor's previews, so both place backgrounds the same way:
+ * the image is drawn x1.5, copies side by side, with its ground row on the line units stand on.
+ */
+inline constexpr float BACKGROUND_SCALE = 1.5f;
+inline constexpr float BATTLE_GROUND_Y = 720.f;                       // World y of the units' feet (1080 * 2/3, layer 0)
+inline constexpr float DEFAULT_BACKGROUND_GROUND_RATIO = 613.f / 1120.f; // The 1280 x 1120 template: row 613
+
+// Row of the background placed on the ground: the stage's own, or the template's ratio of the image height
+inline float background_ground_row(float groundRow, float imageHeight)
+{
+    return groundRow >= 0.f ? groundRow : imageHeight * DEFAULT_BACKGROUND_GROUND_RATIO;
+}
