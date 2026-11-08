@@ -73,6 +73,7 @@ public:
 
 public:
     // ====== Core Data ======
+    int uniqueId = -1;                             // Given by Stage on spawn, unique within a stage (debug tools, status log)
     std::shared_ptr<EntityData> data = nullptr;    // Entity template stats (cost, hp, attack, etc.)
     std::shared_ptr<StateMachine> stateMachine;    // Controls entity behavior
     std::weak_ptr<Stage> currentStage;             // Current stage reference (for spawning, targeting)

@@ -8,7 +8,7 @@ enum class StatusType
 
     PARALYZED,
     SLOW,
-    ATTACK_DOWN,
+    WEAKEN,
 
     COUNT // Not a status: keep it last (used to check statuses.json defines every status)
 };
@@ -20,7 +20,7 @@ inline const char* to_string(StatusType type)
     {
     case StatusType::PARALYZED:   return "PARALYZED";
     case StatusType::SLOW:        return "SLOW";
-    case StatusType::ATTACK_DOWN: return "ATTACK_DOWN";
+    case StatusType::WEAKEN: return "WEAKEN";
     default:                      return "NONE";
     }
 }
@@ -37,7 +37,7 @@ struct StatusEffect
 
     float durationRemaining = 0.f;
 
-    float value = 0.f;          // Strength (e.g. 0.5 = attack x0.5 for ATTACK_DOWN)
+    float value = 0.f;          // Strength (e.g. 0.5 = attack x0.5 for WEAKEN)
 };
 
 /*
@@ -47,7 +47,7 @@ struct StatusEffect
  */
 enum class StrongestRule
 {
-    LOWEST,   // A lower value is stronger (e.g. ATTACK_DOWN 0.3 beats 0.5)
+    LOWEST,   // A lower value is stronger (e.g. WEAKEN 0.3 beats 0.5)
     HIGHEST   // A higher value is stronger
 };
 

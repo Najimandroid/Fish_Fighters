@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <climits>
+#include <cstdio>
 #include <iostream>
 #include <string>
 
@@ -34,7 +35,7 @@ namespace
      * Debug editor for an entity's types and abilities, used before spawning.
      * The lists are copies: the data loaded from the JSON is never changed.
      */
-    void edit_types_and_abilities(std::vector<EntityType>& types, std::vector<AbilityData>& abilities)
+    void edit_types_and_abilities(std::vector<EntityType>& types, std::vector<AbilityData>& abilities, const std::vector<EntityType>& defaultTargets)
     {
         ImGui::SeparatorText("Types");
         ImGui::PushID("Types");
@@ -93,7 +94,7 @@ namespace
         if (abilityToRemove >= 0) abilities.erase(abilities.begin() + abilityToRemove);
 
         if (ImGui::Button("Add ability"))
-            abilities.push_back(AbilityData{ AbilityType::STRONG_AGAINST, {} });
+            abilities.push_back(AbilityData{ AbilityType::STRONG_AGAINST, defaultTargets });
     }
 
     /*
@@ -130,6 +131,121 @@ namespace
         }
 
         ImGui::Image(preview->sprite);
+    }
+
+    /*
+     * One entity listed in the Inspector, with its side ("Unit", "Enemy", "Player base", "Enemy base")
+     */
+    struct DebugEntityRow
+    {
+        std::shared_ptr<BattleEntity> entity;
+        const char* side;
+    };
+
+    std::string debug_entity_name(const DebugEntityRow& row)
+    {
+        return row.entity->data ? row.entity->data->name : row.side; // Bases have no data
+    }
+
+    ImVec4 debug_side_color(const char* side)
+    {
+        const std::string text = side;
+        if (text == "Unit") return ImVec4(0.55f, 0.85f, 1.f, 1.f);
+        if (text == "Enemy") return ImVec4(1.f, 0.6f, 0.55f, 1.f);
+        return ImVec4(0.85f, 0.85f, 0.85f, 1.f);
+    }
+
+    float debug_max_health(const BattleEntity& entity)
+    {
+        if (auto base = dynamic_cast<const BattleBase*>(&entity)) return base->maxHealth;
+        return entity.data ? entity.data->health * entity.magnification.x : 0.f;
+    }
+
+    /*
+     * Damage of one hit before strong against / resistant (they depend on the target):
+     * attackPower x attack multiplier (level or stage) x weaken
+     */
+    float debug_weaken_multiplier(const BattleEntity& entity)
+    {
+        const StatusEffect* weaken = entity.get_status(StatusType::WEAKEN);
+        return weaken ? weaken->value : 1.f;
+    }
+
+    float debug_damage_per_hit(const BattleEntity& entity)
+    {
+        if (!entity.data) return 0.f;
+        return entity.data->attackPower * entity.magnification.y * debug_weaken_multiplier(entity);
+    }
+
+    /*
+     * Everything about one entity, shown under the Inspector's entity list
+     */
+    void show_entity_details(const DebugEntityRow& row)
+    {
+        BattleEntity& entity = *row.entity;
+
+        ImGui::SeparatorText((debug_entity_name(row) + " #" + std::to_string(entity.uniqueId)).c_str());
+        ImGui::TextColored(debug_side_color(row.side), "%s", row.side);
+
+        // ----- Health -----
+        const float maxHealth = debug_max_health(entity);
+        char healthText[64];
+        std::snprintf(healthText, sizeof(healthText), "%.0f / %.0f HP", entity.currentHealth, maxHealth);
+        ImGui::ProgressBar(maxHealth > 0.f ? entity.currentHealth / maxHealth : 0.f, ImVec2(-FLT_MIN, 0.f), healthText);
+
+        // Debug kill goes through take_damage, like every other loss of health
+        if (ImGui::Button("Kill"))
+        {
+            DamageResult kill;
+            kill.finalDamage = entity.currentHealth;
+            entity.take_damage(kill);
+        }
+
+        if (!entity.data) return; // Bases: health only
+
+        const EntityData& data = *entity.data;
+        ImGui::Text("UID %d  |  State: %s", data.UID, entity.stateMachine->get_active_state_id().c_str());
+        ImGui::Text("Next knockback at %.0f HP (%d knockbacks in total)", entity.healthLeftBeforeNextKnockback, data.knockbackCount);
+
+        // ----- Attack -----
+        ImGui::SeparatorText("Attack");
+        ImGui::Text("Damage per hit: %.1f", debug_damage_per_hit(entity));
+        ImGui::TextDisabled("%d attack x%.2f level/stage x%.2f weaken", data.attackPower, entity.magnification.y, debug_weaken_multiplier(entity));
+        ImGui::TextDisabled("Strong against / resistant depend on the target");
+        ImGui::Text("%s attack, range %.0f, every %.2f s", data.attackType == 1 ? "Single" : "Area", data.attackRange, data.attackFrequency);
+
+        const float cooldownProgress = data.attackFrequency > 0.f ? std::min(1.f, entity.currentAttackCooldown / data.attackFrequency) : 1.f;
+        ImGui::ProgressBar(cooldownProgress, ImVec2(-FLT_MIN, 0.f), cooldownProgress >= 1.f ? "Attack ready" : "Attack cooldown");
+
+        // ----- Movement -----
+        ImGui::SeparatorText("Movement");
+        ImGui::Text("x = %.0f  |  layer %d  |  speed %.0f px/s", entity.position.x, entity.currentLayer, data.movementSpeed * 10.f);
+        ImGui::Text("HP x%.2f  |  attack x%.2f", entity.magnification.x, entity.magnification.y);
+
+        // ----- Types and abilities -----
+        ImGui::SeparatorText("Types");
+        if (data.types.empty()) ImGui::TextDisabled("None");
+        for (EntityType type : data.types) { ImGui::SameLine(); ImGui::TextUnformatted(to_string(type)); }
+        ImGui::NewLine();
+
+        ImGui::SeparatorText("Abilities");
+        if (data.abilities.empty()) ImGui::TextDisabled("None");
+        for (const AbilityData& ability : data.abilities)
+        {
+            std::string targets;
+            for (EntityType type : ability.targetTypes) targets += std::string(targets.empty() ? "" : ", ") + to_string(type);
+
+            if (is_on_hit(ability.type))
+                ImGui::BulletText("%s -> %s  x%.2f  %.0f%%  %.1f s", to_string(ability.type), targets.c_str(), ability.value, ability.chance, ability.duration);
+            else
+                ImGui::BulletText("%s -> %s", to_string(ability.type), targets.c_str());
+        }
+
+        // ----- Statuses -----
+        ImGui::SeparatorText("Statuses");
+        if (entity.get_statuses().empty()) ImGui::TextDisabled("None");
+        for (const StatusEffect& status : entity.get_statuses())
+            ImGui::BulletText("%s  x%.2f  %.1f s left", to_string(status.type), status.value, status.durationRemaining);
     }
 }
 #endif
@@ -408,7 +524,7 @@ void Game::debug_ui()
                 show_debug_preview("UnitPreview", unitData->texture, unitData->frameCount);
 
                 ImGui::PushID("Unit");
-                edit_types_and_abilities(unitTypes, unitAbilities);
+                edit_types_and_abilities(unitTypes, unitAbilities, {});
                 if (ImGui::Button("Reset to JSON data"))
                 {
                     unitTypes = unitData->types;
@@ -490,7 +606,7 @@ void Game::debug_ui()
                 show_debug_preview("EnemyPreview", enemyData->texture, enemyData->frameCount);
 
                 ImGui::PushID("Enemy");
-                edit_types_and_abilities(enemyTypes, enemyAbilities);
+                edit_types_and_abilities(enemyTypes, enemyAbilities, { EntityType::FISH }); // Enemy abilities target every fish by default
                 if (ImGui::Button("Reset to JSON data"))
                 {
                     enemyTypes = enemyData->types;
@@ -542,71 +658,166 @@ void Game::debug_ui()
 
     /*
     * =======================================================================================================
-    * Statuses Panel
+    * Inspector Panel
     * -----------------------------------------------------------------
-    * Guaranteed / normal chances, active statuses on the field, and the log of every status request
+    * Entities: every entity on the field (state, HP, damage per hit), click one to see everything about it
+    *           and highlight it on the battlefield
+    * Statuses: guaranteed / normal chances, active statuses, and the log of every status request
     */
     if (isStageLoaded)
     {
-        const ImVec2 statusWindowSize = ImVec2(480.f, 1080.f);
-        ImGui::SetNextWindowSize(statusWindowSize, ImGuiCond_Always);
+        const ImVec2 inspectorWindowSize = ImVec2(480.f, 1080.f);
+        ImGui::SetNextWindowSize(inspectorWindowSize, ImGuiCond_Always);
         ImGui::SetNextWindowPos(ImVec2(0.f, 0.f), ImGuiCond_Always);
 
-        ImGui::Begin("Statuses");
+        ImGui::Begin("Inspector");
 
-        StatusManager& statusManager = m_stage->get_status_manager();
+        // Every entity on the field, sorted by spawn order
+        std::vector<DebugEntityRow> rows;
+        if (auto base = m_stage->get_unit_base().lock()) rows.push_back({ base, "Player base" });
+        if (auto base = m_stage->get_enemy_base().lock()) rows.push_back({ base, "Enemy base" });
+        for (const auto& [layer, list] : m_stage->get_units()) for (const auto& entity : list) rows.push_back({ entity, "Unit" });
+        for (const auto& [layer, list] : m_stage->get_enemies()) for (const auto& entity : list) rows.push_back({ entity, "Enemy" });
+        std::sort(rows.begin(), rows.end(), [](const DebugEntityRow& a, const DebugEntityRow& b) { return a.entity->uniqueId < b.entity->uniqueId; });
 
-        // Guaranteed mode makes effects easy to see, normal mode keeps the real chances for balancing
-        bool isGuaranteed = statusManager.is_guaranteed_mode();
-        if (ImGui::Checkbox("Guaranteed effects (every chance = 100%)", &isGuaranteed))
-            statusManager.set_guaranteed_mode(isGuaranteed);
+        static int selectedEntityId = -1;
+        const DebugEntityRow* selectedRow = nullptr;
+        for (const auto& row : rows) if (row.entity->uniqueId == selectedEntityId) selectedRow = &row;
 
-        ImGui::SeparatorText("Active statuses");
-
-        bool hasAnyStatus = false;
-        auto listStatuses = [&](const char* side, const BattleEntitiesMap_t& entities)
+        if (ImGui::BeginTabBar("InspectorTabs"))
+        {
+            // ----- Entities -----
+            if (ImGui::BeginTabItem("Entities"))
             {
-                for (const auto& [layer, list] : entities)
-                {
-                    for (const auto& entity : list)
-                    {
-                        if (entity->get_statuses().empty() || !entity->data) continue;
-                        hasAnyStatus = true;
+                ImGui::TextDisabled("%d entities on the field. Click one for details.", static_cast<int>(rows.size()));
 
-                        ImGui::Text("%s %s (%.0f HP)", side, entity->data->name.c_str(), entity->currentHealth);
-                        for (const StatusEffect& status : entity->get_statuses())
-                            ImGui::BulletText("%s  x%.2f  %.1f s left", to_string(status.type), status.value, status.durationRemaining);
+                const ImGuiTableFlags tableFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit;
+                if (ImGui::BeginTable("EntityTable", 5, tableFlags, ImVec2(0.f, 300.f)))
+                {
+                    ImGui::TableSetupScrollFreeze(0, 1);
+                    ImGui::TableSetupColumn("ID");
+                    ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch);
+                    ImGui::TableSetupColumn("State");
+                    ImGui::TableSetupColumn("HP");
+                    ImGui::TableSetupColumn("Dmg/hit");
+                    ImGui::TableHeadersRow();
+
+                    for (const auto& row : rows)
+                    {
+                        const BattleEntity& entity = *row.entity;
+                        ImGui::TableNextRow();
+
+                        ImGui::TableNextColumn();
+                        char idLabel[32];
+                        std::snprintf(idLabel, sizeof(idLabel), "%d##Entity", entity.uniqueId);
+                        if (ImGui::Selectable(idLabel, entity.uniqueId == selectedEntityId, ImGuiSelectableFlags_SpanAllColumns))
+                            selectedEntityId = entity.uniqueId;
+
+                        ImGui::TableNextColumn();
+                        ImGui::TextColored(debug_side_color(row.side), "%s", debug_entity_name(row).c_str());
+
+                        ImGui::TableNextColumn();
+                        ImGui::TextUnformatted(entity.data ? entity.stateMachine->get_active_state_id().c_str() : "-");
+
+                        ImGui::TableNextColumn();
+                        ImGui::Text("%.0f/%.0f", entity.currentHealth, debug_max_health(entity));
+
+                        ImGui::TableNextColumn();
+                        if (entity.data) ImGui::Text("%.1f", debug_damage_per_hit(entity));
+                        else ImGui::TextUnformatted("-");
+                    }
+                    ImGui::EndTable();
+                }
+
+                if (selectedRow) show_entity_details(*selectedRow);
+                else ImGui::TextDisabled("No entity selected");
+
+                ImGui::EndTabItem();
+            }
+
+            // ----- Statuses -----
+            if (ImGui::BeginTabItem("Statuses"))
+            {
+                StatusManager& statusManager = m_stage->get_status_manager();
+
+                // Guaranteed mode makes effects easy to see, normal mode keeps the real chances for balancing
+                bool isGuaranteed = statusManager.is_guaranteed_mode();
+                if (ImGui::Checkbox("Guaranteed effects (every chance = 100%)", &isGuaranteed))
+                    statusManager.set_guaranteed_mode(isGuaranteed);
+
+                ImGui::SeparatorText("Active statuses");
+
+                bool hasAnyStatus = false;
+                for (const auto& row : rows)
+                {
+                    if (row.entity->get_statuses().empty()) continue;
+                    hasAnyStatus = true;
+
+                    ImGui::TextColored(debug_side_color(row.side), "%s #%d (%.0f HP)", debug_entity_name(row).c_str(), row.entity->uniqueId, row.entity->currentHealth);
+                    for (const StatusEffect& status : row.entity->get_statuses())
+                        ImGui::BulletText("%s  x%.2f  %.1f s left", to_string(status.type), status.value, status.durationRemaining);
+                }
+                if (!hasAnyStatus) ImGui::TextDisabled("No entity has a status");
+
+                ImGui::SeparatorText("Log (newest first)");
+                static bool isHidingMisses = false;
+                ImGui::Checkbox("Hide misses", &isHidingMisses);
+                ImGui::SameLine();
+                if (ImGui::Button("Clear log")) statusManager.clear_log();
+
+                ImGui::BeginChild("StatusLog");
+                const auto& log = statusManager.get_log();
+                for (auto it = log.rbegin(); it != log.rend(); ++it)
+                {
+                    if (isHidingMisses && it->outcome == StatusOutcome::MISSED) continue;
+
+                    if (it->outcome == StatusOutcome::MISSED)
+                    {
+                        ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.f), "[%.1fs] %s #%d -> %s #%d: %s missed",
+                            it->time, it->source.c_str(), it->sourceId, it->target.c_str(), it->targetId, to_string(it->status));
+                        ImGui::TextDisabled("    roll %.1f vs %.0f%% chance", it->roll, it->chance);
+                    }
+                    else if (it->outcome == StatusOutcome::STACKED)
+                    {
+                        ImGui::TextColored(ImVec4(1.f, 0.8f, 0.4f, 1.f), "[%.1fs] %s #%d -> %s #%d: %s stacked x%d",
+                            it->time, it->source.c_str(), it->sourceId, it->target.c_str(), it->targetId, to_string(it->status), it->stackCount);
+                        ImGui::TextDisabled("    first applied at %.1fs, now x%.2f with %.1f s left", it->firstTime, it->value, it->duration);
+                    }
+                    else
+                    {
+                        ImGui::TextColored(ImVec4(0.5f, 1.f, 0.6f, 1.f), "[%.1fs] %s #%d -> %s #%d: %s applied",
+                            it->time, it->source.c_str(), it->sourceId, it->target.c_str(), it->targetId, to_string(it->status));
+                        if (it->guaranteed)
+                            ImGui::TextDisabled("    guaranteed, x%.2f for %.1f s", it->value, it->duration);
+                        else
+                            ImGui::TextDisabled("    roll %.1f vs %.0f%% chance, x%.2f for %.1f s", it->roll, it->chance, it->value, it->duration);
                     }
                 }
-            };
+                if (log.empty()) ImGui::TextDisabled("No status requested yet");
+                ImGui::EndChild();
 
-        listStatuses("[Unit]", m_stage->get_units());
-        listStatuses("[Enemy]", m_stage->get_enemies());
-        if (!hasAnyStatus) ImGui::TextDisabled("No entity has a status");
+                ImGui::EndTabItem();
+            }
 
-        ImGui::SeparatorText("Log (newest first)");
-        if (ImGui::Button("Clear log")) statusManager.clear_log();
-
-        ImGui::BeginChild("StatusLog");
-        const auto& log = statusManager.get_log();
-        for (auto it = log.rbegin(); it != log.rend(); ++it)
-        {
-            const char* outcome = "MISSED";
-            if (it->outcome == StatusOutcome::APPLIED) outcome = "APPLIED";
-            else if (it->outcome == StatusOutcome::STACKED) outcome = "STACKED";
-
-            ImVec4 color = (it->outcome == StatusOutcome::MISSED) ? ImVec4(0.6f, 0.6f, 0.6f, 1.f) : ImVec4(0.5f, 1.f, 0.6f, 1.f);
-            ImGui::TextColored(color, "[%.1fs] %s -> %s: %s %s", it->time, it->source.c_str(), it->target.c_str(), to_string(it->status), outcome);
-
-            if (it->guaranteed)
-                ImGui::TextDisabled("    guaranteed, x%.2f for %.1f s", it->value, it->duration);
-            else
-                ImGui::TextDisabled("    roll %.1f vs %.0f%% chance, x%.2f for %.1f s", it->roll, it->chance, it->value, it->duration);
+            ImGui::EndTabBar();
         }
-        if (log.empty()) ImGui::TextDisabled("No status requested yet");
-        ImGui::EndChild();
 
         ImGui::End();
+
+        // Highlight the selected entity on the battlefield
+        if (selectedRow)
+        {
+            sf::FloatRect bounds = selectedRow->entity->sprite.getGlobalBounds();
+            sf::RectangleShape outline(bounds.size);
+            outline.setPosition(bounds.position);
+            outline.setFillColor(sf::Color::Transparent);
+            outline.setOutlineColor(sf::Color::Yellow);
+            outline.setOutlineThickness(3.f);
+
+            m_window.setView(m_stageCamera);
+            m_window.draw(outline);
+            m_window.setView(m_uiCamera);
+        }
     }
     //======================================================================================================
 

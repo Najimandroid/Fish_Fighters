@@ -29,18 +29,23 @@ enum class StatusOutcome
  * StatusLogEntry
  * --------------
  * One status request, kept for the debug tools.
+ * When a status stacks, the line of the status it stacks on is updated instead of adding a new one.
  */
 struct StatusLogEntry
 {
-    float time = 0.f;                    // Stage time (seconds) of the request
+    float time = 0.f;                    // Stage time (seconds) of the request, or of the last stack
+    float firstTime = 0.f;               // Stage time the status was first applied
+    int sourceId = -1;                   // Attacker's BattleEntity::uniqueId
+    int targetId = -1;                   // Target's BattleEntity::uniqueId
     std::string source;                  // Attacker's name
     std::string target;                  // Target's name
     StatusType status = StatusType::NONE;
-    float roll = 0.f;                    // Random roll (0-100), compared with the chance
+    float roll = 0.f;                    // Random roll (0-100) of the last request, compared with the chance
     float chance = 0.f;                  // Chance of the ability (%)
     bool guaranteed = false;             // Guaranteed mode was on
-    float value = 0.f;                   // Value requested
-    float duration = 0.f;                // Duration requested
+    float value = 0.f;                   // Value requested (after stacking: the strongest value now active)
+    float duration = 0.f;                // Duration requested (after stacking: time left)
+    int stackCount = 1;                  // How many times the status landed on this target
     StatusOutcome outcome = StatusOutcome::MISSED;
 };
 
@@ -54,7 +59,8 @@ struct StatusLogEntry
  *  - Stacking: the same status again adds the durations and keeps the strongest value,
  *    using the status's "strongest" rule from statuses.json
  *  - Counts down every active status and removes expired ones
- *  - Keeps a log of every request for the debug tools
+ *  - PARALYZED: puts the target in ParalyzedState, which lasts until the status expires
+ *  - Keeps a log of every request for the debug tools (one line per status, updated when it stacks)
  *
  * Statuses are stored on each entity (BattleEntity::get_statuses()), which can read them
  * but never change them: only this class can. They disappear with the entity, so nothing
@@ -89,6 +95,9 @@ public:
 private:
     // Adds the status, or stacks it if the target already has it
     StatusOutcome apply(BattleEntity& target, StatusType type, float value, float duration);
+
+    // Puts the target in ParalyzedState (cancels walking or attacking)
+    void enter_paralysis(BattleEntity& target);
 
     // True if `newValue` is stronger than `currentValue` for this status
     bool is_stronger(StatusType type, float newValue, float currentValue) const;

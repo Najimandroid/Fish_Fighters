@@ -2,6 +2,7 @@
 
 #include "../external/nlohmann/json.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
@@ -102,8 +103,10 @@ namespace
      * Abilities, e.g. "abilities": [ { "type": "STRONG_AGAINST", "targetTypes": [ 0 ] } ].
      * Optional. value, chance and duration are only needed by on-hit abilities,
      * and are checked so a typo can't create an ability that silently does nothing.
+     * Without "targetTypes", an ability targets `defaultTargets` (enemies: every fish).
+     * If there's no default either (units), the ability would affect nothing, so it's an error.
      */
-    std::vector<AbilityData> read_abilities(const json& object)
+    std::vector<AbilityData> read_abilities(const json& object, const std::vector<EntityType>& defaultTargets)
     {
         std::vector<AbilityData> abilities;
         if (!object.contains("abilities")) return abilities;
@@ -113,6 +116,10 @@ namespace
             AbilityData ability;
             ability.type = read_ability_type(abilityValue);
             ability.targetTypes = read_types(abilityValue, "targetTypes");
+
+            if (ability.targetTypes.empty()) ability.targetTypes = defaultTargets;
+            if (ability.targetTypes.empty())
+                throw std::runtime_error(std::string(to_string(ability.type)) + " needs \"targetTypes\" (e.g. [ 0 ] for SHELLED)");
 
             if (abilityValue.contains("value")) ability.value = read_float(abilityValue, "value");
             if (abilityValue.contains("chance")) ability.chance = read_float(abilityValue, "chance");
@@ -231,8 +238,13 @@ bool DataLoader::load_units(const std::string& path)
                 data->damageZone.second = data->attackRange;
             }
 
-            data->types = read_types(formValue, "types");
-            data->abilities = read_abilities(formValue);
+            // Every fish has the hidden FISH type, nothing else
+            if (formValue.contains("types"))
+                throw std::runtime_error(data->name + ": units can't have \"types\", every fish automatically has the hidden FISH type");
+            data->types = { EntityType::FISH };
+
+            // Unit abilities must say which enemy types they target
+            data->abilities = read_abilities(formValue, {});
 
             data->movementSpeed = read_float(formValue, "movementSpeed");
             data->knockbackCount = read_int(formValue, "knockbackCount");
@@ -294,7 +306,11 @@ bool DataLoader::load_enemies(const std::string& path)
         }
 
         data->types = read_types(value, "types");
-        data->abilities = read_abilities(value);
+        if (std::find(data->types.begin(), data->types.end(), EntityType::FISH) != data->types.end())
+            throw std::runtime_error(data->name + ": FISH is reserved for units");
+
+        // Enemy abilities target every fish unless they say otherwise
+        data->abilities = read_abilities(value, { EntityType::FISH });
 
         data->movementSpeed = read_float(value, "movementSpeed");
         data->knockbackCount = read_int(value, "knockbackCount");

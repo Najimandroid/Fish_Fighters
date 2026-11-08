@@ -11,8 +11,8 @@
         "strongest": "lowest",
         "iconIndex": 1
     },
-    "ATTACK_DOWN": {
-        "name": "Attack down",
+    "WEAKEN": {
+        "name": "Weaken",
         "description": "Deals less damage.",
         "strongest": "lowest",
         "iconIndex": 2

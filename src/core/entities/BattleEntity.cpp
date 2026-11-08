@@ -106,7 +106,8 @@ void BattleEntity::update_sprite()
     }
 
     // Update animation depending on current state
-    if (stateMachine->get_active_state_id() == "IDLE")
+    if (stateMachine->get_active_state_id() == "IDLE" ||
+        stateMachine->get_active_state_id() == "PARALYZED") // Paralyzed uses the idle frame
     {
         currentFrameIndex = 0;
     }

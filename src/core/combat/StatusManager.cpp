@@ -1,6 +1,8 @@
 #include "StatusManager.h"
 
 #include "../entities/BattleEntity.h"
+#include "../entities/machine/StateMachine.h"
+#include "../entities/machine/states/ParalyzedState.h"
 #include "../DataLoader.h"
 
 #include <algorithm>
@@ -39,6 +41,9 @@ StatusOutcome StatusManager::request(const BattleEntity& source, BattleEntity& t
 {
     StatusLogEntry entry;
     entry.time = stageTime;
+    entry.firstTime = stageTime;
+    entry.sourceId = source.uniqueId;
+    entry.targetId = target.uniqueId;
     entry.source = source.data ? source.data->name : "Unknown";
     entry.target = target.data ? target.data->name : "Unknown";
     entry.status = status_for_ability(ability.type);
@@ -58,6 +63,26 @@ StatusOutcome StatusManager::request(const BattleEntity& source, BattleEntity& t
     else
         entry.outcome = StatusOutcome::MISSED;
 
+    if (entry.outcome == StatusOutcome::STACKED)
+    {
+        // Stacking updates the line of the status it stacks on instead of adding a new one
+        const StatusEffect* status = target.get_status(entry.status);
+        entry.value = status ? status->value : entry.value;             // Strongest value now active
+        entry.duration = status ? status->durationRemaining : entry.duration; // Time left after stacking
+
+        auto previous = std::find_if(m_log.rbegin(), m_log.rend(), [&entry](const StatusLogEntry& line)
+            {
+                return line.targetId == entry.targetId && line.status == entry.status && line.outcome != StatusOutcome::MISSED;
+            });
+
+        if (previous != m_log.rend())
+        {
+            entry.firstTime = previous->firstTime;
+            entry.stackCount = previous->stackCount + 1;
+            m_log.erase(std::next(previous).base()); // Moved to the end so the newest change shows first
+        }
+    }
+
     m_log.push_back(entry);
     if (m_log.size() > MAX_LOG_ENTRIES) m_log.pop_front();
 
@@ -71,17 +96,36 @@ StatusOutcome StatusManager::apply(BattleEntity& target, StatusType type, float 
             return status.type == type;
         });
 
+    StatusOutcome outcome = StatusOutcome::APPLIED;
+
     if (it == target.m_activeStatuses.end())
     {
         target.m_activeStatuses.push_back({ type, duration, value });
-        return StatusOutcome::APPLIED;
+    }
+    else
+    {
+        // Already affected: durations add up, the strongest value is kept
+        it->durationRemaining += duration;
+        if (is_stronger(type, value, it->value)) it->value = value;
+        outcome = StatusOutcome::STACKED;
     }
 
-    // Already affected: durations add up, the strongest value is kept
-    it->durationRemaining += duration;
-    if (is_stronger(type, value, it->value)) it->value = value;
+    if (type == StatusType::PARALYZED) enter_paralysis(target);
 
-    return StatusOutcome::STACKED;
+    return outcome;
+}
+
+void StatusManager::enter_paralysis(BattleEntity& target)
+{
+    if (!target.stateMachine) return;
+
+    // A knocked back entity goes to ParalyzedState when its knockback ends (KnockbackState checks the status),
+    // a dead one stays dead, and an already paralyzed one just keeps the longer duration
+    const std::string state = target.stateMachine->get_active_state_id();
+    if (state == "KNOCKBACK" || state == "DEAD" || state == "PARALYZED") return;
+
+    // Leaving any other state cancels what the entity was doing (walking, attacking...)
+    target.stateMachine->change_state(std::make_unique<ParalyzedState>(target.stateMachine.get()));
 }
 
 // ==================
@@ -124,7 +168,7 @@ StatusType StatusManager::status_for_ability(AbilityType abilityType)
     {
     case AbilityType::PARALYZE_ATTACK:    return StatusType::PARALYZED;
     case AbilityType::SLOW_ATTACK:        return StatusType::SLOW;
-    case AbilityType::ATTACK_DOWN_ATTACK: return StatusType::ATTACK_DOWN;
+    case AbilityType::WEAKEN_ATTACK: return StatusType::WEAKEN;
     default:                              return StatusType::NONE;
     }
 }

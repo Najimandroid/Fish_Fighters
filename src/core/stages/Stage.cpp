@@ -84,6 +84,7 @@ void Stage::unload()
 
 	m_currentCash = 0;
 	m_cashRemainder = 0.f;
+	m_nextEntityId = 0;
 
 	m_enemies.clear();
 	m_units.clear();
@@ -502,10 +503,12 @@ void Stage::spawn_bases(float health, float playerBaseHealth, const std::string&
 {
 	m_enemyBase = std::make_unique<BattleBase>(health, texture);
 	m_enemyBase->position = { 0.0f, 540.0f - m_enemyBase->texture.getSize().y / 2 };
+	m_enemyBase->uniqueId = m_nextEntityId++;
 	m_enemyBase->update_position(1/60.f);
 
 	m_unitBase = std::make_unique<BattleBase>(playerBaseHealth, "assets/images/textures/bases/fishBaseTEST.png");
 	m_unitBase->position = { m_length, 540.0f - m_unitBase->texture.getSize().y / 2 };
+	m_unitBase->uniqueId = m_nextEntityId++;
 	m_unitBase->update_position(1 / 60.f);
 }
 
@@ -548,6 +551,7 @@ void Stage::spawn_enemy(std::shared_ptr<EntityData> enemyData, sf::Vector2f magn
 	battleEnemy->stateMachine->change_state(std::make_unique<IdleState>(battleEnemy->stateMachine.get()));
 
 	// Assign layer
+	battleEnemy->uniqueId = m_nextEntityId++;
 	battleEnemy->currentLayer = (layer > 0) ? layer : generate_random_spawn_layer();
 	battleEnemy->position.x = 0.f;
 	battleEnemy->update_position(1.f/60.f);
@@ -591,6 +595,7 @@ void Stage::spawn_unit(std::shared_ptr<EntityData> unitData, bool ignoreCostAndL
 	battleUnit->init_state_machine();
 	battleUnit->stateMachine->change_state(std::make_unique<IdleState>(battleUnit->stateMachine.get()));
 
+	battleUnit->uniqueId = m_nextEntityId++;
 	battleUnit->currentLayer = generate_random_spawn_layer();
 	battleUnit->position.x = m_length;
 	battleUnit->update_position(1.f / 60.f);

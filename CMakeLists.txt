@@ -46,6 +46,7 @@ set(PROJECT_SOURCES
     src/core/entities/machine/states/IdleState.cpp
     src/core/entities/machine/states/KnockbackState.cpp
     src/core/entities/machine/states/WalkState.cpp
+    src/core/entities/machine/states/ParalyzedState.cpp
 
     src/core/stages/Stage.cpp
 

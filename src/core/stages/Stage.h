@@ -147,6 +147,7 @@ private:
 
     int m_enemiesCount = 0;                  // Current number of enemies
     int m_unitsCount = 0;                    // Current number of units
+    int m_nextEntityId = 0;                  // Next BattleEntity::uniqueId to give (reset on unload)
 
     float m_length = 0.f;                    // Distance between the enemy and player bases
 

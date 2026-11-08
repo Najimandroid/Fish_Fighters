@@ -15,7 +15,7 @@ struct DamageResult
     float attackMultiplier = 1.0f;        // Attacker's magnification.y (stage scaling or unit level)
     float strongAgainstMultiplier = 1.0f; // STRONG_AGAINST_MULTIPLIER if the attacker is strong against the target's types
     float resistanceMultiplier = 1.0f;    // RESISTANT_MULTIPLIER if the target is resistant against the attacker's types
-    float attackDownMultiplier = 1.0f;    // Value of the attacker's ATTACK_DOWN status (e.g. 0.5), 1 without it
+    float weakenMultiplier = 1.0f;        // Value of the attacker's WEAKEN status (e.g. 0.5), 1 without it
     float finalDamage = 0.0f;             // Damage the target will take (every multiplier applied)
 };
 
@@ -30,7 +30,7 @@ struct DamageResult
  *  - Returns a DamageResult; the target then applies it with BattleEntity::take_damage()
  *
  * Owned by Stage. Hits on bases go through it like any other hit (bases have no types).
- * Statuses (attack down) are read from the attacker's read-only status list.
+ * Statuses (weaken) are read from the attacker's read-only status list.
  */
 class DamageCalculator
 {

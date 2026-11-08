@@ -12,12 +12,12 @@
  *
  * Two kinds:
  *  - Passive (STRONG_AGAINST, RESISTANT_AGAINST): read by the DamageCalculator
- *  - On hit (PARALYZE_ATTACK, SLOW_ATTACK, ATTACK_DOWN_ATTACK): inflict a status through the StatusManager
+ *  - On hit (PARALYZE_ATTACK, SLOW_ATTACK, WEAKEN_ATTACK): inflict a status through the StatusManager
  *
  * In the JSON (units.json forms and enemies.json), for example:
  *   "abilities": [
  *     { "type": "STRONG_AGAINST", "targetTypes": [ 0 ] },
- *     { "type": "ATTACK_DOWN_ATTACK", "targetTypes": [ 1 ], "value": 0.5, "chance": 30, "duration": 3 }
+ *     { "type": "WEAKEN_ATTACK", "targetTypes": [ 1 ], "value": 0.5, "chance": 30, "duration": 3 }
  *   ]
  */
 enum class AbilityType
@@ -29,7 +29,7 @@ enum class AbilityType
 
     PARALYZE_ATTACK,
     SLOW_ATTACK,
-    ATTACK_DOWN_ATTACK,
+    WEAKEN_ATTACK,
 
     COUNT // Not an ability: keep it last (used to list every ability type)
 };
@@ -43,7 +43,7 @@ inline const char* to_string(AbilityType type)
     case AbilityType::RESISTANT_AGAINST:  return "RESISTANT_AGAINST";
     case AbilityType::PARALYZE_ATTACK:    return "PARALYZE_ATTACK";
     case AbilityType::SLOW_ATTACK:        return "SLOW_ATTACK";
-    case AbilityType::ATTACK_DOWN_ATTACK: return "ATTACK_DOWN_ATTACK";
+    case AbilityType::WEAKEN_ATTACK: return "WEAKEN_ATTACK";
     default:                              return "NONE";
     }
 }
@@ -53,7 +53,7 @@ inline bool is_on_hit(AbilityType type)
 {
     return type == AbilityType::PARALYZE_ATTACK
         || type == AbilityType::SLOW_ATTACK
-        || type == AbilityType::ATTACK_DOWN_ATTACK;
+        || type == AbilityType::WEAKEN_ATTACK;
 }
 
 struct AbilityData
@@ -62,7 +62,7 @@ struct AbilityData
 
     std::vector<EntityType> targetTypes; // Applies if the other entity has any of these types (empty = applies to nothing)
 
-    float value = 0.f;      // On hit only: strength of the status (e.g. 0.5 = attack x0.5 for ATTACK_DOWN)
+    float value = 0.f;      // On hit only: strength of the status (e.g. 0.5 = attack x0.5 for WEAKEN)
 
     float chance = 100.f;   // On hit only: chance in % to inflict the status
 
