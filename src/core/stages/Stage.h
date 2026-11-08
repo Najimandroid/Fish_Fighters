@@ -62,12 +62,6 @@ public:
     // Spawn a new player unit in the stage
     void spawn_unit(std::shared_ptr<EntityData> unitData);
 
-    // Remove an enemy from the stage
-    void remove_enemy(BattleEnemy battleEnemy);
-
-    // Remove a unit from the stage
-    void remove_unit(BattleUnit battleUnit);
-
     // Generate a random layer for entity spawning
     int generate_random_spawn_layer();
 

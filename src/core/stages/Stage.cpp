@@ -581,22 +581,6 @@ void Stage::spawn_unit(std::shared_ptr<EntityData> unitData)
 }
 
 /*
-* Remove enemy from stage
-*/
-void Stage::remove_enemy(BattleEnemy battleEnemy)
-{
-	m_enemies.erase(battleEnemy.currentLayer);
-}
-
-/*
-* Remove unit from stage
-*/
-void Stage::remove_unit(BattleUnit battleUnit)
-{
-	m_units.erase(battleUnit.currentLayer);
-}
-
-/*
 * Generate random spawn layer for entities
 */
 int Stage::generate_random_spawn_layer()
