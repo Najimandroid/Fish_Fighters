@@ -3,6 +3,7 @@
 #include "tweeny.h"
 #include "machine/StateMachine.h"
 #include "../../data/EntityData.h"
+#include "status/StatusEffect.h"
 
 #include <SFML/Graphics/Texture.hpp>
 #include <SFML/Graphics/Sprite.hpp>
@@ -47,6 +48,8 @@ public:
     // Handles sprite frame updates (animation)
     virtual void update_sprite();
 
+    virtual void update_statuses(float deltaTime);
+
     // ====== Initialization ======
 
     // Attaches StateMachine to this entity
@@ -86,6 +89,9 @@ public:
     sf::FloatRect hitbox;                          // Entity's body for collisions
     sf::FloatRect attackRangeZone;                 // Range in which it can start attacking enemies
     sf::FloatRect damageZone;                      // Area where its attack actually deals damage
+
+    // ====== Status Effects ======
+    std::vector<StatusEffect> activeStatuses;
 
     // ====== Target Tracking ======
     struct WeakPtrPosXLess {

@@ -2,6 +2,9 @@
 
 #include <string>
 
+#include "EntityType.h"
+#include "AbilityData.h"
+
 enum AttackType;
 
 /*
@@ -39,6 +42,9 @@ struct EntityData
     float backswingTime = 0.0f;                 // Delay after attack before returning to idle
 
 	std::pair<float, float> damageZone = { 0.f, 0.f }; // Damage zone offsets (start, end) relative to unit position
+
+    std::pair<EntityType, EntityType> types = {EntityType::NONE, EntityType::NONE}; // Entity's type
+    std::vector<AbilityData> abilities;         // Entity's abilities
 
     float movementSpeed = 1.0f;                 // Movement speed across the battlefield
     int knockbackCount = 1;                     // Number of knockbacks the unit can sustain before dying

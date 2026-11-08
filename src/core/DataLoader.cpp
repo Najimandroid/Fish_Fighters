@@ -79,6 +79,17 @@ bool DataLoader::load_units(const std::string& path)
                 data->damageZone.second = data->attackRange;
             }
 
+            if (formValue.contains("types") && formValue["types"].is_array() && formValue["types"].size() == 2)
+            {
+                data->types.first = static_cast<EntityType>(formValue["types"][0].get<int>());
+                data->types.second = static_cast<EntityType>(formValue["types"][1].get<int>());
+            }
+            else
+            {
+                data->types.first = EntityType::NONE;
+                data->types.second = EntityType::NONE;
+            }
+
             data->movementSpeed = formValue.at("movementSpeed").get<float>();
             data->knockbackCount = formValue.at("knockbackCount").get<int>();
 
@@ -136,6 +147,17 @@ bool DataLoader::load_enemies(const std::string& path)
         {
             data->damageZone.first = 0.f;
             data->damageZone.second = data->attackRange;
+        }
+
+        if (value.contains("types") && value["types"].is_array() && value["types"].size() == 2)
+        {
+            data->types.first = static_cast<EntityType>(value["types"][0].get<int>());
+            data->types.second = static_cast<EntityType>(value["types"][1].get<int>());
+        }
+        else
+        {
+            data->types.first = EntityType::NONE;
+            data->types.second = EntityType::NONE;
         }
 
         data->movementSpeed = value.at("movementSpeed").get<float>();

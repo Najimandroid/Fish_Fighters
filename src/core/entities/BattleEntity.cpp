@@ -148,3 +148,24 @@ void BattleEntity::update_sprite()
         { static_cast<int>(texture.getSize().x / data->frameCount), static_cast<int>(texture.getSize().y) }
         });
 }
+
+// ==================
+// Statuses
+// ==================
+void BattleEntity::update_statuses(float deltaTime)
+{
+    for (auto it = activeStatuses.begin();
+        it != activeStatuses.end();)
+    {
+        it->durationRemaining -= deltaTime;
+
+        if (it->durationRemaining <= 0.f)
+        {
+            it = activeStatuses.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
+}
