@@ -1,25 +1,19 @@
 #pragma once
 
-#include "imgui.h"
-#include "imgui-SFML.h"
-
 #include <SFML/System/Vector2.hpp>
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 
+#include "GameSpeedState.h"
 #include "DataLoader.h"
 #include "stages/Stage.h"
 #include "../uis/UIManager.h"
 
-/*
-* GameSpeedState enumerates the possible game speed states.
-*/
-enum class GameSpeedState
-{
-    PAUSED = -1,
-    NORMAL,
-    FASTER
-};
+#ifdef DEBUG_MODE
+#include "../debug/DebugTools.h"
+#endif
+
+#include <memory>
 
 /*
  * Game class
@@ -30,6 +24,7 @@ enum class GameSpeedState
  *   - Handling input and events
  *   - Managing the stage and UI systems
  *   - Updating and rendering game objects each frame
+ *   - Owning the developer tools (DEBUG_MODE), which run in their own window
  *
  * Example usage:
  *   Game game = Game();
@@ -70,16 +65,8 @@ private:
     // Initializes UI and stage cameras with correct viewports and zoom
     void init_cameras();
 
-    // Renders debug UI when DEBUG_MODE is enabled
-    void debug_ui();
-
 	// Calculates delta time and applies pause/speed modifiers
 	void calculate_delta_time();
-
-#ifdef DEBUG_MODE
-    // Caches ImGui texture IDs for SFML textures
-	ImTextureID get_imgui_texture(const sf::Texture& texture);
-#endif
 
 private:
     // ----- Game State -----
@@ -91,11 +78,9 @@ private:
     sf::View m_stageCamera;        // Camera used to render the gameplay/stage
 
     sf::Clock m_deltaClock;        // Clock to compute deltaTime between frames
-    float m_deltaTime = 0.0f;      // Delta time in seconds since the last frame
-#ifdef DEBUG_MODE
-	sf::Clock m_deltaClockDebug;   // Clock for debug UI timing
-	float m_debugDeltaTime = 0.0f; // Delta time for debug UI
-#endif
+    float m_deltaTime = 0.0f;      // Delta time in seconds since the last frame (scaled by game speed)
+    float m_realDeltaTime = 0.0f;  // Delta time in seconds since the last frame (not scaled)
+    bool m_isStepFrameRequested = false; // Debug: play exactly one frame while paused
 
     const int m_frameRate = 120;    // Maximum framerate
     const sf::Vector2u m_logicalResolution = { 1920, 1080 }; // Reference resolution
@@ -111,6 +96,6 @@ private:
 
 	// ----- Debug -----
 #ifdef DEBUG_MODE
-    std::unordered_map<const sf::Texture*, ImTextureID> m_imguiTextureCache;
+    std::unique_ptr<DebugTools> m_debugTools; // Developer tools window (F1)
 #endif
 };

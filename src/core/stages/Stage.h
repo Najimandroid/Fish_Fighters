@@ -5,6 +5,7 @@
 #include "../entities/BattleBase.h"
 #include "../combat/DamageCalculator.h"
 #include "../combat/StatusManager.h"
+#include "../combat/CombatLog.h"
 
 #include <SFML/Graphics.hpp>
 
@@ -119,6 +120,12 @@ public:
     // Get the calculator that decides the damage of every hit
     const DamageCalculator& get_damage_calculator() const;
 
+    // Get the log of the last hits (debug tools)
+    CombatLog& get_combat_log();
+
+    // Debug tools only: sets the current cash (clamped to the maximum)
+    void set_cash(int cash);
+
     // Get the manager that applies, stacks and removes statuses
     StatusManager& get_status_manager();
 
@@ -163,6 +170,7 @@ private:
     // ----- Combat -----
     DamageCalculator m_damageCalculator;     // Decides the damage of every hit (units, enemies, bases)
     StatusManager m_statusManager;           // Applies, stacks and removes statuses on units and enemies
+    CombatLog m_combatLog;                   // Last hits of the stage, for the debug tools
 
     // ----- Bases -----
     std::shared_ptr<BattleBase> m_enemyBase; // Enemy base

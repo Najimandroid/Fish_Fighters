@@ -63,6 +63,39 @@ StatusOutcome StatusManager::request(const BattleEntity& source, BattleEntity& t
     else
         entry.outcome = StatusOutcome::MISSED;
 
+    add_to_log(entry, target);
+    return entry.outcome;
+}
+
+StatusOutcome StatusManager::debug_apply(BattleEntity& target, StatusType type, float value, float duration, float stageTime)
+{
+    StatusLogEntry entry;
+    entry.time = stageTime;
+    entry.firstTime = stageTime;
+    entry.targetId = target.uniqueId;
+    entry.source = "Debug";
+    entry.target = target.data ? target.data->name : "Unknown";
+    entry.status = type;
+    entry.chance = 100.f;
+    entry.guaranteed = true;
+    entry.value = value;
+    entry.duration = duration;
+
+    if (type == StatusType::NONE || !target.data) return StatusOutcome::MISSED; // Bases never get statuses
+
+    entry.outcome = apply(target, type, value, duration);
+    add_to_log(entry, target);
+    return entry.outcome;
+}
+
+void StatusManager::debug_clear(BattleEntity& target)
+{
+    // A paralyzed entity leaves ParalyzedState by itself once the status is gone
+    target.m_activeStatuses.clear();
+}
+
+void StatusManager::add_to_log(StatusLogEntry entry, const BattleEntity& target)
+{
     if (entry.outcome == StatusOutcome::STACKED)
     {
         // Stacking updates the line of the status it stacks on instead of adding a new one
@@ -85,8 +118,6 @@ StatusOutcome StatusManager::request(const BattleEntity& source, BattleEntity& t
 
     m_log.push_back(entry);
     if (m_log.size() > MAX_LOG_ENTRIES) m_log.pop_front();
-
-    return entry.outcome;
 }
 
 StatusOutcome StatusManager::apply(BattleEntity& target, StatusType type, float value, float duration)

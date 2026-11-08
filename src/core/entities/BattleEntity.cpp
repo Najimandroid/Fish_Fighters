@@ -20,26 +20,6 @@ BattleEntity::BattleEntity() :
     // Initialize state machine
     stateMachine(std::make_shared<StateMachine>())
 {
-#ifdef DEBUG_MODE
-    // Debug rendering: show hitbox and ranges
-    rHitbox.setPosition(position);
-    rHitbox.setSize(hitbox.size);
-    rHitbox.setOutlineColor(sf::Color::Blue);
-    rHitbox.setFillColor(sf::Color::Transparent);
-    rHitbox.setOutlineThickness(1.f);
-
-    rAttackRangeZone.setPosition(position);
-    rAttackRangeZone.setSize(attackRangeZone.size);
-    rAttackRangeZone.setOutlineColor(sf::Color::Yellow);
-    rAttackRangeZone.setFillColor(sf::Color::Transparent);
-    rAttackRangeZone.setOutlineThickness(2.f);
-
-    rDamageZone.setPosition(position);
-    rDamageZone.setSize(damageZone.size);
-    rDamageZone.setOutlineColor(sf::Color::Red);
-    rDamageZone.setFillColor(sf::Color::Transparent);
-    rDamageZone.setOutlineThickness(3.f);
-#endif
 }
 
 // ==================

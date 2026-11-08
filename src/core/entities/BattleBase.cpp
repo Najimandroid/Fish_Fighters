@@ -32,18 +32,6 @@ BattleBase::BattleBase(float health_, std::string texture_)
     // ===== Sprite =====
     bool isTextureLoaded = texture.loadFromFile(texture_);
     sprite.setTexture(texture, true);
-
-#ifdef DEBUG_MODE
-    // ===== Debug Rectangles =====
-    rHitbox.setSize(hitbox.size);
-    rHitbox.setPosition(position);
-
-    rAttackRangeZone.setSize(attackRangeZone.size);
-    rAttackRangeZone.setPosition(position);
-
-    rDamageZone.setSize(damageZone.size);
-    rDamageZone.setPosition(position);
-#endif
 }
 
 // ==================
@@ -80,11 +68,4 @@ void BattleBase::update_position(float deltaTime)
     hitbox.position = position;
     attackRangeZone.position = position;
     damageZone.position = position;
-
-#ifdef DEBUG_MODE
-    // Update debug rectangle positions
-    rHitbox.setPosition(position);
-    rAttackRangeZone.setPosition(position);
-    rDamageZone.setPosition(position);
-#endif
 }

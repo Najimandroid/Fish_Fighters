@@ -58,18 +58,6 @@ BattleEnemy::BattleEnemy(std::shared_ptr<EntityData> data_, sf::Vector2f magnifi
     hitbox.position = position;
     attackRangeZone.position = position;
     damageZone.position = { position.x + halfFrameWidth + dmgZoneStartPos, position.y };
-
-#ifdef DEBUG_MODE
-    // ===== Debug Rectangles =====
-    rHitbox.setSize(hitbox.size);
-    rHitbox.setPosition(position);
-
-    rAttackRangeZone.setSize(attackRangeZone.size);
-    rAttackRangeZone.setPosition(position);
-
-    rDamageZone.setSize(damageZone.size);
-    rDamageZone.setPosition(position);
-#endif
 }
 
 // ==================
@@ -131,11 +119,4 @@ void BattleEnemy::update_position(float deltaTime)
     hitbox.position = position;
     attackRangeZone.position = position;
     damageZone.position = { position.x + hitbox.size.x + data->damageZone.first, position.y };
-
-#ifdef DEBUG_MODE
-    // Update debug rectangles
-    rHitbox.setPosition(hitbox.position);
-    rAttackRangeZone.setPosition(attackRangeZone.position);
-    rDamageZone.setPosition(damageZone.position);
-#endif
 }

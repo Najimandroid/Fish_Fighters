@@ -84,6 +84,12 @@ public:
     void update(float deltaTime, const std::map<int, std::vector<std::shared_ptr<BattleEntity>>>& entityList);
 
     // ===== Debug =====
+    // Applies a status directly (no ability, no chance roll), logged with "Debug" as the source
+    StatusOutcome debug_apply(BattleEntity& target, StatusType type, float value, float duration, float stageTime);
+
+    // Removes every status of `target`
+    void debug_clear(BattleEntity& target);
+
     void set_guaranteed_mode(bool isGuaranteed);     // true = every chance is 100%
     bool is_guaranteed_mode() const;
     const std::deque<StatusLogEntry>& get_log() const; // Newest last
@@ -98,6 +104,9 @@ private:
 
     // Puts the target in ParalyzedState (cancels walking or attacking)
     void enter_paralysis(BattleEntity& target);
+
+    // Adds a request to the log; a stack updates the line of the status it stacks on
+    void add_to_log(StatusLogEntry entry, const BattleEntity& target);
 
     // True if `newValue` is stronger than `currentValue` for this status
     bool is_stronger(StatusType type, float newValue, float currentValue) const;

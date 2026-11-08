@@ -120,12 +120,6 @@ public:
     float currentFrameCooldown = 0.0f;             // Timer for switching frames
     int currentFrameIndex = 0;                     // Current animation frame index
 
-#ifdef DEBUG_MODE
-    // ====== Debug Rendering ======
-    sf::RectangleShape rHitbox;
-    sf::RectangleShape rAttackRangeZone;
-    sf::RectangleShape rDamageZone;
-#endif
 
 private:
     // ====== Status Effects ======

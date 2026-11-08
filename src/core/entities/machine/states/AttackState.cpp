@@ -112,7 +112,9 @@ void AttackState::perform(float deltaTime)
 
         auto hit = [&](BattleEntity& target)
             {
-                target.take_damage(damageCalculator.calculate(*entity, target));
+                const DamageResult result = damageCalculator.calculate(*entity, target);
+                target.take_damage(result);
+                stage->get_combat_log().record(*entity, target, result, stage->get_elapsed_time());
                 statusManager.apply_on_hit_abilities(*entity, target, stage->get_elapsed_time());
             };
 

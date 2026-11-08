@@ -52,6 +52,7 @@ set(PROJECT_SOURCES
 
     src/core/combat/DamageCalculator.cpp
     src/core/combat/StatusManager.cpp
+    src/core/combat/CombatLog.cpp
 
     src/uis/UIManager.cpp
 
@@ -73,6 +74,17 @@ set(PROJECT_SOURCES
     src/uis/widgets/UIChapterMap.cpp
 
     src/data/PlayerData.cpp
+
+    # Developer tools (their content is only compiled with DEBUG_MODE)
+    src/debug/DebugTools.cpp
+    src/debug/DebugWidgets.cpp
+    src/debug/panels/PerformancePanel.cpp
+    src/debug/panels/StagePanel.cpp
+    src/debug/panels/SpawnerPanel.cpp
+    src/debug/panels/InspectorPanel.cpp
+    src/debug/panels/StatusLogPanel.cpp
+    src/debug/panels/CombatLogPanel.cpp
+    src/debug/panels/OverlayPanel.cpp
     # ← ajoute ici les futurs fichiers, par ex.:
     # src/utils/NewSystem.cpp
 )

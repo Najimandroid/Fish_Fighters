@@ -91,6 +91,7 @@ void Stage::unload()
 	m_enemyStageDatas.clear();
 	m_backgroundSprites.clear();
 	m_statusManager.clear_log();             // Statuses themselves are removed with their entities
+	m_combatLog.clear();
 
 	m_enemyBase = nullptr;
 	m_unitBase = nullptr;
@@ -432,6 +433,16 @@ StatusManager& Stage::get_status_manager()
 	return m_statusManager;
 }
 
+CombatLog& Stage::get_combat_log()
+{
+	return m_combatLog;
+}
+
+void Stage::set_cash(int cash)
+{
+	m_currentCash = std::clamp(cash, 0, m_maxCash);
+}
+
 float Stage::get_elapsed_time() const
 {
 	return m_elapsedTime;
@@ -455,11 +466,6 @@ void Stage::render(sf::RenderWindow& window)
 	window.draw(m_enemyBase->sprite);
 	window.draw(m_unitBase->sprite);
 
-#ifdef DEBUG_MODE
-	// Draw hitboxes for debugging
-	window.draw(m_enemyBase->rHitbox);
-	window.draw(m_unitBase->rHitbox);
-#endif
 
 	// Draw enemies (back to front)
 	for (auto& [layer, enemyList] : std::ranges::reverse_view(m_enemies))
@@ -469,12 +475,6 @@ void Stage::render(sf::RenderWindow& window)
 		{
 			window.draw(enemy->sprite);
 
-#ifdef DEBUG_MODE
-			// Draw hitboxes for debugging
-			window.draw(enemy->rDamageZone);
-			window.draw(enemy->rAttackRangeZone);
-			window.draw(enemy->rHitbox);
-#endif
 		}
 	}
 
@@ -486,12 +486,6 @@ void Stage::render(sf::RenderWindow& window)
 		{
 			window.draw(unit->sprite);
 
-#ifdef DEBUG_MODE
-			// Draw hitboxes for debugging
-			window.draw(unit->rDamageZone);
-			window.draw(unit->rAttackRangeZone);
-			window.draw(unit->rHitbox);
-#endif
 		}
 	}
 }
