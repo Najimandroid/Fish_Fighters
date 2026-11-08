@@ -55,7 +55,7 @@ void Stage::load(int uid)
 	m_length = stageJson->length;
 
 	// Spawn bases with provided health and texture
-	spawn_bases(stageJson->baseHealth, stageJson->baseTexture);
+	spawn_bases(stageJson->baseHealth, stageJson->playerBaseHealth, stageJson->baseTexture);
 
 	// Copy enemy spawn data from stage JSON
 	m_enemyStageDatas.clear();
@@ -498,13 +498,13 @@ void Stage::render(sf::RenderWindow& window)
 /*
 * Spawn the two bases in their positions
 */
-void Stage::spawn_bases(float health, const std::string& texture)
+void Stage::spawn_bases(float health, float playerBaseHealth, const std::string& texture)
 {
 	m_enemyBase = std::make_unique<BattleBase>(health, texture);
 	m_enemyBase->position = { 0.0f, 540.0f - m_enemyBase->texture.getSize().y / 2 };
 	m_enemyBase->update_position(1/60.f);
 
-	m_unitBase = std::make_unique<BattleBase>(350.0f, "assets/images/textures/bases/fishBaseTEST.png");
+	m_unitBase = std::make_unique<BattleBase>(playerBaseHealth, "assets/images/textures/bases/fishBaseTEST.png");
 	m_unitBase->position = { m_length, 540.0f - m_unitBase->texture.getSize().y / 2 };
 	m_unitBase->update_position(1 / 60.f);
 }

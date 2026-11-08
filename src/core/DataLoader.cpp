@@ -336,6 +336,7 @@ bool DataLoader::load_stages(const std::string& path)
         data->unitsLimit = read_int(value, "unitsLimit");
 
         data->baseHealth = read_float(value, "baseHealth");
+        if (value.contains("playerBaseHealth")) data->playerBaseHealth = read_float(value, "playerBaseHealth");
 
         data->length = read_float(value, "length");
 
@@ -727,6 +728,11 @@ const std::map<std::pair<int, int>, std::shared_ptr<EntityData>>& DataLoader::ge
 const std::unordered_map<int, std::shared_ptr<EntityData>>& DataLoader::get_enemies_database() const
 {
     return m_enemiesDatabase;
+}
+
+const std::unordered_map<int, std::shared_ptr<StageData>>& DataLoader::get_stages_database() const
+{
+    return m_stagesDatabase;
 }
 
 std::weak_ptr<PlayerData> DataLoader::get_player_data() const

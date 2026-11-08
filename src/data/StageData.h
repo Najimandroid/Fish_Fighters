@@ -31,6 +31,7 @@ struct StageData
     int enemiesLimit = 10;                 // Maximum number of enemies alive at once
     int unitsLimit = 10;                   // Maximum number of player units deployed at once
     float baseHealth = 100.0f;             // Starting health of the enemy base
+    float playerBaseHealth = 350.0f;       // Starting health of the player base (optional "playerBaseHealth" in the JSON)
     float length = 960.0f;                 // Distance between the enemy base and the player base
 
     // ===== Enemy Waves =====

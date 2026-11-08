@@ -183,7 +183,7 @@ private:
 private:
 
     // Spawn bases at the start of the stage
-    void spawn_bases(float health, const std::string& texture);
+    void spawn_bases(float health, float playerBaseHealth, const std::string& texture);
 
     void init_background(const std::string& texturePath);
 };

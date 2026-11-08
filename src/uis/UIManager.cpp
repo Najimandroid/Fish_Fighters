@@ -299,6 +299,23 @@ void UIManager::generate_battle_uis()
             };
         });
 
+    // Exit button: leaves the battle without rewards and goes back to the chapter map
+    auto exitButton = std::make_shared<UIButtonElement>(
+        sf::Vector2f{ 120.f, 60.f },
+        sf::Vector2f{ 300.f, 20.f },
+        "EXIT"
+    );
+    exitButton->set_callback([this]() {
+        m_pendingAction = [this]() {
+            if (m_setGameSpeedCallback) m_setGameSpeedCallback(GameSpeedState::NORMAL);
+            if (auto stage = m_stage.lock())
+            {
+                stage->unload();
+                generate_chapter_map_uis();
+            }
+            };
+        });
+
 	auto deploymentIcons = std::make_shared<UIDeploymentIcons>(m_dataLoader, m_stage.lock());
 	auto stageCash = std::make_shared<UIStageCash>(m_stage.lock());
 	auto cashUp = std::make_shared<UICashUp>(m_stage.lock());
@@ -306,6 +323,7 @@ void UIManager::generate_battle_uis()
 
     add_ui_element(pauseButton);
     add_ui_element(speedButton);
+    add_ui_element(exitButton);
 	add_ui_element(deploymentIcons);
 	add_ui_element(stageCash);
 	add_ui_element(cashUp);

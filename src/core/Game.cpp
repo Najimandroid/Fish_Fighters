@@ -1,6 +1,7 @@
 #include "Game.h"
 
 #include <algorithm>
+#include <climits>
 #include <iostream>
 #include <string>
 
@@ -277,13 +278,35 @@ void Game::debug_ui()
     {
         ImGui::Text("Main Menu Debug Tools");
 
-        static int levelToLoad = 0;
-        ImGui::InputInt("Level ID", &levelToLoad);
+        // Only defined stages can be picked (the DEBUG stage is UID -1)
+        std::vector<std::shared_ptr<StageData>> stages;
+        for (const auto& [uid, data] : m_dataLoader->get_stages_database()) stages.push_back(data);
+        std::sort(stages.begin(), stages.end(), [](const auto& a, const auto& b) { return a->UID < b->UID; });
 
-        if (ImGui::Button("Load Level"))
+        static int levelToLoad = -1;
+        auto stageLabel = [](const StageData& data) { return std::to_string(data.UID) + " - " + data.name; };
+
+        std::shared_ptr<StageData> selectedStage;
+        for (const auto& data : stages) if (data->UID == levelToLoad) selectedStage = data;
+        if (!selectedStage && !stages.empty()) { selectedStage = stages.front(); levelToLoad = selectedStage->UID; }
+
+        if (selectedStage)
         {
-            m_stage->load(levelToLoad);
-            m_uiManager->generate_battle_uis();
+            if (ImGui::BeginCombo("Stage", stageLabel(*selectedStage).c_str()))
+            {
+                for (const auto& data : stages)
+                {
+                    if (ImGui::Selectable(stageLabel(*data).c_str(), data->UID == levelToLoad))
+                        levelToLoad = data->UID;
+                }
+                ImGui::EndCombo();
+            }
+
+            if (ImGui::Button("Load Stage"))
+            {
+                m_stage->load(levelToLoad);
+                m_uiManager->generate_battle_uis();
+            }
         }
 
         ImGui::Separator();
@@ -301,9 +324,20 @@ void Game::debug_ui()
     {
         /*
         * =======================================================================================================
+        * Exit current stage (no rewards)
+        */
+        if (ImGui::Button("Exit Stage", ImVec2(-FLT_MIN, 0.f)))
+        {
+            m_speedState = GameSpeedState::NORMAL;
+            m_stage->unload();
+            m_uiManager->generate_fish_tank_uis();
+        }
+
+        /*
+        * =======================================================================================================
         * Spawn Unit
         * -------------------------------------------------------------------------------------------------------
-        * Pick any unit form defined in units.json, edit its types and abilities, then spawn it.
+        * Pick any unit defined in units.json and one of its forms, edit its types and abilities, then spawn it.
         * Edits are made on a copy: the data loaded from the JSON is never changed.
         */
         if (ImGui::CollapsingHeader("Spawn Unit", ImGuiTreeNodeFlags_DefaultOpen))
@@ -319,21 +353,43 @@ void Game::debug_ui()
             if (units.find(selectedUnit) == units.end() && !units.empty())
                 selectedUnit = units.begin()->first;
 
-            auto unitLabel = [](const std::pair<int, int>& key, const EntityData& data)
-                {
-                    return std::to_string(key.first) + " - " + data.name + " (form " + std::to_string(key.second) + ")";
-                };
-
             auto selected = units.find(selectedUnit);
             if (selected != units.end())
             {
-                // Only defined units can be picked
-                if (ImGui::BeginCombo("Unit", unitLabel(selected->first, *selected->second).c_str()))
+                // One entry per unit (named after its base form). Only defined units can be picked
+                auto unitLabel = [&units](int uid)
+                    {
+                        auto baseForm = units.lower_bound({ uid, INT_MIN });
+                        return std::to_string(uid) + " - " + baseForm->second->name;
+                    };
+
+                if (ImGui::BeginCombo("Unit", unitLabel(selectedUnit.first).c_str()))
                 {
+                    int previousUid = INT_MIN;
                     for (const auto& [key, data] : units)
                     {
-                        if (ImGui::Selectable(unitLabel(key, *data).c_str(), key == selectedUnit))
-                            selectedUnit = key;
+                        if (key.first == previousUid) continue; // Other forms of the same unit
+                        previousUid = key.first;
+
+                        if (ImGui::Selectable(unitLabel(key.first).c_str(), key.first == selectedUnit.first))
+                            selectedUnit = units.lower_bound({ key.first, INT_MIN })->first; // Base form
+                    }
+                    ImGui::EndCombo();
+                }
+
+                // Only the forms this unit has can be picked
+                auto formLabel = [](const std::pair<int, int>& key, const EntityData& data)
+                    {
+                        return (key.second == 0 ? std::string("Base") : "Evolved " + std::to_string(key.second)) + " - " + data.name;
+                    };
+
+                selected = units.find(selectedUnit);
+                if (ImGui::BeginCombo("Form", formLabel(selected->first, *selected->second).c_str()))
+                {
+                    for (auto it = units.lower_bound({ selectedUnit.first, INT_MIN }); it != units.end() && it->first.first == selectedUnit.first; ++it)
+                    {
+                        if (ImGui::Selectable(formLabel(it->first, *it->second).c_str(), it->first == selectedUnit))
+                            selectedUnit = it->first;
                     }
                     ImGui::EndCombo();
                 }
@@ -362,7 +418,8 @@ void Game::debug_ui()
 
                 ImGui::Checkbox("Free spawn (ignore cost and units limit)", &isFreeUnitSpawn);
 
-                if (ImGui::Button("Spawn Unit", ImVec2(-FLT_MIN, 0.f)))
+                // "##Unit" keeps the button's ID different from the "Spawn Unit" header above
+                if (ImGui::Button("Spawn##Unit", ImVec2(-FLT_MIN, 0.f)))
                 {
                     auto customData = std::make_shared<EntityData>(*unitData);
                     customData->types = unitTypes;
@@ -459,7 +516,8 @@ void Game::debug_ui()
                 static bool bypassEnemyLimit = false;
                 ImGui::Checkbox("Bypass Enemy Limit", &bypassEnemyLimit);
 
-                if (ImGui::Button("Spawn Enemy", ImVec2(-FLT_MIN, 0.f)))
+                // "##Enemy" keeps the button's ID different from the "Spawn Enemy" header above
+                if (ImGui::Button("Spawn##Enemy", ImVec2(-FLT_MIN, 0.f)))
                 {
                     auto customData = std::make_shared<EntityData>(*enemyData);
                     customData->types = enemyTypes;
@@ -477,18 +535,6 @@ void Game::debug_ui()
             }
         }
 
-        ImGui::Separator();
-        ImGui::Text("Stage Parameters");
-
-        /*
-        * =======================================================================================================
-        * Exit current stage
-        */
-        if (ImGui::Button("Exit Stage"))
-        {
-            m_stage->unload();
-            m_uiManager->generate_fish_tank_uis();
-        }
     }
 
     ImGui::End();
