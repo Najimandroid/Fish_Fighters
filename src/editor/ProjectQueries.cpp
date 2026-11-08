@@ -1,6 +1,6 @@
 #include "ProjectQueries.h"
 
-#include "../data/StageData.h"
+#include "../data/BattlefieldLayout.h"
 
 namespace
 {
@@ -167,13 +167,21 @@ namespace ProjectQueries
     // ==================
     float background_ground_row(const ProjectData& project, const std::string& path, float imageHeight)
     {
-        for (int uid : project.sorted_uids(DataFile::STAGES))
-        {
-            const ordered_json& stage = *project.find_uid(DataFile::STAGES, uid);
-            auto row = stage.find("backgroundGroundRow");
-            if (string_of(stage, "backgroundTexture") == path && row != stage.end() && row->is_number())
-                return row->get<float>();
-        }
-        return ::background_ground_row(-1.f, imageHeight);
+        const ordered_json& backgrounds = project.get(DataFile::BACKGROUNDS);
+        auto background = backgrounds.find(path);
+        float row = -1.f;
+        if (background != backgrounds.end() && background->is_object() && background->contains("groundRow") && (*background)["groundRow"].is_number())
+            row = (*background)["groundRow"].get<float>();
+        return ::background_ground_row(row, imageHeight);
+    }
+
+    std::vector<Reference> stages_using_background(const ProjectData& project, const std::string& path)
+    {
+        std::vector<Reference> stages;
+        for_each_entry(project, DataFile::STAGES, [&](int uid, const ordered_json& stage)
+            {
+                if (string_of(stage, "backgroundTexture") == path) stages.push_back({ stage_label(project, uid), { ContentKind::STAGE, uid } });
+            });
+        return stages;
     }
 }

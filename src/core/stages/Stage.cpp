@@ -68,7 +68,7 @@ void Stage::load(int uid)
 
 	// Load the background (any size) and repeat it along the stage
 	bool success = m_backgroundTexture.loadFromFile(stageJson->backgroundTexture);
-	init_background(stageJson->backgroundGroundRow);
+	init_background(m_dataLoader->get_background_ground_row(stageJson->backgroundTexture));
 
 	focus_on_player_base(); // Focus camera
 
@@ -492,18 +492,18 @@ void Stage::render(sf::RenderWindow& window)
 
 /*
 * Spawn the two bases in their positions.
-* They stand on the same ground as the units (their bottom on BATTLE_GROUND_Y),
-* where the background's ground line is placed.
+* They stand on the last layer (BACK_LAYER_Y), behind every unit and enemy,
+* on the ground of the background.
 */
 void Stage::spawn_bases(float health, float playerBaseHealth, const std::string& texture)
 {
 	m_enemyBase = std::make_unique<BattleBase>(health, texture);
-	m_enemyBase->position = { 0.0f, BATTLE_GROUND_Y - m_enemyBase->texture.getSize().y };
+	m_enemyBase->position = { 0.0f, BACK_LAYER_Y - m_enemyBase->texture.getSize().y };
 	m_enemyBase->uniqueId = m_nextEntityId++;
 	m_enemyBase->update_position(1/60.f);
 
 	m_unitBase = std::make_unique<BattleBase>(playerBaseHealth, "assets/images/textures/bases/fishBaseTEST.png");
-	m_unitBase->position = { m_length, BATTLE_GROUND_Y - m_unitBase->texture.getSize().y };
+	m_unitBase->position = { m_length, BACK_LAYER_Y - m_unitBase->texture.getSize().y };
 	m_unitBase->uniqueId = m_nextEntityId++;
 	m_unitBase->update_position(1 / 60.f);
 }
@@ -611,7 +611,7 @@ int Stage::generate_random_spawn_layer()
 {
 	static std::random_device rd;
 	static std::mt19937 gen(rd());
-	std::uniform_int_distribution<> distrib(0, 50);
+	std::uniform_int_distribution<> distrib(0, MAX_BATTLE_LAYER);
 
 	return distrib(gen);
 }

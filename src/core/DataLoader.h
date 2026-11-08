@@ -4,6 +4,8 @@
 #include "../data/PlayerData.h"
 #include "../data/EnemyStageData.h"
 #include "../data/StageData.h"
+#include "../data/BackgroundData.h"
+#include "../data/BattlefieldLayout.h"
 #include "../data/ChapterData.h"
 #include "entities/status/StatusEffect.h"
 
@@ -62,6 +64,9 @@ public:
     const std::shared_ptr<EntityData> get_enemy_data(int uid) const;
     const std::shared_ptr<StageData> get_stage_data(int uid) const;
     const std::shared_ptr<ChapterData> get_chapter_data(int uid) const;
+
+    // Row of a background image the units stand on (backgrounds.json), -1 if it doesn't set one
+    float get_background_ground_row(const std::string& texture) const;
     const std::shared_ptr<StatusData> get_status_data(StatusType type) const;
     std::weak_ptr<PlayerData> get_player_data() const;
 
@@ -81,6 +86,7 @@ private:
     bool load_stages(const std::string& path);
     bool load_player(const std::string& path);
     bool load_chapters(const std::string& path);
+    bool load_backgrounds(const std::string& path);   // Optional file
     bool load_statuses(const std::string& path);
 
     // Internal saving method
@@ -112,6 +118,7 @@ private:
     std::unordered_map<int, std::shared_ptr<StageData>> m_stagesDatabase;
     std::unordered_map<int, std::shared_ptr<ChapterData>> m_chaptersDatabase;
     std::unordered_map<StatusType, std::shared_ptr<StatusData>> m_statusesDatabase;
+    std::unordered_map<std::string, std::shared_ptr<BackgroundData>> m_backgroundsDatabase;   // Key: image path
 
     // ----- Player Data -----
     std::shared_ptr<PlayerData> m_playerData = nullptr;

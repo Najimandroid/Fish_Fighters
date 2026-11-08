@@ -1,0 +1,11 @@
+{
+    "assets/images/textures/backgrounds/stages/CoralSeabed.png": {
+        "groundRow": 791
+    },
+    "assets/images/textures/backgrounds/stages/RockField.png": {
+        "groundRow": 773
+    },
+    "assets/images/textures/backgrounds/stages/ShallowSeabed.png": {
+        "groundRow": 723
+    }
+}

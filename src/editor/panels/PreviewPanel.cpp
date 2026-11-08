@@ -2,7 +2,7 @@
 
 #include "../EditorWidgets.h"
 #include "../ProjectQueries.h"
-#include "../../data/StageData.h"
+#include "../../data/BattlefieldLayout.h"
 #include "../../uis/widgets/UIStatusIcons.h"
 
 #include <algorithm>
@@ -707,27 +707,27 @@ void PreviewPanel::draw_stage(EditorContext& ctx, const ordered_json& stage)
     drawList->PushClipRect(origin, ImVec2(origin.x + size.x, origin.y + size.y), true);
     drawList->AddRectFilled(origin, ImVec2(origin.x + size.x, origin.y + size.y), IM_COL32(8, 16, 20, 255));
 
-    // Background copies with the stage's ground line, like Stage::init_background
+    // Background copies with its ground line (backgrounds.json), like Stage::init_background
     if (background)
     {
-        const auto row = stage.find("backgroundGroundRow");
-        const float groundRow = background_ground_row(row != stage.end() && row->is_number() ? row->get<float>() : -1.f,
+        const float groundRow = ProjectQueries::background_ground_row(ctx.project, read_string(stage, "backgroundTexture"),
             static_cast<float>(background->getSize().y));
         draw_background_copies(drawList, *background, groundRow, worldLeft, worldRight, toScreen);
     }
 
-    // Bases standing on the ground: enemy at x 0 (left), player at the stage length (right), like Stage::spawn_bases
+    // Bases on the last layer: enemy at x 0 (left), player at the stage length (right), like Stage::spawn_bases
     auto drawBase = [&](const sf::Texture* texture, float worldX)
         {
             if (!texture) return;
             const float height = static_cast<float>(texture->getSize().y);
-            drawList->AddImage(texture_id(*texture), toScreen(worldX, BATTLE_GROUND_Y - height),
-                toScreen(worldX + texture->getSize().x, BATTLE_GROUND_Y));
+            drawList->AddImage(texture_id(*texture), toScreen(worldX, BACK_LAYER_Y - height),
+                toScreen(worldX + texture->getSize().x, BACK_LAYER_Y));
         };
     drawBase(enemyBase, 0.f);
     drawBase(playerBase, length);
 
-    // Ground line and length
+    // Layers (front to back) and length
+    drawList->AddRectFilled(toScreen(worldLeft, BACK_LAYER_Y), toScreen(worldRight, BATTLE_GROUND_Y), IM_COL32(255, 80, 80, 40));
     drawList->AddLine(toScreen(worldLeft, BATTLE_GROUND_Y), toScreen(worldRight, BATTLE_GROUND_Y), IM_COL32(255, 80, 80, 150), 1.f);
     const ImVec2 left = toScreen(0.f, BATTLE_GROUND_Y + 160.f);
     const ImVec2 right = toScreen(length, BATTLE_GROUND_Y + 160.f);
@@ -737,5 +737,5 @@ void PreviewPanel::draw_stage(EditorContext& ctx, const ordered_json& stage)
     drawList->AddText(ImVec2((left.x + right.x - labelSize.x) / 2.f, left.y - labelSize.y - 2.f), IM_COL32(255, 160, 115, 255), label.c_str());
     drawList->PopClipRect();
 
-    ImGui::TextDisabled("The whole stage at the default camera height. Red: the ground the units and bases stand on.");
+    ImGui::TextDisabled("The whole stage at the default camera height. Red: the layers units stand on, the bases on the last one.");
 }

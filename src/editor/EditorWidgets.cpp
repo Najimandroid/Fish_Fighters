@@ -6,6 +6,7 @@
 #include "../data/EntityType.h"
 #include "../core/combat/DamageCalculator.h"
 #include "../core/entities/status/StatusEffect.h"
+#include "../data/BattlefieldLayout.h"
 
 #include "imgui_stdlib.h"
 
@@ -764,6 +765,107 @@ namespace EditorWidgets
             ctx.commit(file);
         }
 
+        ImGui::PopID();
+    }
+
+    // ==================
+    // Backgrounds
+    // ==================
+    void ground_line_field(EditorContext& ctx, const std::string& backgroundPath)
+    {
+        const sf::Texture* background = ctx.textures.get(backgroundPath);
+        if (!background)
+        {
+            ImGui::TextDisabled("Pick a background to place its ground line.");
+            return;
+        }
+
+        const DataFile file = DataFile::BACKGROUNDS;
+        ordered_json& backgrounds = ctx.project.get(file);
+        const float imageHeight = static_cast<float>(background->getSize().y);
+        const bool isCustom = backgrounds.contains(backgroundPath) && backgrounds[backgroundPath].contains("groundRow");
+        float row = ProjectQueries::background_ground_row(ctx.project, backgroundPath, imageHeight);
+
+        auto setRow = [&](float value) { backgrounds[backgroundPath]["groundRow"] = std::lround(value); };
+        auto clearRow = [&]()
+            {
+                backgrounds[backgroundPath].erase("groundRow");
+                if (backgrounds[backgroundPath].empty()) backgrounds.erase(backgroundPath);
+            };
+
+        ImGui::PushID(backgroundPath.c_str());
+
+        // ----- Value -----
+        if (begin_properties("Ground"))
+        {
+            property_label("Ground line", "The row of the background the units stand on (front layer), saved in backgrounds.json.\n"
+                "Every stage using this background uses it.\nWithout it: the same place as the 1280 x 1120 template (55% of the height).");
+            bool hasCustomRow = isCustom;
+            if (ImGui::Checkbox("##customGround", &hasCustomRow))
+            {
+                if (hasCustomRow) setRow(row);
+                else clearRow();
+                ctx.commit(file);
+            }
+            ImGui::SetItemTooltip("Set the ground line of this background");
+            ImGui::SameLine();
+            if (hasCustomRow)
+            {
+                ImGui::SetNextItemWidth(-FLT_MIN);
+                if (ImGui::DragFloat("##groundRow", &row, 1.f, 0.f, imageHeight, "row %.0f", ImGuiSliderFlags_AlwaysClamp)) setRow(row);
+                if (ImGui::IsItemDeactivatedAfterEdit()) ctx.commit(file);
+            }
+            else ImGui::TextDisabled("Template ratio: row %.0f of %.0f", row, imageHeight);
+
+            property_label("Used by");
+            const std::vector<Reference> stages = ProjectQueries::stages_using_background(ctx.project, backgroundPath);
+            if (stages.empty()) ImGui::TextDisabled("No stage yet");
+            for (size_t i = 0; i < stages.size(); ++i)
+            {
+                ImGui::PushID(static_cast<int>(i));
+                if (ImGui::TextLink(stages[i].label.c_str())) ctx.defer([&ctx, target = stages[i].target]() { ctx.select(target); });
+                ImGui::PopID();
+            }
+            end_properties();
+        }
+
+        // ----- Image with the line (drag it) -----
+        const ImVec2 imageSize(static_cast<float>(background->getSize().x), imageHeight);
+        const ImVec2 size = fit(imageSize, ImVec2(std::min(ImGui::GetContentRegionAvail().x, 640.f), 420.f));
+        const float scale = size.x / imageSize.x;
+        const ImVec2 origin = ImGui::GetCursorScreenPos();
+        ImGui::InvisibleButton("##groundImage", size);
+
+        if (ImGui::IsItemActive())
+        {
+            row = std::clamp((ImGui::GetIO().MousePos.y - origin.y) / scale, 0.f, imageHeight);
+            setRow(row);
+        }
+        if (ImGui::IsItemDeactivated()) ctx.commit(file);
+        if (ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+        ImGui::SetItemTooltip("Click or drag to place the ground line");
+
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        drawList->AddImage(texture_id(*background), origin, ImVec2(origin.x + size.x, origin.y + size.y));
+        auto rowY = [&](float imageRow) { return origin.y + std::clamp(imageRow, 0.f, imageHeight) * scale; };
+        auto worldRow = [&](float worldY) { return row + (worldY - BATTLE_GROUND_Y) / BACKGROUND_SCALE; };
+
+        // What the camera shows (default zoom, and zoomed out at most): world y 54-1026 and -270-1350
+        auto band = [&](float worldTop, float worldBottom, ImU32 color)
+            {
+                drawList->AddRect(ImVec2(origin.x + 1.f, rowY(worldRow(worldTop))), ImVec2(origin.x + size.x - 1.f, rowY(worldRow(worldBottom))), color, 0.f, 0, 1.5f);
+            };
+        band(-270.f, 1350.f, IM_COL32(255, 255, 255, 70));
+        band(54.f, 1026.f, IM_COL32(255, 215, 70, 200));
+
+        // Layers: front (the line) to back (the bases), MAX_BATTLE_LAYER world px higher
+        const float backRow = worldRow(BACK_LAYER_Y);
+        drawList->AddRectFilled(ImVec2(origin.x, rowY(backRow)), ImVec2(origin.x + size.x, rowY(row)), IM_COL32(255, 80, 80, 60));
+        drawList->AddLine(ImVec2(origin.x, rowY(backRow)), ImVec2(origin.x + size.x, rowY(backRow)), IM_COL32(255, 160, 115, 255), 1.5f);
+        drawList->AddLine(ImVec2(origin.x, rowY(row)), ImVec2(origin.x + size.x, rowY(row)), IM_COL32(255, 80, 80, 255), 2.f);
+
+        ImGui::TextDisabled("Red: the front layer. Orange: the last layer, where the bases stand. Units stand in between.");
+        ImGui::TextDisabled("Yellow: what the camera shows at the default zoom. White: zoomed out at most.");
         ImGui::PopID();
     }
 }

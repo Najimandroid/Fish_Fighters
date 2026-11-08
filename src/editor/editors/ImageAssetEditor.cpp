@@ -3,7 +3,7 @@
 #include "../EditorWidgets.h"
 #include "../ImageTools.h"
 #include "../ProjectQueries.h"
-#include "../../data/StageData.h"
+#include "../../data/BattlefieldLayout.h"
 
 #include <SFML/Graphics/Texture.hpp>
 
@@ -24,7 +24,7 @@ namespace
         std::string path;                        // Image this state belongs to
         sf::Image source;                        // The file as it is on disk
         bool isSourceLoaded = false;
-        int blendWidth = 96;                     // Columns crossfaded across the seam
+        int blendWidth = 128;                    // Columns the two edges overlap on
         bool isPreviewingBlend = true;
         int resultBlendWidth = -1;               // Blend width of `result`, -1 = not computed
         sf::Image result;
@@ -129,19 +129,20 @@ namespace
         const sf::Vector2u size = s_tool.source.getSize();
 
         ImGui::PushTextWrapPos(0.f);
-        ImGui::TextDisabled("The game repeats this background side by side. If the seam shows, the blend crossfades the "
-            "right edge into the left one, then stretches the image back to its width (%.1f%% here).",
-            100.f * s_tool.blendWidth / std::max(1u, size.x - s_tool.blendWidth));
+        ImGui::TextDisabled("The game repeats this background side by side. If the seam shows, the right edge is laid over "
+            "the left one and cut along the path where both look most alike; only the light and colors are blended across "
+            "the band. The image gets %d px narrower (the game takes any width).", s_tool.blendWidth);
         ImGui::PopTextWrapPos();
 
         // ----- Blend settings -----
-        ImGui::Checkbox("Preview the blend", &s_tool.isPreviewingBlend);
+        ImGui::Checkbox("Preview", &s_tool.isPreviewingBlend);
         ImGui::SameLine(0.f, 20.f);
         ImGui::SetNextItemWidth(220.f);
-        ImGui::SliderInt("Blend width", &s_tool.blendWidth, 8, std::max(8, static_cast<int>(size.x / 3)), "%d px");
+        ImGui::SliderInt("Overlap", &s_tool.blendWidth, 32, std::max(32, static_cast<int>(size.x / 3)), "%d px");
         const bool isSliding = ImGui::IsItemActive();
         ImGui::SameLine();
-        help_marker("Wider: smoother, but things near the edges can show twice (faded). Narrower: sharper, but the change is more visible.");
+        help_marker("Wider: more room to find a hidden path and a softer change of light. "
+            "Narrower: keeps more of the image.");
 
         // Recomputed when the slider is released (a few milliseconds)
         if (s_tool.isPreviewingBlend && !isSliding && s_tool.resultBlendWidth != s_tool.blendWidth) compute_result();
@@ -218,6 +219,11 @@ namespace ImageAssetEditor
         if (ImGui::BeginTabItem("General"))
         {
             general_tab(ctx, path, *texture, folder);
+            ImGui::EndTabItem();
+        }
+        if (folder == ImageFolder::STAGE_BACKGROUNDS && ImGui::BeginTabItem("Ground line"))
+        {
+            ground_line_field(ctx, path);
             ImGui::EndTabItem();
         }
         if (folder == ImageFolder::STAGE_BACKGROUNDS && ImGui::BeginTabItem("Tiling"))

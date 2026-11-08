@@ -90,4 +90,9 @@ namespace EditorWidgets
 
     // Abilities list. Enemies always target every fish; units choose the enemy types they target
     void abilities_field(EditorContext& ctx, DataFile file, ordered_json& object, bool isEnemy);
+
+    // ===== Backgrounds =====
+    // Where the units stand on a stage background ("groundRow" in backgrounds.json, shared by
+    // every stage using the image): the image with a line to drag, the layers and the camera's view
+    void ground_line_field(EditorContext& ctx, const std::string& backgroundPath);
 }

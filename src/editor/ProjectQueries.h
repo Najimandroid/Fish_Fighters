@@ -32,7 +32,8 @@ namespace ProjectQueries
     std::vector<Reference> uses_of_image(const ProjectData& project, const std::string& path);
 
     // ===== Backgrounds =====
-    // Row of a stage background units stand on: from the first stage using it that sets one,
-    // else the template's ratio of the image height (background_ground_row in StageData.h)
+    // Row of a stage background units stand on: its "groundRow" in backgrounds.json,
+    // else the template's ratio of the image height (background_ground_row in BattlefieldLayout.h)
     float background_ground_row(const ProjectData& project, const std::string& path, float imageHeight);
+    std::vector<Reference> stages_using_background(const ProjectData& project, const std::string& path);
 }

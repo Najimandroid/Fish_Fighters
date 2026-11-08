@@ -189,6 +189,7 @@ bool DataLoader::load_all()
         load(&DataLoader::load_units, m_dataFolder + "units.json") &&
         load(&DataLoader::load_enemies, m_dataFolder + "enemies.json") &&
         load(&DataLoader::load_stages, m_dataFolder + "stages.json") &&
+        load(&DataLoader::load_backgrounds, m_dataFolder + "backgrounds.json") &&
         load(&DataLoader::load_chapters, m_dataFolder + "chapters.json") &&
         load(&DataLoader::load_player, player_save_path());
 }
@@ -383,11 +384,7 @@ bool DataLoader::load_stages(const std::string& path)
         data->baseTexture = value.at("baseTexture").get<std::string>();
         data->backgroundTexture = value.at("backgroundTexture").get<std::string>();
         if (value.contains("backgroundGroundRow"))
-        {
-            data->backgroundGroundRow = read_float(value, "backgroundGroundRow");
-            if (data->backgroundGroundRow < 0.f)
-                throw std::runtime_error(data->name + ": \"backgroundGroundRow\" must be 0 or more (a row of the background image)");
-        }
+            throw std::runtime_error(data->name + ": the ground line belongs to the background now, in backgrounds.json (\"groundRow\")");
 
         // Just to avoid resizing the vector too many times
         size_t numberOfDifferentEnemies = value.at("numberOfDifferentEnemies").get<size_t>();
@@ -488,6 +485,37 @@ bool DataLoader::load_statuses(const std::string& path)
     }
 
     m_statusesLoaded = true;
+    return true;
+}
+
+/*
+ * Load background settings from JSON (keyed by image path).
+ * Optional file: without it, or for an image it doesn't list, backgrounds use the defaults.
+ */
+bool DataLoader::load_backgrounds(const std::string& path)
+{
+    m_backgroundsDatabase.clear();
+
+    std::ifstream file(path);
+    if (!file) return true; // Nothing customized
+
+    json data;
+    file >> data;
+
+    for (auto& [texture, value] : data.items())
+    {
+        auto background = std::make_shared<BackgroundData>();
+        background->texture = texture;
+
+        if (value.contains("groundRow"))
+        {
+            background->groundRow = read_float(value, "groundRow");
+            if (background->groundRow < 0.f)
+                throw std::runtime_error(texture + ": \"groundRow\" must be 0 or more (a row of the image)");
+        }
+
+        m_backgroundsDatabase[texture] = background;
+    }
     return true;
 }
 
@@ -742,6 +770,12 @@ const std::shared_ptr<StageData> DataLoader::get_stage_data(int uid) const
     }
 
     return std::make_shared<StageData>();
+}
+
+float DataLoader::get_background_ground_row(const std::string& texture) const
+{
+    auto it = m_backgroundsDatabase.find(texture);
+    return it != m_backgroundsDatabase.end() ? it->second->groundRow : -1.f;
 }
 
 const std::shared_ptr<ChapterData> DataLoader::get_chapter_data(int uid) const

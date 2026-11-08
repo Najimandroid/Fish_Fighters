@@ -22,8 +22,17 @@ bool ProjectData::load()
 
     for (size_t i = 0; i < FILE_COUNT; ++i)
     {
-        const std::filesystem::path path = get_data_folder() / file_name(static_cast<DataFile>(i));
+        const DataFile dataFile = static_cast<DataFile>(i);
+        const std::filesystem::path path = get_data_folder() / file_name(dataFile);
         std::ifstream file(path);
+        if (!file && dataFile == DataFile::BACKGROUNDS)
+        {
+            // Optional: created on the first save that sets something
+            m_documents[i] = ordered_json::object();
+            m_committed[i] = m_documents[i];
+            m_isUnsaved[i] = false;
+            continue;
+        }
         if (!file)
         {
             m_error = "Can't open " + path.string();
@@ -200,6 +209,7 @@ const char* ProjectData::file_name(DataFile file)
     case DataFile::STAGES:   return "stages.json";
     case DataFile::CHAPTERS: return "chapters.json";
     case DataFile::STATUSES: return "statuses.json";
+    case DataFile::BACKGROUNDS: return "backgrounds.json";
     default:                 return "";
     }
 }

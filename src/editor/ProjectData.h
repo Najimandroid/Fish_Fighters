@@ -22,6 +22,7 @@ enum class DataFile
     STAGES,
     CHAPTERS,
     STATUSES,
+    BACKGROUNDS,    // Optional file: an empty one is used if it doesn't exist yet
 
     COUNT
 };

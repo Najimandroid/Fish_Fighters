@@ -10,8 +10,10 @@
 namespace ImageTools
 {
     // Makes an image repeat seamlessly side by side (stage backgrounds).
-    // Its last `blendWidth` columns are crossfaded over its first ones, so the right edge flows into the
-    // left one, then the image is stretched back to its width (by blendWidth / width, a few percent).
-    // The height and everything away from the edges stay as they were.
-    sf::Image make_seamless(const sf::Image& source, unsigned blendWidth);
+    // Its last `overlap` columns are laid over its first ones, and the result is `overlap` px narrower:
+    //  - light and colors (a blur) fade from one edge to the other across the whole overlap
+    //  - details are cut along the path where both edges look most alike (dynamic programming),
+    //    so nothing shows twice
+    // Rows don't move: the ground line stays where it was.
+    sf::Image make_seamless(const sf::Image& source, unsigned overlap);
 }

@@ -236,6 +236,18 @@ namespace
             }
         }
     }
+
+    // ==================
+    // Backgrounds (backgrounds.json, keyed by image path)
+    // ==================
+    void check_backgrounds(const ProjectData& project, ValidationReport& report)
+    {
+        for (const auto& [path, background] : project.get(DataFile::BACKGROUNDS).items())
+        {
+            if (!project.exists(path))
+                add(report, false, "backgrounds.json has settings for " + path + ", which doesn't exist (renamed or deleted?)", {});
+        }
+    }
 }
 
 namespace Validator
@@ -250,6 +262,7 @@ namespace Validator
         check_enemies(project, textures, report);
         check_stages(project, report);
         check_chapters(project, report);
+        check_backgrounds(project, report);
 
         return report;
     }
