@@ -4,6 +4,7 @@
 #include "../DataLoader.h"
 #include "../entities/BattleBase.h"
 #include "../combat/DamageCalculator.h"
+#include "../combat/StatusManager.h"
 
 #include <SFML/Graphics.hpp>
 
@@ -61,7 +62,8 @@ public:
     void spawn_enemy(std::shared_ptr<EntityData> enemyData, sf::Vector2f magnification, int layer, bool isBoss, bool bypassLimit);
 
     // Spawn a new player unit in the stage
-    void spawn_unit(std::shared_ptr<EntityData> unitData);
+    // ignoreCostAndLimit: debug tools only, spawns for free even when the units limit is reached
+    void spawn_unit(std::shared_ptr<EntityData> unitData, bool ignoreCostAndLimit = false);
 
     // Generate a random layer for entity spawning
     int generate_random_spawn_layer();
@@ -117,6 +119,12 @@ public:
     // Get the calculator that decides the damage of every hit
     const DamageCalculator& get_damage_calculator() const;
 
+    // Get the manager that applies, stacks and removes statuses
+    StatusManager& get_status_manager();
+
+    // Seconds since the stage was loaded
+    float get_elapsed_time() const;
+
     // Check if a stage is currently loaded
     bool is_loaded() const;
 
@@ -153,6 +161,7 @@ private:
 
     // ----- Combat -----
     DamageCalculator m_damageCalculator;     // Decides the damage of every hit (units, enemies, bases)
+    StatusManager m_statusManager;           // Applies, stacks and removes statuses on units and enemies
 
     // ----- Bases -----
     std::shared_ptr<BattleBase> m_enemyBase; // Enemy base

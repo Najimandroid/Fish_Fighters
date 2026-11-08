@@ -49,13 +49,19 @@ public:
     // Handles sprite frame updates (animation)
     virtual void update_sprite();
 
-    virtual void update_statuses(float deltaTime);
-
     // ====== Combat ======
 
     // Applies a hit decided by the DamageCalculator.
     // The entity never decides how much damage it takes; this is the only place currentHealth goes down.
     void take_damage(const DamageResult& result);
+
+    // ====== Status Effects ======
+    // Read-only: only the StatusManager adds, changes or removes statuses
+
+    const std::vector<StatusEffect>& get_statuses() const;
+
+    // Returns the active status of this type, or nullptr if the entity doesn't have it
+    const StatusEffect* get_status(StatusType type) const;
 
     // ====== Initialization ======
 
@@ -97,9 +103,6 @@ public:
     sf::FloatRect attackRangeZone;                 // Range in which it can start attacking enemies
     sf::FloatRect damageZone;                      // Area where its attack actually deals damage
 
-    // ====== Status Effects ======
-    std::vector<StatusEffect> activeStatuses;
-
     // ====== Target Tracking ======
     struct WeakPtrPosXLess {
         // Ordering functor for target set (sorts entities by X position)
@@ -122,4 +125,9 @@ public:
     sf::RectangleShape rAttackRangeZone;
     sf::RectangleShape rDamageZone;
 #endif
+
+private:
+    // ====== Status Effects ======
+    friend class StatusManager;                    // The only class allowed to change them
+    std::vector<StatusEffect> m_activeStatuses;
 };

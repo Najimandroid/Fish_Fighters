@@ -1,0 +1,20 @@
+{
+    "PARALYZED": {
+        "name": "Paralyzed",
+        "description": "Can't move or attack. Can still be knocked back.",
+        "strongest": "highest",
+        "iconIndex": 0
+    },
+    "SLOW": {
+        "name": "Slow",
+        "description": "Moves slower.",
+        "strongest": "lowest",
+        "iconIndex": 1
+    },
+    "ATTACK_DOWN": {
+        "name": "Attack down",
+        "description": "Deals less damage.",
+        "strongest": "lowest",
+        "iconIndex": 2
+    }
+}

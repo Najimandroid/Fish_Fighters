@@ -18,6 +18,7 @@ void Stage::init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<UIManag
 	m_dataLoader = dataLoader;
 	m_uiManager = uiManager;
 	m_stageCamera = stageCamera;
+	m_statusManager.init(dataLoader);
 	unload();
 }
 
@@ -88,6 +89,7 @@ void Stage::unload()
 	m_units.clear();
 	m_enemyStageDatas.clear();
 	m_backgroundSprites.clear();
+	m_statusManager.clear_log();             // Statuses themselves are removed with their entities
 
 	m_enemyBase = nullptr;
 	m_unitBase = nullptr;
@@ -144,6 +146,10 @@ void Stage::update(float deltaTime)
 	}
 
 	update_cash(deltaTime);
+
+	// Count down statuses before entities act, so an expired status no longer affects them this frame
+	m_statusManager.update(deltaTime, m_units);
+	m_statusManager.update(deltaTime, m_enemies);
 
 	update_bases(deltaTime);
 	update_enemies(deltaTime);
@@ -420,6 +426,16 @@ const DamageCalculator& Stage::get_damage_calculator() const
 	return m_damageCalculator;
 }
 
+StatusManager& Stage::get_status_manager()
+{
+	return m_statusManager;
+}
+
+float Stage::get_elapsed_time() const
+{
+	return m_elapsedTime;
+}
+
 bool Stage::is_loaded() const
 {
 	return m_isLoaded;
@@ -546,10 +562,10 @@ void Stage::spawn_enemy(std::shared_ptr<EntityData> enemyData, sf::Vector2f magn
 /*
 * Spawn a new unit
 */
-void Stage::spawn_unit(std::shared_ptr<EntityData> unitData)
+void Stage::spawn_unit(std::shared_ptr<EntityData> unitData, bool ignoreCostAndLimit)
 {
-	if (m_unitsCount >= m_unitsLimit) return;
-	if (unitData->cost > m_currentCash) return;
+	if (m_unitsCount >= m_unitsLimit && !ignoreCostAndLimit) return;
+	if (unitData->cost > m_currentCash && !ignoreCostAndLimit) return;
 	if (m_isOnEndScreen == true) return;
 
 	sf::Vector2f unitMagnification = { 1.f, 1.f };
@@ -581,7 +597,7 @@ void Stage::spawn_unit(std::shared_ptr<EntityData> unitData)
 	battleUnit->update_sprite();
 
 	m_unitsCount++;
-	m_currentCash -= unitData->cost;
+	if (!ignoreCostAndLimit) m_currentCash -= unitData->cost;
 	m_units[battleUnit->currentLayer].push_back(battleUnit);
 }
 

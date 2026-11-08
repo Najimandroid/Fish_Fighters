@@ -89,24 +89,19 @@ namespace
     // Ability types are written by name in the JSON so they stay readable
     AbilityType read_ability_type(const json& ability)
     {
-        static const std::unordered_map<std::string, AbilityType> names =
-        {
-            { "STRONG_AGAINST", AbilityType::STRONG_AGAINST },
-            { "RESISTANT_AGAINST", AbilityType::RESISTANT_AGAINST },
-            { "FREEZE_ATTACK", AbilityType::FREEZE_ATTACK },
-            { "SLOW_ATTACK", AbilityType::SLOW_ATTACK },
-            { "ATTACK_DOWN_ATTACK", AbilityType::ATTACK_DOWN_ATTACK }
-        };
-
         const std::string name = ability.at("type").get<std::string>();
-        auto it = names.find(name);
-        if (it == names.end()) throw std::runtime_error("Unknown ability type \"" + name + "\"");
-        return it->second;
+
+        for (int i = static_cast<int>(AbilityType::NONE) + 1; i < static_cast<int>(AbilityType::COUNT); ++i)
+        {
+            if (name == to_string(static_cast<AbilityType>(i))) return static_cast<AbilityType>(i);
+        }
+        throw std::runtime_error("Unknown ability type \"" + name + "\"");
     }
 
     /*
      * Abilities, e.g. "abilities": [ { "type": "STRONG_AGAINST", "targetTypes": [ 0 ] } ].
-     * Optional. value, chance and duration are only needed by on-hit abilities.
+     * Optional. value, chance and duration are only needed by on-hit abilities,
+     * and are checked so a typo can't create an ability that silently does nothing.
      */
     std::vector<AbilityData> read_abilities(const json& object)
     {
@@ -122,6 +117,15 @@ namespace
             if (abilityValue.contains("value")) ability.value = read_float(abilityValue, "value");
             if (abilityValue.contains("chance")) ability.chance = read_float(abilityValue, "chance");
             if (abilityValue.contains("duration")) ability.duration = read_float(abilityValue, "duration");
+
+            if (is_on_hit(ability.type))
+            {
+                const std::string name = to_string(ability.type);
+                if (ability.duration <= 0.f) throw std::runtime_error(name + " needs a \"duration\" above 0");
+                if (ability.chance <= 0.f || ability.chance > 100.f) throw std::runtime_error(name + " needs a \"chance\" between 0 and 100");
+                if (ability.type != AbilityType::PARALYZE_ATTACK && ability.value <= 0.f)
+                    throw std::runtime_error(name + " needs a \"value\" above 0 (e.g. 0.5 for x0.5)");
+            }
 
             abilities.push_back(ability);
         }
@@ -150,7 +154,8 @@ bool DataLoader::load_all()
             return false;
         };
 
-    return load(&DataLoader::load_units, "game_data/units.json") &&
+    return load(&DataLoader::load_statuses, "game_data/statuses.json") &&
+        load(&DataLoader::load_units, "game_data/units.json") &&
         load(&DataLoader::load_enemies, "game_data/enemies.json") &&
         load(&DataLoader::load_stages, "game_data/stages.json") &&
         load(&DataLoader::load_chapters, "game_data/chapters.json") &&
@@ -388,6 +393,54 @@ bool DataLoader::load_stages(const std::string& path)
     }
 
     m_stagesLoaded = true;
+    return true;
+}
+
+/*
+ * Load status definitions from JSON.
+ * Populates m_statusesDatabase with StatusData. Every StatusType must be defined.
+ */
+bool DataLoader::load_statuses(const std::string& path)
+{
+    if (m_statusesLoaded) return false;
+
+    std::ifstream file(path);
+    if (!file) return false;
+
+    json j;
+    file >> j;
+
+    for (auto& [name, value] : j.items())
+    {
+        auto data = std::make_shared<StatusData>();
+
+        for (int i = static_cast<int>(StatusType::NONE) + 1; i < static_cast<int>(StatusType::COUNT); ++i)
+        {
+            if (name == to_string(static_cast<StatusType>(i))) data->type = static_cast<StatusType>(i);
+        }
+        if (data->type == StatusType::NONE) throw std::runtime_error("Unknown status \"" + name + "\"");
+
+        data->name = value.at("name").get<std::string>();
+        data->description = value.at("description").get<std::string>();
+        data->iconIndex = read_int(value, "iconIndex");
+
+        const std::string strongest = value.at("strongest").get<std::string>();
+        if (strongest == "lowest") data->strongest = StrongestRule::LOWEST;
+        else if (strongest == "highest") data->strongest = StrongestRule::HIGHEST;
+        else throw std::runtime_error("\"strongest\" of " + name + " must be \"lowest\" or \"highest\", got \"" + strongest + "\"");
+
+        m_statusesDatabase[data->type] = data;
+    }
+
+    // A status without a definition would have no name, icon or stacking rule
+    for (int i = static_cast<int>(StatusType::NONE) + 1; i < static_cast<int>(StatusType::COUNT); ++i)
+    {
+        StatusType type = static_cast<StatusType>(i);
+        if (m_statusesDatabase.find(type) == m_statusesDatabase.end())
+            throw std::runtime_error(std::string("Status ") + to_string(type) + " is missing");
+    }
+
+    m_statusesLoaded = true;
     return true;
 }
 
@@ -653,6 +706,27 @@ const std::shared_ptr<ChapterData> DataLoader::get_chapter_data(int uid) const
     }
 
     return std::make_shared<ChapterData>();
+}
+
+const std::shared_ptr<StatusData> DataLoader::get_status_data(StatusType type) const
+{
+    auto it = m_statusesDatabase.find(type);
+
+    if (it != m_statusesDatabase.end()) {
+        return it->second;
+    }
+
+    return std::make_shared<StatusData>();
+}
+
+const std::map<std::pair<int, int>, std::shared_ptr<EntityData>>& DataLoader::get_units_database() const
+{
+    return m_unitsFormsDatabase;
+}
+
+const std::unordered_map<int, std::shared_ptr<EntityData>>& DataLoader::get_enemies_database() const
+{
+    return m_enemiesDatabase;
 }
 
 std::weak_ptr<PlayerData> DataLoader::get_player_data() const

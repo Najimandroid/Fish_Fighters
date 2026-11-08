@@ -162,20 +162,17 @@ void BattleEntity::take_damage(const DamageResult& result)
 // ==================
 // Statuses
 // ==================
-void BattleEntity::update_statuses(float deltaTime)
+// Counting down and removing statuses is done by the StatusManager
+const std::vector<StatusEffect>& BattleEntity::get_statuses() const
 {
-    for (auto it = activeStatuses.begin();
-        it != activeStatuses.end();)
-    {
-        it->durationRemaining -= deltaTime;
+    return m_activeStatuses;
+}
 
-        if (it->durationRemaining <= 0.f)
-        {
-            it = activeStatuses.erase(it);
-        }
-        else
-        {
-            ++it;
-        }
+const StatusEffect* BattleEntity::get_status(StatusType type) const
+{
+    for (const StatusEffect& status : m_activeStatuses)
+    {
+        if (status.type == type) return &status;
     }
+    return nullptr;
 }

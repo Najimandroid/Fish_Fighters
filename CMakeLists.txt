@@ -50,6 +50,7 @@ set(PROJECT_SOURCES
     src/core/stages/Stage.cpp
 
     src/core/combat/DamageCalculator.cpp
+    src/core/combat/StatusManager.cpp
 
     src/uis/UIManager.cpp
 

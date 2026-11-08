@@ -52,10 +52,15 @@ DamageResult DamageCalculator::calculate(const BattleEntity& attacker, const Bat
     if (has_ability_against(target, AbilityType::RESISTANT_AGAINST, attacker))
         result.resistanceMultiplier = RESISTANT_MULTIPLIER;
 
+    // Attacker weakened by an ATTACK_DOWN status (the StatusManager keeps the strongest value)
+    if (const StatusEffect* attackDown = attacker.get_status(StatusType::ATTACK_DOWN))
+        result.attackDownMultiplier = attackDown->value;
+
     result.finalDamage = result.baseDamage
         * result.attackMultiplier
         * result.strongAgainstMultiplier
-        * result.resistanceMultiplier;
+        * result.resistanceMultiplier
+        * result.attackDownMultiplier;
 
     return result;
 }

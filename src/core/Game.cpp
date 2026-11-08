@@ -1,6 +1,137 @@
 #include "Game.h"
 
+#include <algorithm>
 #include <iostream>
+#include <string>
+
+#ifdef DEBUG_MODE
+namespace
+{
+    /*
+     * Debug editor for a list of entity types: one checkbox per type.
+     */
+    void edit_type_list(std::vector<EntityType>& types)
+    {
+        for (int i = 0; i < static_cast<int>(EntityType::COUNT); ++i)
+        {
+            EntityType type = static_cast<EntityType>(i);
+            bool hasType = std::find(types.begin(), types.end(), type) != types.end();
+
+            ImGui::PushID(i);
+            if (ImGui::Checkbox(to_string(type), &hasType))
+            {
+                if (hasType) types.push_back(type);
+                else types.erase(std::remove(types.begin(), types.end(), type), types.end());
+            }
+            ImGui::PopID();
+
+            if (i + 1 < static_cast<int>(EntityType::COUNT)) ImGui::SameLine();
+        }
+    }
+
+    /*
+     * Debug editor for an entity's types and abilities, used before spawning.
+     * The lists are copies: the data loaded from the JSON is never changed.
+     */
+    void edit_types_and_abilities(std::vector<EntityType>& types, std::vector<AbilityData>& abilities)
+    {
+        ImGui::SeparatorText("Types");
+        ImGui::PushID("Types");
+        edit_type_list(types);
+        ImGui::PopID();
+
+        ImGui::SeparatorText("Abilities");
+        int abilityToRemove = -1;
+
+        for (int a = 0; a < static_cast<int>(abilities.size()); ++a)
+        {
+            AbilityData& ability = abilities[a];
+            ImGui::PushID(a);
+
+            if (ImGui::BeginCombo("Ability", to_string(ability.type)))
+            {
+                for (int t = static_cast<int>(AbilityType::NONE) + 1; t < static_cast<int>(AbilityType::COUNT); ++t)
+                {
+                    AbilityType abilityType = static_cast<AbilityType>(t);
+                    if (ImGui::Selectable(to_string(abilityType), abilityType == ability.type))
+                    {
+                        ability.type = abilityType;
+
+                        // Sensible defaults so a new on-hit ability works right away
+                        if (is_on_hit(abilityType) && ability.duration <= 0.f)
+                        {
+                            ability.value = 0.5f;
+                            ability.chance = 100.f;
+                            ability.duration = 3.f;
+                        }
+                    }
+                }
+                ImGui::EndCombo();
+            }
+
+            ImGui::TextUnformatted("Targets:");
+            ImGui::SameLine();
+            ImGui::PushID("Targets");
+            edit_type_list(ability.targetTypes);
+            ImGui::PopID();
+
+            if (is_on_hit(ability.type))
+            {
+                if (ability.type != AbilityType::PARALYZE_ATTACK)
+                    ImGui::SliderFloat("Value", &ability.value, 0.05f, 2.f, "x%.2f");
+                ImGui::SliderFloat("Chance", &ability.chance, 0.f, 100.f, "%.0f%%");
+                ImGui::SliderFloat("Duration", &ability.duration, 0.1f, 30.f, "%.1f s");
+            }
+
+            if (ImGui::SmallButton("Remove ability")) abilityToRemove = a;
+            ImGui::Separator();
+
+            ImGui::PopID();
+        }
+
+        if (abilityToRemove >= 0) abilities.erase(abilities.begin() + abilityToRemove);
+
+        if (ImGui::Button("Add ability"))
+            abilities.push_back(AbilityData{ AbilityType::STRONG_AGAINST, {} });
+    }
+
+    /*
+     * Shows the first frame of a sprite sheet, scaled to fit 200x200.
+     * Each preview keeps its own texture, reloaded only when the path changes.
+     */
+    void show_debug_preview(const std::string& id, const std::string& texturePath, int frameCount)
+    {
+        struct Preview
+        {
+            sf::Texture texture;
+            sf::Sprite sprite{ texture };
+            std::string loadedPath;
+        };
+        static std::map<std::string, std::unique_ptr<Preview>> previews;
+
+        auto& preview = previews[id];
+        if (!preview) preview = std::make_unique<Preview>();
+
+        if (preview->loadedPath != texturePath)
+        {
+            if (!preview->texture.loadFromFile(texturePath)) return;
+            preview->loadedPath = texturePath;
+
+            int frameWidth = preview->texture.getSize().x / std::max(1, frameCount);
+            int frameHeight = preview->texture.getSize().y;
+
+            preview->sprite.setTexture(preview->texture);
+            preview->sprite.setTextureRect(sf::IntRect({ 0, 0 }, { frameWidth, frameHeight }));
+
+            float maxPreviewSize = 200.f;
+            float scale = std::min(maxPreviewSize / frameWidth, maxPreviewSize / frameHeight);
+            preview->sprite.setScale({ scale, scale });
+        }
+
+        ImGui::Image(preview->sprite);
+    }
+}
+#endif
 
 /*
  * Constructor
@@ -168,146 +299,182 @@ void Game::debug_ui()
     }
     else
     {
-        ImGui::Text("Spawn Units");
-
         /*
         * =======================================================================================================
         * Spawn Unit
         * -------------------------------------------------------------------------------------------------------
-        * Allows spawning any unit by ID and form (0 or 1).
+        * Pick any unit form defined in units.json, edit its types and abilities, then spawn it.
+        * Edits are made on a copy: the data loaded from the JSON is never changed.
         */
-        static int unitId = 1;
-        ImGui::InputInt("Unit ID", &unitId);
-
-        static int unitForm = 0;
-        const char* formOptions[] = { "Base", "Evolved" };
-        ImGui::Combo("Unit Form", &unitForm, formOptions, IM_ARRAYSIZE(formOptions));
-
-        auto unitData = m_dataLoader->get_unit_data(unitId, unitForm);
-
-        // Display unit preview
-       if (unitData)
+        if (ImGui::CollapsingHeader("Spawn Unit", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            static sf::Texture previewTexture;
-			static sf::Sprite sprite(previewTexture);
-			static int previousUnitId = -1;
-			static int previousUnitForm = 0;
+            const auto& units = m_dataLoader->get_units_database();
 
-            if(previousUnitId != unitId || previousUnitForm != unitForm)
+            static std::pair<int, int> selectedUnit = { -1, -1 }; // {UID, form}
+            static std::pair<int, int> editedUnit = { -1, -1 };   // Unit the editor below was filled from
+            static std::vector<EntityType> unitTypes;
+            static std::vector<AbilityData> unitAbilities;
+            static bool isFreeUnitSpawn = true;
+
+            if (units.find(selectedUnit) == units.end() && !units.empty())
+                selectedUnit = units.begin()->first;
+
+            auto unitLabel = [](const std::pair<int, int>& key, const EntityData& data)
+                {
+                    return std::to_string(key.first) + " - " + data.name + " (form " + std::to_string(key.second) + ")";
+                };
+
+            auto selected = units.find(selectedUnit);
+            if (selected != units.end())
             {
-                previewTexture.loadFromFile(unitData->texture);
+                // Only defined units can be picked
+                if (ImGui::BeginCombo("Unit", unitLabel(selected->first, *selected->second).c_str()))
+                {
+                    for (const auto& [key, data] : units)
+                    {
+                        if (ImGui::Selectable(unitLabel(key, *data).c_str(), key == selectedUnit))
+                            selectedUnit = key;
+                    }
+                    ImGui::EndCombo();
+                }
 
-                int frameWidth = previewTexture.getSize().x / unitData->frameCount;
-                int frameHeight = previewTexture.getSize().y;
+                selected = units.find(selectedUnit);
+                const std::shared_ptr<EntityData>& unitData = selected->second;
 
-				sprite.setTexture(previewTexture);
-				sprite.setTextureRect(sf::IntRect({ 0, 0 }, { frameWidth, frameHeight }));
+                // New unit picked: start from its JSON types and abilities
+                if (editedUnit != selectedUnit)
+                {
+                    unitTypes = unitData->types;
+                    unitAbilities = unitData->abilities;
+                    editedUnit = selectedUnit;
+                }
 
-                ImVec2 size(frameWidth, frameHeight);
-            
-                float maxPreviewSize = 200.f;
-                float scale = std::min(maxPreviewSize / size.x, maxPreviewSize / size.y);
+                show_debug_preview("UnitPreview", unitData->texture, unitData->frameCount);
 
-                size.x *= scale;
-                size.y *= scale;
+                ImGui::PushID("Unit");
+                edit_types_and_abilities(unitTypes, unitAbilities);
+                if (ImGui::Button("Reset to JSON data"))
+                {
+                    unitTypes = unitData->types;
+                    unitAbilities = unitData->abilities;
+                }
+                ImGui::PopID();
 
-                sprite.setScale({ scale, scale });
-			}
+                ImGui::Checkbox("Free spawn (ignore cost and units limit)", &isFreeUnitSpawn);
 
-            ImGui::Image(sprite);
-			previousUnitId = unitId;
-			previousUnitForm = unitForm;
+                if (ImGui::Button("Spawn Unit", ImVec2(-FLT_MIN, 0.f)))
+                {
+                    auto customData = std::make_shared<EntityData>(*unitData);
+                    customData->types = unitTypes;
+                    customData->abilities = unitAbilities;
+                    m_stage->spawn_unit(customData, isFreeUnitSpawn);
+                }
+            }
         }
-
-        if (ImGui::Button("Spawn Unit") && unitData)
-        {
-            m_stage->spawn_unit(unitData);
-        }
-
-        ImGui::Separator();
-        ImGui::Text("Spawn Enemies");
 
         /*
         * =======================================================================================================
         * Spawn Enemy
         * -------------------------------------------------------------------------------------------------------
-        * Controls all spawn_enemy parameters:
+        * Pick any enemy defined in enemies.json, edit its types and abilities, then spawn it with all
+        * spawn_enemy parameters:
         * - magnification.x = HP multiplier
         * - magnification.y = Attack multiplier
         * - layer: -1 to 50 (-1 means random)
-        * - isBoss
-        * - generateShockwave
+        * - isBoss (shockwave)
         * - bypassEnemyLimit
         */
-
-        static int enemyId = 1;
-        ImGui::InputInt("Enemy ID", &enemyId);
-
-        // Magnification
-        static float hpMultiplier = 1.0f;
-        static float attackMultiplier = 1.0f;
-
-        ImGui::SliderFloat("HP Multiplier", &hpMultiplier, 1.f, 100.0f);
-        ImGui::SliderFloat("Attack Multiplier", &attackMultiplier, 1.f, 100.0f);
-
-        // Layer
-        static int enemyLayer = -1;
-        ImGui::SliderInt("Layer", &enemyLayer, -1, 50);
-
-        // Flags
-        static bool isBoss = false;
-        ImGui::Checkbox("Is Boss", &isBoss);
-
-        static bool bypassEnemyLimit = false;
-        ImGui::Checkbox("Bypass Enemy Limit", &bypassEnemyLimit);
-
-        auto data = m_dataLoader->get_enemy_data(enemyId);
-
-		// Display enemy preview
-        if (data)
+        if (ImGui::CollapsingHeader("Spawn Enemy", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            static sf::Texture previewTexture;
-            static sf::Sprite sprite(previewTexture);
-            static int previousEnemyId = -1;
+            // Sorted by UID so the list doesn't change order
+            std::vector<std::shared_ptr<EntityData>> enemies;
+            for (const auto& [uid, data] : m_dataLoader->get_enemies_database()) enemies.push_back(data);
+            std::sort(enemies.begin(), enemies.end(), [](const auto& a, const auto& b) { return a->UID < b->UID; });
 
-            if (previousEnemyId != enemyId)
+            static int selectedEnemy = -1; // UID
+            static int editedEnemy = -1;   // Enemy the editor below was filled from
+            static std::vector<EntityType> enemyTypes;
+            static std::vector<AbilityData> enemyAbilities;
+
+            auto findEnemy = [&enemies](int uid) -> std::shared_ptr<EntityData>
+                {
+                    for (const auto& data : enemies) if (data->UID == uid) return data;
+                    return nullptr;
+                };
+
+            if (!findEnemy(selectedEnemy) && !enemies.empty())
+                selectedEnemy = enemies.front()->UID;
+
+            auto enemyLabel = [](const EntityData& data) { return std::to_string(data.UID) + " - " + data.name; };
+
+            if (auto enemyData = findEnemy(selectedEnemy))
             {
-                previewTexture.loadFromFile(data->texture);
+                // Only defined enemies can be picked
+                if (ImGui::BeginCombo("Enemy", enemyLabel(*enemyData).c_str()))
+                {
+                    for (const auto& data : enemies)
+                    {
+                        if (ImGui::Selectable(enemyLabel(*data).c_str(), data->UID == selectedEnemy))
+                            selectedEnemy = data->UID;
+                    }
+                    ImGui::EndCombo();
+                }
 
-                int frameWidth = previewTexture.getSize().x / data->frameCount;
-                int frameHeight = previewTexture.getSize().y;
+                enemyData = findEnemy(selectedEnemy);
 
-                sprite.setTexture(previewTexture);
-                sprite.setTextureRect(sf::IntRect({ 0, 0 }, { frameWidth, frameHeight }));
+                // New enemy picked: start from its JSON types and abilities
+                if (editedEnemy != selectedEnemy)
+                {
+                    enemyTypes = enemyData->types;
+                    enemyAbilities = enemyData->abilities;
+                    editedEnemy = selectedEnemy;
+                }
 
-                ImVec2 size(frameWidth, frameHeight);
+                show_debug_preview("EnemyPreview", enemyData->texture, enemyData->frameCount);
 
-                float maxPreviewSize = 200.f;
-                float scale = std::min(maxPreviewSize / size.x, maxPreviewSize / size.y);
+                ImGui::PushID("Enemy");
+                edit_types_and_abilities(enemyTypes, enemyAbilities);
+                if (ImGui::Button("Reset to JSON data"))
+                {
+                    enemyTypes = enemyData->types;
+                    enemyAbilities = enemyData->abilities;
+                }
+                ImGui::PopID();
 
-                size.x *= scale;
-                size.y *= scale;
+                // Magnification
+                static float hpMultiplier = 1.0f;
+                static float attackMultiplier = 1.0f;
 
-                sprite.setScale({ scale, scale });
+                ImGui::SliderFloat("HP Multiplier", &hpMultiplier, 1.f, 100.0f);
+                ImGui::SliderFloat("Attack Multiplier", &attackMultiplier, 1.f, 100.0f);
+
+                // Layer
+                static int enemyLayer = -1;
+                ImGui::SliderInt("Layer", &enemyLayer, -1, 50);
+
+                // Flags
+                static bool isBoss = false;
+                ImGui::Checkbox("Is Boss", &isBoss);
+
+                static bool bypassEnemyLimit = false;
+                ImGui::Checkbox("Bypass Enemy Limit", &bypassEnemyLimit);
+
+                if (ImGui::Button("Spawn Enemy", ImVec2(-FLT_MIN, 0.f)))
+                {
+                    auto customData = std::make_shared<EntityData>(*enemyData);
+                    customData->types = enemyTypes;
+                    customData->abilities = enemyAbilities;
+
+                    // Spawn enemy with full parameter set
+                    m_stage->spawn_enemy(
+                        customData,
+                        sf::Vector2f(hpMultiplier, attackMultiplier),
+                        enemyLayer,
+                        isBoss,
+                        bypassEnemyLimit
+                    );
+                }
             }
-
-            ImGui::Image(sprite);
-            previousEnemyId = enemyId;
-        }
-
-        if (ImGui::Button("Spawn Enemy") && data)
-        {
-            // Build magnification vector
-            sf::Vector2f magnification(hpMultiplier, attackMultiplier);
-
-            // Spawn enemy with full parameter set
-            m_stage->spawn_enemy(
-                data,
-                magnification,
-                enemyLayer,
-                isBoss,
-                bypassEnemyLimit
-            );
         }
 
         ImGui::Separator();
@@ -326,6 +493,75 @@ void Game::debug_ui()
 
     ImGui::End();
 
+
+    /*
+    * =======================================================================================================
+    * Statuses Panel
+    * -----------------------------------------------------------------
+    * Guaranteed / normal chances, active statuses on the field, and the log of every status request
+    */
+    if (isStageLoaded)
+    {
+        const ImVec2 statusWindowSize = ImVec2(480.f, 1080.f);
+        ImGui::SetNextWindowSize(statusWindowSize, ImGuiCond_Always);
+        ImGui::SetNextWindowPos(ImVec2(0.f, 0.f), ImGuiCond_Always);
+
+        ImGui::Begin("Statuses");
+
+        StatusManager& statusManager = m_stage->get_status_manager();
+
+        // Guaranteed mode makes effects easy to see, normal mode keeps the real chances for balancing
+        bool isGuaranteed = statusManager.is_guaranteed_mode();
+        if (ImGui::Checkbox("Guaranteed effects (every chance = 100%)", &isGuaranteed))
+            statusManager.set_guaranteed_mode(isGuaranteed);
+
+        ImGui::SeparatorText("Active statuses");
+
+        bool hasAnyStatus = false;
+        auto listStatuses = [&](const char* side, const BattleEntitiesMap_t& entities)
+            {
+                for (const auto& [layer, list] : entities)
+                {
+                    for (const auto& entity : list)
+                    {
+                        if (entity->get_statuses().empty() || !entity->data) continue;
+                        hasAnyStatus = true;
+
+                        ImGui::Text("%s %s (%.0f HP)", side, entity->data->name.c_str(), entity->currentHealth);
+                        for (const StatusEffect& status : entity->get_statuses())
+                            ImGui::BulletText("%s  x%.2f  %.1f s left", to_string(status.type), status.value, status.durationRemaining);
+                    }
+                }
+            };
+
+        listStatuses("[Unit]", m_stage->get_units());
+        listStatuses("[Enemy]", m_stage->get_enemies());
+        if (!hasAnyStatus) ImGui::TextDisabled("No entity has a status");
+
+        ImGui::SeparatorText("Log (newest first)");
+        if (ImGui::Button("Clear log")) statusManager.clear_log();
+
+        ImGui::BeginChild("StatusLog");
+        const auto& log = statusManager.get_log();
+        for (auto it = log.rbegin(); it != log.rend(); ++it)
+        {
+            const char* outcome = "MISSED";
+            if (it->outcome == StatusOutcome::APPLIED) outcome = "APPLIED";
+            else if (it->outcome == StatusOutcome::STACKED) outcome = "STACKED";
+
+            ImVec4 color = (it->outcome == StatusOutcome::MISSED) ? ImVec4(0.6f, 0.6f, 0.6f, 1.f) : ImVec4(0.5f, 1.f, 0.6f, 1.f);
+            ImGui::TextColored(color, "[%.1fs] %s -> %s: %s %s", it->time, it->source.c_str(), it->target.c_str(), to_string(it->status), outcome);
+
+            if (it->guaranteed)
+                ImGui::TextDisabled("    guaranteed, x%.2f for %.1f s", it->value, it->duration);
+            else
+                ImGui::TextDisabled("    roll %.1f vs %.0f%% chance, x%.2f for %.1f s", it->roll, it->chance, it->value, it->duration);
+        }
+        if (log.empty()) ImGui::TextDisabled("No status requested yet");
+        ImGui::EndChild();
+
+        ImGui::End();
+    }
     //======================================================================================================
 
     ImGui::SFML::Render(m_window);

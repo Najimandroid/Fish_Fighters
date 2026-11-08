@@ -102,24 +102,32 @@ void AttackState::perform(float deltaTime)
         return;
     }
 
-    // ===== Apply Damage =====
-    // The DamageCalculator decides the amount, the target only applies it
+    // ===== Apply Damage and On-Hit Abilities =====
+    // The DamageCalculator decides the amount, the target only applies it.
+    // Then the StatusManager rolls the attacker's on-hit abilities (the status affects the next hits).
     if (auto stage = m_machine->get_stage().lock())
     {
         const DamageCalculator& damageCalculator = stage->get_damage_calculator();
+        StatusManager& statusManager = stage->get_status_manager();
+
+        auto hit = [&](BattleEntity& target)
+            {
+                target.take_damage(damageCalculator.calculate(*entity, target));
+                statusManager.apply_on_hit_abilities(*entity, target, stage->get_elapsed_time());
+            };
 
         if (entity->data->attackType == 1) // Single-target attack
         {
             auto target = entity->targets.begin()->lock();
             if (target)
-                target->take_damage(damageCalculator.calculate(*entity, *target));
+                hit(*target);
         }
         else // Area attack (all targets in damage zone)
         {
             for (auto& targetPtr : entity->targets)
             {
                 if (auto target = targetPtr.lock())
-                    target->take_damage(damageCalculator.calculate(*entity, *target));
+                    hit(*target);
             }
         }
     }

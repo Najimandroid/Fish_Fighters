@@ -5,6 +5,7 @@
 #include "../data/EnemyStageData.h"
 #include "../data/StageData.h"
 #include "../data/ChapterData.h"
+#include "entities/status/StatusEffect.h"
 
 #include <unordered_map>
 #include <map>
@@ -51,7 +52,12 @@ public:
     const std::shared_ptr<EntityData> get_enemy_data(int uid) const;
     const std::shared_ptr<StageData> get_stage_data(int uid) const;
     const std::shared_ptr<ChapterData> get_chapter_data(int uid) const;
+    const std::shared_ptr<StatusData> get_status_data(StatusType type) const;
     std::weak_ptr<PlayerData> get_player_data() const;
+
+    // Every unit form (key: {UID, form}) and every enemy (key: UID), read-only (used by the debug tools)
+    const std::map<std::pair<int, int>, std::shared_ptr<EntityData>>& get_units_database() const;
+    const std::unordered_map<int, std::shared_ptr<EntityData>>& get_enemies_database() const;
 
     // Returns file paths for unit/enemy icons
     std::string get_unit_icon_texture_path(int uid, int form) const;
@@ -64,6 +70,7 @@ private:
     bool load_stages(const std::string& path);
     bool load_player(const std::string& path);
     bool load_chapters(const std::string& path);
+    bool load_statuses(const std::string& path);
 
     // Internal saving method
     bool save_player(const std::string& path);
@@ -76,12 +83,14 @@ private:
     bool m_stagesLoaded = false;
     bool m_chaptersLoaded = false;
     bool m_playerLoaded = false;
+    bool m_statusesLoaded = false;
 
     // ----- Databases -----
     std::map<std::pair<int, int>, std::shared_ptr<EntityData>> m_unitsFormsDatabase;
     std::unordered_map<int, std::shared_ptr<EntityData>> m_enemiesDatabase;
     std::unordered_map<int, std::shared_ptr<StageData>> m_stagesDatabase;
     std::unordered_map<int, std::shared_ptr<ChapterData>> m_chaptersDatabase;
+    std::unordered_map<StatusType, std::shared_ptr<StatusData>> m_statusesDatabase;
 
     // ----- Player Data -----
     std::shared_ptr<PlayerData> m_playerData = nullptr;
