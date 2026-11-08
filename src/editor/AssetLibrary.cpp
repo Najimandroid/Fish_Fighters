@@ -138,7 +138,9 @@ std::optional<std::string> AssetLibrary::import(ImageFolder imageFolder, const f
     }
 
     refresh();
-    return std::string(folder(imageFolder)) + "/" + destination.filename().generic_string();
+    const std::string imported = std::string(folder(imageFolder)) + "/" + destination.filename().generic_string();
+    m_writtenFiles.push_back(imported);
+    return imported;
 }
 
 bool AssetLibrary::back_up(const fs::path& path, std::string& error)
@@ -183,6 +185,7 @@ bool AssetLibrary::replace(const std::string& relativePath, const fs::path& sour
     }
 
     refresh();
+    m_writtenFiles.push_back(relativePath);
     return true;
 }
 
@@ -201,6 +204,7 @@ bool AssetLibrary::replace(const std::string& relativePath, const sf::Image& ima
     }
 
     refresh();
+    m_writtenFiles.push_back(relativePath);
     return true;
 }
 
@@ -239,7 +243,15 @@ bool AssetLibrary::restore_backup(const std::string& relativePath, std::string& 
     }
 
     refresh();
+    m_writtenFiles.push_back(relativePath);
     return true;
+}
+
+std::vector<std::string> AssetLibrary::take_written_files()
+{
+    std::vector<std::string> files;
+    files.swap(m_writtenFiles);
+    return files;
 }
 
 std::optional<sf::Image> AssetLibrary::make_icon(const sf::Texture& sheet, int frameCount)

@@ -158,13 +158,14 @@ namespace
                 ctx.textures.forget(path);
                 load_source(ctx, path);
                 s_tool.isPreviewingBlend = false; // The file is now the blended one
-                ctx.notify("Made " + path + " seamless. The previous version is kept (Restore previous version)");
+                ctx.notify("Made " + path + " seamless, the previous version is kept");
             }
             else ctx.notify(error.empty() ? "Can't make it seamless" : error, true);
         }
-        ImGui::SetItemTooltip("Writes the blended image (the previous one is kept as a backup)");
+        ImGui::SetItemTooltip("Writes the blended image into the file the game uses (the previous one is kept as a backup)");
 
-        if (const auto backup = ctx.assets.latest_backup(path))
+        const auto backup = ctx.assets.latest_backup(path);
+        if (backup)
         {
             ImGui::SameLine();
             if (ImGui::Button("Restore previous version"))
@@ -181,8 +182,17 @@ namespace
             ImGui::SetItemTooltip("Puts back %s", backup->filename().string().c_str());
         }
 
+        // What the game uses: the preview is only shown here until the button writes it
+        if (isShowingResult)
+            ImGui::TextColored(ImVec4(1.f, 0.8f, 0.4f, 1.f), "Preview only: the file (and the game) keep the current image until you press Make seamless.");
+        else if (backup)
+            ImGui::TextColored(ImVec4(0.45f, 0.9f, 0.6f, 1.f), "Applied: the game uses this version (%u px wide). The previous one is kept as %s.",
+                size.x, backup->filename().string().c_str());
+        else
+            ImGui::TextDisabled("Showing the file the game uses.");
+
         // ----- Views -----
-        section(isShowingResult ? "Side by side (blended)" : "Side by side");
+        section(isShowingResult ? "Side by side: preview of the result" : "Side by side: the file the game uses");
         draw_side_by_side(shown, ImGui::GetContentRegionAvail().x);
 
         section("Seam close-up, 1:1");

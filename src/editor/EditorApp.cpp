@@ -167,6 +167,21 @@ void EditorApp::between_frames()
     }
     else m_context.age_dialog_result();
 
+    // Images the editor wrote (imports, icons, seamless backgrounds, restores) reach the game builds right away:
+    // the game reads its own copy of assets, only refreshed by a game rebuild otherwise
+    const std::vector<std::string> writtenFiles = m_assets.take_written_files();
+    if (m_isUpdatingBuildsOnSave && !writtenFiles.empty() && !m_builds.empty())
+    {
+        std::string error;
+        bool isCopied = true;
+        for (const auto& build : m_builds)
+            for (const std::string& file : writtenFiles)
+                isCopied = GameBuilds::copy_file(m_projectFolder, build, file, error) && isCopied;
+
+        if (isCopied) m_context.notify(m_context.get_status_message() + " (copied to the game builds)");
+        else m_context.notify(error, true);
+    }
+
     // Checks the data once the edits pause for a moment
     if (m_validationPanel.isCheckRequested || (m_isLoaded && m_context.is_validation_due()))
     {
@@ -212,8 +227,9 @@ void EditorApp::draw_menu_bar()
             else reload();
         }
         ImGui::Separator();
-        ImGui::MenuItem("Update game builds on save", nullptr, &m_isUpdatingBuildsOnSave);
-        ImGui::SetItemTooltip("Copies game_data (not player.json) and assets into out/build/*, so the game sees the changes without a rebuild");
+        ImGui::MenuItem("Keep the game builds up to date", nullptr, &m_isUpdatingBuildsOnSave);
+        ImGui::SetItemTooltip("Copies game_data (not player.json) into out/build/* on save, and every image the editor writes right away,\n"
+            "so the game sees the changes without a rebuild");
         ImGui::Separator();
         if (ImGui::MenuItem("Exit")) request_close();
         ImGui::EndMenu();

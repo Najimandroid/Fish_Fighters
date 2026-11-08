@@ -71,6 +71,9 @@ public:
     // A deploy icon made from the first frame of a sprite sheet, centered on a transparent background
     static std::optional<sf::Image> make_icon(const sf::Texture& sheet, int frameCount);
 
+    // Files written since the last call ("assets/..." paths): the EditorApp copies them into the game builds
+    std::vector<std::string> take_written_files();
+
 private:
     bool back_up(const std::filesystem::path& path, std::string& error);
 
@@ -79,4 +82,5 @@ private:
     const ProjectData& m_project;
     std::array<std::vector<std::string>, FOLDER_COUNT> m_lists;
     std::array<bool, FOLDER_COUNT> m_isListed{};
+    std::vector<std::string> m_writtenFiles;
 };

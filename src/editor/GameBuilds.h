@@ -26,6 +26,10 @@ namespace GameBuilds
     // Copies the game_data JSON files (except player.json) and the assets folder into the build
     bool copy_data(const std::filesystem::path& projectFolder, const Build& build, std::string& error);
 
+    // Copies one project file ("assets/...") into the build, replacing its copy even if that one is newer
+    // (a restored backup keeps its old date)
+    bool copy_file(const std::filesystem::path& projectFolder, const Build& build, const std::string& relativePath, std::string& error);
+
     // Starts the game from its folder (it reads its files relative to it)
     bool launch(const Build& build, std::string& error);
 }

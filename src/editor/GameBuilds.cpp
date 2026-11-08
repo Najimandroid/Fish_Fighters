@@ -59,6 +59,20 @@ namespace GameBuilds
         return true;
     }
 
+    bool copy_file(const fs::path& projectFolder, const Build& build, const std::string& relativePath, std::string& error)
+    {
+        std::error_code fsError;
+        const fs::path destination = build.folder / relativePath;
+        fs::create_directories(destination.parent_path(), fsError);
+        fs::copy_file(projectFolder / relativePath, destination, fs::copy_options::overwrite_existing, fsError);
+        if (fsError)
+        {
+            error = "Can't copy " + relativePath + " to " + build.name + ": " + fsError.message();
+            return false;
+        }
+        return true;
+    }
+
     bool launch(const Build& build, std::string& error)
     {
         const fs::path executable = build.folder / GAME_EXECUTABLE;
