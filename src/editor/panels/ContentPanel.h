@@ -28,7 +28,7 @@ private:
     void draw_enemies(EditorContext& ctx);
     void draw_stages(EditorContext& ctx);
     void draw_chapters(EditorContext& ctx);
-    void draw_images(EditorContext& ctx, ContentKind kind, ImageFolder folder);
+    void draw_images(EditorContext& ctx);   // The images of m_imageFolder
     void draw_statuses(EditorContext& ctx);
 
     // A selectable row: image, title, grey subtitle. True when clicked
@@ -54,6 +54,7 @@ private:
 private:
     std::string m_search;
     ContentKind m_visibleTab = ContentKind::UNIT;
+    ImageFolder m_imageFolder = ImageFolder::BASES;   // Folder shown in the Images tab
     Selection m_lastSelection;          // To follow selections made elsewhere (switch tab, scroll to it)
     bool m_isFollowingSelection = false;
 

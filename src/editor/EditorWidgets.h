@@ -74,6 +74,11 @@ namespace EditorWidgets
     void unit_icon(EditorContext& ctx, int uid, int form, ImVec2 box);
     void enemy_icon(EditorContext& ctx, int uid, ImVec2 box);
 
+    // ===== Status icons (STATUS_ICONS_TEXTURE, square cells read left to right) =====
+    const sf::Texture* status_icon(EditorContext& ctx, int iconIndex, FrameUV& uv);   // nullptr if no sheet or index < 0
+    int status_icon_index(const ProjectData& project, const std::string& statusKey);  // "iconIndex" in statuses.json, -1 if none
+    int status_icon_count(EditorContext& ctx);                                         // Cells in the sheet
+
     // ===== Pickers (popups opened with ImGui::OpenPopup(id)). True when something was picked =====
     bool enemy_picker(EditorContext& ctx, const char* popupId, int& uid);
     bool unit_picker(EditorContext& ctx, const char* popupId, int& uid);

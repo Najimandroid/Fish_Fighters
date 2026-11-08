@@ -5,6 +5,7 @@
 #include "../data/AbilityData.h"
 #include "../data/EntityType.h"
 #include "../core/combat/DamageCalculator.h"
+#include "../core/entities/status/StatusEffect.h"
 
 #include "imgui_stdlib.h"
 
@@ -46,6 +47,18 @@ namespace
         case AbilityType::SLOW_ATTACK:      return "Hits can slow the target. (The effect isn't implemented in the game yet.)";
         case AbilityType::WEAKEN_ATTACK:    return "Hits can weaken the target: its attack is multiplied by the value.";
         default:                            return "";
+        }
+    }
+
+    // statuses.json key of the status an on-hit ability inflicts (nullptr for passive abilities)
+    const char* inflicted_status(AbilityType type)
+    {
+        switch (type)
+        {
+        case AbilityType::PARALYZE_ATTACK: return to_string(StatusType::PARALYZED);
+        case AbilityType::SLOW_ATTACK:     return to_string(StatusType::SLOW);
+        case AbilityType::WEAKEN_ATTACK:   return to_string(StatusType::WEAKEN);
+        default:                           return nullptr;
         }
     }
 
@@ -482,6 +495,38 @@ namespace EditorWidgets
     }
 
     // ==================
+    // Status icons
+    // ==================
+    const sf::Texture* status_icon(EditorContext& ctx, int iconIndex, FrameUV& uv)
+    {
+        uv = {};
+        const sf::Texture* sheet = ctx.textures.get(STATUS_ICONS_TEXTURE);
+        if (!sheet || iconIndex < 0) return nullptr;
+
+        const int columns = std::max(1, static_cast<int>(sheet->getSize().x) / STATUS_ICON_CELL_SIZE);
+        const float cell = static_cast<float>(STATUS_ICON_CELL_SIZE);
+        const ImVec2 min((iconIndex % columns) * cell, (iconIndex / columns) * cell);
+        uv.uv0 = ImVec2(min.x / sheet->getSize().x, min.y / sheet->getSize().y);
+        uv.uv1 = ImVec2((min.x + cell) / sheet->getSize().x, (min.y + cell) / sheet->getSize().y);
+        uv.size = ImVec2(cell, cell);
+        return sheet;
+    }
+
+    int status_icon_index(const ProjectData& project, const std::string& statusKey)
+    {
+        const ordered_json& statuses = project.get(DataFile::STATUSES);
+        auto it = statuses.find(statusKey);
+        return it != statuses.end() ? read_int(*it, "iconIndex", -1) : -1;
+    }
+
+    int status_icon_count(EditorContext& ctx)
+    {
+        const sf::Texture* sheet = ctx.textures.get(STATUS_ICONS_TEXTURE);
+        if (!sheet) return 0;
+        return static_cast<int>(sheet->getSize().x / STATUS_ICON_CELL_SIZE) * static_cast<int>(sheet->getSize().y / STATUS_ICON_CELL_SIZE);
+    }
+
+    // ==================
     // Pickers
     // ==================
     namespace
@@ -613,9 +658,17 @@ namespace EditorWidgets
                 ImGui::PushID(static_cast<int>(i));
                 ImGui::TableNextRow();
 
-                // ----- Type -----
+                // ----- Type (on hit: with the icon of the status it inflicts) -----
                 ImGui::TableSetColumnIndex(0);
                 AbilityType type = ability_from_name(read_string(ability, "type"));
+                if (const char* status = inflicted_status(type))
+                {
+                    FrameUV uv;
+                    const sf::Texture* icon = status_icon(ctx, status_icon_index(ctx.project, status), uv);
+                    image_in_box(icon, ImVec2(ImGui::GetFrameHeight(), ImGui::GetFrameHeight()), uv);
+                    ImGui::SetItemTooltip("Inflicts %s", status);
+                    ImGui::SameLine(0.f, 4.f);
+                }
                 ImGui::SetNextItemWidth(-FLT_MIN);
                 if (ImGui::BeginCombo("##type", ability_label(type)))
                 {

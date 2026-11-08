@@ -22,11 +22,14 @@ namespace EntityFields
     {
         attack_type_field(ctx, file, entity);
         number_field(ctx, file, "Attack range", entity, "attackRange", 0.f, 5000.f,
-            "It stops walking and attacks when a target is this close.", 0.5f, "%.1f");
+            "It stops walking and attacks when a target's hitbox is closer than this to its center.\n"
+            "The Preview panel draws it (yellow).", 0.5f, "%.1f");
 
         const float range = static_cast<float>(read_number(entity, "attackRange"));
-        pair_field(ctx, file, "Damage zone", entity, "damageZone", 0.f, range,
-            "Start and end of the zone the attack hits, from its position. Without it, the game uses 0 to the attack range.");
+        pair_field(ctx, file, "Damage zone (offset, width)", entity, "damageZone", 0.f, range,
+            "Where the attack hits, in front of its center: it starts \"offset\" pixels ahead and is \"width\" pixels long\n"
+            "(the game reads the second number as a width). Without it: offset 0, width = attack range.\n"
+            "The Preview panel draws it (red).");
 
         number_field(ctx, file, "Time between attacks", entity, "attackFrequency", 0.01f, 600.f,
             "Seconds between two attacks (\"attackFrequency\" in the JSON).", 0.05f, "%.2f s");

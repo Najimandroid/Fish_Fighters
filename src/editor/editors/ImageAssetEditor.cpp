@@ -14,8 +14,9 @@ namespace ImageAssetEditor
         const std::string& path = ctx.selection.name;
         const sf::Texture* texture = ctx.textures.get(path);
 
+        const auto folder = AssetLibrary::folder_of(path);
         ImGui::Text("%s", path.substr(path.find_last_of('/') + 1).c_str());
-        ImGui::TextDisabled("%s   %s", ctx.selection.kind == ContentKind::BASE ? "Enemy base image" : "Background or map image", path.c_str());
+        ImGui::TextDisabled("%s   %s", folder ? AssetLibrary::display_name(*folder) : "Image", path.c_str());
 
         if (!texture)
         {
@@ -32,8 +33,12 @@ namespace ImageAssetEditor
         // ----- Uses -----
         section("Used by");
         const std::vector<Reference> uses = ProjectQueries::uses_of_image(ctx.project, path);
-        if (uses.empty())
-            ImGui::TextDisabled("Nothing uses it yet. Pick it in a stage (Images) or a chapter (Map image).");
+        if (folder == ImageFolder::MENU_BACKGROUNDS)
+            ImGui::TextDisabled("Menu backgrounds are chosen in the game's code (UIManager), not in the data.");
+        else if (folder == ImageFolder::UNIT_ICONS)
+            ImGui::TextDisabled("Deploy icons are found by their name: icon_<unit UID>_<form>.png (form 0 is the first).");
+        else if (uses.empty())
+            ImGui::TextDisabled("Nothing uses it yet.");
 
         for (size_t i = 0; i < uses.size(); ++i)
         {

@@ -44,6 +44,9 @@ public:
     // Opens the editor on this item (FishEditor --select stage:3)
     void select(const Selection& selection) { m_context.select(selection); }
 
+    // Puts an opponent in the Preview (FishEditor --opponent enemy:2)
+    void set_preview_opponent(const Selection& opponent) { m_previewPanel.set_opponent(opponent); }
+
 private:
     // ----- Frame -----
     void process_events();

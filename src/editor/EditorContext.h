@@ -27,9 +27,8 @@ enum class ContentKind
     ENEMY,
     STAGE,
     CHAPTER,
-    BASE,        // An image of assets/.../bases
-    BACKGROUND,  // An image of assets/.../backgrounds
-    STATUS
+    STATUS,
+    IMAGE        // An image of one of the ImageFolder folders (bases, backgrounds, sprite sheets...)
 };
 
 struct Selection

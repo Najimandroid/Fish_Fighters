@@ -34,7 +34,7 @@ namespace
 
     /*
      * "unit:1", "unit:1:2" (form 2), "enemy:3", "stage:-1", "chapter:1", "status:WEAKEN",
-     * "base:assets/..." or "background:assets/..."
+     * "image:assets/..."
      */
     Selection parse_selection(const std::string& text)
     {
@@ -45,8 +45,7 @@ namespace
         const std::string value = text.substr(colon + 1);
 
         if (kind == "status") return { ContentKind::STATUS, 0, 0, value };
-        if (kind == "base") return { ContentKind::BASE, 0, 0, value };
-        if (kind == "background") return { ContentKind::BACKGROUND, 0, 0, value };
+        if (kind == "image") return { ContentKind::IMAGE, 0, 0, value };
 
         try
         {
@@ -77,12 +76,14 @@ int main(int argc, char* argv[])
     std::filesystem::path projectFolder = FISH_PROJECT_DIR;
     bool isChecking = false;
     Selection selection;
+    Selection opponent;
 
     for (int i = 1; i < argc; ++i)
     {
         const std::string argument = argv[i];
         if (argument == "--check") isChecking = true;
         else if (argument == "--select" && i + 1 < argc) selection = parse_selection(argv[++i]);
+        else if (argument == "--opponent" && i + 1 < argc) opponent = parse_selection(argv[++i]);
         else projectFolder = argument;
     }
 
@@ -90,5 +91,6 @@ int main(int argc, char* argv[])
 
     EditorApp app(projectFolder);
     app.select(selection);
+    app.set_preview_opponent(opponent);
     return app.run();
 }

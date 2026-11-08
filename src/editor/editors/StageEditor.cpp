@@ -390,6 +390,10 @@ namespace
             ctx.commit(STAGES_FILE);
         }
     }
+
+    // Tabs (defined after StageEditor::draw)
+    void general_tab(EditorContext& ctx, int uid, ordered_json& stage);
+    void battlefield_tab(EditorContext& ctx, ordered_json& stage);
 }
 
 namespace StageEditor
@@ -403,32 +407,76 @@ namespace StageEditor
             ImGui::TextDisabled("Stage %d doesn't exist anymore.", uid);
             return;
         }
-        ImGui::PushID(uid);
-
         // ----- Header -----
+        ImGui::PushID(uid);
         image_in_box(ctx.textures.get(read_string(*stage, "baseTexture")), ImVec2(72.f, 72.f), {}, true);
         ImGui::SameLine();
         ImGui::BeginGroup();
         ImGui::Text("%s", ProjectQueries::stage_name(ctx.project, uid).c_str());
-        const auto chapters = ProjectQueries::uses_of_stage(ctx.project, uid);
-        ImGui::TextDisabled("Stage #%d   stages.json", uid);
-        if (chapters.empty()) ImGui::TextColored(ImVec4(1.f, 0.8f, 0.4f, 1.f), "Not on any chapter map yet");
-        for (size_t i = 0; i < chapters.size(); ++i)
-        {
-            ImGui::PushID(static_cast<int>(i));
-            if (i > 0) ImGui::SameLine();
-            if (ImGui::TextLink(chapters[i].label.c_str())) ctx.defer([&ctx, target = chapters[i].target]() { ctx.select(target); });
-            ImGui::PopID();
-        }
+        const size_t waveCount = stage->contains("enemies") && (*stage)["enemies"].is_array() ? (*stage)["enemies"].size() : 0;
+        ImGui::TextDisabled("Stage #%d   %zu wave(s)   stages.json", uid, waveCount);
         ImGui::EndGroup();
+        ImGui::PopID();
+        ImGui::Spacing();
 
-        if (begin_properties("Stage"))
+        // ----- Categories (the open tab stays when switching stages) -----
+        if (ImGui::BeginTabBar("StageCategories"))
         {
-            text_field(ctx, STAGES_FILE, "Name", *stage, "stageName");
+            auto tab = [&](const char* name, auto drawContent)
+                {
+                    if (!ImGui::BeginTabItem(name)) return;
+                    ImGui::PushID(uid);
+                    drawContent();
+                    ImGui::PopID();
+                    ImGui::EndTabItem();
+                };
+            tab("General", [&]() { general_tab(ctx, uid, *stage); });
+            tab("Battlefield", [&]() { battlefield_tab(ctx, *stage); });
+            tab("Waves", [&]()
+                {
+                    section("Enemy waves");
+                    waves_table(ctx, *stage);
+                    section("Timeline");
+                    ImGui::TextDisabled("When each wave spawns. Purple: waits for the enemy base health. Orange: boss.");
+                    timeline(ctx, *stage);
+                });
+            tab("Rewards", [&]() { rewards(ctx, *stage); });
+            ImGui::EndTabBar();
+        }
+    }
+}
+
+namespace
+{
+    // ==================
+    // Tabs
+    // ==================
+    void general_tab(EditorContext& ctx, int uid, ordered_json& stage)
+    {
+        if (begin_properties("General"))
+        {
+            text_field(ctx, STAGES_FILE, "Name", stage, "stageName");
+            int_field(ctx, STAGES_FILE, "Enemy limit", stage, "enemiesLimit", 1, 1000, "Maximum enemies on the field at once.", 0.1f);
+            int_field(ctx, STAGES_FILE, "Unit limit", stage, "unitsLimit", 1, 1000, "Maximum fish the player can have on the field.", 0.1f);
             end_properties();
         }
 
-        section("Rules");
+        section("On the chapter maps");
+        const auto chapters = ProjectQueries::uses_of_stage(ctx.project, uid);
+        if (chapters.empty()) ImGui::TextColored(ImVec4(1.f, 0.8f, 0.4f, 1.f), "Not on any chapter map yet: add it in a chapter's Map tab to make it playable.");
+        for (size_t i = 0; i < chapters.size(); ++i)
+        {
+            ImGui::PushID(static_cast<int>(i));
+            if (ImGui::TextLink(chapters[i].label.c_str())) ctx.defer([&ctx, target = chapters[i].target]() { ctx.select(target); });
+            ImGui::PopID();
+        }
+    }
+
+    void battlefield_tab(EditorContext& ctx, ordered_json& stageObject)
+    {
+        ordered_json* stage = &stageObject;
+
+        section("Bases and length");
         if (begin_properties("Rules"))
         {
             int_field(ctx, STAGES_FILE, "Enemy base health", *stage, "baseHealth", 1, 1000000000, "Destroy it to win.");
@@ -454,8 +502,6 @@ namespace StageEditor
             else ImGui::TextDisabled("Default (%.0f)", DEFAULT_PLAYER_BASE_HEALTH);
 
             number_field(ctx, STAGES_FILE, "Length", *stage, "length", 100.f, 100000.f, "Distance between the enemy base (left) and the player base (right).", 5.f, "%.0f");
-            int_field(ctx, STAGES_FILE, "Enemy limit", *stage, "enemiesLimit", 1, 1000, "Maximum enemies on the field at once.", 0.1f);
-            int_field(ctx, STAGES_FILE, "Unit limit", *stage, "unitsLimit", 1, 1000, "Maximum fish the player can have on the field.", 0.1f);
             end_properties();
         }
 
@@ -463,20 +509,9 @@ namespace StageEditor
         if (begin_properties("Images"))
         {
             image_field(ctx, STAGES_FILE, "Enemy base", *stage, "baseTexture", ImageFolder::BASES);
-            image_field(ctx, STAGES_FILE, "Background", *stage, "backgroundTexture", ImageFolder::BACKGROUNDS, "Repeated along the stage length.");
+            image_field(ctx, STAGES_FILE, "Background", *stage, "backgroundTexture", ImageFolder::STAGE_BACKGROUNDS,
+                "Repeated along the stage length (x1.5, like Stage::init_background).");
             end_properties();
         }
-
-        section("Enemy waves");
-        waves_table(ctx, *stage);
-
-        section("Timeline");
-        ImGui::TextDisabled("When each wave spawns. Purple: waits for the enemy base health. Orange: boss.");
-        timeline(ctx, *stage);
-
-        section("Rewards");
-        rewards(ctx, *stage);
-
-        ImGui::PopID();
     }
 }

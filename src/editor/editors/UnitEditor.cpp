@@ -12,11 +12,13 @@ using namespace EditorWidgets;
 namespace
 {
     constexpr float LEVEL_GROWTH = 0.15f;  // Same as Stage::spawn_unit: stats x1.15 per level above 1
+    const DataFile UNITS_FILE = DataFile::UNITS;
 
-    int s_formToSelect = -1;    // Tab to open on the next frame (after adding a form)
     int s_previewLevel = 1;
 
-    // ===== Deploy icon (icon_<UID>_<form>.png, not stored in the JSON) =====
+    // ==================
+    // Deploy icon (icon_<UID>_<form>.png, not stored in the JSON)
+    // ==================
     void icon_field(EditorContext& ctx, int uid, int form, const ordered_json& formData)
     {
         property_label("Deploy icon", "Shown in the deploy bar and the equip menu.\nFile: icon_<UID>_<form>.png in assets/images/textures/icons/units.\n"
@@ -59,50 +61,110 @@ namespace
         }
     }
 
-    // ===== One form =====
-    void draw_form(EditorContext& ctx, int uid, ordered_json& form, int formIndex)
+    // ==================
+    // Forms: one chip per form (its icon), "+" adds an evolution
+    // ==================
+    void form_chips(EditorContext& ctx, int uid, ordered_json& forms, int& removedForm)
     {
-        const DataFile file = DataFile::UNITS;
-
-        if (begin_properties("Identity"))
+        const ImVec2 chipSize(96.f, 84.f);
+        for (size_t i = 0; i < forms.size(); ++i)
         {
-            icon_field(ctx, uid, formIndex, form);
-            text_field(ctx, file, "Name", form, "name");
-            text_field(ctx, file, "Description", form, "description", "Shown in the equip and upgrade menus.", true);
+            const int formIndex = static_cast<int>(i);
+            ImGui::PushID(formIndex);
+            FrameUV uv;
+            const sf::Texture* texture = unit_texture(ctx, uid, formIndex, uv);
+            if (tile("##form", texture, uv, "Form " + std::to_string(i + 1), ctx.selection.form == formIndex, chipSize))
+                ctx.selection.form = formIndex;
+            ImGui::SetItemTooltip("%s", read_string(forms[i], "name", "?").c_str());
+            ImGui::PopID();
+            ImGui::SameLine();
+        }
+
+        // New evolution: a copy of the last form, starting after its max level
+        if (tile("##addForm", nullptr, {}, "+ Form", false, ImVec2(70.f, chipSize.y)))
+        {
+            ordered_json form = forms.empty() ? ordered_json::object() : forms.back();
+            const int index = static_cast<int>(forms.size());
+            const int previousMax = forms.empty() ? -1 : read_int(forms.back(), "maxLevel", 0);
+            form["form"] = index;
+            form["minLevel"] = previousMax + 1;
+            form["maxLevel"] = previousMax + 20;
+            form["name"] = read_string(form, "name", "Fish") + " (evolved)";
+            forms.push_back(std::move(form));
+            ctx.commit(UNITS_FILE);
+            ctx.selection.form = index;
+            ctx.notify("Form " + std::to_string(index + 1) + " added: give it its own sprite sheet and icon (Appearance)");
+        }
+        ImGui::SetItemTooltip("Add a form (evolution), copied from the last one");
+
+        // Only the last form can go (forms are numbered in order)
+        if (forms.size() > 1 && ctx.selection.form == static_cast<int>(forms.size()) - 1)
+        {
+            ImGui::SameLine();
+            if (ImGui::Button(("Remove form " + std::to_string(forms.size())).c_str())) removedForm = ctx.selection.form;
+        }
+    }
+
+    // ==================
+    // Tabs
+    // ==================
+    void general_tab(EditorContext& ctx, int uid, ordered_json& form)
+    {
+        if (begin_properties("General"))
+        {
+            text_field(ctx, UNITS_FILE, "Name", form, "name");
+            text_field(ctx, UNITS_FILE, "Description", form, "description", "Shown in the equip and upgrade menus.", true);
             end_properties();
         }
 
-        section("Levels and deployment");
-        if (begin_properties("Levels"))
+        section("Unlocked by");
+        const auto uses = ProjectQueries::uses_of_unit(ctx.project, uid);
+        if (uses.empty()) ImGui::TextDisabled("No stage rewards this unit.");
+        for (size_t i = 0; i < uses.size(); ++i)
         {
-            int_field(ctx, file, "Min level", form, "minLevel", 0, 999, "The unit uses this form from this level...", 0.1f);
-            int_field(ctx, file, "Max level", form, "maxLevel", 0, 999, "...to this one. The next form starts at max level + 1.", 0.1f);
-            int_field(ctx, file, "Deploy cost", form, "cost", 0, 1000000, "Cash spent in battle to deploy it.");
-            number_field(ctx, file, "Cooldown", form, "cooldown", 0.f, 600.f, "Seconds before it can be deployed again.", 0.05f, "%.2f s");
-            end_properties();
+            ImGui::PushID(static_cast<int>(i));
+            if (ImGui::TextLink(uses[i].label.c_str())) ctx.defer([&ctx, target = uses[i].target]() { ctx.select(target); });
+            ImGui::PopID();
         }
+    }
 
+    void combat_tab(EditorContext& ctx, ordered_json& form)
+    {
         section("Stats");
         if (begin_properties("Stats"))
         {
-            EntityFields::stats(ctx, file, form);
+            EntityFields::stats(ctx, UNITS_FILE, form);
             end_properties();
         }
 
         section("Attack");
         if (begin_properties("Attack"))
         {
-            EntityFields::attack(ctx, file, form);
+            EntityFields::attack(ctx, UNITS_FILE, form);
             end_properties();
         }
 
         section("Abilities");
-        abilities_field(ctx, file, form, false);
+        abilities_field(ctx, UNITS_FILE, form, false);
+    }
 
-        section("Sprite");
-        if (begin_properties("Sprite"))
+    void deployment_tab(EditorContext& ctx, ordered_json& unit, ordered_json& form)
+    {
+        section("In battle");
+        if (begin_properties("Deploy"))
         {
-            EntityFields::sprite(ctx, file, form, ImageFolder::UNIT_SHEETS);
+            int_field(ctx, UNITS_FILE, "Deploy cost", form, "cost", 0, 1000000, "Cash spent in battle to deploy it.");
+            number_field(ctx, UNITS_FILE, "Cooldown", form, "cooldown", 0.f, 600.f, "Seconds before it can be deployed again.", 0.05f, "%.2f s");
+            end_properties();
+        }
+
+        section("Levels");
+        if (begin_properties("Levels"))
+        {
+            int_field(ctx, UNITS_FILE, "Min level", form, "minLevel", 0, 999, "The unit uses this form from this level...", 0.1f);
+            int_field(ctx, UNITS_FILE, "Max level", form, "maxLevel", 0, 999, "...to this one. The next form starts at max level + 1.", 0.1f);
+            int_field(ctx, UNITS_FILE, "Upgrade base cost", unit, "baseUpgradeCost", 0, 100000000,
+                "Shells for the first upgrade, later upgrades cost more. Shared by every form.");
             end_properties();
         }
 
@@ -133,6 +195,16 @@ namespace
             ImGui::EndTable();
         }
     }
+
+    void appearance_tab(EditorContext& ctx, int uid, ordered_json& form, int formIndex)
+    {
+        if (begin_properties("Appearance"))
+        {
+            icon_field(ctx, uid, formIndex, form);
+            EntityFields::sprite(ctx, UNITS_FILE, form, ImageFolder::UNIT_SHEETS);
+            end_properties();
+        }
+    }
 }
 
 namespace UnitEditor
@@ -140,76 +212,51 @@ namespace UnitEditor
     void draw(EditorContext& ctx)
     {
         const int uid = ctx.selection.uid;
-        ordered_json* unit = ctx.project.find_uid(DataFile::UNITS, uid);
+        ordered_json* unit = ctx.project.find_uid(UNITS_FILE, uid);
         if (!unit)
         {
             ImGui::TextDisabled("Unit %d doesn't exist anymore.", uid);
             return;
         }
-        if (!unit->contains("forms") || !(*unit)["forms"].is_array()) (*unit)["forms"] = ordered_json::array();
-        ordered_json& forms = (*unit)["forms"];
-
-        ImGui::PushID(uid);
-
-        // ----- Header -----
-        unit_icon(ctx, uid, std::clamp(ctx.selection.form, 0, std::max(0, static_cast<int>(forms.size()) - 1)), ImVec2(96.f, 72.f));
-        ImGui::SameLine();
-        ImGui::BeginGroup();
-        ImGui::Text("%s", ProjectQueries::unit_name(ctx.project, uid).c_str());
-        ImGui::TextDisabled("Unit #%d   %zu form(s)   units.json", uid, forms.size());
-        ImGui::EndGroup();
-
-        if (begin_properties("Unit"))
+        if (!unit->contains("forms") || !(*unit)["forms"].is_array() || (*unit)["forms"].empty())
         {
-            int_field(ctx, DataFile::UNITS, "Upgrade base cost", *unit, "baseUpgradeCost", 0, 100000000,
-                "Shells for the first upgrade. Later upgrades cost more.");
-            end_properties();
+            ImGui::TextColored(ImVec4(1.f, 0.45f, 0.4f, 1.f), "Unit %d has no form.", uid);
+            return;
         }
+        ordered_json& forms = (*unit)["forms"];
+        ctx.selection.form = std::clamp(ctx.selection.form, 0, static_cast<int>(forms.size()) - 1);
+        const int formIndex = ctx.selection.form;
 
-        // ----- Forms -----
+        // ----- Header: the form shown, and every form as a chip -----
+        ImGui::PushID(uid);
+        ImGui::Text("%s", ProjectQueries::unit_name(ctx.project, uid, formIndex).c_str());
+        ImGui::SameLine();
+        ImGui::TextDisabled("Unit #%d, form %d of %zu   units.json", uid, formIndex + 1, forms.size());
+
         int removedForm = -1;
-        if (ImGui::BeginTabBar("Forms", ImGuiTabBarFlags_FittingPolicyScroll))
+        form_chips(ctx, uid, forms, removedForm);
+        ImGui::PopID();
+        ImGui::Spacing();
+
+        // ----- Categories (the tab bar is shared with enemies: the open tab stays when switching) -----
+        ordered_json& form = forms[formIndex];
+        if (ImGui::BeginTabBar("EntityCategories"))
         {
-            for (size_t i = 0; i < forms.size(); ++i)
-            {
-                const int formIndex = static_cast<int>(i);
-                const std::string label = "Form " + std::to_string(i + 1) + ": " + read_string(forms[i], "name", "?") + "###Form" + std::to_string(i);
-                ImGuiTabItemFlags flags = 0;
-                if (s_formToSelect == formIndex) flags |= ImGuiTabItemFlags_SetSelected;
-
-                if (ImGui::BeginTabItem(label.c_str(), nullptr, flags))
+            // Tab names keep the same IDs for every unit; the content is scoped to this unit and form
+            auto tab = [&](const char* name, auto drawContent)
                 {
-                    if (s_formToSelect == formIndex) s_formToSelect = -1;
-                    ctx.selection.form = formIndex;
-
+                    if (!ImGui::BeginTabItem(name)) return;
+                    ImGui::PushID(uid);
                     ImGui::PushID(formIndex);
-                    if (i + 1 == forms.size() && forms.size() > 1)
-                    {
-                        if (ImGui::SmallButton("Remove this form")) removedForm = formIndex;
-                        ImGui::SetItemTooltip("Only the last form can be removed (forms are numbered in order)");
-                    }
-                    draw_form(ctx, uid, forms[i], formIndex);
+                    drawContent();
+                    ImGui::PopID();
                     ImGui::PopID();
                     ImGui::EndTabItem();
-                }
-            }
-
-            if (ImGui::TabItemButton("+", ImGuiTabItemFlags_Trailing | ImGuiTabItemFlags_NoTooltip))
-            {
-                // New evolution: a copy of the last form, starting after its max level
-                ordered_json form = forms.empty() ? ordered_json::object() : forms.back();
-                const int index = static_cast<int>(forms.size());
-                const int previousMax = forms.empty() ? -1 : read_int(forms.back(), "maxLevel", 0);
-                form["form"] = index;
-                form["minLevel"] = previousMax + 1;
-                form["maxLevel"] = previousMax + 20;
-                form["name"] = read_string(form, "name", "Fish") + " (evolved)";
-                forms.push_back(std::move(form));
-                ctx.commit(DataFile::UNITS);
-                s_formToSelect = index;
-                ctx.notify("Form " + std::to_string(index + 1) + " added: give it its own sprite sheet and icon");
-            }
-            ImGui::SetItemTooltip("Add a form (evolution)");
+                };
+            tab("General", [&]() { general_tab(ctx, uid, form); });
+            tab("Combat", [&]() { combat_tab(ctx, form); });
+            tab("Deployment", [&]() { deployment_tab(ctx, *unit, form); });
+            tab("Appearance", [&]() { appearance_tab(ctx, uid, form, formIndex); });
             ImGui::EndTabBar();
         }
 
@@ -217,9 +264,7 @@ namespace UnitEditor
         {
             forms.erase(static_cast<size_t>(removedForm));
             ctx.selection.form = std::max(0, removedForm - 1);
-            ctx.commit(DataFile::UNITS);
+            ctx.commit(UNITS_FILE);
         }
-
-        ImGui::PopID();
     }
 }

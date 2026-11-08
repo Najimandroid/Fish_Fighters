@@ -57,5 +57,15 @@ struct StatusData
     std::string name;            // Shown to the player
     std::string description;     // For the future "more information" panel
     StrongestRule strongest = StrongestRule::LOWEST; // Which value wins when the status is applied again
-    int iconIndex = -1;          // Index in the status icons sprite sheet
+    int iconIndex = -1;          // Index in the status icons sprite sheet (STATUS_ICONS_TEXTURE), -1 = no icon
 };
+
+/*
+ * Status icons sprite sheet
+ * -------------------------
+ * One square icon per cell, read left to right then top to bottom:
+ * with 2 columns, iconIndex 0 is top-left, 1 top-right, 2 the start of the second row.
+ * Used by UIStatusIcons in battle and by FishEditor.
+ */
+inline constexpr const char* STATUS_ICONS_TEXTURE = "assets/images/textures/icons/statuses.png";
+inline constexpr int STATUS_ICON_CELL_SIZE = 100;   // Pixels of one icon in the sheet

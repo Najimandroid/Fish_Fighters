@@ -299,8 +299,8 @@ void EditorApp::build_default_layout(unsigned int dockspaceId)
     // [         |            | Validation ]
     ImGuiID center = dockspaceId;
     const ImGuiID left = ImGui::DockBuilderSplitNode(center, ImGuiDir_Left, 0.22f, nullptr, &center);
-    ImGuiID right = ImGui::DockBuilderSplitNode(center, ImGuiDir_Right, 0.36f, nullptr, &center);
-    const ImGuiID rightBottom = ImGui::DockBuilderSplitNode(right, ImGuiDir_Down, 0.38f, nullptr, &right);
+    ImGuiID right = ImGui::DockBuilderSplitNode(center, ImGuiDir_Right, 0.40f, nullptr, &center);
+    const ImGuiID rightBottom = ImGui::DockBuilderSplitNode(right, ImGuiDir_Down, 0.26f, nullptr, &right);
 
     ImGui::DockBuilderDockWindow("Content", left);
     ImGui::DockBuilderDockWindow("Properties", center);

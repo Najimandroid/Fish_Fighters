@@ -316,26 +316,44 @@ namespace ChapterEditor
             s_draggedPoint = -1;
         }
 
-        ImGui::PushID(uid);
         ImGui::Text("%s", ProjectQueries::chapter_name(ctx.project, uid).c_str());
         ImGui::TextDisabled("Chapter #%d   chapters.json", uid);
+        ImGui::Spacing();
 
-        if (begin_properties("Chapter"))
+        // ----- Categories (the open tab stays when switching chapters) -----
+        if (!ImGui::BeginTabBar("ChapterCategories")) return;
+
+        if (ImGui::BeginTabItem("General"))
         {
-            text_field(ctx, CHAPTERS_FILE, "Name", *chapter, "name");
-            text_field(ctx, CHAPTERS_FILE, "Description", *chapter, "description", nullptr, true);
-            image_field(ctx, CHAPTERS_FILE, "Map image", *chapter, "mapTexture", ImageFolder::BACKGROUNDS,
-                "Drawn x2 in the game: stage positions are in those pixels.");
-            end_properties();
+            ImGui::PushID(uid);
+            if (begin_properties("General"))
+            {
+                text_field(ctx, CHAPTERS_FILE, "Name", *chapter, "name");
+                text_field(ctx, CHAPTERS_FILE, "Description", *chapter, "description", nullptr, true);
+                end_properties();
+            }
+            ImGui::PopID();
+            ImGui::EndTabItem();
         }
 
-        section("Map");
-        ImGui::TextDisabled("Drag the stages to move them. Right click to add or remove one. The numbers are the path order.");
-        draw_map(ctx, *chapter);
+        if (ImGui::BeginTabItem("Map"))
+        {
+            ImGui::PushID(uid);
+            if (begin_properties("MapImage"))
+            {
+                image_field(ctx, CHAPTERS_FILE, "Map image", *chapter, "mapTexture", ImageFolder::MAPS,
+                    "Drawn x2 in the game: stage positions are in those pixels.");
+                end_properties();
+            }
 
-        section("Stages on the map");
-        draw_point_list(ctx, *chapter);
+            section("Stages on the map");
+            ImGui::TextDisabled("Drag the stages to move them. Right click to add or remove one. The numbers are the path order.");
+            draw_map(ctx, *chapter);
+            draw_point_list(ctx, *chapter);
+            ImGui::PopID();
+            ImGui::EndTabItem();
+        }
 
-        ImGui::PopID();
+        ImGui::EndTabBar();
     }
 }

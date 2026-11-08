@@ -44,10 +44,22 @@ const char* AssetLibrary::folder(ImageFolder folder)
     case ImageFolder::UNIT_SHEETS:  return "assets/images/textures/units";
     case ImageFolder::ENEMY_SHEETS: return "assets/images/textures/enemies";
     case ImageFolder::BASES:        return "assets/images/textures/bases";
-    case ImageFolder::BACKGROUNDS:  return "assets/images/textures/backgrounds";
+    case ImageFolder::STAGE_BACKGROUNDS: return "assets/images/textures/backgrounds/stages";
+    case ImageFolder::MAPS:         return "assets/images/textures/backgrounds/maps";
+    case ImageFolder::MENU_BACKGROUNDS: return "assets/images/textures/backgrounds/menus";
     case ImageFolder::UNIT_ICONS:   return "assets/images/textures/icons/units";
     default:                        return "assets";
     }
+}
+
+std::optional<ImageFolder> AssetLibrary::folder_of(const std::string& path)
+{
+    const std::string directory = path.substr(0, path.find_last_of('/'));
+    for (int i = 0; i < static_cast<int>(ImageFolder::COUNT); ++i)
+    {
+        if (directory == folder(static_cast<ImageFolder>(i))) return static_cast<ImageFolder>(i);
+    }
+    return std::nullopt;
 }
 
 const char* AssetLibrary::display_name(ImageFolder folder)
@@ -57,7 +69,9 @@ const char* AssetLibrary::display_name(ImageFolder folder)
     case ImageFolder::UNIT_SHEETS:  return "Unit sprite sheets";
     case ImageFolder::ENEMY_SHEETS: return "Enemy sprite sheets";
     case ImageFolder::BASES:        return "Bases";
-    case ImageFolder::BACKGROUNDS:  return "Backgrounds and maps";
+    case ImageFolder::STAGE_BACKGROUNDS: return "Stage backgrounds";
+    case ImageFolder::MAPS:         return "Chapter maps";
+    case ImageFolder::MENU_BACKGROUNDS: return "Menu backgrounds";
     case ImageFolder::UNIT_ICONS:   return "Unit icons";
     default:                        return "Images";
     }

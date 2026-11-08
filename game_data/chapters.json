@@ -3,11 +3,23 @@
         "UID": 1,
         "name": "Shallow Waters",
         "description": "The beginning of the journey in the coral reefs.",
-        "mapTexture":  "assets/images/textures/backgrounds/chapter_map.png",
+        "mapTexture": "assets/images/textures/backgrounds/maps/chapter_map.png",
         "stages": [
-            { "UID": 1, "x": 300, "y": 500 },
-            { "UID": 2, "x": 600, "y": 450 },
-            { "UID": 3, "x": 900, "y": 700 }
+            {
+                "UID": 1,
+                "x": 300,
+                "y": 500
+            },
+            {
+                "UID": 2,
+                "x": 600,
+                "y": 450
+            },
+            {
+                "UID": 3,
+                "x": 913,
+                "y": 703
+            }
         ]
     }
 }

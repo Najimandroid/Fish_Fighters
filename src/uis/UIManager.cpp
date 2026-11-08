@@ -7,6 +7,7 @@
 #include "widgets/UIStageCash.h"
 #include "widgets/UICashUp.h"
 #include "widgets/UIBaseHealthInfo.h"
+#include "widgets/UIStatusIcons.h"
 #include "widgets/UIUpgradeSlider.h"
 #include "widgets/UIEquipSlider.h"
 #include "widgets/UIPlayerShellsInfo.h"
@@ -86,7 +87,7 @@ void UIManager::generate_fish_tank_uis()
     auto bg = std::make_shared<UITextureElement>(
         sf::Vector2f{ 1920.f, 1080.f },
         sf::Vector2f{ 0.f, 0.f },
-        "assets/images/textures/backgrounds/fish_tank.png"
+        "assets/images/textures/backgrounds/menus/fish_tank.png"
     );
 
     auto title = std::make_shared<UITextElement>(
@@ -174,7 +175,7 @@ void UIManager::generate_upgrade_menu_uis()
     auto bg = std::make_shared<UITextureElement>(
         sf::Vector2f{ 1920.f, 1080.f },
         sf::Vector2f{ 0.f, 0.f },
-        "assets/images/textures/backgrounds/fish_tank.png"
+        "assets/images/textures/backgrounds/menus/fish_tank.png"
     );
 
     //title text "Upgrades"
@@ -220,7 +221,7 @@ void UIManager::generate_equip_menu_uis()
     auto bg = std::make_shared<UITextureElement>(
         sf::Vector2f{ 1920.f, 1080.f },
         sf::Vector2f{ 0.f, 0.f },
-        "assets/images/textures/backgrounds/fish_tank.png"
+        "assets/images/textures/backgrounds/menus/fish_tank.png"
     );
 
     //title text "Equip Team"
@@ -320,6 +321,7 @@ void UIManager::generate_battle_uis()
 	auto stageCash = std::make_shared<UIStageCash>(m_stage.lock());
 	auto cashUp = std::make_shared<UICashUp>(m_stage.lock());
 	auto baseHealthInfo = std::make_shared<UIBaseHealthInfo>(m_stage.lock());
+	auto statusIcons = std::make_shared<UIStatusIcons>(m_stage.lock(), m_dataLoader); // Status icons under every entity
 
     add_ui_element(pauseButton);
     add_ui_element(speedButton);
@@ -328,6 +330,7 @@ void UIManager::generate_battle_uis()
 	add_ui_element(stageCash);
 	add_ui_element(cashUp);
 	add_ui_element(baseHealthInfo);
+	add_ui_element(statusIcons);
 }
 
 void UIManager::generate_chapter_map_uis()

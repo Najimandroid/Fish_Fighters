@@ -82,6 +82,10 @@ void ContentPanel::draw(EditorContext& ctx)
     {
         m_isFollowingSelection = ctx.selection.kind != ContentKind::NONE;
         m_lastSelection = ctx.selection;
+
+        // An image selected elsewhere: show its folder
+        if (ctx.selection.kind == ContentKind::IMAGE)
+            if (const auto folder = AssetLibrary::folder_of(ctx.selection.name)) m_imageFolder = *folder;
     }
 
     ImGui::SetNextItemWidth(-FLT_MIN);
@@ -90,8 +94,7 @@ void ContentPanel::draw(EditorContext& ctx)
     struct Tab { const char* label; ContentKind kind; };
     const Tab tabs[] = {
         { "Units", ContentKind::UNIT }, { "Enemies", ContentKind::ENEMY }, { "Stages", ContentKind::STAGE },
-        { "Chapters", ContentKind::CHAPTER }, { "Bases", ContentKind::BASE }, { "Backgrounds", ContentKind::BACKGROUND },
-        { "Statuses", ContentKind::STATUS }
+        { "Chapters", ContentKind::CHAPTER }, { "Statuses", ContentKind::STATUS }, { "Images", ContentKind::IMAGE }
     };
 
     if (ImGui::BeginTabBar("ContentTabs", ImGuiTabBarFlags_FittingPolicyScroll))
@@ -112,9 +115,8 @@ void ContentPanel::draw(EditorContext& ctx)
             case ContentKind::ENEMY:      draw_enemies(ctx); break;
             case ContentKind::STAGE:      draw_stages(ctx); break;
             case ContentKind::CHAPTER:    draw_chapters(ctx); break;
-            case ContentKind::BASE:       draw_images(ctx, ContentKind::BASE, ImageFolder::BASES); break;
-            case ContentKind::BACKGROUND: draw_images(ctx, ContentKind::BACKGROUND, ImageFolder::BACKGROUNDS); break;
             case ContentKind::STATUS:     draw_statuses(ctx); break;
+            case ContentKind::IMAGE:      draw_images(ctx); break;
             default: break;
             }
             ImGui::EndChild();
@@ -261,8 +263,10 @@ void ContentPanel::draw_chapters(EditorContext& ctx)
     }
 }
 
-void ContentPanel::draw_images(EditorContext& ctx, ContentKind kind, ImageFolder folder)
+void ContentPanel::draw_images(EditorContext& ctx)
 {
+    const ImageFolder folder = m_imageFolder;
+    const ContentKind kind = ContentKind::IMAGE;
     const std::vector<std::string> images = ctx.assets.list(folder);
     if (images.empty()) ImGui::TextDisabled("No image in %s", AssetLibrary::folder(folder));
 
@@ -296,10 +300,12 @@ void ContentPanel::draw_statuses(EditorContext& ctx)
         if (!matches_search(name + " " + key, -100000)) continue;
 
         const std::string subtitle = key + "   stronger: " + read_string(status, "strongest", "?") + " value";
+        FrameUV uv;
+        const sf::Texture* icon = status_icon(ctx, read_int(status, "iconIndex", -1), uv);
 
         ImGui::PushID(key.c_str());
         const bool isSelected = ctx.selection.kind == ContentKind::STATUS && ctx.selection.name == key;
-        if (row("##status", nullptr, {}, name, subtitle, isSelected))
+        if (row("##status", icon, uv, name, subtitle, isSelected))
         {
             ctx.select({ ContentKind::STATUS, 0, 0, key });
             m_lastSelection = ctx.selection;
@@ -313,8 +319,7 @@ void ContentPanel::draw_statuses(EditorContext& ctx)
 // ==================
 void ContentPanel::draw_toolbar(EditorContext& ctx, ContentKind kind)
 {
-    const bool isSelectedHere = ctx.selection.kind == kind
-        && (kind == ContentKind::BASE || kind == ContentKind::BACKGROUND || ctx.project.find_uid(file_of(kind), ctx.selection.uid));
+    const bool isSelectedHere = ctx.selection.kind == kind && ctx.project.find_uid(file_of(kind), ctx.selection.uid);
 
     switch (kind)
     {
@@ -332,12 +337,26 @@ void ContentPanel::draw_toolbar(EditorContext& ctx, ContentKind kind)
         if (ImGui::Button("+ New chapter")) create_chapter(ctx);
         break;
 
-    case ContentKind::BASE:
-    case ContentKind::BACKGROUND:
+    case ContentKind::IMAGE:
     {
-        const ImageFolder folder = kind == ContentKind::BASE ? ImageFolder::BASES : ImageFolder::BACKGROUNDS;
+        // Folder picker: bases, stage backgrounds, chapter maps, menu backgrounds, sprite sheets, unit icons
+        ImGui::SetNextItemWidth(std::max(120.f, ImGui::GetContentRegionAvail().x - 150.f));
+        if (ImGui::BeginCombo("##folder", AssetLibrary::display_name(m_imageFolder)))
+        {
+            for (int i = 0; i < static_cast<int>(ImageFolder::COUNT); ++i)
+            {
+                const ImageFolder option = static_cast<ImageFolder>(i);
+                const std::string label = std::string(AssetLibrary::display_name(option)) + "  (" + std::to_string(ctx.assets.list(option).size()) + ")";
+                if (ImGui::Selectable(label.c_str(), option == m_imageFolder)) m_imageFolder = option;
+                ImGui::SetItemTooltip("%s", AssetLibrary::folder(option));
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::SameLine();
+
+        const ImageFolder folder = m_imageFolder;
         const ImGuiID importId = ImGui::GetID("ImportImage");
-        if (ImGui::Button("+ Import image...")) ctx.request_png_dialog(importId, std::string("Import into ") + AssetLibrary::folder(folder));
+        if (ImGui::Button("+ Import...")) ctx.request_png_dialog(importId, std::string("Import into ") + AssetLibrary::folder(folder));
         ImGui::SetItemTooltip("Copies a .png into %s", AssetLibrary::folder(folder));
 
         if (auto picked = ctx.take_dialog_result(importId))
@@ -381,7 +400,7 @@ void ContentPanel::create_stage(EditorContext& ctx)
         { "baseHealth", 1000 },
         { "length", 1600 },
         { "baseTexture", default_image(ctx, ImageFolder::BASES, "defaultBase.png") },
-        { "backgroundTexture", default_image(ctx, ImageFolder::BACKGROUNDS, "backgroundTEST.png") },
+        { "backgroundTexture", default_image(ctx, ImageFolder::STAGE_BACKGROUNDS, "backgroundTEST.png") },
         { "numberOfDifferentEnemies", 0 },
         { "enemies", ordered_json::array() },
         { "rewards", ordered_json::array({ { { "type", "shells" }, { "amount", 100 } } }) }
@@ -401,7 +420,7 @@ void ContentPanel::create_chapter(EditorContext& ctx)
         { "UID", uid },
         { "name", "New chapter" },
         { "description", "" },
-        { "mapTexture", default_image(ctx, ImageFolder::BACKGROUNDS, "chapter_map.png") },
+        { "mapTexture", default_image(ctx, ImageFolder::MAPS, "chapter_map.png") },
         { "stages", ordered_json::array() }
     };
 

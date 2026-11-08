@@ -70,6 +70,7 @@ set(PROJECT_SOURCES
     src/uis/widgets/UIEquipSlot.cpp
     src/uis/widgets/UIEquipSlider.cpp
     src/uis/widgets/UIChapterMap.cpp
+    src/uis/widgets/UIStatusIcons.cpp
 
     # ImGui theme shared by the developer tools and the editor
     src/tools/ToolsTheme.cpp

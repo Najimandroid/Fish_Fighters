@@ -20,9 +20,11 @@ enum class ImageFolder
 {
     UNIT_SHEETS,    // assets/images/textures/units
     ENEMY_SHEETS,   // assets/images/textures/enemies
-    BASES,          // assets/images/textures/bases
-    BACKGROUNDS,    // assets/images/textures/backgrounds (battle backgrounds and chapter maps)
-    UNIT_ICONS,     // assets/images/textures/icons/units (icon_<UID>_<form>.png)
+    BASES,              // assets/images/textures/bases
+    STAGE_BACKGROUNDS,  // assets/images/textures/backgrounds/stages (battlefields)
+    MAPS,               // assets/images/textures/backgrounds/maps (chapter maps)
+    MENU_BACKGROUNDS,   // assets/images/textures/backgrounds/menus (chosen in UIManager's code)
+    UNIT_ICONS,         // assets/images/textures/icons/units (icon_<UID>_<form>.png)
 
     COUNT
 };
@@ -45,6 +47,7 @@ public:
 
     static const char* folder(ImageFolder folder);       // Relative to the project
     static const char* display_name(ImageFolder folder); // "Unit sprite sheets"...
+    static std::optional<ImageFolder> folder_of(const std::string& path); // Folder an "assets/..." image is in
     static std::string unit_icon_path(int uid, int form); // Same path as DataLoader::get_unit_icon_texture_path
 
     // Every .png of the folder ("assets/..." paths), sorted. Cached until refresh()
