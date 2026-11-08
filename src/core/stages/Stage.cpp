@@ -415,6 +415,11 @@ int Stage::get_current_uid() const
 	return m_uid;
 }
 
+const DamageCalculator& Stage::get_damage_calculator() const
+{
+	return m_damageCalculator;
+}
+
 bool Stage::is_loaded() const
 {
 	return m_isLoaded;

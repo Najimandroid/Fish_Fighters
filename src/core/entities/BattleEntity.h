@@ -15,6 +15,7 @@
 #include <map>
 
 class Stage;
+struct DamageResult;
 
 /*
  * BattleEntity
@@ -49,6 +50,12 @@ public:
     virtual void update_sprite();
 
     virtual void update_statuses(float deltaTime);
+
+    // ====== Combat ======
+
+    // Applies a hit decided by the DamageCalculator.
+    // The entity never decides how much damage it takes; this is the only place currentHealth goes down.
+    void take_damage(const DamageResult& result);
 
     // ====== Initialization ======
 

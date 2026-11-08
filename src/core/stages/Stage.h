@@ -3,6 +3,7 @@
 #include "../../data/EnemyStageData.h"
 #include "../DataLoader.h"
 #include "../entities/BattleBase.h"
+#include "../combat/DamageCalculator.h"
 
 #include <SFML/Graphics.hpp>
 
@@ -113,6 +114,9 @@ public:
     // Get the loaded stage's id
 	int get_current_uid() const;
 
+    // Get the calculator that decides the damage of every hit
+    const DamageCalculator& get_damage_calculator() const;
+
     // Check if a stage is currently loaded
     bool is_loaded() const;
 
@@ -146,6 +150,9 @@ private:
     // ----- Entities -----
     BattleEntitiesMap_t m_enemies;           // Enemy entities, stored by layer for rendering
     BattleEntitiesMap_t m_units;             // Unit entities, stored by layer
+
+    // ----- Combat -----
+    DamageCalculator m_damageCalculator;     // Decides the damage of every hit (units, enemies, bases)
 
     // ----- Bases -----
     std::shared_ptr<BattleBase> m_enemyBase; // Enemy base

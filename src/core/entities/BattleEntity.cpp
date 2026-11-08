@@ -1,4 +1,5 @@
 #include "BattleEntity.h"
+#include "../combat/DamageCalculator.h"
 
 #include <iostream>
 
@@ -147,6 +148,15 @@ void BattleEntity::update_sprite()
         { static_cast<int>(texture.getSize().x / data->frameCount * currentFrameIndex), 0 },
         { static_cast<int>(texture.getSize().x / data->frameCount), static_cast<int>(texture.getSize().y) }
         });
+}
+
+// ==================
+// Combat
+// ==================
+void BattleEntity::take_damage(const DamageResult& result)
+{
+    // Knockback and death are handled by the states, which check currentHealth every frame
+    currentHealth -= result.finalDamage;
 }
 
 // ==================

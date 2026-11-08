@@ -103,18 +103,24 @@ void AttackState::perform(float deltaTime)
     }
 
     // ===== Apply Damage =====
-    if (entity->data->attackType == 1) // Single-target attack
+    // The DamageCalculator decides the amount, the target only applies it
+    if (auto stage = m_machine->get_stage().lock())
     {
-        auto target = entity->targets.begin()->lock();
-        if (target)
-            target->currentHealth -= entity->data->attackPower * entity->magnification.y;
-    }
-    else // Area attack (all targets in damage zone)
-    {
-        for (auto& targetPtr : entity->targets)
+        const DamageCalculator& damageCalculator = stage->get_damage_calculator();
+
+        if (entity->data->attackType == 1) // Single-target attack
         {
-            if (auto target = targetPtr.lock())
-                target->currentHealth -= entity->data->attackPower * entity->magnification.y;
+            auto target = entity->targets.begin()->lock();
+            if (target)
+                target->take_damage(damageCalculator.calculate(*entity, *target));
+        }
+        else // Area attack (all targets in damage zone)
+        {
+            for (auto& targetPtr : entity->targets)
+            {
+                if (auto target = targetPtr.lock())
+                    target->take_damage(damageCalculator.calculate(*entity, *target));
+            }
         }
     }
 
