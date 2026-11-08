@@ -67,10 +67,15 @@ void UIDeploymentIcons::init_icons()
 
                 std::weak_ptr<EntityData> weakData = unitData;
 
+                // The callback is stored inside the icon, so it must not hold a shared_ptr
+                // to that same icon (it would keep itself alive forever)
+                std::weak_ptr<UIBattleIcon> weakIcon = icon;
+
                 // Set callback to spawn unit when icon is clicked
-                icon->set_callback([this, icon, weakData]()
+                icon->set_callback([this, weakIcon, weakData]()
                     {
-                        if (icon->get_if_on_cooldown()) return;
+                        auto icon = weakIcon.lock();
+                        if (!icon || icon->get_if_on_cooldown()) return;
 
                         if (auto data = weakData.lock())
                         {

@@ -20,7 +20,7 @@
 class IdleState : public BaseState
 {
 public:
-    explicit IdleState(std::shared_ptr<StateMachine> machine);
+    explicit IdleState(StateMachine* machine);
 
     void enter() override;                       // Called when entering idle
     void perform(float deltaTime) override;      // Main idle behavior logic

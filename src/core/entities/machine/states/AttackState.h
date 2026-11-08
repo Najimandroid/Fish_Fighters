@@ -23,7 +23,7 @@
 class AttackState : public BaseState
 {
 public:
-    explicit AttackState(std::shared_ptr<StateMachine> machine);
+    explicit AttackState(StateMachine* machine);
 
     void enter() override;                       // Called once when state starts
     void perform(float deltaTime) override;      // Handles attack timing and damage

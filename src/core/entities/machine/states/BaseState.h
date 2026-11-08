@@ -29,7 +29,7 @@ class BaseState
 {
 public:
     BaseState() = default;
-    explicit BaseState(std::shared_ptr<StateMachine> machine);
+    explicit BaseState(StateMachine* machine);
 
     // ===== Lifecycle =====
     virtual void enter() = 0;                      // Called when state is activated
@@ -41,5 +41,5 @@ public:
 
 protected:
 
-    std::shared_ptr<StateMachine> m_machine; // State machine the state belongs to
+    StateMachine* m_machine = nullptr; // State machine the state belongs to. Not owned: the machine owns this state and always outlives it
 };

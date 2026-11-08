@@ -10,7 +10,7 @@
 // ==================
 // Constructor
 // ==================
-KnockbackState::KnockbackState(std::shared_ptr<StateMachine> machine)
+KnockbackState::KnockbackState(StateMachine* machine)
 {
     m_machine = machine;
 }

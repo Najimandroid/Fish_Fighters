@@ -12,7 +12,7 @@
 // ==================
 // Constructor
 // ==================
-WalkState::WalkState(std::shared_ptr<StateMachine> machine)
+WalkState::WalkState(StateMachine* machine)
 {
     m_machine = machine;
 }

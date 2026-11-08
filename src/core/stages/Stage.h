@@ -134,6 +134,7 @@ private:
     int m_currentCash = 0;                   // Current cash available to the player
     int m_maxCash = BASE_MAX_CASH;           // Maximum cash allowed
 	int m_cashPerSecond = BASE_CASH_PER_SECOND; // Cash gained per second (with no upgrades)
+    float m_cashRemainder = 0.f;             // Fraction of cash earned but not added yet (frame-rate independent income)
 
     int m_enemiesLimit = 5;                  // Maximum number of enemies
     int m_unitsLimit = 5;                    // Maximum number of units

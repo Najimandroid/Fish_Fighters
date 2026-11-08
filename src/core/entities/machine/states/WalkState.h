@@ -20,7 +20,7 @@
 class WalkState : public BaseState
 {
 public:
-    explicit WalkState(std::shared_ptr<StateMachine> machine);
+    explicit WalkState(StateMachine* machine);
 
     void enter() override;                       // Called once when state starts
     void perform(float deltaTime) override;      // Handles movement and transitions

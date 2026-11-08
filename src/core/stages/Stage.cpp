@@ -50,6 +50,7 @@ void Stage::load(int uid)
 	m_currentCash = 0;
 	m_maxCash = BASE_MAX_CASH;               // Cash Up upgrades only last for one stage
 	m_cashPerSecond = BASE_CASH_PER_SECOND;
+	m_cashRemainder = 0.f;
 	m_length = stageJson->length;
 
 	// Spawn bases with provided health and texture
@@ -81,10 +82,12 @@ void Stage::unload()
 	m_uid = -1;
 
 	m_currentCash = 0;
+	m_cashRemainder = 0.f;
 
 	m_enemies.clear();
 	m_units.clear();
 	m_enemyStageDatas.clear();
+	m_backgroundSprites.clear();
 
 	m_enemyBase = nullptr;
 	m_unitBase = nullptr;
@@ -189,7 +192,13 @@ void Stage::update_cash(float deltaTime)
 	if (deltaTime <= 0.0f) return;
 	if (m_currentCash >= m_maxCash) return;
 
-	m_currentCash += std::ceil(m_cashPerSecond * deltaTime);
+	// Accumulate fractions of cash and only add whole units,
+	// so income is exactly m_cashPerSecond whatever the frame rate
+	m_cashRemainder += m_cashPerSecond * deltaTime;
+
+	int wholeCash = static_cast<int>(m_cashRemainder);
+	m_currentCash += wholeCash;
+	m_cashRemainder -= static_cast<float>(wholeCash);
 
 	if(m_currentCash > m_maxCash)
 		m_currentCash = m_maxCash;
@@ -483,6 +492,9 @@ void Stage::init_background(const std::string& texturePath)
 {
 	int numberOfSprites = (m_length / 1920) + 1;
 
+	// Rebuilt from scratch on every load
+	m_backgroundSprites.clear();
+
 	for (int i = 0; i <= numberOfSprites; i++)
 	{
 		sf::Sprite m_backgroundSprite(m_backgroundTexture);
@@ -512,7 +524,7 @@ void Stage::spawn_enemy(std::shared_ptr<EntityData> enemyData, sf::Vector2f magn
 	std::shared_ptr<BattleEnemy> battleEnemy = std::make_shared<BattleEnemy>(enemyData, magnification);
 	battleEnemy->set_current_stage(shared_from_this());
 	battleEnemy->init_state_machine();
-	battleEnemy->stateMachine->change_state(std::make_unique<IdleState>(battleEnemy->stateMachine));
+	battleEnemy->stateMachine->change_state(std::make_unique<IdleState>(battleEnemy->stateMachine.get()));
 
 	// Assign layer
 	battleEnemy->currentLayer = (layer > 0) ? layer : generate_random_spawn_layer();
@@ -556,7 +568,7 @@ void Stage::spawn_unit(std::shared_ptr<EntityData> unitData)
 	std::shared_ptr<BattleUnit> battleUnit = std::make_shared<BattleUnit>(unitData, unitMagnification);
 	battleUnit->set_current_stage(shared_from_this());
 	battleUnit->init_state_machine();
-	battleUnit->stateMachine->change_state(std::make_unique<IdleState>(battleUnit->stateMachine));
+	battleUnit->stateMachine->change_state(std::make_unique<IdleState>(battleUnit->stateMachine.get()));
 
 	battleUnit->currentLayer = generate_random_spawn_layer();
 	battleUnit->position.x = m_length;
@@ -610,7 +622,7 @@ void Stage::generate_boss_shockwave()
 				continue;
 
 			unit->isOnShockwave = true;
-			unit->stateMachine->change_state(std::make_unique<KnockbackState>(unit->stateMachine));
+			unit->stateMachine->change_state(std::make_unique<KnockbackState>(unit->stateMachine.get()));
 		}
 	}
 }

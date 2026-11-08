@@ -12,7 +12,7 @@
 // ==================
 // Constructor
 // ==================
-AttackState::AttackState(std::shared_ptr<StateMachine> machine)
+AttackState::AttackState(StateMachine* machine)
 {
     m_machine = machine;
 }
