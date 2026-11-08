@@ -771,6 +771,11 @@ namespace EditorWidgets
     // ==================
     // Backgrounds
     // ==================
+    const sf::Texture* background_texture(EditorContext& ctx, const std::string& backgroundPath)
+    {
+        return ctx.textures.get_seamless(backgroundPath, ProjectQueries::background_seamless_overlap(ctx.project, backgroundPath));
+    }
+
     void ground_line_field(EditorContext& ctx, const std::string& backgroundPath)
     {
         const sf::Texture* background = ctx.textures.get(backgroundPath);

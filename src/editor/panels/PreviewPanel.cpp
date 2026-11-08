@@ -456,9 +456,9 @@ void PreviewPanel::draw_scene(EditorContext& ctx, const SceneEntity& edited, con
     drawList->PushClipRect(origin, ImVec2(origin.x + width, origin.y + height), true);
     drawList->AddRectFilled(origin, ImVec2(origin.x + width, origin.y + height), IM_COL32(8, 16, 20, 255));
 
-    // ----- Background, placed like Stage::init_background (ground line of the stages using it) -----
+    // ----- Background, placed and made seamless like Stage does it (backgrounds.json) -----
     const std::string backgroundPath = background_path(ctx);
-    if (const sf::Texture* background = ctx.textures.get(backgroundPath))
+    if (const sf::Texture* background = background_texture(ctx, backgroundPath))
     {
         const float groundRow = ProjectQueries::background_ground_row(ctx.project, backgroundPath, static_cast<float>(background->getSize().y));
         draw_background_copies(drawList, *background, groundRow, m_viewLeft + SCENE_WORLD_X, worldRight + SCENE_WORLD_X,
@@ -685,7 +685,7 @@ void PreviewPanel::draw_frame_strip(EditorContext& ctx, ordered_json& entity, Da
 // ==================
 void PreviewPanel::draw_stage(EditorContext& ctx, const ordered_json& stage)
 {
-    const sf::Texture* background = ctx.textures.get(read_string(stage, "backgroundTexture"));
+    const sf::Texture* background = background_texture(ctx, read_string(stage, "backgroundTexture")); // Seamless like in the game
     const sf::Texture* enemyBase = ctx.textures.get(read_string(stage, "baseTexture"));
     const sf::Texture* playerBase = ctx.textures.get(PLAYER_BASE_TEXTURE);
 

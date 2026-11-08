@@ -2,6 +2,8 @@
 
 #include "../data/BattlefieldLayout.h"
 
+#include <algorithm>
+
 namespace
 {
     std::string string_of(const ordered_json& object, const char* key)
@@ -173,6 +175,14 @@ namespace ProjectQueries
         if (background != backgrounds.end() && background->is_object() && background->contains("groundRow") && (*background)["groundRow"].is_number())
             row = (*background)["groundRow"].get<float>();
         return ::background_ground_row(row, imageHeight);
+    }
+
+    int background_seamless_overlap(const ProjectData& project, const std::string& path)
+    {
+        const ordered_json& backgrounds = project.get(DataFile::BACKGROUNDS);
+        auto background = backgrounds.find(path);
+        if (background == backgrounds.end() || !background->is_object()) return 0;
+        return std::max(0, int_of(*background, "seamlessOverlap", 0));
     }
 
     std::vector<Reference> stages_using_background(const ProjectData& project, const std::string& path)

@@ -194,6 +194,9 @@ private:
     // Spawn bases at the start of the stage
     void spawn_bases(float health, float playerBaseHealth, const std::string& texture);
 
+    // The background image, made seamless when backgrounds.json asks for it (the file isn't changed)
+    void load_background_texture(const BackgroundData& background);
+
     // Background copies along the stage (any image size), ground row from backgrounds.json (-1 = template ratio)
     void init_background(float groundRow);
 };

@@ -514,6 +514,13 @@ bool DataLoader::load_backgrounds(const std::string& path)
                 throw std::runtime_error(texture + ": \"groundRow\" must be 0 or more (a row of the image)");
         }
 
+        if (value.contains("seamlessOverlap"))
+        {
+            background->seamlessOverlap = read_int(value, "seamlessOverlap");
+            if (background->seamlessOverlap < 0)
+                throw std::runtime_error(texture + ": \"seamlessOverlap\" must be 0 (off) or more (pixels)");
+        }
+
         m_backgroundsDatabase[texture] = background;
     }
     return true;
@@ -772,10 +779,14 @@ const std::shared_ptr<StageData> DataLoader::get_stage_data(int uid) const
     return std::make_shared<StageData>();
 }
 
-float DataLoader::get_background_ground_row(const std::string& texture) const
+BackgroundData DataLoader::get_background_data(const std::string& texture) const
 {
     auto it = m_backgroundsDatabase.find(texture);
-    return it != m_backgroundsDatabase.end() ? it->second->groundRow : -1.f;
+    if (it != m_backgroundsDatabase.end()) return *it->second;
+
+    BackgroundData defaults; // Not in backgrounds.json: the template's ground ratio, used as is
+    defaults.texture = texture;
+    return defaults;
 }
 
 const std::shared_ptr<ChapterData> DataLoader::get_chapter_data(int uid) const

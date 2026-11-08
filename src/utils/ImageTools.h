@@ -5,7 +5,8 @@
 /*
  * ImageTools
  * ----------
- * Image processing for the editor's image tools.
+ * Image processing shared by the game and FishEditor (part of fishcore), so the editor's
+ * previews show exactly what the game draws.
  */
 namespace ImageTools
 {

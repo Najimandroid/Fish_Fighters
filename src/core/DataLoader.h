@@ -65,8 +65,8 @@ public:
     const std::shared_ptr<StageData> get_stage_data(int uid) const;
     const std::shared_ptr<ChapterData> get_chapter_data(int uid) const;
 
-    // Row of a background image the units stand on (backgrounds.json), -1 if it doesn't set one
-    float get_background_ground_row(const std::string& texture) const;
+    // Settings of a background image (backgrounds.json): ground row, seamless overlap. Defaults if not listed
+    BackgroundData get_background_data(const std::string& texture) const;
     const std::shared_ptr<StatusData> get_status_data(StatusType type) const;
     std::weak_ptr<PlayerData> get_player_data() const;
 

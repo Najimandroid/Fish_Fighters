@@ -1,56 +1,25 @@
 #include "ImageAssetEditor.h"
 
 #include "../EditorWidgets.h"
-#include "../ImageTools.h"
 #include "../ProjectQueries.h"
 #include "../../data/BattlefieldLayout.h"
 
-#include <SFML/Graphics/Texture.hpp>
-
 #include <algorithm>
-#include <memory>
+#include <cmath>
 
 using namespace EditorWidgets;
 
 namespace
 {
     const ImU32 SEAM_COLOR = IM_COL32(255, 160, 115, 255);
+    constexpr int DEFAULT_OVERLAP = 128;
 
-    // ==================
-    // Seamless tool: state for the image shown
-    // ==================
-    struct SeamlessTool
-    {
-        std::string path;                        // Image this state belongs to
-        sf::Image source;                        // The file as it is on disk
-        bool isSourceLoaded = false;
-        int blendWidth = 128;                    // Columns the two edges overlap on
-        bool isPreviewingBlend = true;
-        int resultBlendWidth = -1;               // Blend width of `result`, -1 = not computed
-        sf::Image result;
-        std::unique_ptr<sf::Texture> resultTexture;
-        float closeUpRow = -1.f;                 // Top row of the close-up, -1 = around the ground line
-    };
-    SeamlessTool s_tool;
+    // Tiling tab state for the image shown
+    std::string s_tilingPath;
+    int s_overlapSlider = DEFAULT_OVERLAP;   // Edited value, written to backgrounds.json when released
+    float s_closeUpRow = -1.f;               // Top row of the close-up, -1 = around the ground line
 
-    void load_source(EditorContext& ctx, const std::string& path)
-    {
-        s_tool.path = path;
-        s_tool.isSourceLoaded = s_tool.source.loadFromFile(ctx.project.resolve(path));
-        s_tool.resultBlendWidth = -1;
-        s_tool.closeUpRow = -1.f;
-    }
-
-    bool compute_result()
-    {
-        s_tool.result = ImageTools::make_seamless(s_tool.source, static_cast<unsigned>(s_tool.blendWidth));
-        if (!s_tool.resultTexture) s_tool.resultTexture = std::make_unique<sf::Texture>();
-        if (!s_tool.resultTexture->loadFromImage(s_tool.result)) return false;
-        s_tool.resultBlendWidth = s_tool.blendWidth;
-        return true;
-    }
-
-    // Two copies side by side: the seam the game shows is in the middle
+    // Two copies side by side: the join the game shows is in the middle
     void draw_side_by_side(const sf::Texture& texture, float width)
     {
         const ImVec2 imageSize(static_cast<float>(texture.getSize().x), static_cast<float>(texture.getSize().y));
@@ -65,7 +34,7 @@ namespace
             drawList->AddImage(texture_id(texture), min, ImVec2(min.x + copySize.x, min.y + copySize.y));
         }
 
-        // Arrows above and below the seam, nothing over it
+        // Arrows above and below the join, nothing over it
         const float seamX = origin.x + copySize.x;
         drawList->AddTriangleFilled(ImVec2(seamX - 6.f, origin.y - 4.f), ImVec2(seamX + 6.f, origin.y - 4.f), ImVec2(seamX, origin.y + 4.f), SEAM_COLOR);
         const float bottom = origin.y + copySize.y + 4.f;
@@ -118,91 +87,79 @@ namespace
         }
     }
 
+    // Seamless joins: a setting of the background ("seamlessOverlap" in backgrounds.json) the game applies when
+    // it loads the stage. The file isn't changed, and the views show exactly what the game draws
     void tiling_tab(EditorContext& ctx, const std::string& path, const sf::Texture& fileTexture)
     {
-        if (s_tool.path != path) load_source(ctx, path);
-        if (!s_tool.isSourceLoaded)
+        const DataFile file = DataFile::BACKGROUNDS;
+        ordered_json& backgrounds = ctx.project.get(file);
+        const int overlap = ProjectQueries::background_seamless_overlap(ctx.project, path);
+        const bool isSeamless = overlap > 0;
+
+        if (s_tilingPath != path)
         {
-            ImGui::TextColored(ImVec4(1.f, 0.45f, 0.4f, 1.f), "Can't read this image.");
-            return;
+            s_tilingPath = path;
+            s_overlapSlider = isSeamless ? overlap : DEFAULT_OVERLAP;
+            s_closeUpRow = -1.f;
         }
-        const sf::Vector2u size = s_tool.source.getSize();
 
         ImGui::PushTextWrapPos(0.f);
-        ImGui::TextDisabled("The game repeats this background side by side. If the seam shows, the right edge is laid over "
-            "the left one and cut along the path where both look most alike; only the light and colors are blended across "
-            "the band. The image gets %d px narrower (the game takes any width).", s_tool.blendWidth);
+        ImGui::TextDisabled("The game repeats this background side by side. With Seamless on, the game joins the copies "
+            "when it loads the stage: the right edge is laid over the left one and cut along the path where both look most "
+            "alike, only the light and colors are blended. The image file is never changed. Saved in backgrounds.json, "
+            "for every stage using this background.");
         ImGui::PopTextWrapPos();
 
-        // ----- Blend settings -----
-        ImGui::Checkbox("Preview", &s_tool.isPreviewingBlend);
+        // ----- Setting -----
+        bool isEnabled = isSeamless;
+        if (ImGui::Checkbox("Seamless in the game", &isEnabled))
+        {
+            if (isEnabled) backgrounds[path]["seamlessOverlap"] = s_overlapSlider;
+            else
+            {
+                backgrounds[path].erase("seamlessOverlap");
+                if (backgrounds[path].empty()) backgrounds.erase(path);
+            }
+            ctx.commit(file);
+        }
+
         ImGui::SameLine(0.f, 20.f);
+        ImGui::BeginDisabled(!isEnabled);
         ImGui::SetNextItemWidth(220.f);
-        ImGui::SliderInt("Overlap", &s_tool.blendWidth, 32, std::max(32, static_cast<int>(size.x / 3)), "%d px");
-        const bool isSliding = ImGui::IsItemActive();
+        const int maxOverlap = std::max(32, static_cast<int>(fileTexture.getSize().x / 3));
+        if (isSeamless && !ImGui::IsAnyItemActive()) s_overlapSlider = overlap; // Follows undo / redo when not dragged
+        ImGui::SliderInt("Overlap", &s_overlapSlider, 32, maxOverlap, "%d px");
+        if (ImGui::IsItemDeactivatedAfterEdit() && isEnabled)
+        {
+            backgrounds[path]["seamlessOverlap"] = s_overlapSlider;
+            ctx.commit(file);
+        }
+        ImGui::EndDisabled();
         ImGui::SameLine();
-        help_marker("Wider: more room to find a hidden path and a softer change of light. "
-            "Narrower: keeps more of the image.");
+        help_marker("Columns the two edges overlap on: the image gets that much narrower in the game.\n"
+            "Wider: more room to hide the cut and a softer change of light. Narrower: keeps more of the image.");
 
-        // Recomputed when the slider is released (a few milliseconds)
-        if (s_tool.isPreviewingBlend && !isSliding && s_tool.resultBlendWidth != s_tool.blendWidth) compute_result();
-        const bool isShowingResult = s_tool.isPreviewingBlend && s_tool.resultBlendWidth >= 0 && s_tool.resultTexture;
-        const sf::Texture& shown = isShowingResult ? *s_tool.resultTexture : fileTexture;
-
-        // ----- Apply / restore -----
-        if (ImGui::Button("Make seamless"))
-        {
-            std::string error;
-            if ((s_tool.resultBlendWidth == s_tool.blendWidth || compute_result()) && ctx.assets.replace(path, s_tool.result, error))
-            {
-                ctx.textures.forget(path);
-                load_source(ctx, path);
-                s_tool.isPreviewingBlend = false; // The file is now the blended one
-                ctx.notify("Made " + path + " seamless, the previous version is kept");
-            }
-            else ctx.notify(error.empty() ? "Can't make it seamless" : error, true);
-        }
-        ImGui::SetItemTooltip("Writes the blended image into the file the game uses (the previous one is kept as a backup)");
-
-        const auto backup = ctx.assets.latest_backup(path);
-        if (backup)
-        {
-            ImGui::SameLine();
-            if (ImGui::Button("Restore previous version"))
-            {
-                std::string error;
-                if (ctx.assets.restore_backup(path, error))
-                {
-                    ctx.textures.forget(path);
-                    load_source(ctx, path);
-                    ctx.notify("Restored " + backup->filename().string());
-                }
-                else ctx.notify(error, true);
-            }
-            ImGui::SetItemTooltip("Puts back %s", backup->filename().string().c_str());
-        }
-
-        // What the game uses: the preview is only shown here until the button writes it
-        if (isShowingResult)
-            ImGui::TextColored(ImVec4(1.f, 0.8f, 0.4f, 1.f), "Preview only: the file (and the game) keep the current image until you press Make seamless.");
-        else if (backup)
-            ImGui::TextColored(ImVec4(0.45f, 0.9f, 0.6f, 1.f), "Applied: the game uses this version (%u px wide). The previous one is kept as %s.",
-                size.x, backup->filename().string().c_str());
+        // ----- What the game draws -----
+        const sf::Texture* shown = background_texture(ctx, path);
+        if (!shown) shown = &fileTexture;
+        if (isSeamless)
+            ImGui::TextColored(ImVec4(0.45f, 0.9f, 0.6f, 1.f), "The game joins the copies seamlessly (%u px wide instead of %u).",
+                shown->getSize().x, fileTexture.getSize().x);
         else
-            ImGui::TextDisabled("Showing the file the game uses.");
+            ImGui::TextDisabled("The game draws the file as it is: check the join below.");
 
-        // ----- Views -----
-        section(isShowingResult ? "Side by side: preview of the result" : "Side by side: the file the game uses");
-        draw_side_by_side(shown, ImGui::GetContentRegionAvail().x);
+        section("Side by side, as the game draws it");
+        draw_side_by_side(*shown, ImGui::GetContentRegionAvail().x);
 
-        section("Seam close-up, 1:1");
+        section("Join close-up, 1:1");
         const float closeUpHeight = 260.f;
-        const float maxRow = std::max(0.f, static_cast<float>(size.y) - closeUpHeight);
-        if (s_tool.closeUpRow < 0.f)
-            s_tool.closeUpRow = std::clamp(background_ground_row(-1.f, static_cast<float>(size.y)) - closeUpHeight / 2.f, 0.f, maxRow);
+        const float maxRow = std::max(0.f, static_cast<float>(shown->getSize().y) - closeUpHeight);
+        if (s_closeUpRow < 0.f)
+            s_closeUpRow = std::clamp(ProjectQueries::background_ground_row(ctx.project, path, static_cast<float>(shown->getSize().y))
+                - closeUpHeight / 2.f, 0.f, maxRow);
         ImGui::SetNextItemWidth(260.f);
-        ImGui::SliderFloat("Height", &s_tool.closeUpRow, 0.f, maxRow, "from row %.0f");
-        draw_seam_close_up(shown, ImGui::GetContentRegionAvail().x, closeUpHeight, s_tool.closeUpRow);
+        ImGui::SliderFloat("Height", &s_closeUpRow, 0.f, maxRow, "from row %.0f");
+        draw_seam_close_up(*shown, ImGui::GetContentRegionAvail().x, closeUpHeight, s_closeUpRow);
     }
 }
 
@@ -224,7 +181,7 @@ namespace ImageAssetEditor
         }
         ImGui::Text("%u x %u px", texture->getSize().x, texture->getSize().y);
 
-        // ----- Categories (Tiling only for stage backgrounds, the images the game repeats) -----
+        // ----- Categories (Ground line and Tiling only for stage backgrounds, the images the game repeats) -----
         if (!ImGui::BeginTabBar("ImageCategories")) return;
         if (ImGui::BeginTabItem("General"))
         {

@@ -35,5 +35,6 @@ namespace ProjectQueries
     // Row of a stage background units stand on: its "groundRow" in backgrounds.json,
     // else the template's ratio of the image height (background_ground_row in BattlefieldLayout.h)
     float background_ground_row(const ProjectData& project, const std::string& path, float imageHeight);
+    int background_seamless_overlap(const ProjectData& project, const std::string& path);   // 0 = drawn as is
     std::vector<Reference> stages_using_background(const ProjectData& project, const std::string& path);
 }

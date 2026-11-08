@@ -22,7 +22,11 @@ public:
     // The texture, or nullptr if the file is missing or not an image
     const sf::Texture* get(const std::string& relativePath);
 
-    // Reloads this image next time (after it was imported or replaced)
+    // The image made seamless like the game does it (ImageTools::make_seamless), the file as is if overlap <= 0.
+    // One version is kept per image (changing the overlap replaces it)
+    const sf::Texture* get_seamless(const std::string& relativePath, int overlap);
+
+    // Reloads this image (and its seamless version) next time (after it was imported or replaced)
     void forget(const std::string& relativePath);
 
     void clear();

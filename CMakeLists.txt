@@ -102,14 +102,15 @@ target_link_libraries(imgui-sfml PUBLIC imgui SFML::Graphics SFML::Window SFML::
 
 # ---------------------------------------------------------------------
 # fishcore: game data shared by the game and the editor
-# (JSON loading and validation, data structures, player save)
+# (JSON loading and validation, data structures, player save, image processing)
 # ---------------------------------------------------------------------
 add_library(fishcore STATIC
     src/core/DataLoader.cpp
     src/data/PlayerData.cpp
+    src/utils/ImageTools.cpp
 )
 target_include_directories(fishcore PUBLIC src/ external/SFML-3.0.0/include)
-target_link_libraries(fishcore PUBLIC SFML::System)
+target_link_libraries(fishcore PUBLIC SFML::Graphics SFML::System)
 
 # ---------------------------------------------------------------------
 # Main executable
@@ -146,7 +147,6 @@ set(EDITOR_SOURCES
     src/editor/ProjectQueries.cpp
     src/editor/TextureCache.cpp
     src/editor/AssetLibrary.cpp
-    src/editor/ImageTools.cpp
     src/editor/FileDialog.cpp
     src/editor/GameBuilds.cpp
     src/editor/Validator.cpp

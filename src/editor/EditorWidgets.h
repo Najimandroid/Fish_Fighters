@@ -95,4 +95,7 @@ namespace EditorWidgets
     // Where the units stand on a stage background ("groundRow" in backgrounds.json, shared by
     // every stage using the image): the image with a line to drag, the layers and the camera's view
     void ground_line_field(EditorContext& ctx, const std::string& backgroundPath);
+
+    // A stage background as the game draws it: made seamless if backgrounds.json asks for it
+    const sf::Texture* background_texture(EditorContext& ctx, const std::string& backgroundPath);
 }

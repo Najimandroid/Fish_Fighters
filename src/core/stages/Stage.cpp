@@ -7,6 +7,7 @@
 #include "../entities/machine/states/IdleState.h"
 
 #include "../../uis/UIManager.h"
+#include "../../utils/ImageTools.h"
 
 #include <iostream>
 
@@ -67,8 +68,9 @@ void Stage::load(int uid)
 	}
 
 	// Load the background (any size) and repeat it along the stage
-	bool success = m_backgroundTexture.loadFromFile(stageJson->backgroundTexture);
-	init_background(m_dataLoader->get_background_ground_row(stageJson->backgroundTexture));
+	const BackgroundData background = m_dataLoader->get_background_data(stageJson->backgroundTexture);
+	load_background_texture(background);
+	init_background(background.groundRow);
 
 	focus_on_player_base(); // Focus camera
 
@@ -509,9 +511,30 @@ void Stage::spawn_bases(float health, float playerBaseHealth, const std::string&
 }
 
 /*
+* Loads the background image into m_backgroundTexture.
+* With a seamless overlap (backgrounds.json), its edges are blended so the copies join without a seam
+* (the file itself isn't changed). The rows don't move, so the ground row stays valid.
+*/
+void Stage::load_background_texture(const BackgroundData& background)
+{
+	sf::Image image;
+	if (!image.loadFromFile(background.texture))
+	{
+		std::cerr << "Stage: can't load the background " << background.texture << "\n";
+		return;
+	}
+
+	if (background.seamlessOverlap > 0)
+		image = ImageTools::make_seamless(image, static_cast<unsigned>(background.seamlessOverlap));
+
+	if (!m_backgroundTexture.loadFromImage(image))
+		std::cerr << "Stage: can't create the background texture of " << background.texture << "\n";
+}
+
+/*
 * Copies of the background side by side along the whole stage.
 * Works with any image size: a copy every (image width x BACKGROUND_SCALE) pixels, and the image's
-* ground row (the stage's, or the template's ratio) on the line units stand on.
+* ground row (backgrounds.json, or the template's ratio) on the line units stand on.
 * With the 1280 x 1120 template: a copy every 1920 px, top at y = -200.
 */
 void Stage::init_background(float groundRow)
