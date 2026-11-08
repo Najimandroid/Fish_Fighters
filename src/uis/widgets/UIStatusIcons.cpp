@@ -31,13 +31,13 @@ void UIStatusIcons::render(sf::RenderWindow& window)
     if (!stage || !stage->is_loaded()) return;
 
     for (const auto& [layer, units] : stage->get_units())
-        for (const auto& unit : units) draw_row(window, *unit);
+        for (const auto& unit : units) draw_row(window, *unit, true);
 
     for (const auto& [layer, enemies] : stage->get_enemies())
-        for (const auto& enemy : enemies) draw_row(window, *enemy);
+        for (const auto& enemy : enemies) draw_row(window, *enemy, false);
 }
 
-void UIStatusIcons::draw_row(sf::RenderWindow& window, const BattleEntity& entity)
+void UIStatusIcons::draw_row(sf::RenderWindow& window, const BattleEntity& entity, bool isGrowingRight)
 {
     const auto& statuses = entity.get_statuses();
     if (statuses.empty() || entity.isDead) return;
@@ -45,13 +45,11 @@ void UIStatusIcons::draw_row(sf::RenderWindow& window, const BattleEntity& entit
     const int columns = std::max(1, static_cast<int>(m_iconsTexture.getSize().x) / STATUS_ICON_CELL_SIZE);
     const float scale = ICON_SIZE / STATUS_ICON_CELL_SIZE;
 
-    // Centered under the sprite's feet (works for units and enemies, during knockback too)
-    const sf::FloatRect bounds = entity.sprite.getGlobalBounds();
-    const float rowWidth = statuses.size() * ICON_SIZE + (statuses.size() - 1) * ICON_GAP;
-    sf::Vector2f position = {
-        bounds.position.x + bounds.size.x / 2.f - rowWidth / 2.f,
-        bounds.position.y + bounds.size.y + OFFSET_BELOW
-    };
+    // The sprite's position is where its origin is: bottom of the frame's center
+    // (follows knockbacks and layers). The icons stand on it, over the body
+    const sf::Vector2f origin = entity.sprite.getPosition();
+    const float step = isGrowingRight ? ICON_SIZE + ICON_GAP : -(ICON_SIZE + ICON_GAP);
+    sf::Vector2f position = { isGrowingRight ? origin.x : origin.x - ICON_SIZE, origin.y - ICON_SIZE };
 
     for (const StatusEffect& status : statuses)
     {
@@ -71,7 +69,7 @@ void UIStatusIcons::draw_row(sf::RenderWindow& window, const BattleEntity& entit
                 icon.setColor(sf::Color(255, 255, 255, static_cast<std::uint8_t>(255 * alpha)));
             }
             window.draw(icon);
+            position.x += step;
         }
-        position.x += ICON_SIZE + ICON_GAP;
     }
 }

@@ -508,7 +508,7 @@ void PreviewPanel::draw_scene(EditorContext& ctx, const SceneEntity& edited, con
     if (opponent) outlineZones(opponentZones, zoneTop - 34.f, 150, "its ");
     outlineZones(editedZones, zoneTop - 18.f, 255, "");
 
-    // ----- Status icons under the feet, as UIStatusIcons draws them -----
+    // ----- Status icons on the sprite's origin, as UIStatusIcons draws them -----
     if (m_isShowingStatusIcons)
     {
         std::vector<std::pair<const sf::Texture*, FrameUV>> icons;
@@ -519,13 +519,16 @@ void PreviewPanel::draw_scene(EditorContext& ctx, const SceneEntity& edited, con
         }
         auto drawIcons = [&](const SceneEntity& entity)
             {
-                const float rowWidth = icons.size() * UIStatusIcons::ICON_SIZE + (icons.size() - 1) * UIStatusIcons::ICON_GAP;
-                float x = entity.center - rowWidth / 2.f;
-                const float y = GROUND_Y + UIStatusIcons::OFFSET_BELOW;
+                // Origin: bottom of the frame's center (fish: its bottom-left corner, grows right;
+                // enemy: its bottom-right corner, grows left)
+                const float size = UIStatusIcons::ICON_SIZE;
+                const float step = entity.isUnit ? size + UIStatusIcons::ICON_GAP : -(size + UIStatusIcons::ICON_GAP);
+                float x = entity.isUnit ? entity.center : entity.center - size;
+                const float y = GROUND_Y - size;
                 for (const auto& [texture, uv] : icons)
                 {
-                    drawList->AddImage(texture_id(*texture), toScreen(x, y), toScreen(x + UIStatusIcons::ICON_SIZE, y + UIStatusIcons::ICON_SIZE), uv.uv0, uv.uv1);
-                    x += UIStatusIcons::ICON_SIZE + UIStatusIcons::ICON_GAP;
+                    drawList->AddImage(texture_id(*texture), toScreen(x, y), toScreen(x + size, y + size), uv.uv0, uv.uv1);
+                    x += step;
                 }
             };
         if (!icons.empty())

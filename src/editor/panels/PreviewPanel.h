@@ -86,7 +86,7 @@ private:
     bool m_isShowingHitboxes = true;
     bool m_isShowingRanges = true;
     bool m_isShowingDamageZones = true;
-    bool m_isShowingStatusIcons = false;         // Every status icon under the entities, as in battle
+    bool m_isShowingStatusIcons = false;         // Every status icon at the entities' feet, as in battle
 
     Selection m_opponent;                        // UNIT (with its form) or ENEMY in front, NONE = alone
     float m_distance = 120.f;                    // Between the two centers, in world pixels
