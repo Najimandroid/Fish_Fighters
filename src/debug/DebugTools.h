@@ -45,7 +45,6 @@ public:
     void toggle_window();
 
 private:
-    void apply_theme();
     void draw_menu_bar();
     void build_default_layout(ImGuiID dockspaceId);
 

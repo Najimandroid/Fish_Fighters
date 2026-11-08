@@ -38,6 +38,16 @@ enum AttackType
 class DataLoader {
 public:
 
+    // Folder the JSON files are read from and saved to (default "game_data/").
+    // The editor points it at a temporary copy to check its changes with this same loader.
+    void set_data_folder(const std::string& folder);
+
+    // Turns error_log.txt on or off (the editor reads get_last_error() instead)
+    void set_error_log_enabled(bool isEnabled);
+
+    // Message of the last error (empty if none since load_all() started)
+    const std::string& get_last_error() const;
+
     // Loads all game data (units, enemies, stages, player progress)
     bool load_all();
 
@@ -76,7 +86,17 @@ private:
     // Internal saving method
     bool save_player(const std::string& path);
 
+    // Prints an error, keeps it for get_last_error() and writes it to error_log.txt
+    void report_error(const std::string& message);
+
+    std::string player_save_path() const;
+
 private:
+
+    // ----- Files -----
+    std::string m_dataFolder = "game_data/";
+    bool m_isWritingErrorLog = true;
+    std::string m_lastError;
 
     // ----- Flags -----
     bool m_unitsLoaded = false;

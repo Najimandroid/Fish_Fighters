@@ -32,8 +32,6 @@ set(PROJECT_SOURCES
 
     src/core/Game.cpp
 
-    src/core/DataLoader.cpp
-
     src/core/entities/BattleEntity.cpp
     src/core/entities/BattleEnemy.cpp
     src/core/entities/BattleUnit.cpp
@@ -73,7 +71,8 @@ set(PROJECT_SOURCES
     src/uis/widgets/UIEquipSlider.cpp
     src/uis/widgets/UIChapterMap.cpp
 
-    src/data/PlayerData.cpp
+    # ImGui theme shared by the developer tools and the editor
+    src/tools/ToolsTheme.cpp
 
     # Developer tools (their content is only compiled with DEBUG_MODE)
     src/debug/DebugTools.cpp
@@ -101,6 +100,17 @@ target_include_directories(imgui-sfml PUBLIC external/imgui-sfml external/imgui)
 target_link_libraries(imgui-sfml PUBLIC imgui SFML::Graphics SFML::Window SFML::System)
 
 # ---------------------------------------------------------------------
+# fishcore: game data shared by the game and the editor
+# (JSON loading and validation, data structures, player save)
+# ---------------------------------------------------------------------
+add_library(fishcore STATIC
+    src/core/DataLoader.cpp
+    src/data/PlayerData.cpp
+)
+target_include_directories(fishcore PUBLIC src/ external/SFML-3.0.0/include)
+target_link_libraries(fishcore PUBLIC SFML::System)
+
+# ---------------------------------------------------------------------
 # Main executable
 # ---------------------------------------------------------------------
 add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})
@@ -114,6 +124,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
+    fishcore
     imgui-sfml
     SFML::Graphics
     SFML::Audio
@@ -121,6 +132,62 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     SFML::System
     opengl32.lib
 )
+
+
+# ---------------------------------------------------------------------
+# FishEditor: the game data editor (units, enemies, stages, chapters, images)
+# Edits the project's game_data and assets folders directly
+# ---------------------------------------------------------------------
+set(EDITOR_SOURCES
+    src/editor/main.cpp
+    src/editor/EditorApp.cpp
+    src/editor/ProjectData.cpp
+    src/editor/ProjectQueries.cpp
+    src/editor/TextureCache.cpp
+    src/editor/AssetLibrary.cpp
+    src/editor/FileDialog.cpp
+    src/editor/GameBuilds.cpp
+    src/editor/Validator.cpp
+    src/editor/EditorWidgets.cpp
+
+    src/editor/panels/ContentPanel.cpp
+    src/editor/panels/PropertiesPanel.cpp
+    src/editor/panels/PreviewPanel.cpp
+    src/editor/panels/ValidationPanel.cpp
+
+    src/editor/editors/EntityFields.cpp
+    src/editor/editors/UnitEditor.cpp
+    src/editor/editors/EnemyEditor.cpp
+    src/editor/editors/StageEditor.cpp
+    src/editor/editors/ChapterEditor.cpp
+    src/editor/editors/ImageAssetEditor.cpp
+
+    src/tools/ToolsTheme.cpp
+    external/imgui/misc/cpp/imgui_stdlib.cpp
+)
+
+add_executable(FishEditor ${EDITOR_SOURCES})
+
+target_include_directories(FishEditor PRIVATE
+    external/imgui
+    external/imgui/misc/cpp
+    external/imgui-sfml
+    external/SFML-3.0.0/include
+    src/
+)
+
+target_link_libraries(FishEditor PRIVATE
+    fishcore
+    imgui-sfml
+    SFML::Graphics
+    SFML::Window
+    SFML::System
+    opengl32.lib
+    comdlg32.lib
+)
+
+# The editor opens this project's game_data and assets folders
+target_compile_definitions(FishEditor PRIVATE FISH_PROJECT_DIR="${CMAKE_SOURCE_DIR}")
 
 # ---------------------------------------------------------------------
 # Debug macro
@@ -148,19 +215,19 @@ set(SFML_DLLS_RELEASE
     "${SFML_DLL_DIR}/sfml-system-3.dll"
 )
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    foreach(dll ${SFML_DLLS_DEBUG})
-        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${dll}" $<TARGET_FILE_DIR:${PROJECT_NAME}>
+# The game and the editor both need the SFML DLLs next to them
+foreach(target ${PROJECT_NAME} FishEditor)
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        set(TARGET_DLLS ${SFML_DLLS_DEBUG})
+    else()
+        set(TARGET_DLLS ${SFML_DLLS_RELEASE})
+    endif()
+    foreach(dll ${TARGET_DLLS})
+        add_custom_command(TARGET ${target} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${dll}" $<TARGET_FILE_DIR:${target}>
         )
     endforeach()
-else()
-    foreach(dll ${SFML_DLLS_RELEASE})
-        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${dll}" $<TARGET_FILE_DIR:${PROJECT_NAME}>
-        )
-    endforeach()
-endif()
+endforeach()
 
 # ---------------------------------------------------------------------
 # Copy assets folder to output

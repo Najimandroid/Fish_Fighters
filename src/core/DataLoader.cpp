@@ -13,20 +13,7 @@ using json = nlohmann::json;
 
 namespace
 {
-    const std::string PLAYER_SAVE_PATH = "game_data/player.json";
     const std::string ERROR_LOG_PATH = "error_log.txt";
-
-    /*
-     * Prints an error and appends it to error_log.txt next to the executable,
-     * since release builds have no console.
-     */
-    void report_error(const std::string& message)
-    {
-        std::cerr << message << "\n";
-
-        std::ofstream log(ERROR_LOG_PATH, std::ios::app);
-        if (log) log << message << "\n";
-    }
 
     /*
      * JSON readers that refuse to lose data silently.
@@ -141,6 +128,41 @@ namespace
 }
 
 /*
+ * Prints an error, keeps it for get_last_error(), and appends it to error_log.txt
+ * next to the executable (release builds have no console) unless that log is turned off.
+ */
+void DataLoader::report_error(const std::string& message)
+{
+    std::cerr << message << "\n";
+    m_lastError = message;
+
+    if (!m_isWritingErrorLog) return;
+    std::ofstream log(ERROR_LOG_PATH, std::ios::app);
+    if (log) log << message << "\n";
+}
+
+void DataLoader::set_data_folder(const std::string& folder)
+{
+    m_dataFolder = folder;
+    if (!m_dataFolder.empty() && m_dataFolder.back() != '/' && m_dataFolder.back() != '\\') m_dataFolder += '/';
+}
+
+void DataLoader::set_error_log_enabled(bool isEnabled)
+{
+    m_isWritingErrorLog = isEnabled;
+}
+
+const std::string& DataLoader::get_last_error() const
+{
+    return m_lastError;
+}
+
+std::string DataLoader::player_save_path() const
+{
+    return m_dataFolder + "player.json";
+}
+
+/*
  * Loads all game data: units, enemies, stages, and player data.
  * Returns true if all data loaded successfully.
  * Errors (missing files, broken JSON, wrong values) are written to error_log.txt.
@@ -161,12 +183,14 @@ bool DataLoader::load_all()
             return false;
         };
 
-    return load(&DataLoader::load_statuses, "game_data/statuses.json") &&
-        load(&DataLoader::load_units, "game_data/units.json") &&
-        load(&DataLoader::load_enemies, "game_data/enemies.json") &&
-        load(&DataLoader::load_stages, "game_data/stages.json") &&
-        load(&DataLoader::load_chapters, "game_data/chapters.json") &&
-        load(&DataLoader::load_player, PLAYER_SAVE_PATH);
+    m_lastError.clear();
+
+    return load(&DataLoader::load_statuses, m_dataFolder + "statuses.json") &&
+        load(&DataLoader::load_units, m_dataFolder + "units.json") &&
+        load(&DataLoader::load_enemies, m_dataFolder + "enemies.json") &&
+        load(&DataLoader::load_stages, m_dataFolder + "stages.json") &&
+        load(&DataLoader::load_chapters, m_dataFolder + "chapters.json") &&
+        load(&DataLoader::load_player, player_save_path());
 }
 
 /*
@@ -175,7 +199,7 @@ bool DataLoader::load_all()
  */
 bool DataLoader::terminate()
 {
-    return save_player(PLAYER_SAVE_PATH);
+    return save_player(player_save_path());
 }
 
 /*
@@ -185,7 +209,7 @@ bool DataLoader::terminate()
  */
 bool DataLoader::save_progress()
 {
-    return save_player(PLAYER_SAVE_PATH);
+    return save_player(player_save_path());
 }
 
 /*
