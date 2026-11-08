@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 #include "EntityType.h"
 #include "AbilityData.h"
@@ -30,14 +31,14 @@ struct EntityData
 
     // ===== Battle Attributes =====
     int cost = 50;                              // Deployment cost (currency required to spawn)
-    int cooldown = 1;                           // Time (in seconds) before unit can be deployed again
+    float cooldown = 1.0f;                      // Time (in seconds) before unit can be deployed again
 
     int health = 1;                             // Maximum health of the unit
 
     int attackPower = 1;                        // Base damage per attack
     float attackRange = 1.0f;                   // Effective attack range
     AttackType attackType = static_cast<AttackType>(1); // Attack style/type (single, AoE, etc.)
-    float attackFrequency = 1.0f;               // Attacks per second
+    float attackFrequency = 1.0f;               // Seconds between two attacks
     float foreswingTime = 0.0f;                 // Delay before attack is executed (wind-up)
     float backswingTime = 0.0f;                 // Delay after attack before returning to idle
 

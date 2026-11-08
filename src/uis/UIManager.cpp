@@ -242,6 +242,8 @@ void UIManager::generate_equip_menu_uis()
             m_pendingAction = [this]() {
                 if (auto stage = m_stage.lock())
                 {
+                    // Save the loadout when leaving the equip menu
+                    m_dataLoader->save_progress();
                     generate_fish_tank_uis();
                 }
                 };

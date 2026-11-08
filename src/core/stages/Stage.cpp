@@ -48,6 +48,8 @@ void Stage::load(int uid)
 	m_enemiesCount = 0;
 	m_unitsCount = 0;
 	m_currentCash = 0;
+	m_maxCash = BASE_MAX_CASH;               // Cash Up upgrades only last for one stage
+	m_cashPerSecond = BASE_CASH_PER_SECOND;
 	m_length = stageJson->length;
 
 	// Spawn bases with provided health and texture
@@ -131,7 +133,7 @@ void Stage::update(float deltaTime)
 			auto data = m_dataLoader->get_enemy_data(spawnEnemyData->UID);
 
 			//std::cout << "Spawned enemy: " << data->name << "\n";*
-			spawn_enemy(data, spawnEnemyData->magnification, spawnEnemyData->layer, spawnEnemyData->isBoss, spawnEnemyData->isBoss);
+			spawn_enemy(data, spawnEnemyData->magnification, spawnEnemyData->layer, spawnEnemyData->isBoss, spawnEnemyData->bypassEnemyLimit);
 
 			spawnEnemyData->currentTimer = 0.f;
 			spawnEnemyData->spawnedCount++;
@@ -156,6 +158,8 @@ void Stage::update(float deltaTime)
 			auto stageData = m_dataLoader->get_stage_data(m_uid);
 			if (stageData)
 				player->complete_stage(stageData);
+
+			m_dataLoader->save_progress();
 		}
 		
 		m_enemies.clear();

@@ -128,9 +128,12 @@ private:
     int m_uid = -1;
     std::string m_stageName = "Unknown Area ???";
 
+    static constexpr int BASE_MAX_CASH = 500;        // Wallet size at the start of every stage
+    static constexpr int BASE_CASH_PER_SECOND = 50;  // Income at the start of every stage
+
     int m_currentCash = 0;                   // Current cash available to the player
-    int m_maxCash = 500;                     // Maximum cash allowed
-	int m_cashPerSecond = 50;                // Cash gained per second (with no upgrades)
+    int m_maxCash = BASE_MAX_CASH;           // Maximum cash allowed
+	int m_cashPerSecond = BASE_CASH_PER_SECOND; // Cash gained per second (with no upgrades)
 
     int m_enemiesLimit = 5;                  // Maximum number of enemies
     int m_unitsLimit = 5;                    // Maximum number of units

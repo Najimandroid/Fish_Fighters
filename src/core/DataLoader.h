@@ -43,6 +43,9 @@ public:
     // Saves necessary data (mainly player progress)
     bool terminate();
 
+    // Saves player progress right away (after victories, upgrades, equip changes)
+    bool save_progress();
+
     // Accessors
     const std::shared_ptr<EntityData> get_unit_data(int uid, int form) const;
     const std::shared_ptr<EntityData> get_enemy_data(int uid) const;

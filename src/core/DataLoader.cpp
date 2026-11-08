@@ -2,22 +2,93 @@
 
 #include "../external/nlohmann/json.hpp"
 
+#include <cmath>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <stdexcept>
 
 using json = nlohmann::json;
+
+namespace
+{
+    const std::string PLAYER_SAVE_PATH = "game_data/player.json";
+    const std::string ERROR_LOG_PATH = "error_log.txt";
+
+    /*
+     * Prints an error and appends it to error_log.txt next to the executable,
+     * since release builds have no console.
+     */
+    void report_error(const std::string& message)
+    {
+        std::cerr << message << "\n";
+
+        std::ofstream log(ERROR_LOG_PATH, std::ios::app);
+        if (log) log << message << "\n";
+    }
+
+    /*
+     * JSON readers that refuse to lose data silently.
+     * nlohmann's get<int>() truncates 1.75 to 1, so whole numbers are checked here.
+     */
+    int read_int_value(const json& value, const std::string& name)
+    {
+        if (value.is_number_integer()) return value.get<int>();
+
+        if (value.is_number_float())
+        {
+            double number = value.get<double>();
+            if (number == std::floor(number)) return static_cast<int>(number);
+            throw std::runtime_error("\"" + name + "\" must be a whole number, got " + value.dump());
+        }
+
+        throw std::runtime_error("\"" + name + "\" must be a number, got " + value.dump());
+    }
+
+    float read_float_value(const json& value, const std::string& name)
+    {
+        if (!value.is_number()) throw std::runtime_error("\"" + name + "\" must be a number, got " + value.dump());
+        return value.get<float>();
+    }
+
+    int read_int(const json& object, const std::string& key) { return read_int_value(object.at(key), key); }
+    float read_float(const json& object, const std::string& key) { return read_float_value(object.at(key), key); }
+
+    // Accepts true/false or 1/0
+    bool read_flag(const json& object, const std::string& key)
+    {
+        const json& value = object.at(key);
+        if (value.is_boolean()) return value.get<bool>();
+        return read_int_value(value, key) != 0;
+    }
+}
 
 /*
  * Loads all game data: units, enemies, stages, and player data.
  * Returns true if all data loaded successfully.
+ * Errors (missing files, broken JSON, wrong values) are written to error_log.txt.
  */
 bool DataLoader::load_all()
 {
-    return load_units("game_data/units.json") &&
-        load_enemies("game_data/enemies.json") &&
-        load_stages("game_data/stages.json") &&
-        load_chapters("game_data/chapters.json") &&
-        load_player("game_data/player.json");
+    auto load = [this](bool (DataLoader::*loader)(const std::string&), const std::string& path)
+        {
+            try
+            {
+                if ((this->*loader)(path)) return true;
+                report_error("Could not load " + path);
+            }
+            catch (const std::exception& e)
+            {
+                report_error("Could not load " + path + ": " + e.what());
+            }
+            return false;
+        };
+
+    return load(&DataLoader::load_units, "game_data/units.json") &&
+        load(&DataLoader::load_enemies, "game_data/enemies.json") &&
+        load(&DataLoader::load_stages, "game_data/stages.json") &&
+        load(&DataLoader::load_chapters, "game_data/chapters.json") &&
+        load(&DataLoader::load_player, PLAYER_SAVE_PATH);
 }
 
 /*
@@ -26,7 +97,17 @@ bool DataLoader::load_all()
  */
 bool DataLoader::terminate()
 {
-    return save_player("game_data/player.json");
+    return save_player(PLAYER_SAVE_PATH);
+}
+
+/*
+ * Saves player progress now.
+ * Called after victories, upgrades and when leaving the equip menu,
+ * so a crash doesn't lose the whole session.
+ */
+bool DataLoader::save_progress()
+{
+    return save_player(PLAYER_SAVE_PATH);
 }
 
 /*
@@ -44,8 +125,8 @@ bool DataLoader::load_units(const std::string& path)
 
     for (auto& [_, value] : j.items())
     {
-        int UID = value.at("UID").get<int>();
-        int baseUpgradeCost = value.at("baseUpgradeCost").get<int>();
+        int UID = read_int(value, "UID");
+        int baseUpgradeCost = read_int(value, "baseUpgradeCost");
 
         for (auto& formValue : value.at("forms"))
         {
@@ -57,21 +138,21 @@ bool DataLoader::load_units(const std::string& path)
             data->name = formValue.at("name").get<std::string>();
             data->description = formValue.at("description").get<std::string>();
 
-            data->cost = formValue.at("cost").get<int>();
-            data->cooldown = formValue.at("cooldown").get<int>();
+            data->cost = read_int(formValue, "cost");
+            data->cooldown = read_float(formValue, "cooldown");
 
-            data->health = formValue.at("health").get<int>();
-            data->attackPower = formValue.at("attackPower").get<int>();
-            data->attackRange = formValue.at("attackRange").get<float>();
-            data->attackType = static_cast<AttackType>(formValue.at("attackType").get<int>());
-            data->attackFrequency = formValue.at("attackFrequency").get<float>();
-            data->foreswingTime = formValue.at("foreswing").get<float>();
-            data->backswingTime = formValue.at("backswing").get<float>();
+            data->health = read_int(formValue, "health");
+            data->attackPower = read_int(formValue, "attackPower");
+            data->attackRange = read_float(formValue, "attackRange");
+            data->attackType = static_cast<AttackType>(read_int(formValue, "attackType"));
+            data->attackFrequency = read_float(formValue, "attackFrequency");
+            data->foreswingTime = read_float(formValue, "foreswing");
+            data->backswingTime = read_float(formValue, "backswing");
 
             if(formValue.contains("damageZone") && formValue["damageZone"].is_array() && formValue["damageZone"].size() == 2)
             {
-                data->damageZone.first = formValue["damageZone"][0].get<float>();
-                data->damageZone.second = formValue["damageZone"][1].get<float>();
+                data->damageZone.first = read_float_value(formValue["damageZone"][0], "damageZone");
+                data->damageZone.second = read_float_value(formValue["damageZone"][1], "damageZone");
 			}
             else
             {
@@ -81,8 +162,8 @@ bool DataLoader::load_units(const std::string& path)
 
             if (formValue.contains("types") && formValue["types"].is_array() && formValue["types"].size() == 2)
             {
-                data->types.first = static_cast<EntityType>(formValue["types"][0].get<int>());
-                data->types.second = static_cast<EntityType>(formValue["types"][1].get<int>());
+                data->types.first = static_cast<EntityType>(read_int_value(formValue["types"][0], "types"));
+                data->types.second = static_cast<EntityType>(read_int_value(formValue["types"][1], "types"));
             }
             else
             {
@@ -90,14 +171,14 @@ bool DataLoader::load_units(const std::string& path)
                 data->types.second = EntityType::NONE;
             }
 
-            data->movementSpeed = formValue.at("movementSpeed").get<float>();
-            data->knockbackCount = formValue.at("knockbackCount").get<int>();
+            data->movementSpeed = read_float(formValue, "movementSpeed");
+            data->knockbackCount = read_int(formValue, "knockbackCount");
 
             data->texture = formValue.at("texture").get<std::string>();
-            data->frameCount = formValue.at("frameCount").get<int>();
-            data->knockbackFrameIndex = formValue.at("knockbackFrameIndex").get<int>();
+            data->frameCount = read_int(formValue, "frameCount");
+            data->knockbackFrameIndex = read_int(formValue, "knockbackFrameIndex");
 
-            int formID = formValue.at("form").get<int>();
+            int formID = read_int(formValue, "form");
             m_unitsFormsDatabase[{UID, formID}] = data;
         }
     }
@@ -124,24 +205,24 @@ bool DataLoader::load_enemies(const std::string& path)
     {
         std::shared_ptr<EntityData> data = std::make_shared<EntityData>();
 
-        data->UID = value.at("UID").get<int>();
+        data->UID = read_int(value, "UID");
 
         data->name = value.at("name").get<std::string>();
         data->description = value.at("description").get<std::string>();
 
-        data->health = value.at("health").get<int>();
+        data->health = read_int(value, "health");
 
-        data->attackPower = value.at("attackPower").get<int>();
-        data->attackRange = value.at("attackRange").get<float>();
-        data->attackType = static_cast<AttackType>(value.at("attackType").get<int>());
-        data->attackFrequency = value.at("attackFrequency").get<float>();
-        data->foreswingTime = value.at("foreswing").get<float>();
-        data->backswingTime = value.at("backswing").get<float>();
+        data->attackPower = read_int(value, "attackPower");
+        data->attackRange = read_float(value, "attackRange");
+        data->attackType = static_cast<AttackType>(read_int(value, "attackType"));
+        data->attackFrequency = read_float(value, "attackFrequency");
+        data->foreswingTime = read_float(value, "foreswing");
+        data->backswingTime = read_float(value, "backswing");
 
         if (value.contains("damageZone") && value["damageZone"].is_array() && value["damageZone"].size() == 2)
         {
-            data->damageZone.first = value["damageZone"][0].get<float>();
-            data->damageZone.second = value["damageZone"][1].get<float>();
+            data->damageZone.first = read_float_value(value["damageZone"][0], "damageZone");
+            data->damageZone.second = read_float_value(value["damageZone"][1], "damageZone");
         }
         else
         {
@@ -151,8 +232,8 @@ bool DataLoader::load_enemies(const std::string& path)
 
         if (value.contains("types") && value["types"].is_array() && value["types"].size() == 2)
         {
-            data->types.first = static_cast<EntityType>(value["types"][0].get<int>());
-            data->types.second = static_cast<EntityType>(value["types"][1].get<int>());
+            data->types.first = static_cast<EntityType>(read_int_value(value["types"][0], "types"));
+            data->types.second = static_cast<EntityType>(read_int_value(value["types"][1], "types"));
         }
         else
         {
@@ -160,12 +241,12 @@ bool DataLoader::load_enemies(const std::string& path)
             data->types.second = EntityType::NONE;
         }
 
-        data->movementSpeed = value.at("movementSpeed").get<float>();
-        data->knockbackCount = value.at("knockbackCount").get<int>();
+        data->movementSpeed = read_float(value, "movementSpeed");
+        data->knockbackCount = read_int(value, "knockbackCount");
 
         data->texture = value.at("texture").get<std::string>();
-        data->frameCount = value.at("frameCount").get<int>();
-        data->knockbackFrameIndex = value.at("knockbackFrameIndex").get<int>();
+        data->frameCount = read_int(value, "frameCount");
+        data->knockbackFrameIndex = read_int(value, "knockbackFrameIndex");
 
         m_enemiesDatabase[data->UID] = data;
     }
@@ -192,16 +273,16 @@ bool DataLoader::load_stages(const std::string& path)
     {
         std::shared_ptr<StageData> data = std::make_shared<StageData>();
 
-        data->UID = value.at("UID").get<int>();
+        data->UID = read_int(value, "UID");
 
         data->name = value.at("stageName").get<std::string>();
 
-        data->enemiesLimit = value.at("enemiesLimit").get<int>();
-        data->unitsLimit = value.at("unitsLimit").get<int>();
+        data->enemiesLimit = read_int(value, "enemiesLimit");
+        data->unitsLimit = read_int(value, "unitsLimit");
 
-        data->baseHealth = value.at("baseHealth").get<float>();
+        data->baseHealth = read_float(value, "baseHealth");
 
-        data->length = value.at("length").get<float>();
+        data->length = read_float(value, "length");
 
         data->baseTexture = value.at("baseTexture").get<std::string>();
         data->backgroundTexture = value.at("backgroundTexture").get<std::string>();
@@ -214,21 +295,21 @@ bool DataLoader::load_stages(const std::string& path)
         {
             std::shared_ptr<EnemyStageData> enemyData = std::make_shared<EnemyStageData>();
 
-            enemyData->UID = enemyValue.at("UID").get<int>();
+            enemyData->UID = read_int(enemyValue, "UID");
 
-            enemyData->amount = enemyValue.at("amount").get<int>();
-            enemyData->respawnTime = enemyValue.at("respawnTime").get<float>();
-            enemyData->spawnStart = enemyValue.at("spawnStart").get<float>();
+            enemyData->amount = read_int(enemyValue, "amount");
+            enemyData->respawnTime = read_float(enemyValue, "respawnTime");
+            enemyData->spawnStart = read_float(enemyValue, "spawnStart");
 
-            enemyData->layer = enemyValue.at("layer").get<int>();
+            enemyData->layer = read_int(enemyValue, "layer");
 
-            enemyData->baseHealthThreshold = enemyValue.at("baseHealth").get<float>();
+            enemyData->baseHealthThreshold = read_float(enemyValue, "baseHealth");
 
-            enemyData->magnification.x = enemyValue["magnification"][0];
-            enemyData->magnification.y = enemyValue["magnification"][1];
+            enemyData->magnification.x = read_float_value(enemyValue.at("magnification").at(0), "magnification");
+            enemyData->magnification.y = read_float_value(enemyValue.at("magnification").at(1), "magnification");
 
-            enemyData->isBoss = (bool)enemyValue.at("isBoss").get<int>();
-            enemyData->bypassEnemyLimit = (bool)enemyValue.at("bypassEnemyLimit").get<int>();
+            enemyData->isBoss = read_flag(enemyValue, "isBoss");
+            enemyData->bypassEnemyLimit = read_flag(enemyValue, "bypassEnemyLimit");
 
             enemyData->currentTimer = enemyData->respawnTime;
 
@@ -243,11 +324,11 @@ bool DataLoader::load_stages(const std::string& path)
 
             if (reward->type == "shells")
             {
-                reward->amount = rewardValue.at("amount").get<int>();
+                reward->amount = read_int(rewardValue, "amount");
             }
             else if (reward->type == "unit")
             {
-                reward->unitUID = rewardValue.at("UID").get<int>();
+                reward->unitUID = read_int(rewardValue, "UID");
             }
 
             data->rewards.push_back(reward);
@@ -276,19 +357,19 @@ bool DataLoader::load_chapters(const std::string& path)
     {
         auto chapter = std::make_shared<ChapterData>();
 
-        chapter->UID = value["UID"];
+        chapter->UID = read_int(value, "UID");
 
-        chapter->name = value["name"];
-        chapter->description = value["description"];
+        chapter->name = value.at("name").get<std::string>();
+        chapter->description = value.at("description").get<std::string>();
 
-        chapter->mapTexture = value["mapTexture"].get<std::string>();
+        chapter->mapTexture = value.at("mapTexture").get<std::string>();
 
-        for (const auto& stageJson : value["stages"])
+        for (const auto& stageJson : value.at("stages"))
         {
             ChapterData::StageMapData stageMapData;
 
-            stageMapData.UID = stageJson["UID"].get<int>();
-            stageMapData.position = { stageJson["x"].get<float>(), stageJson["y"].get<float>() };
+            stageMapData.UID = read_int(stageJson, "UID");
+            stageMapData.position = { read_float(stageJson, "x"), read_float(stageJson, "y") };
 
             chapter->stages.push_back(stageMapData);
         }
@@ -308,27 +389,38 @@ bool DataLoader::load_player(const std::string& path)
 {
     if (m_playerLoaded) return false;
 
-    std::ifstream file(path);
-    if (!file) { std::cerr << "Failed to load the player\n"; return false; }
-
-    json j;
-    file >> j;
-
 	m_playerData = std::make_shared<PlayerData>();
+    m_playerData->equippedUnits.fill(-1);
+
+    std::ifstream file(path);
+    if (!file)
+    {
+        // First launch (or deleted save): start a new game with the first fish equipped
+        report_error("No save found at " + path + ", creating a new one");
+
+        m_playerData->ownedUnits[1] = { 1, 0 };
+        m_playerData->equippedUnits[0] = 1;
+
+        m_playerLoaded = true;
+        return save_player(path);
+    }
 
     //Tries to load the data:
     try
     {
+        json j;
+        file >> j;
+
         // Shells
-        m_playerData->shells = j.at("money").at("shells").get<int>();
+        m_playerData->shells = read_int(j.at("money"), "shells");
 
         // Owned units
         m_playerData->ownedUnits.clear();
         for (auto& [uidStr, unitData] : j.at("units").at("owned").items())
         {
             int uid = std::stoi(uidStr);
-            int level = unitData.at("level").get<int>();
-            int form = unitData.contains("form") ? unitData.at("form").get<int>() : 0;
+            int level = read_int(unitData, "level");
+            int form = unitData.contains("form") ? read_int(unitData, "form") : 0;
 
             m_playerData->ownedUnits[uid] = { level, form };
         }
@@ -345,22 +437,33 @@ bool DataLoader::load_player(const std::string& path)
         auto equippedArray = j.at("units").at("equipped");
         for (size_t i = 0; i < equippedArray.size() && i < m_playerData->equippedUnits.size(); i++)
         {
-            m_playerData->equippedUnits[i] = equippedArray[i].get<int>();
+            m_playerData->equippedUnits[i] = read_int_value(equippedArray[i], "equipped");
         }
 
         // Completed stages
         m_playerData->completedStages.clear();
         for (auto& stageUid : j.at("progression").at("completedStages"))
         {
-            m_playerData->completedStages.insert(stageUid.get<int>());
+            m_playerData->completedStages.insert(read_int_value(stageUid, "completedStages"));
+        }
+
+        // Completed chapters (missing in older saves)
+        m_playerData->completedChapters.clear();
+        if (j.at("progression").contains("completedChapters"))
+        {
+            for (auto& chapterUid : j.at("progression").at("completedChapters"))
+            {
+                m_playerData->completedChapters.insert(read_int_value(chapterUid, "completedChapters"));
+            }
         }
 
         // Current chapter
-        m_playerData->currentChapter = j.at("progression").at("currentChapter").get<int>();
+        m_playerData->currentChapter = read_int(j.at("progression"), "currentChapter");
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Error parsing player data: " << e.what() << "\n";
+        // The save is left untouched (m_playerLoaded stays false, so nothing overwrites it)
+        report_error("Error parsing player data: " + std::string(e.what()));
         return false;
     }
 
@@ -416,17 +519,45 @@ bool DataLoader::save_player(const std::string& path)
         j["progression"]["completedStages"].push_back(stageUid);
     }
 
+    // Completed chapters
+    j["progression"]["completedChapters"] = json::array();
+    for (int chapterUid : m_playerData->completedChapters)
+    {
+        j["progression"]["completedChapters"].push_back(chapterUid);
+    }
+
     // Current chapter
     j["progression"]["currentChapter"] = m_playerData->currentChapter;
 
-    std::ofstream file(path, std::ios::trunc); // Write onto the existing file
-    if (!file)
+    // Write to a temporary file first, then replace the save,
+    // so a crash in the middle of writing can't corrupt player.json
+    const std::string tempPath = path + ".tmp";
     {
-        std::cerr << "Failed to open player data file for saving: " << path << "\n";
+        std::ofstream file(tempPath, std::ios::trunc);
+        if (!file)
+        {
+            report_error("Failed to open player data file for saving: " + tempPath);
+            return false;
+        }
+
+        file << j.dump(4);
+        file.flush();
+        if (!file)
+        {
+            report_error("Failed to write player data to " + tempPath);
+            return false;
+        }
+    }
+
+    std::error_code error;
+    std::filesystem::rename(tempPath, path, error);
+    if (error)
+    {
+        report_error("Failed to replace " + path + ": " + error.message());
+        std::filesystem::remove(tempPath, error);
         return false;
     }
 
-    file << j.dump(4);
     return true;
 }
 

@@ -6,7 +6,7 @@
 
 UIChapterMap::UIChapterMap(std::shared_ptr<DataLoader> dataLoader)
     : m_playerData(dataLoader->get_player_data()), m_dataLoader(dataLoader), m_background(m_backgroundTexture),
-    m_stageTitle(std::make_shared<UITextElement>(sf::Vector2f{ 500.f, 200.f }, sf::Vector2f{ 0.f, 0.f }, "Unkownk Stage", 48))
+    m_stageTitle(std::make_shared<UITextElement>(sf::Vector2f{ 500.f, 200.f }, sf::Vector2f{ 0.f, 0.f }, "Unknown Stage", 48))
 {
     m_offsetTween = tweeny::from(0.f, 0.f).to(0.f, 0.f).during(1).via(tweeny::easing::linear);
 }

@@ -16,7 +16,7 @@ Game::Game():
 	m_uiManager(std::make_shared<UIManager>())
 {
     // Create fullscreen window without borders
-    m_window.create(sf::VideoMode::getDesktopMode(), "Fish Fighers", sf::Style::None); //sf::Style::None
+    m_window.create(sf::VideoMode::getDesktopMode(), "Fish Fighters", sf::Style::None); //sf::Style::None
     m_window.setFramerateLimit(m_frameRate);
     center_window();
 
@@ -30,7 +30,12 @@ Game::Game():
     ImGui::SFML::UpdateFontTexture();
 #endif
     // Load all game data (units, enemies, stages, player)
-    m_dataLoader->load_all();
+    // If anything is missing or broken, the reason is in error_log.txt and the game closes
+    // instead of running with incomplete data (the save is not touched in that case)
+    if (!m_dataLoader->load_all())
+    {
+        m_window.close();
+    }
 
     // Initialize UIManager and Stage with references to DataLoader
     m_uiManager->init(m_dataLoader, m_stage);
@@ -364,6 +369,7 @@ ImTextureID Game::get_imgui_texture(const sf::Texture& texture)
         return it->second;
 
 	// TODO: Texture SFML => IMGUI conversion
+    return ImTextureID{};
 }
 #endif
 

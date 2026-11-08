@@ -36,7 +36,7 @@ public:
 
     // Setters
     void set_uid(int uid);
-    void set_max_cooldown(int cooldown);
+    void set_max_cooldown(float cooldown);
     void set_cost(int cost);
     void set_texture(const std::string& texturePath);
     void set_darkened(bool isDarkened); // visually darkens the icon when unavailable
@@ -48,7 +48,7 @@ private:
     int m_cost = 50;          // Cost to deploy the unit
     bool m_isOnCooldown = false;
     float m_currentCooldown = 0.0f;
-    int m_maxCooldown = 1;
+    float m_maxCooldown = 1.0f;
 
     // Visuals
     sf::Texture m_texture;    // Unit icon texture

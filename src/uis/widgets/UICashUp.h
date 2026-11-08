@@ -42,6 +42,7 @@ private:
 
     sf::Sprite m_icon;    // Icon representing the upgrade
     sf::Texture m_texture;// Texture used for the icon
+    sf::Texture m_disabledTexture; // Icon shown when the upgrade isn't affordable
 
     std::weak_ptr<Stage> m_stage; // Reference to the current stage (weak to avoid circular ownership)
 };

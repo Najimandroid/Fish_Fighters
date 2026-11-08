@@ -54,12 +54,7 @@ void BattleBase::update(
     const std::map<int, std::vector<std::shared_ptr<BattleEntity>>>& entityList
 )
 {
-    // If destroyed
-    if (currentHealth < 0.0f)
-    {
-        // TODO: trigger stage loss/win depending on whose base this is
-        // std::cout << "Base destroyed x_x\n";
-    }
+    // Victory and defeat are detected in Stage::update()
 
 #ifdef DEBUG_MODE
     // Debugging health in console

@@ -12,8 +12,9 @@ UICashUp::UICashUp(std::shared_ptr<Stage> stage) :
     m_position = { 0.f, 780.f };
     m_shape.setFillColor(sf::Color(0, 0, 0, 0)); // Transparent button shape
 
-    // Load icon texture
+    // Load both icon textures once (update() only switches between them)
     auto success = m_texture.loadFromFile("assets/images/textures/icons/uis/cash_up.png");
+    success = m_disabledTexture.loadFromFile("assets/images/textures/icons/uis/cash_up_disabled.png");
     m_icon.setTextureRect(sf::IntRect(
         { 0, 0 },
         { static_cast<int>(m_texture.getSize().x), static_cast<int>(m_texture.getSize().y) }
@@ -63,13 +64,13 @@ void UICashUp::update(float deltaTime)
     if (m_stage.lock()->get_cash() >= m_cost || m_level == m_maxLevel)
     {
         // Active icon and green text
-        m_texture.loadFromFile("assets/images/textures/icons/uis/cash_up.png");
+        m_icon.setTexture(m_texture);
         m_text.setFillColor(sf::Color::Green);
     }
     else
     {
         // Disabled icon and greyed-out text
-        m_texture.loadFromFile("assets/images/textures/icons/uis/cash_up_disabled.png");
+        m_icon.setTexture(m_disabledTexture);
         m_text.setFillColor(sf::Color(135, 135, 135));
     }
 
