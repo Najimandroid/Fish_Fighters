@@ -179,6 +179,7 @@ private:
     // ----- Rendering -----
     sf::Texture m_backgroundTexture;         // Stage background texture
     std::vector<sf::Sprite> m_backgroundSprites; // Background sprites
+    sf::Texture m_shadowTexture;             // Soft round shadow drawn under every unit and enemy
 
     // ----- Camera -----
     sf::View* m_stageCamera;                 // Stage camera
@@ -199,4 +200,13 @@ private:
 
     // Background copies along the stage (any image size), ground row from backgrounds.json (-1 = template ratio)
     void init_background(float groundRow);
+
+    // Soft round shadow on the ground (like The Battle Cats), centered on groundCenter
+    void draw_shadow(sf::RenderWindow& window, sf::Vector2f groundCenter, float width) const;
+
+    // The shadow of a unit or an enemy: under its body (hitbox), at its feet
+    void draw_entity_shadow(sf::RenderWindow& window, const BattleEntity& entity) const;
+
+    // The shadow of a base: under its whole image
+    void draw_base_shadow(sf::RenderWindow& window, const BattleBase& base) const;
 };

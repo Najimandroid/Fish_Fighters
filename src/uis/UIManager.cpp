@@ -12,7 +12,10 @@
 #include "widgets/UIEquipSlider.h"
 #include "widgets/UIPlayerShellsInfo.h"
 #include "widgets/UIChapterMap.h"
+#include "widgets/UIRoundButton.h"
+#include "widgets/UIPauseMenu.h"
 
+#include <algorithm>
 #include <iostream>
 
 // Initialize the manager with references to the data loader and current stage
@@ -60,9 +63,20 @@ void UIManager::render_uis(sf::RenderWindow& window, sf::View& uiView, sf::View&
 // Executes deferred actions after processing events
 void UIManager::handle_ui_events(const sf::Event& event, const sf::RenderWindow& window)
 {
-    for (auto& uiElement : m_uiElements)
+    // A modal window (the pause menu) gets the events alone; the last one added is the one on top
+    auto blocking = std::find_if(m_uiElements.rbegin(), m_uiElements.rend(),
+        [](const auto& uiElement) { return uiElement->is_visible() && uiElement->is_blocking_input(); });
+
+    if (blocking != m_uiElements.rend())
     {
-        uiElement->handle_event(event, window);
+        (*blocking)->handle_event(event, window);
+    }
+    else
+    {
+        for (auto& uiElement : m_uiElements)
+        {
+            uiElement->handle_event(event, window);
+        }
     }
 
     // Execute deferred action if set by button callbacks
@@ -261,52 +275,52 @@ void UIManager::generate_equip_menu_uis()
     add_ui_element(menuButton);
 }
 
+/*
+ * Generate the battle screen (Battle Cats layout):
+ *   - Round pause and speed buttons at the top left, cash at the top right
+ *   - The 10 deploy slots at the bottom, Cash Up at the bottom left
+ *   - Health over the bases and status icons under the entities (world space)
+ *   - The pause menu (Continue / Retreat), drawn over everything while the battle is paused
+ */
 void UIManager::generate_battle_uis()
 {
 	m_uiElements.clear();
 
-    // Pause button
-    auto pauseButton = std::make_shared<UIButtonElement>(
-        sf::Vector2f{ 120.f, 60.f },
-        sf::Vector2f{ 20.f, 20.f },
-        "PAUSE"
-    );
-    pauseButton->set_callback([this]() {
+    std::string stageName;
+    if (auto stage = m_stage.lock())
+    {
+        if (auto stageData = m_dataLoader->get_stage_data(stage->get_current_uid()))
+            stageName = stageData->name;
+    }
+
+    auto pauseMenu = std::make_shared<UIPauseMenu>(stageName);
+    std::weak_ptr<UIPauseMenu> weakPauseMenu = pauseMenu; // The menu keeps these callbacks: no shared_ptr to itself
+
+    // Pauses the battle (remembering if it ran faster) and opens the menu
+    auto openPauseMenu = [this, weakPauseMenu]() {
         // defer to main loop to avoid changing state during event iteration
-        m_pendingAction = [this]() {
+        m_pendingAction = [this, weakPauseMenu]() {
             if (!m_getGameSpeedCallback || !m_setGameSpeedCallback) return;
-            auto current = m_getGameSpeedCallback();
-            if (current == GameSpeedState::PAUSED)
-                m_setGameSpeedCallback(GameSpeedState::NORMAL);
-            else
-                m_setGameSpeedCallback(GameSpeedState::PAUSED);
+            m_wasFasterBeforePause = m_getGameSpeedCallback() == GameSpeedState::FASTER;
+            m_setGameSpeedCallback(GameSpeedState::PAUSED);
+            if (auto menu = weakPauseMenu.lock()) menu->open();
+            };
+        };
+
+    pauseMenu->set_open_callback(openPauseMenu);
+    pauseMenu->set_continue_callback([this, weakPauseMenu]() {
+        m_pendingAction = [this, weakPauseMenu]() {
+            if (m_setGameSpeedCallback)
+                m_setGameSpeedCallback(m_wasFasterBeforePause ? GameSpeedState::FASTER : GameSpeedState::NORMAL);
+            if (auto menu = weakPauseMenu.lock()) menu->close();
             };
         });
-
-	// Speed up button
-    auto speedButton = std::make_shared<UIButtonElement>(
-        sf::Vector2f{ 120.f, 60.f },
-        sf::Vector2f{ 160.f, 20.f },
-        "SPEED UP"
-    );
-    speedButton->set_callback([this]() {
-        m_pendingAction = [this]() {
-            if (!m_getGameSpeedCallback || !m_setGameSpeedCallback) return;
-            auto current = m_getGameSpeedCallback();
-            if (current == GameSpeedState::FASTER)
-                m_setGameSpeedCallback(GameSpeedState::NORMAL);
-            else
-                m_setGameSpeedCallback(GameSpeedState::FASTER);
-            };
+    pauseMenu->set_is_paused_callback([this]() {
+        return m_getGameSpeedCallback && m_getGameSpeedCallback() == GameSpeedState::PAUSED;
         });
 
-    // Exit button: leaves the battle without rewards and goes back to the chapter map
-    auto exitButton = std::make_shared<UIButtonElement>(
-        sf::Vector2f{ 120.f, 60.f },
-        sf::Vector2f{ 300.f, 20.f },
-        "EXIT"
-    );
-    exitButton->set_callback([this]() {
+    // Retreat: leaves the battle without rewards and goes back to the chapter map
+    pauseMenu->set_retreat_callback([this]() {
         m_pendingAction = [this]() {
             if (m_setGameSpeedCallback) m_setGameSpeedCallback(GameSpeedState::NORMAL);
             if (auto stage = m_stage.lock())
@@ -317,20 +331,41 @@ void UIManager::generate_battle_uis()
             };
         });
 
+    // Pause button (top left)
+    auto pauseButton = std::make_shared<UIRoundButton>(100.f, sf::Vector2f{ 24.f, 24.f }, "icon_pause");
+    pauseButton->set_callback(openPauseMenu);
+
+	// Speed up button: lit while the battle runs faster
+    auto speedButton = std::make_shared<UIRoundButton>(100.f, sf::Vector2f{ 140.f, 24.f }, "icon_speed");
+    speedButton->set_callback([this]() {
+        m_pendingAction = [this]() {
+            if (!m_getGameSpeedCallback || !m_setGameSpeedCallback) return;
+            auto current = m_getGameSpeedCallback();
+            if (current == GameSpeedState::FASTER)
+                m_setGameSpeedCallback(GameSpeedState::NORMAL);
+            else
+                m_setGameSpeedCallback(GameSpeedState::FASTER);
+            };
+        });
+    speedButton->set_active_callback([this]() {
+        return m_getGameSpeedCallback && m_getGameSpeedCallback() == GameSpeedState::FASTER;
+        });
+
 	auto deploymentIcons = std::make_shared<UIDeploymentIcons>(m_dataLoader, m_stage.lock());
 	auto stageCash = std::make_shared<UIStageCash>(m_stage.lock());
 	auto cashUp = std::make_shared<UICashUp>(m_stage.lock());
 	auto baseHealthInfo = std::make_shared<UIBaseHealthInfo>(m_stage.lock());
 	auto statusIcons = std::make_shared<UIStatusIcons>(m_stage.lock(), m_dataLoader); // Status icons under every entity
 
+    // World-space widgets first, so the screen widgets are drawn over them
+	add_ui_element(statusIcons);
+	add_ui_element(baseHealthInfo);
     add_ui_element(pauseButton);
     add_ui_element(speedButton);
-    add_ui_element(exitButton);
 	add_ui_element(deploymentIcons);
 	add_ui_element(stageCash);
 	add_ui_element(cashUp);
-	add_ui_element(baseHealthInfo);
-	add_ui_element(statusIcons);
+    add_ui_element(pauseMenu); // Last: on top, and the first to get the input
 }
 
 void UIManager::generate_chapter_map_uis()

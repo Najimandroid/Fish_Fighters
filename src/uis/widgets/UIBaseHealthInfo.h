@@ -30,7 +30,6 @@ private:
 
     std::weak_ptr<Stage> m_stage; // Weak reference to the current stage
 
-    sf::Font m_font;             // Font used for the health text
     sf::Text m_textUnitBase;     // Displays player's base health
     sf::Text m_textEnemyBase;    // Displays enemy's base health
 };

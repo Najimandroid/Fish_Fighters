@@ -8,22 +8,27 @@
  * ------------
  * Represents a clickable icon in the deployment UI for spawning units during a stage.
  * - Inherits from UIButtonElement for click handling
- * - Displays a unit icon, cost, and cooldown overlay
+ * - Drawn like a Battle Cats deploy slot: light blue slot, the unit icon under a rounded frame,
+ *   the cost in yellow outlined digits, a cyan bar while it cools down, darkened when it can't be used
  */
 
 class UIBattleIcon : public UIButtonElement
 {
 public:
 
+    // Size of a slot on screen
+    static constexpr float WIDTH = 166.f;
+    static constexpr float HEIGHT = 124.f;
+
     // Constructor
     // position: position of the icon on the screen
     // iconTexturePath: path to the unit's icon texture
     UIBattleIcon(sf::Vector2f position, const std::string& iconTexturePath);
 
-    // Updates cooldown progress, price text, and overlay
+    // Updates cooldown progress and price text
     void update(float deltaTime) override;
 
-    // Draws the icon, cooldown overlay, price, and unit texture
+    // Draws the slot, unit icon, shade, cooldown bar, frame and price
     void render(sf::RenderWindow& window) override;
 
     // Getters
@@ -49,11 +54,9 @@ private:
     bool m_isOnCooldown = false;
     float m_currentCooldown = 0.0f;
     float m_maxCooldown = 1.0f;
+    bool m_isDarkened = false;
 
     // Visuals
     sf::Texture m_texture;    // Unit icon texture
     sf::Sprite m_sprite;      // Sprite to display the texture
-    sf::RectangleShape m_blackFilter;  // overlay to darken icon
-    sf::RectangleShape m_barBackground; // cooldown bar background
-    sf::RectangleShape m_barFill;       // cooldown bar fill
 };

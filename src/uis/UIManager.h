@@ -81,4 +81,6 @@ private:
 	std::function<void(GameSpeedState)> m_setGameSpeedCallback; // Callback to set game speed state
     std::function<GameSpeedState()> m_getGameSpeedCallback;     // Callback to get current game speed state
     std::function<void()> m_quitGameCallback;                   // Callback to quit game
+
+    bool m_wasFasterBeforePause = false;                        // "Continue" goes back to this speed
 };

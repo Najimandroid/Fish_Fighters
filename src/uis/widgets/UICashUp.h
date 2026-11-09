@@ -7,7 +7,8 @@ class Stage;
 /*
  * UICashUp
  * ---------
- * A UI button that allows the player to upgrade cash-related attributes during a stage:
+ * A UI button that allows the player to upgrade cash-related attributes during a stage
+ * (bottom left of the battle, drawn in a slot frame like the deploy slots):
  * - Maximum cash capacity
  * - Cash production speed
  *
@@ -43,6 +44,8 @@ private:
     sf::Sprite m_icon;    // Icon representing the upgrade
     sf::Texture m_texture;// Texture used for the icon
     sf::Texture m_disabledTexture; // Icon shown when the upgrade isn't affordable
+    sf::Text m_levelText; // "LEVEL 1" at the top (m_text shows the cost at the bottom)
+    bool m_isAffordable = false;
 
     std::weak_ptr<Stage> m_stage; // Reference to the current stage (weak to avoid circular ownership)
 };

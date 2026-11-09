@@ -53,6 +53,7 @@ set(PROJECT_SOURCES
     src/core/combat/CombatLog.cpp
 
     src/uis/UIManager.cpp
+    src/uis/UISkin.cpp
 
     src/uis/widgets/UIElement.cpp
     src/uis/widgets/UIBattleIcon.cpp
@@ -71,6 +72,9 @@ set(PROJECT_SOURCES
     src/uis/widgets/UIEquipSlider.cpp
     src/uis/widgets/UIChapterMap.cpp
     src/uis/widgets/UIStatusIcons.cpp
+    src/uis/widgets/UIRoundButton.cpp
+    src/uis/widgets/UIPanel.cpp
+    src/uis/widgets/UIPauseMenu.cpp
 
     # ImGui theme shared by the developer tools and the editor
     src/tools/ToolsTheme.cpp

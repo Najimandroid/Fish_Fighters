@@ -1,50 +1,40 @@
 #include "UIBattleIcon.h"
-#include <iostream>
+#include "../UISkin.h"
+
+#include <algorithm>
+#include <cstdint>
+
+namespace
+{
+    const float FRAME_SCALE = 1.f;                       // Corners of the slot images on screen
+    const float FRAME_THICKNESS = 6.f * FRAME_SCALE;     // Outline of slot.png (6 px in the image)
+    const unsigned int COST_SIZE = 32;
+    const sf::Vector2f COST_PADDING{ 12.f, 10.f };       // From the bottom right corner
+    const float BAR_HEIGHT = 14.f;
+    const float BAR_MARGIN = 14.f;                       // From the sides and the bottom
+    const sf::Color BAR_BACKGROUND{ 20, 30, 40, 220 };
+    const sf::Color EMPTY_SLOT_TINT{ 150, 170, 180 };    // Slot with no unit equipped
+    const std::uint8_t SHADE_ALPHA_COOLDOWN = 150;
+    const std::uint8_t SHADE_ALPHA_DARKENED = 110;
+}
 
 /*
- * Initializes the button, loads the icon texture, sets up cooldown bar and price text.
+ * Initializes the button and loads the icon texture.
  */
 UIBattleIcon::UIBattleIcon(sf::Vector2f position, const std::string& iconTexturePath) :
-    UIButtonElement({ 144.f * 1.15f, 108.f * 1.15f }, position, "0$"),
+    UIButtonElement({ WIDTH, HEIGHT }, position, ""),
     m_sprite(m_texture)
 {
     // Load icon texture
     set_texture(iconTexturePath);
 
-    // Configure price text
-    m_text.setCharacterSize(30);
-    m_text.setFillColor(sf::Color::Yellow);
-    m_text.setOutlineColor(sf::Color::Black);
-    m_text.setOutlineThickness(1.5f);
-
+    // Price text: yellow outlined digits
+    UISkin::style_text(m_text, COST_SIZE, UISkin::NUMBER);
     set_cost(m_cost);
-
-    // Setup cooldown bar visuals
-    float barWidth = m_shape.getSize().x - 15.f;
-    float barHeight = m_shape.getSize().y * 0.1f;
-
-    m_barBackground.setSize({ barWidth, barHeight });
-    m_barBackground.setFillColor(sf::Color(0, 0, 0, 0));
-    m_barBackground.setPosition({
-        position.x + (m_shape.getSize().x - barWidth) / 2.f,
-        position.y + m_shape.getSize().y - barHeight - 7.5f
-        });
-
-    m_barFill.setSize({ 0.f, barHeight });
-    m_barFill.setFillColor(sf::Color(0, 255, 255, 0));
-    m_barFill.setPosition(m_barBackground.getPosition());
-
-    // Shape outline
-    m_shape.setOutlineColor(sf::Color::Black);
-    m_shape.setOutlineThickness(4.5f);
-
-    // Setup black overlay filter
-    m_blackFilter.setSize(m_shape.getSize());
-    m_blackFilter.setPosition(m_shape.getPosition());
 }
 
 /*
- * Updates cooldown progress, updates overlay and price text
+ * Updates cooldown progress and price text
  */
 void UIBattleIcon::update(float deltaTime)
 {
@@ -57,42 +47,85 @@ void UIBattleIcon::update(float deltaTime)
             // Cooldown finished
             m_isOnCooldown = false;
             m_currentCooldown = 0.0f;
-
-            // Hide overlays
-            sf::Color filterColor = m_blackFilter.getFillColor(); filterColor.a = 0; m_blackFilter.setFillColor(filterColor);
-            sf::Color bgColor = m_barBackground.getFillColor(); bgColor.a = 0; m_barBackground.setFillColor(bgColor);
-            sf::Color fillColor = m_barFill.getFillColor(); fillColor.a = 0; m_barFill.setFillColor(fillColor);
         }
     }
 
-    // Update price text
+    // Update price text (hidden while the cooldown bar is shown)
     std::string priceTagText = (m_isOnCooldown || m_uid < 0) ? "" : std::to_string(m_cost) + "$";
     m_text.setString(priceTagText);
-
-    // Update cooldown bar
-    float progress = m_isOnCooldown ? (m_currentCooldown / m_maxCooldown) : 0.f;
-    progress = std::clamp(progress, 0.f, 1.f);
-
-    float fullWidth = m_barBackground.getSize().x;
-    sf::Vector2f size = m_barFill.getSize();
-    size.x = fullWidth * progress;
-    m_barFill.setSize(size);
+    UISkin::set_text_color(m_text, m_isDarkened ? UISkin::NUMBER_DISABLED : UISkin::NUMBER);
 }
 
 /*
- * Draws the icon sprite, button, cooldown overlay, bar, and price text
+ * Draws the slot, the unit icon inside it, the shade and cooldown bar, the frame over the icon edges, and the price
  */
 void UIBattleIcon::render(sf::RenderWindow& window)
 {
-    if (m_isVisible)
+    if (!m_isVisible) return;
+
+    const sf::FloatRect rect = get_visual_rect();
+    const float scale = rect.size.x / WIDTH;
+    const float inset = FRAME_THICKNESS * scale;
+    const sf::FloatRect inner{ rect.position + sf::Vector2f{ inset, inset }, rect.size - sf::Vector2f{ inset, inset } * 2.f };
+
+    const bool isEmpty = m_uid < 0;
+    UISkin::draw_nine_slice(window, UISkin::SLOT, rect, FRAME_SCALE * scale, isEmpty ? EMPTY_SLOT_TINT : sf::Color::White);
+
+    if (!isEmpty)
     {
-        window.draw(m_shape);
+        // Unit icon cropped to the shape of the slot, filling it
+        const sf::Vector2f textureSize(m_texture.getSize());
+        const float innerRatio = inner.size.x / inner.size.y;
+        sf::Vector2f cropSize = textureSize;
+        if (textureSize.x / textureSize.y > innerRatio) cropSize.x = textureSize.y * innerRatio;
+        else cropSize.y = textureSize.x / innerRatio;
+        const sf::Vector2f cropPosition = (textureSize - cropSize) / 2.f;
+
+        m_sprite.setTextureRect(sf::IntRect(sf::Vector2i(cropPosition), sf::Vector2i(cropSize)));
+        m_sprite.setScale({ inner.size.x / cropSize.x, inner.size.y / cropSize.y });
+        m_sprite.setPosition(inner.position);
         window.draw(m_sprite);
-        window.draw(m_blackFilter);
-        window.draw(m_barBackground);
-        window.draw(m_barFill);
-        window.draw(m_text);
+
+        // Shade: can't be deployed (cooldown or not enough cash)
+        if (m_isOnCooldown || m_isDarkened)
+        {
+            sf::RectangleShape shade(inner.size);
+            shade.setPosition(inner.position);
+            sf::Color shadeColor = UISkin::SHADE;
+            shadeColor.a = m_isOnCooldown ? SHADE_ALPHA_COOLDOWN : SHADE_ALPHA_DARKENED;
+            shade.setFillColor(shadeColor);
+            window.draw(shade);
+        }
+
+        // Cooldown bar at the bottom of the slot
+        if (m_isOnCooldown)
+        {
+            const float progress = std::clamp(m_currentCooldown / m_maxCooldown, 0.f, 1.f);
+            const sf::Vector2f barSize{ rect.size.x - 2.f * BAR_MARGIN * scale, BAR_HEIGHT * scale };
+            const sf::Vector2f barPosition{ rect.position.x + BAR_MARGIN * scale, rect.position.y + rect.size.y - (BAR_MARGIN * scale) - barSize.y };
+
+            sf::RectangleShape barBackground(barSize);
+            barBackground.setPosition(barPosition);
+            barBackground.setFillColor(BAR_BACKGROUND);
+            barBackground.setOutlineThickness(2.f * scale);
+            barBackground.setOutlineColor(UISkin::OUTLINE);
+            window.draw(barBackground);
+
+            sf::RectangleShape barFill({ barSize.x * progress, barSize.y });
+            barFill.setPosition(barPosition);
+            barFill.setFillColor(UISkin::COOLDOWN);
+            window.draw(barFill);
+        }
     }
+
+    // Frame over the icon edges (hides its corners under the rounded border)
+    UISkin::draw_nine_slice(window, UISkin::SLOT_FRAME, rect, FRAME_SCALE * scale);
+
+    // Price at the bottom right
+    UISkin::set_text_anchor(m_text, { 1.f, 1.f });
+    m_text.setScale({ scale, scale });
+    m_text.setPosition(rect.position + rect.size - COST_PADDING * scale);
+    window.draw(m_text);
 }
 
 // Getters
@@ -105,74 +138,33 @@ void UIBattleIcon::set_uid(int uid) { m_uid = uid; }
 void UIBattleIcon::set_max_cooldown(float cooldown) { m_maxCooldown = cooldown; }
 
 /*
- * Sets the unit deployment cost and updates price text position
+ * Sets the unit deployment cost (a negative cost hides the price)
  */
 void UIBattleIcon::set_cost(int cost)
 {
     m_cost = cost;
-
-    if (m_cost < 0)
-    {
-        m_text.setString("");
-        m_text.setFillColor(sf::Color::Transparent);
-    }
-    else
-    {
-        m_text.setString(std::to_string(m_cost) + "$");
-        m_text.setFillColor(sf::Color::Yellow);
-    }
-
-    // Adjust text position to bottom-right of the icon
-    auto bounds = m_shape.getGlobalBounds();
-    auto textBounds = m_text.getLocalBounds();
-    m_text.setOrigin({
-        textBounds.position.x + textBounds.size.x,
-        textBounds.position.y + textBounds.size.y
-        });
-
-    float paddingX = 2.f;
-    float paddingY = 2.f;
-
-    m_text.setPosition({
-        bounds.position.x + bounds.size.x - paddingX,
-        bounds.position.y + bounds.size.y - paddingY
-        });
+    m_text.setString(m_cost < 0 ? "" : std::to_string(m_cost) + "$");
 }
 
 /*
- * Begins cooldown and sets overlay and cooldown bar to visible
+ * Begins the cooldown: the slot is shaded and the bar fills up
  */
 void UIBattleIcon::start_cooldown()
 {
     m_isOnCooldown = true;
     m_currentCooldown = 0.0f;
-
-    sf::Color filterColor = m_blackFilter.getFillColor(); filterColor.a = 128; m_blackFilter.setFillColor(filterColor);
-    sf::Color bgColor = m_barBackground.getFillColor(); bgColor.a = 255; m_barBackground.setFillColor(bgColor);
-    sf::Color fillColor = m_barFill.getFillColor(); fillColor.a = 255; m_barFill.setFillColor(fillColor);
 }
 
 /*
- * Loads a texture from file and scales/centers it inside the icon
+ * Loads a texture from file (placeholder if missing). render() crops and scales it into the slot
  */
 void UIBattleIcon::set_texture(const std::string& texturePath)
 {
     if (!m_texture.loadFromFile(texturePath))
         m_texture.loadFromFile("assets/images/textures/icons/placeholder.png");
+    m_texture.setSmooth(true);
 
-    m_sprite.setTextureRect(sf::IntRect({ 0, 0 }, { static_cast<int>(m_texture.getSize().x), static_cast<int>(m_texture.getSize().y) }));
-
-    // Scale sprite to fit button
-    sf::Vector2f targetSize = m_shape.getSize();
-    sf::Vector2u texSize = m_texture.getSize();
-    float scaleX = targetSize.x / texSize.x;
-    float scaleY = targetSize.y / texSize.y;
-    float uniformScale = std::min(scaleX, scaleY);
-
-    m_sprite.setScale({ uniformScale, uniformScale });
-
-    // Center sprite inside the button
-    m_sprite.setPosition(m_shape.getPosition());
+    m_sprite.setTexture(m_texture, true);
 }
 
 /*
@@ -180,18 +172,5 @@ void UIBattleIcon::set_texture(const std::string& texturePath)
  */
 void UIBattleIcon::set_darkened(bool isDarkened)
 {
-    sf::Color bgColor = m_barBackground.getFillColor();
-
-    if (isDarkened)
-    {
-        bgColor.a = 128;
-        m_text.setFillColor(sf::Color(128, 128, 0));
-    }
-    else
-    {
-        bgColor.a = 0;
-        m_text.setFillColor(sf::Color::Yellow);
-    }
-
-    m_blackFilter.setFillColor(bgColor);
+    m_isDarkened = isDarkened;
 }

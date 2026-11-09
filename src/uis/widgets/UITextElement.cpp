@@ -1,45 +1,26 @@
 #include "UITextElement.h"
+#include "../UISkin.h"
 
 // Constructor with size and position, default text "Text"
 UITextElement::UITextElement(sf::Vector2f size, sf::Vector2f position)
-    : m_text(m_font, "Text", 30) // default character size 30
+    : UITextElement(size, position, "Text", 30.f) // default character size 30
 {
-    // Load font from file
-    auto success = m_font.openFromFile("assets/fonts/MPLUSRounded1c-Medium.ttf");
-
-    // Configure text appearance
-    m_text.setPosition(position);
-    m_text.setFillColor(sf::Color::White);
-    m_text.setOutlineColor(sf::Color::Black);
-    m_text.setOutlineThickness(1.5f);
 }
 
 // Constructor with custom text
 UITextElement::UITextElement(sf::Vector2f size, sf::Vector2f position, const std::string& text)
-    : m_text(m_font, text, 30) // default character size 30
+    : UITextElement(size, position, text, 30.f) // default character size 30
 {
-    // Load font from file
-    auto success = m_font.openFromFile("assets/fonts/MPLUSRounded1c-Medium.ttf");
-
-    // Configure text appearance
-    m_text.setPosition(position);
-    m_text.setFillColor(sf::Color::White);
-    m_text.setOutlineColor(sf::Color::Black);
-    m_text.setOutlineThickness(1.5f);
 }
 
 // Constructor with custom text and custom character size
+// The text uses the heavy font of the skin, white with a dark outline
 UITextElement::UITextElement(sf::Vector2f size, sf::Vector2f position, const std::string& text, float characterSize)
-    : m_text(m_font, text, characterSize)
+    : UIElement(size, position),
+    m_text(UISkin::heavy_font(), text)
 {
-    // Load font from file
-    auto success = m_font.openFromFile("assets/fonts/MPLUSRounded1c-Medium.ttf");
-
-    // Configure text appearance
+    UISkin::style_text(m_text, static_cast<unsigned int>(characterSize));
     m_text.setPosition(position);
-    m_text.setFillColor(sf::Color::White);
-    m_text.setOutlineColor(sf::Color::Black);
-    m_text.setOutlineThickness(1.5f);
 }
 
 // Set the displayed text string
@@ -49,18 +30,16 @@ void UITextElement::set_text(const std::string& text)
 }
 
 // Set the fill color of the text
+// The outline gets the same transparency (a hidden text hides its outline too)
 void UITextElement::set_text_color(const sf::Color& color)
 {
-    m_text.setFillColor(color);
-
-    if(color.a == 0)
-        m_text.setOutlineColor(sf::Color(0, 0, 0, 0));
+    UISkin::set_text_color(m_text, color);
 }
 
-// Set the character size of the text
+// Set the character size of the text; the outline follows
 void UITextElement::set_character_size(unsigned int size)
 {
-    m_text.setCharacterSize(size);
+    UISkin::style_text(m_text, size, m_text.getFillColor());
 }
 
 // Update function called every frame
