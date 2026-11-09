@@ -42,6 +42,15 @@ namespace
     int read_int(const json& object, const std::string& key) { return read_int_value(object.at(key), key); }
     float read_float(const json& object, const std::string& key) { return read_float_value(object.at(key), key); }
 
+    // Optional "shadowScale": shadow width compared to the body, 1 without it
+    float read_shadow_scale(const json& object)
+    {
+        if (!object.contains("shadowScale")) return 1.f;
+        const float scale = read_float(object, "shadowScale");
+        if (scale <= 0.f) throw std::runtime_error("\"shadowScale\" must be above 0, got " + object["shadowScale"].dump());
+        return scale;
+    }
+
     // Accepts true/false or 1/0
     bool read_flag(const json& object, const std::string& key)
     {
@@ -277,6 +286,7 @@ bool DataLoader::load_units(const std::string& path)
             data->texture = formValue.at("texture").get<std::string>();
             data->frameCount = read_int(formValue, "frameCount");
             data->knockbackFrameIndex = read_int(formValue, "knockbackFrameIndex");
+            data->shadowScale = read_shadow_scale(formValue);
 
             int formID = read_int(formValue, "form");
             m_unitsFormsDatabase[{UID, formID}] = data;
@@ -343,6 +353,7 @@ bool DataLoader::load_enemies(const std::string& path)
         data->texture = value.at("texture").get<std::string>();
         data->frameCount = read_int(value, "frameCount");
         data->knockbackFrameIndex = read_int(value, "knockbackFrameIndex");
+        data->shadowScale = read_shadow_scale(value);
 
         m_enemiesDatabase[data->UID] = data;
     }

@@ -1,30 +1,74 @@
-#include "UIEquipSlider.h"
+﻿#include "UIEquipSlider.h"
+#include "UIBattleIcon.h"
+#include "../UISkin.h"
 #include "../../core/DataLoader.h"
 
 #include <algorithm>
 #include <cmath>
 #include <iostream>
 
+namespace
+{
+    // Lineup: the same slots as in battle, in a dark panel under the cards
+    const float SLOT_SPACING = 12.f;
+    const float LINEUP_TOP = 670.f;                      // Top of the first row of slots
+    const float PANEL_PADDING = 22.f;
+    const float PANEL_TITLE_BAND = 52.f;                 // "LINEUP" above the slots
+    const float GHOST_SCALE = 1.5f;                      // The dragged unit is a slot this much bigger
+    const float ARROW_SIZE = 96.f;
+    const float ARROW_Y = 292.f;
+    const float HINT_Y = 562.f;
+
+    sf::Vector2f lineup_size()
+    {
+        return { 5.f * UIBattleIcon::WIDTH + 4.f * SLOT_SPACING, 2.f * UIBattleIcon::HEIGHT + SLOT_SPACING };
+    }
+
+    sf::FloatRect lineup_panel_rect()
+    {
+        const sf::Vector2f slots = lineup_size();
+        const sf::Vector2f size{ slots.x + 2.f * PANEL_PADDING, slots.y + PANEL_PADDING + PANEL_TITLE_BAND };
+        return { { (1920.f - size.x) / 2.f, LINEUP_TOP - PANEL_TITLE_BAND }, size };
+    }
+}
+
 /*
  * Constructor
  * -----------
- * - Loads font and placeholder texture
- * - Initializes the drag ghost object
+ * - Loads the placeholder texture
+ * - Initializes the drag ghost, the arrows and the lineup panel
  * - Calls init_icons() to build the equip UI
  */
 UIEquipSlider::UIEquipSlider(std::shared_ptr<DataLoader> dataLoader)
-    : m_dataLoader(std::move(dataLoader))
+    : m_dataLoader(std::move(dataLoader)),
+    m_previousButton(ARROW_SIZE, { 36.f, ARROW_Y }, "icon_play"),
+    m_nextButton(ARROW_SIZE, { 1920.f - 36.f - ARROW_SIZE, ARROW_Y }, "icon_play"),
+    m_lineupPanel(lineup_panel_rect().size, lineup_panel_rect().position, UISkin::PANEL_DARK, 1.2f),
+    m_lineupTitle(UISkin::heavy_font(), "LINEUP"),
+    m_hint(UISkin::heavy_font(), "Drag a fish into the lineup  -  right click a fish of the lineup to remove it"),
+    m_ghostCost(UISkin::heavy_font())
 {
-    if (!m_sharedFont.openFromFile("assets/fonts/MPLUSRounded1c-Medium.ttf")) {
-        std::cerr << "UIEquipSlider: failed to load font\n";
-    }
-
     if (!m_placeholderTexture.loadFromFile("assets/images/textures/icons/placeholder.png")) {
         std::cerr << "UIEquipSlider: failed to load placeholder texture\n";
     }
 
     // Create temporary drag ghost
-    m_tempGhost = std::make_unique<TempGhost>(m_sharedFont, m_placeholderTexture);
+    m_tempGhost = std::make_unique<TempGhost>(m_placeholderTexture);
+
+    m_previousButton.set_icon_flipped(true);
+    m_previousButton.set_callback([this]() { move_to_index(m_currentIndex - 1); });
+    m_nextButton.set_callback([this]() { move_to_index(m_currentIndex + 1); });
+
+    const sf::FloatRect panel = lineup_panel_rect();
+    UISkin::style_text(m_lineupTitle, 34, UISkin::TITLE);
+    UISkin::set_text_anchor(m_lineupTitle, { 0.5f, 0.5f });
+    m_lineupTitle.setPosition({ 960.f, panel.position.y + PANEL_TITLE_BAND / 2.f + 6.f });
+
+    UISkin::style_text(m_hint, 26);
+    UISkin::set_text_anchor(m_hint, { 0.5f, 0.5f });
+    m_hint.setPosition({ 960.f, HINT_Y });
+
+    UISkin::style_text(m_ghostCost, 32, UISkin::NUMBER);
 
     // Initialize equip icons and slots
     init_icons();
@@ -34,7 +78,7 @@ UIEquipSlider::UIEquipSlider(std::shared_ptr<DataLoader> dataLoader)
  * init_icons
  * ----------
  * - Clears old icons and slots
- * - Builds the slot grid (2 rows � 5 columns)
+ * - Builds the slot grid (2 rows × 5 columns)
  * - Loads equipped units from player data into slots
  * - Creates the slider icons for all owned units
  */
@@ -53,42 +97,34 @@ void UIEquipSlider::init_icons()
     // Sort IDs for consistent order
     std::sort(m_availableEquips.begin(), m_availableEquips.end());
 
-    // Center of the screen where slider icons are placed
-    sf::Vector2f screenCenter(
-        1920.f / 2.0f - baseIconSize.x / 2.f,
-        1080.f / 2.0f - baseIconSize.y / 2.f + 300.f
-    );
+    m_currentIndex = std::clamp(m_currentIndex, 0, std::max(0, static_cast<int>(m_availableEquips.size()) - 1));
 
-    // Grid configuration for equip slots
+    // Left edge of a side card in the middle; the cards stand on CARDS_BOTTOM
+    sf::Vector2f screenCenter(1920.f / 2.0f - baseIconSize.x / 2.f, CARDS_BOTTOM);
+
+    // Grid configuration for equip slots: the deploy slots of the battle
     const int rows = 2;
     const int cols = 5;
-    const float iconWidth = 144.f * 1.15f;
-    const float iconHeight = 108.f * 1.15f;
-    const float spacingX = 24.f * 1.15f;
-    const float spacingY = 24.f * 1.15f;
+    const float iconWidth = UIBattleIcon::WIDTH;
+    const float iconHeight = UIBattleIcon::HEIGHT;
+    const float spacingX = SLOT_SPACING;
+    const float spacingY = SLOT_SPACING;
 
     // Calculate starting position for grid
-    float totalWidth = cols * iconWidth + (cols - 1) * spacingX;
-    float startX = (1920.f - totalWidth) / 2.f;
-    float startY = 775.f;
+    float startX = (1920.f - lineup_size().x) / 2.f;
+    float startY = LINEUP_TOP;
 
-    // Create slot rectangles and visuals
+    // Create slot rectangles
     int index = 0;
-    for (int row = 0; row < rows; ++row) 
+    for (int row = 0; row < rows; ++row)
     {
-        for (int col = 0; col < cols; ++col) 
+        for (int col = 0; col < cols; ++col)
         {
             sf::Vector2f pos{ startX + col * (iconWidth + spacingX), startY + row * (iconHeight + spacingY) };
             sf::Vector2f size{ iconWidth, iconHeight };
 
             m_slots[index].bounds = sf::FloatRect(pos, size);
             m_slots[index].ghost = nullptr;
-
-            m_slots[index].background.setSize(size);
-            m_slots[index].background.setPosition(pos);
-            m_slots[index].background.setFillColor(sf::Color(0, 0, 0, 150));
-            m_slots[index].background.setOutlineColor(sf::Color::White);
-            m_slots[index].background.setOutlineThickness(2.f);
 
             index++;
         }
@@ -201,8 +237,19 @@ void UIEquipSlider::init_icons()
  */
 void UIEquipSlider::update(float deltaTime)
 {
+    // Cards: tweens, and "IN USE" on the units already in the lineup
+    auto player = m_dataLoader->get_player_data().lock();
     for (auto& icon : m_equipIcons)
+    {
+        if (player)
+            icon->set_in_lineup(std::find(player->equippedUnits.begin(), player->equippedUnits.end(), icon->get_uid()) != player->equippedUnits.end());
         icon->update(deltaTime);
+    }
+
+    m_previousButton.set_visible(m_currentIndex > 0);
+    m_nextButton.set_visible(m_currentIndex + 1 < static_cast<int>(m_equipIcons.size()));
+    m_previousButton.update(deltaTime);
+    m_nextButton.update(deltaTime);
 
     // Detect hold-to-drag
     if (m_mouseDown && !m_dragging)
@@ -248,20 +295,6 @@ void UIEquipSlider::update(float deltaTime)
     {
         m_tempGhost->currentScale = m_tempGhost->scaleTween.step(1);
         m_tempGhost->shape.setScale({ m_tempGhost->currentScale, m_tempGhost->currentScale });
-        m_tempGhost->costText.setCharacterSize(m_tempGhost->INFO_BASE_TEXT_SIZE * m_tempGhost->currentScale);
-        m_tempGhost->levelText.setCharacterSize(m_tempGhost->INFO_BASE_TEXT_SIZE * m_tempGhost->currentScale);
-
-        // Adjust sprite to fit ghost shape
-        sf::Vector2u texSize = m_tempGhost->texture.getSize();
-        sf::Vector2f shapeBaseSize = m_tempGhost->shape.getSize();
-
-        if (texSize.x > 0 && texSize.y > 0)
-        {
-            float scaleX = shapeBaseSize.x / static_cast<float>(texSize.x);
-            float scaleY = shapeBaseSize.y / static_cast<float>(texSize.y);
-            float uniformScale = std::min(scaleX, scaleY) * m_tempGhost->currentScale; // If the texture is not 4:3 ratio
-            m_tempGhost->sprite.setScale({ uniformScale, uniformScale });
-        }
     }
     else
     {
@@ -270,65 +303,79 @@ void UIEquipSlider::update(float deltaTime)
         if (std::abs(finalVal) < 1e-6f)
             m_tempGhost->active = false;
     }
-
-    // Updating the ghost's costText and levelText positions
-    if (m_tempGhost->active)
-    {
-        sf::FloatRect shapeBounds = m_tempGhost->shape.getGlobalBounds();
-
-        sf::FloatRect costTextBounds = m_tempGhost->costText.getLocalBounds();
-        sf::FloatRect levelTextBounds = m_tempGhost->levelText.getLocalBounds();
-
-        // Cost Text
-        m_tempGhost->costText.setOrigin({
-            costTextBounds.position.x + costTextBounds.size.x,
-            costTextBounds.position.y + costTextBounds.size.y
-            });
-
-        m_tempGhost->costText.setPosition({
-            shapeBounds.position.x + shapeBounds.size.x - m_tempGhost->INFO_BASE_TEXT_OFFSET * m_tempGhost->currentScale,
-            shapeBounds.position.y + shapeBounds.size.y - m_tempGhost->INFO_BASE_TEXT_OFFSET * m_tempGhost->currentScale
-            });
-
-        // Level Text
-        m_tempGhost->levelText.setOrigin({
-            levelTextBounds.position.x + levelTextBounds.size.x,
-            levelTextBounds.position.y + levelTextBounds.size.y
-            });
-
-        m_tempGhost->levelText.setPosition({
-            shapeBounds.position.x + shapeBounds.size.x - m_tempGhost->INFO_BASE_TEXT_OFFSET * m_tempGhost->currentScale,
-            shapeBounds.position.y + shapeBounds.size.y - m_tempGhost->INFO_BASE_TEXT_OFFSET * m_tempGhost->currentScale - m_tempGhost->costText.getCharacterSize() - m_tempGhost->INFO_BASE_TEXT_OFFSET
-            });
-
-    }
 }
 
 /*
  * render
  * ------
- * - Draws icons, slot backgrounds, and equipped units
+ * - Draws the cards (the selected one on top), the arrows and the hint
+ * - Draws the lineup panel, its empty slots and the equipped units
  * - If a ghost is active, draws it on top
  */
 void UIEquipSlider::render(sf::RenderWindow& window)
 {
-    for (auto& icon : m_equipIcons)
-        icon->render(window);
+    for (int i = 0; i < static_cast<int>(m_equipIcons.size()); ++i)
+        if (i != m_currentIndex) m_equipIcons[i]->render(window);
+    if (!m_equipIcons.empty())
+        m_equipIcons[m_currentIndex]->render(window);
+
+    m_previousButton.render(window);
+    m_nextButton.render(window);
+    window.draw(m_hint);
+
+    render_lineup(window);
 
     for (auto& slot : m_slots)
     {
-        window.draw(slot.background);
         if (slot.ghost)
             slot.ghost->render(window);
     }
 
-    if (m_tempGhost && m_tempGhost->active)
+    render_ghost(window);
+}
+
+/*
+ * render_lineup
+ * -------------
+ * The dark panel with "LINEUP", and every slot as an empty (dimmed) deploy slot
+ */
+void UIEquipSlider::render_lineup(sf::RenderWindow& window)
+{
+    m_lineupPanel.render(window);
+    window.draw(m_lineupTitle);
+
+    for (auto& slot : m_slots)
     {
-        window.draw(m_tempGhost->shape);
-        window.draw(m_tempGhost->sprite);
-        window.draw(m_tempGhost->costText);
-        window.draw(m_tempGhost->levelText);
+        if (slot.ghost) continue;
+        UISkin::draw_nine_slice(window, UISkin::SLOT, slot.bounds, 1.f, UISkin::EMPTY_SLOT_TINT);
+        UISkin::draw_nine_slice(window, UISkin::SLOT_FRAME, slot.bounds, 1.f);
     }
+}
+
+/*
+ * render_ghost
+ * ------------
+ * The dragged unit: a lineup slot following the mouse (its shape is centered on it),
+ * slightly see-through, with its deploy cost
+ */
+void UIEquipSlider::render_ghost(sf::RenderWindow& window)
+{
+    if (!m_tempGhost || !m_tempGhost->active) return;
+
+    const sf::FloatRect rect = m_tempGhost->shape.getGlobalBounds();
+    if (rect.size.x < 1.f || rect.size.y < 1.f) return;
+    const float scale = rect.size.x / UIBattleIcon::WIDTH;
+    const sf::Color seeThrough(255, 255, 255, 225);
+
+    UISkin::draw_nine_slice(window, UISkin::SLOT, rect, scale, seeThrough);
+    UISkin::draw_cropped(window, m_tempGhost->texture, UISkin::slot_inner(rect, scale), seeThrough);
+    UISkin::draw_nine_slice(window, UISkin::SLOT_FRAME, rect, scale, seeThrough);
+
+    m_ghostCost.setString(std::to_string(m_tempGhost->cost) + "$");
+    UISkin::set_text_anchor(m_ghostCost, { 1.f, 1.f });
+    m_ghostCost.setScale({ scale, scale });
+    m_ghostCost.setPosition(rect.position + rect.size - sf::Vector2f{ 12.f, 10.f } * scale);
+    window.draw(m_ghostCost);
 }
 
 /*
@@ -368,9 +415,10 @@ void UIEquipSlider::handle_event(const sf::Event& event, const sf::RenderWindow&
                 m_mouseDownPos = mousePos;
                 m_holdClock.restart();
             }
-            else
+            else if (!(m_previousButton.is_visible() && m_previousButton.get_bounds().contains(mousePos))
+                && !(m_nextButton.is_visible() && m_nextButton.get_bounds().contains(mousePos)))
             {
-                // Pressed another icon -> switch selection
+                // Pressed another icon -> switch selection (the arrows, drawn over the far cards, come first)
                 for (int i = 0; i < static_cast<int>(m_equipIcons.size()); ++i)
                 {
                     if (i != m_currentIndex && m_equipIcons[i]->get_bounds().contains(mousePos))
@@ -454,6 +502,9 @@ void UIEquipSlider::handle_event(const sf::Event& event, const sf::RenderWindow&
         if (m_slots[i].ghost)
             m_slots[i].ghost->handle_event(event, window);
     }
+
+    m_previousButton.handle_event(event, window);
+    m_nextButton.handle_event(event, window);
 }
 
 /*
@@ -465,11 +516,10 @@ void UIEquipSlider::handle_event(const sf::Event& event, const sf::RenderWindow&
  */
 void UIEquipSlider::move_to_index(int newIndex)
 {
-    if (newIndex < 0 || newIndex >= static_cast<int>(m_equipIcons.size()))
+    if (newIndex < 0 || newIndex >= static_cast<int>(m_equipIcons.size()) || newIndex == m_currentIndex)
         return;
 
-    sf::Vector2f screenCenter(1920.f / 2.0f - baseIconSize.x / 2.f,
-        1080.f / 2.0f - baseIconSize.y / 2.f + 300.f);
+    sf::Vector2f screenCenter(1920.f / 2.0f - baseIconSize.x / 2.f, CARDS_BOTTOM);
 
     for (int i = 0; i < static_cast<int>(m_equipIcons.size()); ++i)
     {
@@ -498,7 +548,7 @@ void UIEquipSlider::move_to_index(int newIndex)
  * start_drag
  * ----------
  * - Activates the drag ghost when dragging starts
- * - Sets ghost visuals (shape, sprite, cost text)
+ * - Sets ghost visuals (shape and texture; render_ghost draws it)
  * - Places ghost at starting cursor position
  */
 void UIEquipSlider::start_drag(const DragInfo& dragInfo, const sf::Vector2f& startPos)
@@ -511,56 +561,19 @@ void UIEquipSlider::start_drag(const DragInfo& dragInfo, const sf::Vector2f& sta
     tg.level = dragInfo.level;
     tg.active = true;
 
-    // Shape
-    sf::Vector2f shapeSize = dragInfo.iconSize;
-    if (shapeSize.x <= 0.f || shapeSize.y <= 0.f)
-        shapeSize = { 144.f, 108.f };
-
+    // Shape: a lineup slot, bigger while it's not over a slot (centered on the mouse)
+    const sf::Vector2f shapeSize{ UIBattleIcon::WIDTH * GHOST_SCALE, UIBattleIcon::HEIGHT * GHOST_SCALE };
     tg.shape.setSize(shapeSize);
-    tg.shape.setFillColor(sf::Color(255, 255, 255, 150));
-    tg.shape.setOutlineColor(sf::Color::Black);
-    tg.shape.setOutlineThickness(3.f);
     tg.shape.setOrigin(shapeSize * 0.5f);
+    tg.shape.setScale({ 1.f, 1.f });
     tg.shape.setPosition(startPos);
 
-    // Texture and Sprite
+    // Texture (drawn by render_ghost)
     if (dragInfo.texture)
         tg.texture = *dragInfo.texture;
     else
         tg.texture = m_placeholderTexture;
-
-    tg.sprite.setTexture(tg.texture);
-    tg.sprite.setTextureRect(sf::IntRect({ 0, 0 }, { static_cast<int>(tg.texture.getSize().x), static_cast<int>(tg.texture.getSize().y) }));
-    tg.sprite.setOrigin({
-        static_cast<float>(tg.texture.getSize().x) / 2.f,
-        static_cast<float>(tg.texture.getSize().y) / 2.f
-        });
-    tg.sprite.setScale({ 1.f, 1.f });
-    tg.sprite.setColor(sf::Color(255, 255, 255, 200));
-    tg.sprite.setPosition(startPos);
-
-    // Cost label
-    sf::FloatRect shapeBounds = tg.shape.getGlobalBounds();
-
-    tg.costText.setString("Cost: " + std::to_string(dragInfo.cost) + "$");
-    tg.costText.setCharacterSize(tg.INFO_BASE_TEXT_SIZE);
-
-    tg.costText.setOrigin({ 0.f, 0.f });
-    tg.costText.setPosition({
-        shapeBounds.position.x + shapeBounds.size.x - tg.costText.getLocalBounds().size.x - tg.INFO_BASE_TEXT_OFFSET,
-        shapeBounds.position.y + shapeBounds.size.y - tg.costText.getLocalBounds().size.y - tg.INFO_BASE_TEXT_OFFSET
-        });
-
-    // Level label
-    tg.levelText.setString("Lvl. " + std::to_string(dragInfo.level));
-    tg.levelText.setCharacterSize(tg.INFO_BASE_TEXT_SIZE);
-
-    tg.levelText.setOrigin({ 0.f, 0.f });
-    tg.levelText.setPosition({
-        shapeBounds.position.x + shapeBounds.size.x - tg.levelText.getLocalBounds().size.x - tg.INFO_BASE_TEXT_OFFSET,
-        shapeBounds.position.y + shapeBounds.size.y - tg.levelText.getLocalBounds().size.y - tg.INFO_BASE_TEXT_OFFSET - tg.costText.getCharacterSize() - m_tempGhost->INFO_BASE_TEXT_OFFSET
-        });
-
+    tg.texture.setSmooth(true);
 
     tg.currentScale = 1.f;
     tg.scaleTween = tweeny::from(1.f).to(1.f).during(60); // idle tween
@@ -580,22 +593,8 @@ void UIEquipSlider::update_drag_position(const sf::Vector2f& pos)
     if (!m_tempGhost || !m_tempGhost->active) return;
     auto& tg = *m_tempGhost;
 
-    // Update ghost visuals to cursor position
+    // Update ghost position (render_ghost draws it from the shape)
     tg.shape.setPosition(pos);
-    tg.sprite.setPosition(pos);
-
-    // Always keep costText and levelText at bottom-right inside the shape
-    sf::FloatRect shapeBounds = tg.shape.getGlobalBounds();
-
-    tg.costText.setPosition({
-        shapeBounds.position.x + shapeBounds.size.x - tg.costText.getLocalBounds().size.x - tg.INFO_BASE_TEXT_OFFSET,
-        shapeBounds.position.y + shapeBounds.size.y - tg.costText.getLocalBounds().size.y - tg.INFO_BASE_TEXT_OFFSET
-        });
-    tg.levelText.setPosition({
-        shapeBounds.position.x + shapeBounds.size.x - tg.levelText.getLocalBounds().size.x - tg.INFO_BASE_TEXT_OFFSET,
-        shapeBounds.position.y + shapeBounds.size.y - tg.levelText.getLocalBounds().size.y - tg.INFO_BASE_TEXT_OFFSET - tg.costText.getCharacterSize() - m_tempGhost->INFO_BASE_TEXT_OFFSET
-        });
-
 
     // Detect if cursor is over a slot
     int hoveredSlot = -1;
@@ -786,24 +785,10 @@ void UIEquipSlider::refresh_slots_after_unequip()
 }
 
 
-UIEquipSlider::TempGhost::TempGhost(const sf::Font& font, const sf::Texture& placeholder)
+UIEquipSlider::TempGhost::TempGhost(const sf::Texture& placeholder)
     : texture(placeholder)
-    , sprite(texture)
-    , costText(font)
-    , levelText(font)
     , active(false)
     , currentScale(1.f)
     , scaleTween(tweeny::from(1.f).to(1.f).during(1))
 {
-    costText.setFillColor(sf::Color::Yellow);
-    costText.setOutlineColor(sf::Color::Black);
-    costText.setCharacterSize(INFO_BASE_TEXT_SIZE);
-    costText.setOutlineThickness(2.f);
-
-    levelText.setFillColor(sf::Color::Green);
-    levelText.setOutlineColor(sf::Color::Black);
-    levelText.setCharacterSize(INFO_BASE_TEXT_SIZE);
-    levelText.setOutlineThickness(2.f);
-
-    // center origins will be set when sizes are known
 }

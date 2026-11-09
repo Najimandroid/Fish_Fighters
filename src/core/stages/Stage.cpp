@@ -11,16 +11,6 @@
 
 #include <iostream>
 
-namespace
-{
-	const std::string SHADOW_TEXTURE = "assets/images/textures/effects/shadow.png";
-	const float SHADOW_HEIGHT_RATIO = 0.3f;        // Shadow height compared to its width
-	const float ENTITY_SHADOW_WIDTH = 1.f;         // Compared to the body (hitbox) width
-	const float ENTITY_SHADOW_RISE = 0.25f;        // Center above the feet (part of its height): sprites leave a little space under the drawing
-	const float BASE_SHADOW_WIDTH = 1.1f;          // Compared to the base image width
-	const float BASE_SHADOW_RISE = 0.1f;           // Base images stand on their bottom edge
-}
-
 /*
 * Initializes the stage with the DataLoader and UIManager
 */
@@ -488,10 +478,10 @@ void Stage::render(sf::RenderWindow& window)
 	// Shadows on the ground, under every unit and enemy
 	for (auto& [layer, enemyList] : m_enemies)
 		for (auto& enemy : enemyList)
-			draw_entity_shadow(window, *enemy);
+			draw_entity_shadow(window, *enemy, false);
 	for (auto& [layer, unitList] : m_units)
 		for (auto& unit : unitList)
-			draw_entity_shadow(window, *unit);
+			draw_entity_shadow(window, *unit, true);
 
 	// Draw enemies (back to front)
 	for (auto& [layer, enemyList] : std::ranges::reverse_view(m_enemies))
@@ -686,28 +676,30 @@ void Stage::generate_boss_shockwave()
 /*
 * Soft round shadow on the ground (like The Battle Cats), drawn before what stands on it.
 */
-void Stage::draw_shadow(sf::RenderWindow& window, sf::Vector2f groundCenter, float width) const
+void Stage::draw_shadow(sf::RenderWindow& window, const ShadowShape& shape) const
 {
 	const sf::Vector2f textureSize(m_shadowTexture.getSize());
-	if (textureSize.x <= 0.f || textureSize.y <= 0.f) return;
+	if (textureSize.x <= 0.f || textureSize.y <= 0.f || shape.width <= 0.f) return;
 
 	sf::Sprite shadow(m_shadowTexture);
 	shadow.setOrigin(textureSize / 2.f);
-	shadow.setScale({ width / textureSize.x, width * SHADOW_HEIGHT_RATIO / textureSize.y });
-	shadow.setPosition(groundCenter);
+	shadow.setScale({ shape.width / textureSize.x, shape.height / textureSize.y });
+	shadow.setPosition({ shape.centerX, shape.centerY });
 	window.draw(shadow);
 }
 
 /*
-* Under the body of a unit or an enemy: the hitbox (the back half of the frame, where the drawing is).
-* The feet are on position.y raised by the layer. It stays on the ground while the entity flies back (knockback).
+* Under the body of a unit or an enemy (BattlefieldLayout's entity_shadow), its width set by EntityData::shadowScale.
+* It follows the sprite along x, so it slides with a knockback, but stays on the ground (position.y raised by the layer).
+* The body is the back half of the frame: right of the sprite center for units (they face left), left for enemies.
 */
-void Stage::draw_entity_shadow(sf::RenderWindow& window, const BattleEntity& entity) const
+void Stage::draw_entity_shadow(sf::RenderWindow& window, const BattleEntity& entity, bool isUnit) const
 {
-	const float width = entity.hitbox.size.x * ENTITY_SHADOW_WIDTH;
+	const float bodyWidth = entity.hitbox.size.x;
+	const float bodyCenterX = entity.sprite.getPosition().x + (isUnit ? bodyWidth / 2.f : -bodyWidth / 2.f);
 	const float feetY = entity.position.y - static_cast<float>(entity.currentLayer);
-	const float centerX = entity.hitbox.position.x + entity.hitbox.size.x / 2.f;
-	draw_shadow(window, { centerX, feetY - width * SHADOW_HEIGHT_RATIO * ENTITY_SHADOW_RISE }, width);
+	const float shadowScale = entity.data ? entity.data->shadowScale : 1.f;
+	draw_shadow(window, entity_shadow(bodyCenterX, feetY, bodyWidth, shadowScale));
 }
 
 /*
@@ -716,7 +708,5 @@ void Stage::draw_entity_shadow(sf::RenderWindow& window, const BattleEntity& ent
 void Stage::draw_base_shadow(sf::RenderWindow& window, const BattleBase& base) const
 {
 	const sf::FloatRect bounds = base.sprite.getGlobalBounds();
-	const float width = bounds.size.x * BASE_SHADOW_WIDTH;
-	const float bottom = bounds.position.y + bounds.size.y;
-	draw_shadow(window, { bounds.position.x + bounds.size.x / 2.f, bottom - width * SHADOW_HEIGHT_RATIO * BASE_SHADOW_RISE }, width);
+	draw_shadow(window, base_shadow(bounds.position.x + bounds.size.x / 2.f, bounds.position.y + bounds.size.y, bounds.size.x));
 }

@@ -305,6 +305,39 @@ namespace EditorWidgets
         return changed;
     }
 
+    bool scale_field(EditorContext& ctx, DataFile file, const char* label, ordered_json& object, const char* key,
+        float min, float max, const char* help)
+    {
+        property_label(label, help);
+        ImGui::PushID(key);
+
+        const bool isSet = object.contains(key);
+        float percent = static_cast<float>(read_number(object, key, 1.0)) * 100.f;
+        const float resetWidth = ImGui::CalcTextSize("Reset").x + ImGui::GetStyle().FramePadding.x * 2.f;
+        ImGui::SetNextItemWidth(std::max(60.f, ImGui::GetContentRegionAvail().x - resetWidth - ImGui::GetStyle().ItemSpacing.x));
+        bool changed = ImGui::DragFloat("##value", &percent, 1.f, min * 100.f, max * 100.f, "%.0f %%", ImGuiSliderFlags_AlwaysClamp);
+        if (changed)
+        {
+            // 100 % is the default: no key in the JSON
+            if (std::abs(percent - 100.f) < 0.5f) object.erase(key);
+            else object[key] = number_value(percent / 100.f);
+        }
+        commit_when_done(ctx, file);
+
+        ImGui::SameLine();
+        ImGui::BeginDisabled(!isSet);
+        if (ImGui::Button("Reset"))
+        {
+            object.erase(key);
+            ctx.commit(file);
+            changed = true;
+        }
+        ImGui::EndDisabled();
+
+        ImGui::PopID();
+        return changed;
+    }
+
     bool image_field(EditorContext& ctx, DataFile file, const char* label, ordered_json& object, const char* key,
         ImageFolder folder, const char* help)
     {

@@ -1,14 +1,56 @@
-#include "UIChapterMap.h"
+ï»¿#include "UIChapterMap.h"
+#include "../UISkin.h"
 
 #include "../../core/stages/Stage.h"
 
+#include <algorithm>
 #include <iostream>
+
+namespace
+{
+    // The selected stage is brought to this point of the screen (between the title bar and the info panel)
+    const sf::Vector2f VIEW_CENTER{ 960.f, 480.f };
+
+    // Info panel at the bottom, between the back button and the BATTLE button (UIManager)
+    const sf::FloatRect INFO_PANEL{ { 180.f, 862.f }, { 1260.f, 190.f } };
+
+    const float MARKER_SIZE = 66.f;
+    const float SELECTED_MARKER_SIZE = 84.f;
+    const sf::Color CLEARED_TINT{ 150, 235, 150 };   // Turns the yellow marker green
+
+    // Keeps the map covering the whole screen (no black past its edges)
+    sf::Vector2f clamp_to_map(sf::Vector2f offset, sf::Vector2f mapSize)
+    {
+        return {
+            std::clamp(offset.x, std::min(0.f, 1920.f - mapSize.x), 0.f),
+            std::clamp(offset.y, std::min(0.f, 1080.f - mapSize.y), 0.f)
+        };
+    }
+}
 
 UIChapterMap::UIChapterMap(std::shared_ptr<DataLoader> dataLoader)
     : m_playerData(dataLoader->get_player_data()), m_dataLoader(dataLoader), m_background(m_backgroundTexture),
-    m_stageTitle(std::make_shared<UITextElement>(sf::Vector2f{ 500.f, 200.f }, sf::Vector2f{ 0.f, 0.f }, "Unknown Stage", 48))
+    m_marker(UISkin::texture("button_round")),
+    m_markerNumber(UISkin::heavy_font()),
+    m_infoPanel(INFO_PANEL.size, INFO_PANEL.position, UISkin::PANEL_DARK, 1.2f),
+    m_stageName(UISkin::heavy_font()),
+    m_stageDetails(UISkin::heavy_font()),
+    m_rewardText(UISkin::heavy_font()),
+    m_clearedText(UISkin::heavy_font(), "CLEARED!")
 {
     m_offsetTween = tweeny::from(0.f, 0.f).to(0.f, 0.f).during(1).via(tweeny::easing::linear);
+
+    m_marker.setOrigin(sf::Vector2f(m_marker.getTexture().getSize()) / 2.f);
+    UISkin::style_text(m_markerNumber, 34);
+
+    m_selectionRing.setFillColor(sf::Color::Transparent);
+    m_selectionRing.setOutlineColor(sf::Color::White);
+    m_selectionRing.setOutlineThickness(6.f);
+
+    UISkin::style_text(m_stageName, 48, UISkin::NUMBER);
+    UISkin::style_text(m_stageDetails, 30);
+    UISkin::style_text(m_rewardText, 30, UISkin::NUMBER);
+    UISkin::style_text(m_clearedText, 36, CLEARED_TINT);
 }
 
 void UIChapterMap::load_chapter(int chapterUID)
@@ -45,10 +87,9 @@ void UIChapterMap::select_stage(int stageUID)
 
     if (it != m_stageIcons.end())
     {
-        sf::Vector2f screenCenter(1920.f / 2.f, 1080.f / 2.f);
-        sf::Vector2f targetOffset = screenCenter - it->circle.getPosition();
+        sf::Vector2f targetOffset = clamp_to_map(VIEW_CENTER - it->circle.getPosition(), m_background.getGlobalBounds().size);
 
-        m_stageTitle->set_text(m_dataLoader->get_stage_data(m_selectedStage)->name);
+        describe_selected_stage();
 
         m_offsetTween = tweeny::from(m_viewOffset.x, m_viewOffset.y)
             .to(targetOffset.x, targetOffset.y)
@@ -76,18 +117,19 @@ void UIChapterMap::build_stage_icons()
         auto stageData = m_dataLoader->get_stage_data(stageUID);
         if (!stageData)
         {
-            // si stage introuvable, skip mais loguer si nécessaire
+            // si stage introuvable, skip mais loguer si nÃ©cessaire
             std::cerr << "UIChapterMap::build_stage_icons - stage " << stageUID << " not found\n";
             continue;
         }
 
         StageIcon icon;
         icon.stageUID = stageUID;
+        icon.number = static_cast<int>(i) + 1;
 
         // completed = si joueur a fini ce stage
         icon.completed = player->has_completed_stage(stageUID);
 
-        // unlocked = premier stage OU précédent complété OU déjà complété (sécurité)
+        // unlocked = premier stage OU prÃ©cÃ©dent complÃ©tÃ© OU dÃ©jÃ  complÃ©tÃ© (sÃ©curitÃ©)
         bool prevCompleted = false;
         if (i == 0)
             prevCompleted = true;
@@ -96,23 +138,19 @@ void UIChapterMap::build_stage_icons()
 
         icon.unlocked = prevCompleted || icon.completed;
 
-        const float radius = 30.f;
+        // Click area of the marker (render() draws the marker itself)
+        const float radius = SELECTED_MARKER_SIZE / 2.f;
 
         icon.circle.setRadius(radius);
         icon.circle.setOrigin({ radius, radius });
         icon.circle.setPosition(stageMapData.position);
-
-        if (icon.completed)
-            icon.circle.setFillColor(sf::Color::Green);
-        else if (icon.unlocked)
-            icon.circle.setFillColor(sf::Color::Black);
 
         if (icon.unlocked || icon.completed) {
             m_stageIcons.push_back(std::move(icon));
         }
     }
 
-    // si la stage sélectionnée précédente n'appartient pas à ce chapitre, la clear
+    // si la stage sÃ©lectionnÃ©e prÃ©cÃ©dente n'appartient pas Ã  ce chapitre, la clear
     if (m_selectedStage != -1)
     {
         bool stillInChapter = false;
@@ -123,7 +161,7 @@ void UIChapterMap::build_stage_icons()
 
     if (m_selectedStage == -1 && !m_currentChapter->stages.empty())
     {
-        // Chercher le premier stage non complété
+        // Chercher le premier stage non complÃ©tÃ©
         for (auto[uid, position] : m_currentChapter->stages) {
             if (!player->has_completed_stage(uid))
             {
@@ -131,7 +169,7 @@ void UIChapterMap::build_stage_icons()
                 break;
             }
         }
-        // Si tout est complété, fallback sur le premier
+        // Si tout est complÃ©tÃ©, fallback sur le premier
         if (m_selectedStage == -1)
             m_selectedStage = m_currentChapter->stages[0].UID;
     }
@@ -145,8 +183,7 @@ void UIChapterMap::build_stage_icons()
         if (it != m_stageIcons.end()) 
         {
             // Compute immediate offset
-            sf::Vector2f screenCenter(1920.f / 2.f, 1080.f / 2.f);
-            sf::Vector2f targetOffset = screenCenter - it->circle.getPosition();
+            sf::Vector2f targetOffset = clamp_to_map(VIEW_CENTER - it->circle.getPosition(), m_background.getGlobalBounds().size);
 
             m_offsetTween = tweeny::from(m_viewOffset.x, m_viewOffset.y)
                 .to(targetOffset.x, targetOffset.y)
@@ -167,13 +204,45 @@ void UIChapterMap::build_stage_icons()
         if (a.completed)
         {
             m_stageConnections.push_back(
-                make_dotted_line(a.circle.getPosition(), b.circle.getPosition(), 20.f, 3.f)
+                make_dotted_line(a.circle.getPosition(), b.circle.getPosition(), 28.f, 6.f)
             );
         }
     }
 
-    // Set stage title
-    m_stageTitle->set_text(m_dataLoader->get_stage_data(m_selectedStage)->name);
+    // Name and rewards of the selected stage
+    describe_selected_stage();
+}
+
+/*
+ * The info panel: stage name, enemy base health, rewards (shells and a new fish), CLEARED when done
+ */
+void UIChapterMap::describe_selected_stage()
+{
+    auto stage = m_dataLoader->get_stage_data(m_selectedStage);
+    if (!stage) return;
+
+    m_stageName.setString(stage->name);
+    m_stageDetails.setString("Enemy base: " + std::to_string(static_cast<int>(stage->baseHealth)) + " HP");
+
+    int shells = 0;
+    bool hasNewFish = false;
+    for (const auto& reward : stage->rewards)
+    {
+        if (reward->type == "shells") shells += reward->amount;
+        else if (reward->type == "unit") hasNewFish = true;
+    }
+    m_rewardText.setString(std::to_string(shells) + (hasNewFish ? "   + a new fish!" : ""));
+
+    const float left = INFO_PANEL.position.x + 40.f;
+    const float top = INFO_PANEL.position.y;
+    UISkin::set_text_anchor(m_stageName, { 0.f, 0.5f });
+    m_stageName.setPosition({ left, top + 48.f });
+    UISkin::set_text_anchor(m_stageDetails, { 0.f, 0.5f });
+    m_stageDetails.setPosition({ left, top + 106.f });
+    UISkin::set_text_anchor(m_rewardText, { 0.f, 0.5f });
+    m_rewardText.setPosition({ left + 52.f, top + 150.f });   // After the shell icon
+    UISkin::set_text_anchor(m_clearedText, { 1.f, 0.5f });
+    m_clearedText.setPosition({ INFO_PANEL.position.x + INFO_PANEL.size.x - 40.f, top + 48.f });
 }
 
 std::vector<sf::CircleShape> UIChapterMap::make_dotted_line(sf::Vector2f from, sf::Vector2f to, float spacing, float radius)
@@ -196,6 +265,8 @@ std::vector<sf::CircleShape> UIChapterMap::make_dotted_line(sf::Vector2f from, s
         dot.setOrigin({ radius, radius });
         dot.setPosition(pos);
         dot.setFillColor(sf::Color::White);
+        dot.setOutlineColor(UISkin::OUTLINE);
+        dot.setOutlineThickness(3.f);
 
         dots.push_back(dot);
     }
@@ -208,29 +279,10 @@ void UIChapterMap::update(float deltaTime)
 {
     if (!m_isVisible) return;
 
-    if (m_offsetTween.progress() != 1.f) 
+    if (m_offsetTween.progress() != 1.f)
     {
         auto [ox, oy] = m_offsetTween.step(1);
         m_viewOffset = { ox, oy };
-    }
-
-    for (auto& icon : m_stageIcons)
-    {
-        if (icon.stageUID == m_selectedStage)
-        {
-            icon.circle.setOutlineColor(sf::Color::Yellow);
-            icon.circle.setOutlineThickness(3.f);
-        }
-        else if (icon.completed)
-        {
-            icon.circle.setOutlineColor(sf::Color::Green);
-            icon.circle.setOutlineThickness(1.5f);
-        }
-        else
-        {
-            icon.circle.setOutlineColor(sf::Color::Red);
-            icon.circle.setOutlineThickness(1.5f);
-        }
     }
 }
 
@@ -242,14 +294,49 @@ void UIChapterMap::render(sf::RenderWindow& window)
     states.transform.translate(m_viewOffset);
 
     window.draw(m_background, states);
-    m_stageTitle->render(window);
 
     for (auto& connection : m_stageConnections)
         for (auto& dot : connection)
             window.draw(dot, states);
 
+    // Markers: yellow, green once cleared, the selected one bigger with a white ring
+    const sf::Vector2f markerTexture(m_marker.getTexture().getSize());
     for (auto& icon : m_stageIcons)
-        window.draw(icon.circle, states);
+    {
+        const bool isSelected = icon.stageUID == m_selectedStage;
+        const float size = isSelected ? SELECTED_MARKER_SIZE : MARKER_SIZE;
+        const sf::Vector2f center = icon.circle.getPosition();
+
+        if (isSelected)
+        {
+            m_selectionRing.setRadius(size / 2.f + 4.f);
+            m_selectionRing.setOrigin({ m_selectionRing.getRadius(), m_selectionRing.getRadius() });
+            m_selectionRing.setPosition(center);
+            window.draw(m_selectionRing, states);
+        }
+
+        m_marker.setScale({ size / markerTexture.x, size / markerTexture.y });
+        m_marker.setPosition(center);
+        m_marker.setColor(icon.completed ? CLEARED_TINT : sf::Color::White);
+        window.draw(m_marker, states);
+
+        m_markerNumber.setString(std::to_string(icon.number));
+        m_markerNumber.setScale({ size / SELECTED_MARKER_SIZE, size / SELECTED_MARKER_SIZE });
+        UISkin::set_text_anchor(m_markerNumber, { 0.5f, 0.5f });
+        m_markerNumber.setPosition(center);
+        window.draw(m_markerNumber, states);
+    }
+
+    // Info panel of the selected stage
+    m_infoPanel.render(window);
+    window.draw(m_stageName);
+    window.draw(m_stageDetails);
+    UISkin::draw_fitted(window, UISkin::texture("icon_shell"),
+        { { INFO_PANEL.position.x + 40.f, INFO_PANEL.position.y + 130.f }, { 40.f, 40.f } });
+    window.draw(m_rewardText);
+
+    if (auto player = m_playerData.lock(); player && player->has_completed_stage(m_selectedStage))
+        window.draw(m_clearedText);
 }
 
 void UIChapterMap::handle_event(const sf::Event& event, const sf::RenderWindow& window)

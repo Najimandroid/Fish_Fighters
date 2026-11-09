@@ -123,3 +123,75 @@ void UISkin::set_text_anchor(sf::Text& text, sf::Vector2f anchor)
         bounds.position.y + bounds.size.y * anchor.y
         });
 }
+
+std::string UISkin::wrap_text(const std::string& text, unsigned int size, float maxWidth)
+{
+    sf::Text measure(heavy_font(), "", size);
+    auto width = [&](const std::string& line) { measure.setString(line); return measure.getLocalBounds().size.x; };
+
+    std::string result;
+    std::string line;
+    std::string word;
+    auto addWord = [&]()
+        {
+            if (word.empty()) return;
+            const std::string candidate = line.empty() ? word : line + " " + word;
+            if (!line.empty() && width(candidate) > maxWidth)
+            {
+                result += line + "\n";
+                line = word;
+            }
+            else
+            {
+                line = candidate;
+            }
+            word.clear();
+        };
+
+    for (char c : text)
+    {
+        if (c == ' ') addWord();
+        else if (c == '\n') { addWord(); result += line + "\n"; line.clear(); }
+        else word += c;
+    }
+    addWord();
+    return result + line;
+}
+
+void UISkin::draw_cropped(sf::RenderTarget& target, const sf::Texture& texture, const sf::FloatRect& area, sf::Color tint)
+{
+    const sf::Vector2f textureSize(texture.getSize());
+    if (textureSize.x <= 0.f || textureSize.y <= 0.f || area.size.x <= 0.f || area.size.y <= 0.f) return;
+
+    // Biggest centered part of the texture with the shape of area
+    const float areaRatio = area.size.x / area.size.y;
+    sf::Vector2f cropSize = textureSize;
+    if (textureSize.x / textureSize.y > areaRatio) cropSize.x = textureSize.y * areaRatio;
+    else cropSize.y = textureSize.x / areaRatio;
+    const sf::Vector2f cropPosition = (textureSize - cropSize) / 2.f;
+
+    sf::Sprite sprite(texture, sf::IntRect(sf::Vector2i(cropPosition), sf::Vector2i(cropSize)));
+    sprite.setScale({ area.size.x / cropSize.x, area.size.y / cropSize.y });
+    sprite.setPosition(area.position);
+    sprite.setColor(tint);
+    target.draw(sprite);
+}
+
+void UISkin::draw_fitted(sf::RenderTarget& target, const sf::Texture& texture, const sf::FloatRect& area, sf::Color tint)
+{
+    const sf::Vector2f textureSize(texture.getSize());
+    if (textureSize.x <= 0.f || textureSize.y <= 0.f) return;
+
+    const float scale = std::min(area.size.x / textureSize.x, area.size.y / textureSize.y);
+    sf::Sprite sprite(texture);
+    sprite.setScale({ scale, scale });
+    sprite.setPosition(area.position + (area.size - textureSize * scale) / 2.f);
+    sprite.setColor(tint);
+    target.draw(sprite);
+}
+
+sf::FloatRect UISkin::slot_inner(const sf::FloatRect& rect, float cornerScale)
+{
+    const float inset = SLOT_OUTLINE * cornerScale;
+    return { rect.position + sf::Vector2f{ inset, inset }, rect.size - sf::Vector2f{ inset, inset } * 2.f };
+}

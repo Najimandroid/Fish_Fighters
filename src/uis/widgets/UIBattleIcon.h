@@ -57,6 +57,5 @@ private:
     bool m_isDarkened = false;
 
     // Visuals
-    sf::Texture m_texture;    // Unit icon texture
-    sf::Sprite m_sprite;      // Sprite to display the texture
+    sf::Texture m_texture;    // Unit icon texture (drawn cropped into the slot)
 };

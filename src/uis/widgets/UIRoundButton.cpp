@@ -29,6 +29,11 @@ void UIRoundButton::set_icon(const std::string& iconName)
     m_icon.setOrigin(sf::Vector2f(texture.getSize()) / 2.f);
 }
 
+void UIRoundButton::set_icon_flipped(bool isFlipped)
+{
+    m_isIconFlipped = isFlipped;
+}
+
 void UIRoundButton::set_active_callback(std::function<bool()> isActive)
 {
     m_isActive = isActive;
@@ -60,7 +65,7 @@ void UIRoundButton::render(sf::RenderWindow& window)
     window.draw(m_button);
 
     const float iconScale = rect.size.x * ICON_RATIO / static_cast<float>(m_icon.getTexture().getSize().x);
-    m_icon.setScale({ iconScale, iconScale });
+    m_icon.setScale({ m_isIconFlipped ? -iconScale : iconScale, iconScale });
     m_icon.setPosition(center);
     window.draw(m_icon);
 }

@@ -58,6 +58,10 @@ namespace EntityFields
         const int frames = read_int(entity, "frameCount", 1);
         int_field(ctx, file, "Knockback frame", entity, "knockbackFrameIndex", 1, std::max(1, frames - 1),
             "Frames before it: walk. Frames after it: attack.\nYou can also pick it in the Preview panel's frame strip.", 0.05f);
+
+        scale_field(ctx, file, "Shadow size", entity, "shadowScale", 0.2f, 3.f,
+            "Width of its round shadow in battle, compared to its body (the hitbox): 100 % by default.\n"
+            "The Preview panel draws it like the game.");
     }
 
     float damage_per_second(const ordered_json& entity, float multiplier)

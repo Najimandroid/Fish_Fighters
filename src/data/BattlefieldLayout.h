@@ -22,3 +22,36 @@ inline float background_ground_row(float groundRow, float imageHeight)
 {
     return groundRow >= 0.f ? groundRow : imageHeight * DEFAULT_BACKGROUND_GROUND_RATIO;
 }
+
+// ===== Shadows =====
+// Soft round shadows on the ground (like The Battle Cats), drawn before what stands on them
+inline constexpr const char* SHADOW_TEXTURE = "assets/images/textures/effects/shadow.png";
+inline constexpr float SHADOW_HEIGHT_RATIO = 0.3f;  // Height of a shadow compared to its width
+inline constexpr float ENTITY_SHADOW_RISE = 0.25f;  // Center above the feet (part of its height): sprites leave a little space under the drawing
+inline constexpr float BASE_SHADOW_WIDTH = 1.1f;    // Compared to the base image width
+inline constexpr float BASE_SHADOW_RISE = 0.1f;     // Base images stand on their bottom edge
+
+struct ShadowShape
+{
+    float centerX = 0.f;
+    float centerY = 0.f;
+    float width = 0.f;
+    float height = 0.f;
+};
+
+// The shadow of a unit or an enemy: under its body (the hitbox, the back half of the frame, where the drawing is),
+// as wide as the body x shadowScale (EntityData, "shadowScale" in the JSON, 1 by default)
+inline ShadowShape entity_shadow(float bodyCenterX, float feetY, float bodyWidth, float shadowScale)
+{
+    const float width = bodyWidth * shadowScale;
+    const float height = width * SHADOW_HEIGHT_RATIO;
+    return { bodyCenterX, feetY - height * ENTITY_SHADOW_RISE, width, height };
+}
+
+// The shadow of a base: under its whole image, on its bottom edge
+inline ShadowShape base_shadow(float imageCenterX, float imageBottom, float imageWidth)
+{
+    const float width = imageWidth * BASE_SHADOW_WIDTH;
+    const float height = width * SHADOW_HEIGHT_RATIO;
+    return { imageCenterX, imageBottom - height * BASE_SHADOW_RISE, width, height };
+}

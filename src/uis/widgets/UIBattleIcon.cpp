@@ -7,13 +7,11 @@
 namespace
 {
     const float FRAME_SCALE = 1.f;                       // Corners of the slot images on screen
-    const float FRAME_THICKNESS = 6.f * FRAME_SCALE;     // Outline of slot.png (6 px in the image)
     const unsigned int COST_SIZE = 32;
     const sf::Vector2f COST_PADDING{ 12.f, 10.f };       // From the bottom right corner
     const float BAR_HEIGHT = 14.f;
     const float BAR_MARGIN = 14.f;                       // From the sides and the bottom
     const sf::Color BAR_BACKGROUND{ 20, 30, 40, 220 };
-    const sf::Color EMPTY_SLOT_TINT{ 150, 170, 180 };    // Slot with no unit equipped
     const std::uint8_t SHADE_ALPHA_COOLDOWN = 150;
     const std::uint8_t SHADE_ALPHA_DARKENED = 110;
 }
@@ -22,8 +20,7 @@ namespace
  * Initializes the button and loads the icon texture.
  */
 UIBattleIcon::UIBattleIcon(sf::Vector2f position, const std::string& iconTexturePath) :
-    UIButtonElement({ WIDTH, HEIGHT }, position, ""),
-    m_sprite(m_texture)
+    UIButtonElement({ WIDTH, HEIGHT }, position, "")
 {
     // Load icon texture
     set_texture(iconTexturePath);
@@ -65,26 +62,15 @@ void UIBattleIcon::render(sf::RenderWindow& window)
 
     const sf::FloatRect rect = get_visual_rect();
     const float scale = rect.size.x / WIDTH;
-    const float inset = FRAME_THICKNESS * scale;
-    const sf::FloatRect inner{ rect.position + sf::Vector2f{ inset, inset }, rect.size - sf::Vector2f{ inset, inset } * 2.f };
+    const sf::FloatRect inner = UISkin::slot_inner(rect, FRAME_SCALE * scale);
 
     const bool isEmpty = m_uid < 0;
-    UISkin::draw_nine_slice(window, UISkin::SLOT, rect, FRAME_SCALE * scale, isEmpty ? EMPTY_SLOT_TINT : sf::Color::White);
+    UISkin::draw_nine_slice(window, UISkin::SLOT, rect, FRAME_SCALE * scale, isEmpty ? UISkin::EMPTY_SLOT_TINT : sf::Color::White);
 
     if (!isEmpty)
     {
         // Unit icon cropped to the shape of the slot, filling it
-        const sf::Vector2f textureSize(m_texture.getSize());
-        const float innerRatio = inner.size.x / inner.size.y;
-        sf::Vector2f cropSize = textureSize;
-        if (textureSize.x / textureSize.y > innerRatio) cropSize.x = textureSize.y * innerRatio;
-        else cropSize.y = textureSize.x / innerRatio;
-        const sf::Vector2f cropPosition = (textureSize - cropSize) / 2.f;
-
-        m_sprite.setTextureRect(sf::IntRect(sf::Vector2i(cropPosition), sf::Vector2i(cropSize)));
-        m_sprite.setScale({ inner.size.x / cropSize.x, inner.size.y / cropSize.y });
-        m_sprite.setPosition(inner.position);
-        window.draw(m_sprite);
+        UISkin::draw_cropped(window, m_texture, inner);
 
         // Shade: can't be deployed (cooldown or not enough cash)
         if (m_isOnCooldown || m_isDarkened)
@@ -163,8 +149,6 @@ void UIBattleIcon::set_texture(const std::string& texturePath)
     if (!m_texture.loadFromFile(texturePath))
         m_texture.loadFromFile("assets/images/textures/icons/placeholder.png");
     m_texture.setSmooth(true);
-
-    m_sprite.setTexture(m_texture, true);
 }
 
 /*

@@ -23,6 +23,9 @@ public:
     // Changes the icon
     void set_icon(const std::string& iconName);
 
+    // Mirrors the icon horizontally (the play icon becomes a "previous" arrow)
+    void set_icon_flipped(bool isFlipped);
+
     // The ring is shown while this returns true
     void set_active_callback(std::function<bool()> isActive);
 
@@ -36,4 +39,5 @@ private:
     sf::CircleShape m_ring;              // Shown while the option is on
     std::function<bool()> m_isActive;
     bool m_isActiveNow = false;
+    bool m_isIconFlipped = false;
 };

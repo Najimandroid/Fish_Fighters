@@ -38,6 +38,11 @@ EditorApp::EditorApp(fs::path projectFolder) :
     m_window.setPosition({ static_cast<int>(desktop.x - size.x) / 2, static_cast<int>(desktop.y - size.y) / 3 });
     m_window.setFramerateLimit(60);
 
+    // Window icon (the exe's own icon comes from resources/editor.rc)
+    sf::Image icon;
+    if (icon.loadFromFile(m_projectFolder / "assets/images/app/editor_icon.png"))
+        m_window.setIcon(icon);
+
     if (!ImGui::SFML::Init(m_window, false))
     {
         std::cerr << "FishEditor: ImGui could not be initialized\n";

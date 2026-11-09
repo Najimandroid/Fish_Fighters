@@ -2,14 +2,18 @@
 
 #include "UIUpgradeIcon.h"
 #include "UIButtonElement.h"
+#include "UIRoundButton.h"
+#include "UIPanel.h"
 
 class DataLoader;
 
 /*
  * UIUpgradeSlider
  * ----------------
- * A horizontal slider that displays a list of upgradeable units.
- * Allows the player to navigate through units, view details, and upgrade them.
+ * The Upgrade screen's carousel, like The Battle Cats' upgrade screen: unit cards in a row
+ * (the selected one big in the middle), arrows on both sides, a big UPGRADE! button, and a panel
+ * with the selected unit's name and description.
+ * Left / Right keys, the arrows or a click on a side card move it.
  * Works with DataLoader to fetch player data and unit info.
  */
 
@@ -37,25 +41,31 @@ public:
 
 private:
 
-    int m_currentIndex = 0; // Current selected upgrade index
+    // Upgrades (or unlocks) the selected unit if the player has enough shells
+    void upgrade_selected();
 
+    int m_currentIndex = 0; // Current selected upgrade index
     std::vector<int> m_availableUpgrades; // List of all unit UIDs to display
     std::vector<std::shared_ptr<UIUpgradeIcon>> m_upgradeIcons; // Icon objects for the slider
 
-    UIButtonElement m_upgradeButton; // Button to upgrade selected unit
+    UIButtonElement m_upgradeButton;  // Button to upgrade selected unit
+    UIRoundButton m_previousButton;   // Arrows on both sides of the cards
+    UIRoundButton m_nextButton;
 
     std::shared_ptr<DataLoader> m_dataLoader; // Reference to data loader
 
-    // Lower panel for UI description
-    sf::Font m_font;
+    // Lower panel: name and description of the selected unit
+    UIPanel m_descriptionPanel;
+    sf::Text m_unitName;
     sf::Text m_description;
-    sf::RectangleShape m_lowerPart;
+    int m_describedUid = -1;   // The description is wrapped again only when the selection changes
 
-    // Icon layout parameters
-    const sf::Vector2f baseIconSize = { 350.0f, 350.0f };
-    const float ICON_SPACING = 475.0f;
-    const float CENTER_OFFSET_X = 40.f;
+    // Card layout: bottom-aligned on CARDS_BOTTOM, the selected card centered
+    const sf::Vector2f baseIconSize = { 300.0f, 300.0f };
+    const float CARDS_BOTTOM = 640.f;
+    const float ICON_SPACING = 440.0f;
     const float CENTER_SCALE = 1.3f;
     const float SIDE_SCALE = 1.0f;
+    const float CENTER_OFFSET_X = (CENTER_SCALE - SIDE_SCALE) * 300.f / 2.f; // Keeps the bigger card centered
     const float TWEEN_DURATION = 0.3f; // Animation duration in seconds
 };
