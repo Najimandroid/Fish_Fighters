@@ -1,6 +1,8 @@
 #include "DeadState.h"
 #include "../StateMachine.h"
 #include "../../BattleEntity.h"
+#include "../../BattleUnit.h"
+#include "../../../stages/Stage.h"
 
 #include <iostream>
 
@@ -20,8 +22,13 @@ void DeadState::enter()
     // std::cout << "Entering Dead State\n";
 
     auto entity = m_machine->get_owner().lock();
-    if (entity)
-        entity->isDead = true; // -> Mark as dead
+    if (!entity) return;
+
+    entity->isDead = true; // -> Mark as dead
+
+    // A fish faints (bloop bloop), an enemy pops
+    if (auto stage = m_machine->get_stage().lock())
+        stage->play_sound(std::dynamic_pointer_cast<BattleUnit>(entity) ? "death_unit" : "death_enemy");
 }
 
 // ==================

@@ -63,8 +63,15 @@ StatusOutcome StatusManager::request(const BattleEntity& source, BattleEntity& t
     else
         entry.outcome = StatusOutcome::MISSED;
 
+    if (entry.outcome != StatusOutcome::MISSED && m_onStatusLanded) m_onStatusLanded(entry.status);
+
     add_to_log(entry, target);
     return entry.outcome;
+}
+
+void StatusManager::set_on_status_landed(std::function<void(StatusType)> callback)
+{
+    m_onStatusLanded = std::move(callback);
 }
 
 StatusOutcome StatusManager::debug_apply(BattleEntity& target, StatusType type, float value, float duration, float stageTime)

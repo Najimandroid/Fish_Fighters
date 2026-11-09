@@ -29,9 +29,12 @@ UIUpgradeSlider::UIUpgradeSlider(std::shared_ptr<DataLoader> dataLoader) :
 	m_description(UISkin::heavy_font())
 {
 	m_upgradeButton.set_text_size(60);
+	m_upgradeButton.set_click_sound("");   // upgrade_selected plays "purchase" or "unlock"
 	m_upgradeButton.set_callback([this]() { upgrade_selected(); });
 
 	m_previousButton.set_icon_flipped(true);
+	m_previousButton.set_click_sound("");   // move_to_index plays the selection sound
+	m_nextButton.set_click_sound("");
 	m_previousButton.set_callback([this]() { move_to_index(m_currentIndex - 1); });
 	m_nextButton.set_callback([this]() { move_to_index(m_currentIndex + 1); });
 
@@ -59,10 +62,17 @@ void UIUpgradeSlider::upgrade_selected()
 
 		if (player->spend_shells(upgradeCost))
 		{
+			// Shells clinking for a level, a fanfare for a new fish
 			if (player->is_unit_owned(unitUid))
+			{
 				player->upgrade_unit(unitUid); // Upgrade if owned
+				play_sound("purchase");
+			}
 			else
+			{
 				player->unlock_unit(unitUid); // Unlock if not owned
+				play_sound("unlock");
+			}
 
 			// The form (and so the name and icon) can change with the level
 			auto icon = m_upgradeIcons[m_currentIndex];
@@ -298,6 +308,8 @@ void UIUpgradeSlider::move_to_index(int newIndex)
 {
 	if (newIndex < 0 || newIndex >= static_cast<int>(m_upgradeIcons.size()) || newIndex == m_currentIndex)
 		return;
+
+	play_sound("ui_select");
 
 	const float centerX = 1920.f / 2.0f - baseIconSize.x / 2.f;
 

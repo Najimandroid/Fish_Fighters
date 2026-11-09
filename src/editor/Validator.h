@@ -14,5 +14,5 @@
  */
 namespace Validator
 {
-    ValidationReport run(const ProjectData& project, TextureCache& textures);
+    ValidationReport run(const ProjectData& project, TextureCache& textures, const AudioLibrary& audio);
 }

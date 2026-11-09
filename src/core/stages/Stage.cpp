@@ -8,18 +8,37 @@
 
 #include "../../uis/UIManager.h"
 #include "../../utils/ImageTools.h"
+#include "../../audio/AudioManager.h"
 
 #include <iostream>
 
+namespace
+{
+	const std::string DEFAULT_ATTACK_SOUND = "attack_slap";   // Fish and enemies without an "attackSound"
+}
+
 /*
-* Initializes the stage with the DataLoader and UIManager
+* Initializes the stage with the DataLoader, UIManager and AudioManager
 */
-void Stage::init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<UIManager> uiManager, sf::View* stageCamera)
+void Stage::init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<UIManager> uiManager, std::shared_ptr<AudioManager> audio, sf::View* stageCamera)
 {
 	m_dataLoader = dataLoader;
 	m_uiManager = uiManager;
+	m_audio = audio;
 	m_stageCamera = stageCamera;
 	m_statusManager.init(dataLoader);
+
+	// A status that lands makes its sound (zap, goo, sad "wah")
+	m_statusManager.set_on_status_landed([this](StatusType status)
+		{
+			switch (status)
+			{
+			case StatusType::PARALYZED: play_sound("status_paralyze"); break;
+			case StatusType::SLOW:      play_sound("status_slow"); break;
+			case StatusType::WEAKEN:    play_sound("status_weaken"); break;
+			default: break;
+			}
+		});
 
 	if (!m_shadowTexture.loadFromFile(SHADOW_TEXTURE))
 		std::cerr << "Stage: can't load " << SHADOW_TEXTURE << "\n";
@@ -79,7 +98,37 @@ void Stage::load(int uid)
 
 	focus_on_player_base(); // Focus camera
 
+	// The stage's theme, and the one it switches to when the enemy base gets low (FishEditor, Music tab)
+	m_musicChange = stageJson->musicChange;
+	m_musicChangeBaseHealth = stageJson->musicChangeBaseHealth;
+	m_hasMusicChanged = false;
+	if (m_audio) m_audio->play_music(stageJson->music);
+
 	m_isLoaded = true;
+}
+
+/*
+* Switches to the second theme once the enemy base is at or below its health % (like The Battle Cats' boss music)
+*/
+void Stage::update_music()
+{
+	if (m_hasMusicChanged || m_musicChange.empty() || !m_audio || !m_enemyBase) return;
+	if (m_enemyBase->currentHealth > m_enemyBase->maxHealth * (m_musicChangeBaseHealth / 100.f)) return;
+
+	m_audio->play_music(m_musicChange, 1.5f);
+	m_hasMusicChanged = true;
+}
+
+void Stage::play_sound(const std::string& name, float volumeScale) const
+{
+	if (m_audio) m_audio->play_sound(name, volumeScale);
+}
+
+void Stage::on_attack_landed(const BattleEntity& attacker, bool hasHitBase) const
+{
+	const std::string& sound = attacker.data && !attacker.data->attackSound.empty() ? attacker.data->attackSound : DEFAULT_ATTACK_SOUND;
+	play_sound(sound);
+	if (hasHitBase) play_sound("base_hit");
 }
 
 /*
@@ -167,6 +216,8 @@ void Stage::update(float deltaTime)
 	// Doesn't need to check the bases if the player is on an end screen
 	if (m_isOnEndScreen) return;
 
+	update_music();
+
 	// Checks if the Player has won or lost
 	if (is_enemy_base_destroyed())
 	{
@@ -182,6 +233,10 @@ void Stage::update(float deltaTime)
 		
 		m_enemies.clear();
 
+		// The enemy base blows up, the victory jingle plays
+		play_sound("base_destroyed");
+		if (m_audio) m_audio->play_jingle("jingle_victory");
+
 		m_isOnEndScreen = true;
 		m_uiManager.lock()->generate_victory_uis();
 		return;
@@ -193,6 +248,10 @@ void Stage::update(float deltaTime)
 		m_dataLoader->save_progress();
 
 		m_units.clear();
+
+		// The fish base blows up, the defeat jingle plays
+		play_sound("base_destroyed");
+		if (m_audio) m_audio->play_jingle("jingle_defeat");
 
 		m_isOnEndScreen = true;
 		m_uiManager.lock()->generate_defeat_uis();
@@ -606,11 +665,11 @@ void Stage::spawn_enemy(std::shared_ptr<EntityData> enemyData, sf::Vector2f magn
 /*
 * Spawn a new unit
 */
-void Stage::spawn_unit(std::shared_ptr<EntityData> unitData, bool ignoreCostAndLimit)
+bool Stage::spawn_unit(std::shared_ptr<EntityData> unitData, bool ignoreCostAndLimit)
 {
-	if (m_unitsCount >= m_unitsLimit && !ignoreCostAndLimit) return;
-	if (unitData->cost > m_currentCash && !ignoreCostAndLimit) return;
-	if (m_isOnEndScreen == true) return;
+	if (m_unitsCount >= m_unitsLimit && !ignoreCostAndLimit) return false;
+	if (unitData->cost > m_currentCash && !ignoreCostAndLimit) return false;
+	if (m_isOnEndScreen == true) return false;
 
 	sf::Vector2f unitMagnification = { 1.f, 1.f };
 
@@ -639,6 +698,9 @@ void Stage::spawn_unit(std::shared_ptr<EntityData> unitData, bool ignoreCostAndL
 	m_unitsCount++;
 	if (!ignoreCostAndLimit) m_currentCash -= unitData->cost;
 	m_units[battleUnit->currentLayer].push_back(battleUnit);
+
+	play_sound("deploy");
+	return true;
 }
 
 /*
@@ -658,6 +720,8 @@ int Stage::generate_random_spawn_layer()
 */
 void Stage::generate_boss_shockwave()
 {
+	play_sound("boss_shockwave");
+
 	for (auto& pair : m_units)
 	{
 		for (auto& unit : pair.second)

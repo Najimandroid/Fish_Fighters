@@ -37,6 +37,7 @@ class BattleEnemy;
 class BattleUnit;
 class EnemyData;
 class UIManager;
+class AudioManager;
 
 class Stage : public std::enable_shared_from_this<Stage>
 {
@@ -45,8 +46,8 @@ public:
     // Constructor
     Stage();
 
-    // Initialize stage with references to DataLoader and UIManager
-    void init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<UIManager> uiManager, sf::View* stageCamera);
+    // Initialize stage with references to DataLoader, UIManager and AudioManager
+    void init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<UIManager> uiManager, std::shared_ptr<AudioManager> audio, sf::View* stageCamera);
 
     // Load a stage by its unique ID
     void load(int uid);
@@ -63,9 +64,16 @@ public:
     // Spawn a new enemy in the stage
     void spawn_enemy(std::shared_ptr<EntityData> enemyData, sf::Vector2f magnification, int layer, bool isBoss, bool bypassLimit);
 
-    // Spawn a new player unit in the stage
+    // Spawn a new player unit in the stage; false if it can't (units limit, cash, end screen)
     // ignoreCostAndLimit: debug tools only, spawns for free even when the units limit is reached
-    void spawn_unit(std::shared_ptr<EntityData> unitData, bool ignoreCostAndLimit = false);
+    bool spawn_unit(std::shared_ptr<EntityData> unitData, bool ignoreCostAndLimit = false);
+
+    // ===== Sounds =====
+    // Plays a sound of sfx.json (nothing without audio)
+    void play_sound(const std::string& name, float volumeScale = 1.f) const;
+
+    // An attack hit at least one target: the attacker's attack sound, and the clang of a base if one was hit
+    void on_attack_landed(const BattleEntity& attacker, bool hasHitBase) const;
 
     // Generate a random layer for entity spawning
     int generate_random_spawn_layer();
@@ -161,6 +169,12 @@ private:
 
     std::shared_ptr<DataLoader> m_dataLoader;
     std::weak_ptr<UIManager> m_uiManager;
+    std::shared_ptr<AudioManager> m_audio;   // Music and sounds of the battle
+
+    // ----- Music -----
+    std::string m_musicChange;               // Theme to switch to once the enemy base is low enough ("" = none)
+    float m_musicChangeBaseHealth = 50.f;    // ...at or below this % of its health
+    bool m_hasMusicChanged = false;
 
     std::vector<std::shared_ptr<EnemyStageData>> m_enemyStageDatas; // Enemy spawn datas
 
@@ -195,6 +209,9 @@ private:
 
     // Spawn bases at the start of the stage
     void spawn_bases(float health, float playerBaseHealth, const std::string& texture);
+
+    // Switches to the stage's second theme once the enemy base's health is low enough (once per battle)
+    void update_music();
 
     // The background image, made seamless when backgrounds.json asks for it (the file isn't changed)
     void load_background_texture(const BackgroundData& background);

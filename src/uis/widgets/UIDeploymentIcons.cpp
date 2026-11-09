@@ -77,13 +77,17 @@ void UIDeploymentIcons::init_icons()
                 icon->set_callback([this, weakIcon, weakData]()
                     {
                         auto icon = weakIcon.lock();
-                        if (!icon || icon->get_if_on_cooldown()) return;
+                        if (!icon) return;
+                        if (icon->get_if_on_cooldown()) { UIElement::play_sound("ui_error"); return; }
 
                         if (auto data = weakData.lock())
                         {
-                            if (m_stage.lock()->get_cash() < data->cost) return;
-                            m_stage.lock()->spawn_unit(data);
-                            icon->start_cooldown();
+                            if (m_stage.lock()->get_cash() < data->cost) { UIElement::play_sound("ui_error"); return; }
+
+                            // The stage plays the deploy sound; when the units limit is reached nothing spawns
+                            // and the slot doesn't start its cooldown
+                            if (m_stage.lock()->spawn_unit(data)) icon->start_cooldown();
+                            else UIElement::play_sound("ui_error");
                         }
                     });
             }

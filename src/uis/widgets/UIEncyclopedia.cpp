@@ -401,7 +401,12 @@ void UIEncyclopedia::handle_event(const sf::Event& event, const sf::RenderWindow
         const int first = m_scrollRow * COLUMNS;
         const int last = std::min(static_cast<int>(m_entries.size()), first + visible_rows() * COLUMNS);
         for (int i = first; i < last; ++i)
-            if (slot_rect(i).contains(mouse)) { select(i); break; }
+            if (slot_rect(i).contains(mouse))
+            {
+                if (i != m_selected) play_sound("ui_select");
+                select(i);
+                break;
+            }
     }
     else if (const auto* wheel = event.getIf<sf::Event::MouseWheelScrolled>())
     {
@@ -419,6 +424,10 @@ void UIEncyclopedia::handle_event(const sf::Event& event, const sf::RenderWindow
         else if (keyPressed->code == sf::Keyboard::Key::Right) next += 1;
         else if (keyPressed->code == sf::Keyboard::Key::Up) next -= COLUMNS;
         else if (keyPressed->code == sf::Keyboard::Key::Down) next += COLUMNS;
-        if (next != m_selected && next >= 0 && next < static_cast<int>(m_entries.size())) select(next);
+        if (next != m_selected && next >= 0 && next < static_cast<int>(m_entries.size()))
+        {
+            play_sound("ui_select");
+            select(next);
+        }
     }
 }

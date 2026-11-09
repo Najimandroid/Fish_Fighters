@@ -2,6 +2,9 @@
 
 #include <SFML/Graphics.hpp>
 
+#include <functional>
+#include <string>
+
 /*
  * Base class for all UI elements in the game.
  * Handles common properties like position, size, visibility,
@@ -44,6 +47,11 @@ public:
     // While true (a modal window like the pause menu), this element gets the input events alone
     virtual bool is_blocking_input() const { return false; }
 
+    // Sounds of the widgets (clicks, selections...): UIManager plugs the AudioManager in, so the widgets
+    // don't depend on it. Without a player, play_sound does nothing.
+    static void set_sound_player(std::function<void(const std::string&)> player) { s_soundPlayer = std::move(player); }
+    static void play_sound(const std::string& name) { if (s_soundPlayer && !name.empty()) s_soundPlayer(name); }
+
 public:
 
     bool isWorldSpaceUi = false; // Determines if element is rendered in world space or screen space
@@ -54,4 +62,8 @@ protected:
     sf::Vector2f m_size = { 0.0f, 0.0f };     // Width and height of the element
 
     bool m_isVisible = true; // Whether the element should be drawn
+
+private:
+
+    static inline std::function<void(const std::string&)> s_soundPlayer;
 };

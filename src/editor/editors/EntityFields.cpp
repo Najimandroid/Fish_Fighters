@@ -37,6 +37,9 @@ namespace EntityFields
             "Wind-up: seconds between the start of the attack and the hit.", 0.01f, "%.2f s");
         number_field(ctx, file, "Backswing", entity, "backswing", 0.f, 60.f,
             "Recovery: seconds after the hit before it can move again.", 0.01f, "%.2f s");
+        sound_field(ctx, file, "Attack sound", entity, "attackSound", "attack_", "attack_slap",
+            "Played when its attack hits (once per attack, even when it hits several targets).\n"
+            "The sounds are in assets/audios/sfx (made by tools/music/make_sfx.js).");
 
         property_label("Damage per second");
         ImGui::TextDisabled("%.1f (one target, without abilities)", damage_per_second(entity));

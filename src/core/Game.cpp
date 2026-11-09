@@ -13,7 +13,8 @@
 Game::Game():
     m_dataLoader(std::make_shared<DataLoader>()),
     m_stage(std::make_shared<Stage>()),
-	m_uiManager(std::make_shared<UIManager>())
+	m_uiManager(std::make_shared<UIManager>()),
+    m_audio(std::make_shared<AudioManager>())
 {
     // Create fullscreen window without borders
     m_window.create(sf::VideoMode::getDesktopMode(), "Fish Fighters", sf::Style::None); //sf::Style::None
@@ -33,8 +34,11 @@ Game::Game():
         m_window.close();
     }
 
+    // Music and sounds (without them the game still runs, silent; the reason is in the console)
+    m_audio->load();
+
     // Initialize UIManager and Stage with references to DataLoader
-    m_uiManager->init(m_dataLoader, m_stage);
+    m_uiManager->init(m_dataLoader, m_stage, m_audio);
 
 	// Set up game speed and quit callbacks for UIManager
     m_uiManager->set_game_speed_callback([this](GameSpeedState s) {
@@ -45,7 +49,7 @@ Game::Game():
     });
     m_uiManager->set_quit_game_callback([this]() {m_window.close();});
 
-    m_stage->init(m_dataLoader, m_uiManager, &m_stageCamera);
+    m_stage->init(m_dataLoader, m_uiManager, m_audio, &m_stageCamera);
 
     // Set up cameras for UI and stage rendering
     init_cameras();
@@ -111,8 +115,8 @@ void Game::calculate_delta_time()
 
 void Game::run_game_loop()
 {
-    // Initialize UI to Fish Tank screen
-	m_uiManager->generate_fish_tank_uis(); // TODO: add a main menu before this
+    // The game opens on the title screen
+	m_uiManager->generate_title_uis();
 
     while (m_window.isOpen())
     {
@@ -122,6 +126,10 @@ void Game::run_game_loop()
 
         m_stage->update(m_deltaTime);
         m_uiManager->update_uis(m_deltaTime);
+
+        // The music plays quieter while a battle is paused; real time, so it keeps fading during the pause
+        m_audio->set_music_ducked(m_stage->is_loaded() && m_speedState == GameSpeedState::PAUSED);
+        m_audio->update(m_realDeltaTime);
 
         m_window.clear();
 

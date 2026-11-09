@@ -22,7 +22,8 @@ namespace
         }
 
         TextureCache textures(projectFolder);
-        const ValidationReport report = Validator::run(project, textures);
+        AudioLibrary audio(project);
+        const ValidationReport report = Validator::run(project, textures, audio);
 
         std::cout << (report.isLoadedByGame ? "The game loads this data." : "The game can't load this data.") << "\n";
         for (const ValidationIssue& issue : report.issues)

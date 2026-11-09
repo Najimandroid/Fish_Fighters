@@ -288,6 +288,7 @@ bool DataLoader::load_units(const std::string& path)
             data->knockbackFrameIndex = read_int(formValue, "knockbackFrameIndex");
             data->shadowScale = read_shadow_scale(formValue);
             data->shadowOffset = formValue.contains("shadowOffset") ? read_float(formValue, "shadowOffset") : 0.f;
+            if (formValue.contains("attackSound")) data->attackSound = formValue.at("attackSound").get<std::string>();
 
             int formID = read_int(formValue, "form");
             m_unitsFormsDatabase[{UID, formID}] = data;
@@ -356,6 +357,7 @@ bool DataLoader::load_enemies(const std::string& path)
         data->knockbackFrameIndex = read_int(value, "knockbackFrameIndex");
         data->shadowScale = read_shadow_scale(value);
         data->shadowOffset = value.contains("shadowOffset") ? read_float(value, "shadowOffset") : 0.f;
+        if (value.contains("attackSound")) data->attackSound = value.at("attackSound").get<std::string>();
 
         m_enemiesDatabase[data->UID] = data;
     }
@@ -398,6 +400,15 @@ bool DataLoader::load_stages(const std::string& path)
         data->backgroundTexture = value.at("backgroundTexture").get<std::string>();
         if (value.contains("backgroundGroundRow"))
             throw std::runtime_error(data->name + ": the ground line belongs to the background now, in backgrounds.json (\"groundRow\")");
+
+        // Optional music: a theme from the start, and another one once the enemy base is low enough
+        if (value.contains("music")) data->music = value.at("music").get<std::string>();
+        if (value.contains("musicChange"))
+        {
+            const auto& change = value.at("musicChange");
+            data->musicChange = change.at("music").get<std::string>();
+            data->musicChangeBaseHealth = read_float(change, "baseHealth");
+        }
 
         // Just to avoid resizing the vector too many times
         size_t numberOfDifferentEnemies = value.at("numberOfDifferentEnemies").get<size_t>();

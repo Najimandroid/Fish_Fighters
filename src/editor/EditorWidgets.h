@@ -109,4 +109,16 @@ namespace EditorWidgets
 
     // A stage background as the game draws it: made seamless if backgrounds.json asks for it
     const sf::Texture* background_texture(EditorContext& ctx, const std::string& backgroundPath);
+
+    // ===== Music and sounds (assets/audios: music.json, sfx.json) =====
+    // A play / stop button previewing a theme or a sound
+    void audio_preview_button(EditorContext& ctx, const AudioLibrary::Entry* entry, bool isMusic);
+
+    // Picks a theme (menu and stage themes, by title) into `name`, with a preview button. True when it changed
+    bool music_combo(EditorContext& ctx, const char* id, std::string& name);
+
+    // Optional sound of the game whose name starts with `prefix` ("attack_"): a combo, a preview button,
+    // "Default" removes the key (the game then uses defaultName)
+    bool sound_field(EditorContext& ctx, DataFile file, const char* label, ordered_json& object, const char* key,
+        const char* prefix, const char* defaultName, const char* help = nullptr);
 }

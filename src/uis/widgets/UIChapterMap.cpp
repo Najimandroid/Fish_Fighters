@@ -82,6 +82,7 @@ void UIChapterMap::load_chapter(int chapterUID)
 
 void UIChapterMap::select_stage(int stageUID)
 {
+    if (stageUID != m_selectedStage) play_sound("ui_select");
     m_selectedStage = stageUID;
     std::cout << "Selected stage " << stageUID << "\n";
 

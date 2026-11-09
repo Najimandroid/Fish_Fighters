@@ -29,7 +29,8 @@ EditorApp::EditorApp(fs::path projectFolder) :
     m_project(m_projectFolder),
     m_textures(m_projectFolder),
     m_assets(m_project),
-    m_context(m_project, m_textures, m_assets, m_window)
+    m_audio(m_project),
+    m_context(m_project, m_textures, m_assets, m_audio, m_window)
 {
     // 1600 x 950, smaller on small screens (keeps room for the taskbar), centered
     const sf::Vector2u desktop = sf::VideoMode::getDesktopMode().size;
@@ -431,7 +432,7 @@ void EditorApp::draw_modals()
 // ==================
 void EditorApp::validate()
 {
-    m_context.validation = Validator::run(m_project, m_textures);
+    m_context.validation = Validator::run(m_project, m_textures, m_audio);
     m_context.clear_validation_due();
 }
 
@@ -507,6 +508,7 @@ void EditorApp::reload()
         {
             m_isLoaded = m_project.load();
             m_assets.refresh();
+            m_audio.refresh();
             m_textures.clear();
             m_context.select({});
             m_context.mark_changed();

@@ -56,6 +56,8 @@ UIEquipSlider::UIEquipSlider(std::shared_ptr<DataLoader> dataLoader)
     m_tempGhost = std::make_unique<TempGhost>(m_placeholderTexture);
 
     m_previousButton.set_icon_flipped(true);
+    m_previousButton.set_click_sound("");   // move_to_index plays the selection sound
+    m_nextButton.set_click_sound("");
     m_previousButton.set_callback([this]() { move_to_index(m_currentIndex - 1); });
     m_nextButton.set_callback([this]() { move_to_index(m_currentIndex + 1); });
 
@@ -168,6 +170,7 @@ void UIEquipSlider::init_icons()
                 {
                     // Unequip the clicked slot
                     player->unequip_unit(slotIndex);
+                    play_sound("unequip");
 
                     // Refresh all slots and redraw ghosts in order
                     refresh_slots_after_unequip();
@@ -519,6 +522,8 @@ void UIEquipSlider::move_to_index(int newIndex)
     if (newIndex < 0 || newIndex >= static_cast<int>(m_equipIcons.size()) || newIndex == m_currentIndex)
         return;
 
+    play_sound("ui_select");
+
     sf::Vector2f screenCenter(1920.f / 2.0f - baseIconSize.x / 2.f, CARDS_BOTTOM);
 
     for (int i = 0; i < static_cast<int>(m_equipIcons.size()); ++i)
@@ -680,6 +685,7 @@ void UIEquipSlider::end_drag(const sf::Vector2f& pos)
                 if (auto player = m_dataLoader->get_player_data().lock())
                 {
                     player->equip_unit(m_tempGhost->uid, finalSlot);
+                    play_sound("equip");
 
                     auto slotGhost = std::make_shared<UIEquipSlot>(
                         m_tempGhost->uid,
@@ -697,6 +703,7 @@ void UIEquipSlider::end_drag(const sf::Vector2f& pos)
                         if (auto player = m_dataLoader->get_player_data().lock()) {
                             // Unequip the clicked slot
                             player->unequip_unit(slotIndex);
+                            play_sound("unequip");
 
                             // Refresh all slots and redraw ghosts in order
                             refresh_slots_after_unequip();
@@ -765,6 +772,7 @@ void UIEquipSlider::refresh_slots_after_unequip()
 
             // Unequip from PlayerData
             player->unequip_unit(slotIndex);
+            play_sound("unequip");
 
             // Refresh all slots
             this->refresh_slots_after_unequip();

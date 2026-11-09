@@ -1,0 +1,110 @@
+{
+    "theme_default": {
+        "title": "Reef Rumble",
+        "kind": "stage",
+        "tempo": 152,
+        "sampleRate": 48000,
+        "lengthSeconds": 164.201,
+        "loopStartSample": 4092632,
+        "loopLengthSample": 3789474
+    },
+    "theme_calm": {
+        "title": "Kelp Garden",
+        "kind": "stage",
+        "tempo": 100,
+        "sampleRate": 48000,
+        "lengthSeconds": 198.537,
+        "loopStartSample": 4838400,
+        "loopLengthSample": 4608000
+    },
+    "theme_serious": {
+        "title": "Deep Current",
+        "kind": "stage",
+        "tempo": 138,
+        "sampleRate": 48000,
+        "lengthSeconds": 173.891,
+        "loopStartSample": 4340870,
+        "loopLengthSample": 4006957
+    },
+    "theme_stressful": {
+        "title": "Pressure Alarm",
+        "kind": "stage",
+        "tempo": 172,
+        "sampleRate": 48000,
+        "lengthSeconds": 136.727,
+        "loopStartSample": 3348837,
+        "loopLengthSample": 3214884
+    },
+    "theme_boss": {
+        "title": "Leviathan",
+        "kind": "stage",
+        "tempo": 160,
+        "sampleRate": 48000,
+        "lengthSeconds": 150,
+        "loopStartSample": 3744000,
+        "loopLengthSample": 3456000
+    },
+    "theme_title": {
+        "title": "Fish Fighters!",
+        "kind": "menu",
+        "tempo": 168,
+        "sampleRate": 48000,
+        "lengthSeconds": 102.848,
+        "loopStartSample": 2605715,
+        "loopLengthSample": 2331429
+    },
+    "theme_base": {
+        "title": "Fish Tank",
+        "kind": "menu",
+        "tempo": 112,
+        "sampleRate": 48000,
+        "lengthSeconds": 175.688,
+        "loopStartSample": 4320000,
+        "loopLengthSample": 4114286
+    },
+    "theme_shanty": {
+        "title": "Sunken Galleon",
+        "kind": "stage",
+        "tempo": 126,
+        "sampleRate": 48000,
+        "lengthSeconds": 186.679,
+        "loopStartSample": 4571428,
+        "loopLengthSample": 4388571
+    },
+    "theme_jelly": {
+        "title": "Jellyfish Lair",
+        "kind": "stage",
+        "tempo": 124,
+        "sampleRate": 48000,
+        "lengthSeconds": 193.754,
+        "loopStartSample": 4830968,
+        "loopLengthSample": 4459355
+    },
+    "theme_jelly_boss": {
+        "title": "Jellyfish King",
+        "kind": "stage",
+        "tempo": 152,
+        "sampleRate": 48000,
+        "lengthSeconds": 157.875,
+        "loopStartSample": 3941053,
+        "loopLengthSample": 3637895
+    },
+    "jingle_victory": {
+        "title": "Victory",
+        "kind": "jingle",
+        "tempo": 150,
+        "sampleRate": 48000,
+        "lengthSeconds": 2.4,
+        "loopStartSample": null,
+        "loopLengthSample": null
+    },
+    "jingle_defeat": {
+        "title": "Defeat",
+        "kind": "jingle",
+        "tempo": 96,
+        "sampleRate": 48000,
+        "lengthSeconds": 5,
+        "loopStartSample": null,
+        "loopLengthSample": null
+    }
+}

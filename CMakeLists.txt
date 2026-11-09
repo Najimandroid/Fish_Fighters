@@ -52,6 +52,8 @@ set(PROJECT_SOURCES
     src/core/combat/StatusManager.cpp
     src/core/combat/CombatLog.cpp
 
+    src/audio/AudioManager.cpp
+
     src/uis/UIManager.cpp
     src/uis/UISkin.cpp
     src/uis/EntityPortraits.cpp
@@ -81,6 +83,7 @@ set(PROJECT_SOURCES
     src/uis/widgets/UIUnitCard.cpp
     src/uis/widgets/UIAbilityList.cpp
     src/uis/widgets/UIEncyclopedia.cpp
+    src/uis/widgets/UITitleScreen.cpp
 
     # ImGui theme shared by the developer tools and the editor
     src/tools/ToolsTheme.cpp
@@ -167,6 +170,7 @@ set(EDITOR_SOURCES
     src/editor/ProjectQueries.cpp
     src/editor/TextureCache.cpp
     src/editor/AssetLibrary.cpp
+    src/editor/AudioLibrary.cpp
     src/editor/FileDialog.cpp
     src/editor/GameBuilds.cpp
     src/editor/GameBuilder.cpp
@@ -204,6 +208,7 @@ target_link_libraries(FishEditor PRIVATE
     fishcore
     imgui-sfml
     SFML::Graphics
+    SFML::Audio
     SFML::Window
     SFML::System
     opengl32.lib

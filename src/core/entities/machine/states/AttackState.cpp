@@ -110,6 +110,8 @@ void AttackState::perform(float deltaTime)
     {
         const DamageCalculator& damageCalculator = stage->get_damage_calculator();
         StatusManager& statusManager = stage->get_status_manager();
+        int hitCount = 0;
+        bool hasHitBase = false;
 
         auto hit = [&](BattleEntity& target)
             {
@@ -117,6 +119,8 @@ void AttackState::perform(float deltaTime)
                 target.take_damage(result);
                 stage->get_combat_log().record(*entity, target, result, stage->get_elapsed_time());
                 statusManager.apply_on_hit_abilities(*entity, target, stage->get_elapsed_time());
+                ++hitCount;
+                if (dynamic_cast<BattleBase*>(&target)) hasHitBase = true;
             };
 
         if (entity->data->attackType == 1) // Single-target attack
@@ -133,6 +137,9 @@ void AttackState::perform(float deltaTime)
                     hit(*target);
             }
         }
+
+        // One sound per attack, even when an area attack hits several targets
+        if (hitCount > 0) stage->on_attack_landed(*entity, hasHitBase);
     }
 
     // Clear targets

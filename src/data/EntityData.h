@@ -57,6 +57,9 @@ struct EntityData
     float shadowScale = 1.0f;                   // Shadow width compared to the body ("shadowScale", optional, set in FishEditor)
     float shadowOffset = 0.0f;                  // Shadow moved forward, in px ("shadowOffset", optional, set in FishEditor)
 
+    // ===== Sound =====
+    std::string attackSound;                    // Sound of its hits ("attackSound", optional, set in FishEditor; empty: "attack_slap")
+
     // ===== Upgrade Attributes =====
     int baseUpgradeCost = 100;                  // Base cost for upgrading this unit
 };

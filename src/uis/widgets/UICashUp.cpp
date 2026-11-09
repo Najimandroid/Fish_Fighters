@@ -33,12 +33,13 @@ UICashUp::UICashUp(std::shared_ptr<Stage> stage) :
     UISkin::style_text(m_levelText, LEVEL_SIZE);
     UISkin::style_text(m_text, COST_SIZE, UISkin::NUMBER);
 
-    // Callback executed when button is clicked
+    // Callback executed when button is clicked (with its own sounds: "cash_up", or the error when it can't)
+    set_click_sound("");
     set_callback(
         [this]()
         {
             // Prevent upgrading beyond max level
-            if (m_level >= m_maxLevel) return;
+            if (m_level >= m_maxLevel) { play_sound("ui_error"); return; }
 
             // Lock stage reference
             if (auto stage = m_stage.lock())
@@ -48,7 +49,9 @@ UICashUp::UICashUp(std::shared_ptr<Stage> stage) :
                 {
                     m_level++;
                     m_cost *= 1.5f;
+                    play_sound("cash_up");
                 }
+                else play_sound("ui_error");
             }
         }
     );

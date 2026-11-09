@@ -83,6 +83,7 @@ private:
     ProjectData m_project;
     TextureCache m_textures;
     AssetLibrary m_assets;
+    AudioLibrary m_audio;
     EditorContext m_context;
 
     ContentPanel m_contentPanel;

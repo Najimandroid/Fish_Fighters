@@ -1,0 +1,287 @@
+{
+    "ui_click": {
+        "files": [
+            "assets/audios/sfx/ui_click.ogg"
+        ],
+        "volume": 0.55,
+        "pitch": 0.04,
+        "cooldown": 0.03,
+        "maxInstances": 2
+    },
+    "ui_back": {
+        "files": [
+            "assets/audios/sfx/ui_back.ogg"
+        ],
+        "volume": 0.5,
+        "pitch": 0.03,
+        "cooldown": 0.03,
+        "maxInstances": 2
+    },
+    "ui_select": {
+        "files": [
+            "assets/audios/sfx/ui_select.ogg"
+        ],
+        "volume": 0.45,
+        "pitch": 0.05,
+        "cooldown": 0.03,
+        "maxInstances": 2
+    },
+    "ui_transition": {
+        "files": [
+            "assets/audios/sfx/ui_transition.ogg"
+        ],
+        "volume": 0.4,
+        "pitch": 0.03,
+        "cooldown": 0.1,
+        "maxInstances": 1
+    },
+    "ui_error": {
+        "files": [
+            "assets/audios/sfx/ui_error.ogg"
+        ],
+        "volume": 0.55,
+        "pitch": 0,
+        "cooldown": 0.15,
+        "maxInstances": 1
+    },
+    "ui_pause": {
+        "files": [
+            "assets/audios/sfx/ui_pause.ogg"
+        ],
+        "volume": 0.5,
+        "pitch": 0,
+        "cooldown": 0.1,
+        "maxInstances": 1
+    },
+    "ui_unpause": {
+        "files": [
+            "assets/audios/sfx/ui_unpause.ogg"
+        ],
+        "volume": 0.5,
+        "pitch": 0,
+        "cooldown": 0.1,
+        "maxInstances": 1
+    },
+    "ui_start": {
+        "files": [
+            "assets/audios/sfx/ui_start.ogg"
+        ],
+        "volume": 0.9,
+        "pitch": 0,
+        "cooldown": 0.5,
+        "maxInstances": 1
+    },
+    "purchase": {
+        "files": [
+            "assets/audios/sfx/purchase.ogg"
+        ],
+        "volume": 0.8,
+        "pitch": 0,
+        "cooldown": 0.1,
+        "maxInstances": 2
+    },
+    "unlock": {
+        "files": [
+            "assets/audios/sfx/unlock.ogg"
+        ],
+        "volume": 0.9,
+        "pitch": 0,
+        "cooldown": 0.5,
+        "maxInstances": 1
+    },
+    "equip": {
+        "files": [
+            "assets/audios/sfx/equip.ogg"
+        ],
+        "volume": 0.6,
+        "pitch": 0.04,
+        "cooldown": 0.05,
+        "maxInstances": 2
+    },
+    "unequip": {
+        "files": [
+            "assets/audios/sfx/unequip.ogg"
+        ],
+        "volume": 0.5,
+        "pitch": 0.04,
+        "cooldown": 0.05,
+        "maxInstances": 2
+    },
+    "battle_start": {
+        "files": [
+            "assets/audios/sfx/battle_start.ogg"
+        ],
+        "volume": 0.8,
+        "pitch": 0,
+        "cooldown": 1,
+        "maxInstances": 1
+    },
+    "deploy": {
+        "files": [
+            "assets/audios/sfx/deploy_1.ogg",
+            "assets/audios/sfx/deploy_2.ogg"
+        ],
+        "volume": 0.6,
+        "pitch": 0.06,
+        "cooldown": 0.05,
+        "maxInstances": 3
+    },
+    "cash_up": {
+        "files": [
+            "assets/audios/sfx/cash_up.ogg"
+        ],
+        "volume": 0.75,
+        "pitch": 0,
+        "cooldown": 0.1,
+        "maxInstances": 1
+    },
+    "attack_slap": {
+        "files": [
+            "assets/audios/sfx/attack_slap_1.ogg",
+            "assets/audios/sfx/attack_slap_2.ogg",
+            "assets/audios/sfx/attack_slap_3.ogg"
+        ],
+        "volume": 0.45,
+        "pitch": 0.06,
+        "cooldown": 0.04,
+        "maxInstances": 6
+    },
+    "attack_bite": {
+        "files": [
+            "assets/audios/sfx/attack_bite_1.ogg",
+            "assets/audios/sfx/attack_bite_2.ogg",
+            "assets/audios/sfx/attack_bite_3.ogg"
+        ],
+        "volume": 0.45,
+        "pitch": 0.06,
+        "cooldown": 0.04,
+        "maxInstances": 6
+    },
+    "attack_pinch": {
+        "files": [
+            "assets/audios/sfx/attack_pinch_1.ogg",
+            "assets/audios/sfx/attack_pinch_2.ogg",
+            "assets/audios/sfx/attack_pinch_3.ogg"
+        ],
+        "volume": 0.45,
+        "pitch": 0.06,
+        "cooldown": 0.04,
+        "maxInstances": 6
+    },
+    "attack_zap": {
+        "files": [
+            "assets/audios/sfx/attack_zap_1.ogg",
+            "assets/audios/sfx/attack_zap_2.ogg",
+            "assets/audios/sfx/attack_zap_3.ogg"
+        ],
+        "volume": 0.45,
+        "pitch": 0.05,
+        "cooldown": 0.04,
+        "maxInstances": 6
+    },
+    "attack_heavy": {
+        "files": [
+            "assets/audios/sfx/attack_heavy_1.ogg",
+            "assets/audios/sfx/attack_heavy_2.ogg",
+            "assets/audios/sfx/attack_heavy_3.ogg"
+        ],
+        "volume": 0.5,
+        "pitch": 0.05,
+        "cooldown": 0.05,
+        "maxInstances": 4
+    },
+    "attack_squirt": {
+        "files": [
+            "assets/audios/sfx/attack_squirt_1.ogg",
+            "assets/audios/sfx/attack_squirt_2.ogg",
+            "assets/audios/sfx/attack_squirt_3.ogg"
+        ],
+        "volume": 0.45,
+        "pitch": 0.06,
+        "cooldown": 0.04,
+        "maxInstances": 6
+    },
+    "base_hit": {
+        "files": [
+            "assets/audios/sfx/base_hit_1.ogg",
+            "assets/audios/sfx/base_hit_2.ogg",
+            "assets/audios/sfx/base_hit_3.ogg"
+        ],
+        "volume": 0.55,
+        "pitch": 0.05,
+        "cooldown": 0.1,
+        "maxInstances": 2
+    },
+    "knockback": {
+        "files": [
+            "assets/audios/sfx/knockback.ogg"
+        ],
+        "volume": 0.5,
+        "pitch": 0.06,
+        "cooldown": 0.05,
+        "maxInstances": 4
+    },
+    "death_unit": {
+        "files": [
+            "assets/audios/sfx/death_unit.ogg"
+        ],
+        "volume": 0.55,
+        "pitch": 0.06,
+        "cooldown": 0.03,
+        "maxInstances": 4
+    },
+    "death_enemy": {
+        "files": [
+            "assets/audios/sfx/death_enemy.ogg"
+        ],
+        "volume": 0.5,
+        "pitch": 0.06,
+        "cooldown": 0.03,
+        "maxInstances": 4
+    },
+    "boss_shockwave": {
+        "files": [
+            "assets/audios/sfx/boss_shockwave.ogg"
+        ],
+        "volume": 1,
+        "pitch": 0,
+        "cooldown": 1,
+        "maxInstances": 1
+    },
+    "base_destroyed": {
+        "files": [
+            "assets/audios/sfx/base_destroyed.ogg"
+        ],
+        "volume": 1,
+        "pitch": 0,
+        "cooldown": 1,
+        "maxInstances": 1
+    },
+    "status_paralyze": {
+        "files": [
+            "assets/audios/sfx/status_paralyze.ogg"
+        ],
+        "volume": 0.5,
+        "pitch": 0.05,
+        "cooldown": 0.08,
+        "maxInstances": 2
+    },
+    "status_slow": {
+        "files": [
+            "assets/audios/sfx/status_slow.ogg"
+        ],
+        "volume": 0.5,
+        "pitch": 0.05,
+        "cooldown": 0.08,
+        "maxInstances": 2
+    },
+    "status_weaken": {
+        "files": [
+            "assets/audios/sfx/status_weaken.ogg"
+        ],
+        "volume": 0.5,
+        "pitch": 0.05,
+        "cooldown": 0.08,
+        "maxInstances": 2
+    }
+}

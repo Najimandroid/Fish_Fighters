@@ -950,4 +950,102 @@ namespace EditorWidgets
         ImGui::TextDisabled("Yellow: what the camera shows at the default zoom. White: zoomed out at most.");
         ImGui::PopID();
     }
+
+    // ==================
+    // Music and sounds
+    // ==================
+    void audio_preview_button(EditorContext& ctx, const AudioLibrary::Entry* entry, bool isMusic)
+    {
+        ImGui::BeginDisabled(entry == nullptr);
+        const bool isPlaying = entry && ctx.audio.is_playing(entry->name);
+        ImGui::PushID(entry ? entry->name.c_str() : "none");
+        if (ImGui::Button(isPlaying ? "Stop" : "Play", ImVec2(52.f, 0.f)))
+        {
+            if (isPlaying) ctx.audio.stop();
+            else ctx.audio.play(*entry, isMusic);
+        }
+        ImGui::SetItemTooltip(isPlaying ? "Stop the preview" : isMusic ? "Listen to it from the start (the game then loops it)" : "Listen to it");
+        ImGui::PopID();
+        ImGui::EndDisabled();
+    }
+
+    bool music_combo(EditorContext& ctx, const char* id, std::string& name)
+    {
+        ImGui::PushID(id);
+        const AudioLibrary::Entry* current = ctx.audio.find_music(name);
+        const std::string preview = current ? current->title + "  (" + current->name + ")" : "Missing: " + name;
+
+        bool changed = false;
+        ImGui::SetNextItemWidth(std::max(160.f, ImGui::GetContentRegionAvail().x - 60.f));
+        if (!current) ImGui::PushStyleColor(ImGuiCol_Text, MISSING_COLOR);
+        const bool isOpen = ImGui::BeginCombo("##music", preview.c_str());
+        if (!current) ImGui::PopStyleColor();
+        if (isOpen)
+        {
+            // Menu and stage themes (jingles are for the end of a battle)
+            for (const char* kind : { "stage", "menu" })
+            {
+                ImGui::SeparatorText(std::string(kind) == "stage" ? "Stage themes" : "Menu themes");
+                for (const auto& entry : ctx.audio.get_music())
+                {
+                    if (entry.kind != kind) continue;
+                    const bool isSelected = entry.name == name;
+                    if (ImGui::Selectable((entry.title + "  (" + entry.name + ")").c_str(), isSelected))
+                    {
+                        name = entry.name;
+                        changed = true;
+                    }
+                    if (isSelected) ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::SameLine();
+        audio_preview_button(ctx, ctx.audio.find_music(name), true);
+        ImGui::PopID();
+        return changed;
+    }
+
+    bool sound_field(EditorContext& ctx, DataFile file, const char* label, ordered_json& object, const char* key,
+        const char* prefix, const char* defaultName, const char* help)
+    {
+        property_label(label, help);
+        ImGui::PushID(key);
+
+        const bool hasKey = object.contains(key) && object[key].is_string();
+        const std::string name = hasKey ? object[key].get<std::string>() : defaultName;
+        const AudioLibrary::Entry* current = ctx.audio.find_sound(name);
+        const std::string preview = !current ? "Missing: " + name : hasKey ? name : name + "  (default)";
+
+        bool changed = false;
+        ImGui::SetNextItemWidth(std::max(140.f, ImGui::GetContentRegionAvail().x - 60.f));
+        if (!current) ImGui::PushStyleColor(ImGuiCol_Text, MISSING_COLOR);
+        const bool isOpen = ImGui::BeginCombo("##sound", preview.c_str());
+        if (!current) ImGui::PopStyleColor();
+        if (isOpen)
+        {
+            if (ImGui::Selectable((std::string("Default (") + defaultName + ")").c_str(), !hasKey))
+            {
+                object.erase(key);
+                changed = true;
+            }
+            for (const auto& entry : ctx.audio.get_sounds())
+            {
+                if (entry.name.rfind(prefix, 0) != 0) continue;
+                if (ImGui::Selectable(entry.name.c_str(), hasKey && entry.name == name))
+                {
+                    object[key] = entry.name;
+                    changed = true;
+                    ctx.audio.play(entry, false);   // Hear it right away
+                }
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::SameLine();
+        audio_preview_button(ctx, current, false);
+        ImGui::PopID();
+
+        if (changed) ctx.commit(file);
+        return changed;
+    }
 }

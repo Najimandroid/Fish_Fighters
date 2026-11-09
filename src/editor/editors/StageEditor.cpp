@@ -14,6 +14,8 @@ namespace
 {
     constexpr float DEFAULT_PLAYER_BASE_HEALTH = 350.f;   // StageData::playerBaseHealth when the stage doesn't set it
     const DataFile STAGES_FILE = DataFile::STAGES; // Every edit of this editor is in stages.json
+    const char* DEFAULT_MUSIC = "theme_default";          // StageData::music when the stage doesn't set it
+    const char* DEFAULT_MUSIC_CHANGE = "theme_boss";      // Suggested second theme
 
     // The loader reserves this many waves: kept equal to the list
     void sync_wave_count(ordered_json& stage)
@@ -395,6 +397,7 @@ namespace
     // Tabs (defined after StageEditor::draw)
     void general_tab(EditorContext& ctx, int uid, ordered_json& stage);
     void battlefield_tab(EditorContext& ctx, ordered_json& stage);
+    void music_tab(EditorContext& ctx, ordered_json& stage);
 }
 
 namespace StageEditor
@@ -441,6 +444,7 @@ namespace StageEditor
                     ImGui::TextDisabled("When each wave spawns. Purple: waits for the enemy base health. Orange: boss.");
                     timeline(ctx, *stage);
                 });
+            tab("Music", [&]() { music_tab(ctx, *stage); });
             tab("Rewards", [&]() { rewards(ctx, *stage); });
             ImGui::EndTabBar();
         }
@@ -517,5 +521,74 @@ namespace
 
         section("Ground line (shared by every stage using this background)");
         ground_line_field(ctx, read_string(*stage, "backgroundTexture"));
+    }
+
+    // "music": the battle's theme. "musicChange": { "music", "baseHealth" }: another theme once the enemy base
+    // is at or below baseHealth % (Stage::update_music), like The Battle Cats' boss music
+    void music_tab(EditorContext& ctx, ordered_json& stage)
+    {
+        section("Battle theme");
+        ImGui::TextDisabled("Plays from the start of the battle, then loops.");
+        std::string music = read_string(stage, "music", DEFAULT_MUSIC);
+        if (music_combo(ctx, "music", music))
+        {
+            stage["music"] = music;
+            ctx.commit(STAGES_FILE);
+        }
+
+        // The first boss wave's health threshold, to switch the music when the boss arrives
+        const ordered_json* bossWave = nullptr;
+        if (stage.contains("enemies") && stage["enemies"].is_array())
+            for (const auto& wave : stage["enemies"])
+                if (read_int(wave, "isBoss") != 0) { bossWave = &wave; break; }
+        const float bossThreshold = bossWave ? static_cast<float>(read_number(*bossWave, "baseHealth", 100.0)) : 50.f;
+
+        section("Change of theme");
+        ImGui::TextWrapped("Once the enemy base is low enough, the battle switches to another theme (once per battle), "
+            "like the boss music of The Battle Cats.");
+        bool hasChange = stage.contains("musicChange") && stage["musicChange"].is_object();
+        if (ImGui::Checkbox("Change the theme when the enemy base gets low", &hasChange))
+        {
+            if (hasChange) stage["musicChange"] = { { "music", DEFAULT_MUSIC_CHANGE }, { "baseHealth", number_value(bossThreshold) } };
+            else stage.erase("musicChange");
+            ctx.commit(STAGES_FILE);
+        }
+        if (!hasChange) return;
+
+        ordered_json& change = stage["musicChange"];
+        if (begin_properties("MusicChange"))
+        {
+            property_label("Enemy base at or below", "The theme changes once the enemy base's health is at or below this % (100 = right at the start).");
+            float percent = static_cast<float>(read_number(change, "baseHealth", 50.0));
+            if (ImGui::SliderFloat("##baseHealth", &percent, 1.f, 100.f, "%.0f%%", ImGuiSliderFlags_AlwaysClamp))
+                change["baseHealth"] = number_value(std::round(percent));
+            if (ImGui::IsItemDeactivatedAfterEdit()) ctx.commit(STAGES_FILE);
+
+            property_label("Switch to");
+            std::string next = read_string(change, "music", DEFAULT_MUSIC_CHANGE);
+            if (music_combo(ctx, "musicChange", next))
+            {
+                change["music"] = next;
+                ctx.commit(STAGES_FILE);
+            }
+            end_properties();
+        }
+
+        // The switch usually goes with the boss's arrival
+        if (bossWave)
+        {
+            const std::string boss = ProjectQueries::enemy_name(ctx.project, read_int(*bossWave, "UID"));
+            ImGui::TextDisabled("The boss (%s) arrives once the enemy base is at or below %.0f%%.", boss.c_str(), bossThreshold);
+            if (static_cast<float>(read_number(change, "baseHealth", 50.0)) != bossThreshold)
+            {
+                ImGui::SameLine();
+                if (ImGui::SmallButton("Switch with the boss"))
+                {
+                    change["baseHealth"] = number_value(bossThreshold);
+                    ctx.commit(STAGES_FILE);
+                }
+                ImGui::SetItemTooltip("Use the boss wave's %%, so the theme changes when the boss arrives");
+            }
+        }
     }
 }

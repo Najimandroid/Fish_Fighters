@@ -21,3 +21,14 @@ CMakeUserPresets.json
 # SFML / assets
 *.log
 *.tmp
+
+# Audio tools downloaded for rendering the music (FluidSynth, GeneralUser GS)
+audio_sources/tools/
+# Stems rendered by tools/music/render_stems.js (rebuilt from the MIDI, too big for git)
+audio_sources/stems/
+# Instrument stems written by tools/music/compose_music.js (rebuilt by it, read by render_stems.js)
+audio_sources/midi/stems/
+# Waveform's renders, backups and temporary files (the game's files are in assets/audios/music)
+audio_sources/waveform/*/Exported/
+audio_sources/waveform/*/Backups/
+audio_sources/waveform/*/.tmp_*
