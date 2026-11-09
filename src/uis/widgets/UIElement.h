@@ -41,6 +41,9 @@ public:
     virtual sf::FloatRect get_bounds() const;
     bool is_visible() const;
 
+    // While true (a modal window like the pause menu), this element gets the input events alone
+    virtual bool is_blocking_input() const { return false; }
+
 public:
 
     bool isWorldSpaceUi = false; // Determines if element is rendered in world space or screen space

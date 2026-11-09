@@ -23,14 +23,16 @@ void UIDeploymentIcons::init_icons()
     const int rows = 2;
     const int cols = 5;
 
-    const float iconWidth = 144.f * 1.15f;
-    const float iconHeight = 108.f * 1.15f;
-    const float spacingX = 24.f * 1.15f;
-    const float spacingY = 24.f * 1.15f;
+    const float iconWidth = UIBattleIcon::WIDTH;
+    const float iconHeight = UIBattleIcon::HEIGHT;
+    const float spacingX = 12.f;
+    const float spacingY = 12.f;
+    const float bottomMargin = 18.f;
 
     float totalWidth = cols * iconWidth + (cols - 1) * spacingX;
+    float totalHeight = rows * iconHeight + (rows - 1) * spacingY;
     float startX = (1920.f - totalWidth) / 2.f; // center horizontally
-    float startY = 775.f; // vertical position for icons
+    float startY = 1080.f - bottomMargin - totalHeight; // at the bottom of the screen
 
     int index = 0;
 

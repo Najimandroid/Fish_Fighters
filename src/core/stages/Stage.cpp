@@ -20,6 +20,11 @@ void Stage::init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<UIManag
 	m_uiManager = uiManager;
 	m_stageCamera = stageCamera;
 	m_statusManager.init(dataLoader);
+
+	if (!m_shadowTexture.loadFromFile(SHADOW_TEXTURE))
+		std::cerr << "Stage: can't load " << SHADOW_TEXTURE << "\n";
+	m_shadowTexture.setSmooth(true);
+
 	unload();
 }
 
@@ -465,9 +470,18 @@ void Stage::render(sf::RenderWindow& window)
 	// Draw background and bases
 	for (auto& bgSprite : m_backgroundSprites)
 		window.draw(bgSprite);
+	draw_base_shadow(window, *m_enemyBase);
+	draw_base_shadow(window, *m_unitBase);
 	window.draw(m_enemyBase->sprite);
 	window.draw(m_unitBase->sprite);
 
+	// Shadows on the ground, under every unit and enemy
+	for (auto& [layer, enemyList] : m_enemies)
+		for (auto& enemy : enemyList)
+			draw_entity_shadow(window, *enemy, false);
+	for (auto& [layer, unitList] : m_units)
+		for (auto& unit : unitList)
+			draw_entity_shadow(window, *unit, true);
 
 	// Draw enemies (back to front)
 	for (auto& [layer, enemyList] : std::ranges::reverse_view(m_enemies))
@@ -658,3 +672,41 @@ void Stage::generate_boss_shockwave()
 	}
 }
 
+
+/*
+* Soft round shadow on the ground (like The Battle Cats), drawn before what stands on it.
+*/
+void Stage::draw_shadow(sf::RenderWindow& window, const ShadowShape& shape) const
+{
+	const sf::Vector2f textureSize(m_shadowTexture.getSize());
+	if (textureSize.x <= 0.f || textureSize.y <= 0.f || shape.width <= 0.f) return;
+
+	sf::Sprite shadow(m_shadowTexture);
+	shadow.setOrigin(textureSize / 2.f);
+	shadow.setScale({ shape.width / textureSize.x, shape.height / textureSize.y });
+	shadow.setPosition({ shape.centerX, shape.centerY });
+	window.draw(shadow);
+}
+
+/*
+* Under the body of a unit or an enemy (BattlefieldLayout's entity_shadow), its width set by EntityData::shadowScale.
+* It follows the sprite along x, so it slides with a knockback, but stays on the ground (position.y raised by the layer).
+* The body is the back half of the frame: right of the sprite center for units (they face left), left for enemies.
+*/
+void Stage::draw_entity_shadow(sf::RenderWindow& window, const BattleEntity& entity, bool isUnit) const
+{
+	const float bodyWidth = entity.hitbox.size.x;
+	const float bodyCenterX = entity.sprite.getPosition().x + (isUnit ? bodyWidth / 2.f : -bodyWidth / 2.f);
+	const float feetY = entity.position.y - static_cast<float>(entity.currentLayer);
+	const float shadowScale = entity.data ? entity.data->shadowScale : 1.f;
+	draw_shadow(window, entity_shadow(bodyCenterX, feetY, bodyWidth, shadowScale));
+}
+
+/*
+* Under the whole base image, centered on its bottom edge (bases stand on the last layer).
+*/
+void Stage::draw_base_shadow(sf::RenderWindow& window, const BattleBase& base) const
+{
+	const sf::FloatRect bounds = base.sprite.getGlobalBounds();
+	draw_shadow(window, base_shadow(bounds.position.x + bounds.size.x / 2.f, bounds.position.y + bounds.size.y, bounds.size.x));
+}

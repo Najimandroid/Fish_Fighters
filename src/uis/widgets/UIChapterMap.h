@@ -1,6 +1,6 @@
 #pragma once
 
-#include "UITextElement.h"
+#include "UIPanel.h"
 
 #include "../../core/DataLoader.h"
 
@@ -11,7 +11,9 @@
 
 /*
  * UI for displaying a chapter map.
- * Shows stages as clickable icons, greying out locked ones and highlighting completed ones.
+ * Shows the unlocked stages as round numbered markers on the map (yellow, green once cleared,
+ * a white ring on the selected one) joined by dotted lines, and a panel with the selected stage:
+ * its name, the enemy base's health and the rewards.
  */
 
 class UIChapterMap : public UIElement
@@ -41,6 +43,9 @@ private:
 
     void build_stage_icons();
 
+    // Name, enemy base health and rewards of the selected stage in the info panel
+    void describe_selected_stage();
+
     std::vector<sf::CircleShape> make_dotted_line(sf::Vector2f from, sf::Vector2f to, float spacing, float radius);
 
 private:
@@ -50,13 +55,12 @@ private:
 
     std::shared_ptr<ChapterData> m_currentChapter;
 
-    std::shared_ptr<UITextElement> m_stageTitle;
-
-    struct StageIcon 
+    struct StageIcon
     {
         int stageUID;
+        int number = 1;         // Its place in the chapter (shown on the marker)
 
-        sf::CircleShape circle; // Placeholder visual
+        sf::CircleShape circle; // Position and click area of the marker
 
         bool completed = false;
         bool unlocked = false;
@@ -69,6 +73,16 @@ private:
 
     sf::Sprite m_background;
     sf::Texture m_backgroundTexture;
+
+    // Markers and the info panel
+    sf::Sprite m_marker;            // button_round, tinted per stage
+    sf::Text m_markerNumber;
+    sf::CircleShape m_selectionRing;
+    UIPanel m_infoPanel;
+    sf::Text m_stageName;
+    sf::Text m_stageDetails;        // Enemy base health
+    sf::Text m_rewardText;          // Shells (after a shell icon) and a new fish
+    sf::Text m_clearedText;         // CLEARED, on a completed stage
 
     tweeny::tween<float, float> m_offsetTween;
     sf::Vector2f m_viewOffset{ 0.f, 0.f };      // current camera offset

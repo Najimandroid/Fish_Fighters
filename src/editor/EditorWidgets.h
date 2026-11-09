@@ -46,6 +46,8 @@ namespace EditorWidgets
     bool attack_type_field(EditorContext& ctx, DataFile file, ordered_json& object);
     bool pair_field(EditorContext& ctx, DataFile file, const char* label, ordered_json& object, const char* key,
         float defaultFirst, float defaultSecond, const char* help = nullptr);  // [ a, b ] lists (damageZone)
+    bool scale_field(EditorContext& ctx, DataFile file, const char* label, ordered_json& object, const char* key,
+        float min, float max, const char* help = nullptr);  // Optional factor shown in %, 1 = no key in the JSON, Reset button
 
     // Image path with a thumbnail, a picker of the folder's images and an Import... button
     bool image_field(EditorContext& ctx, DataFile file, const char* label, ordered_json& object, const char* key,

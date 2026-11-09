@@ -8,6 +8,7 @@
 #include <functional>
 
 class Stage;
+class UIRoundButton;
 enum class GameSpeedState;
 
 /*
@@ -71,6 +72,9 @@ public:
     void set_quit_game_callback(std::function<void()> callback);
 
 private:
+    // The round back button of the menus (bottom left): runs onBack as a deferred action
+    std::shared_ptr<UIRoundButton> make_back_button(std::function<void()> onBack);
+
     std::shared_ptr<DataLoader> m_dataLoader = nullptr;         // Reference to game data
     std::weak_ptr<Stage> m_stage;                               // Reference to current game stage
 
@@ -81,4 +85,6 @@ private:
 	std::function<void(GameSpeedState)> m_setGameSpeedCallback; // Callback to set game speed state
     std::function<GameSpeedState()> m_getGameSpeedCallback;     // Callback to get current game speed state
     std::function<void()> m_quitGameCallback;                   // Callback to quit game
+
+    bool m_wasFasterBeforePause = false;                        // "Continue" goes back to this speed
 };

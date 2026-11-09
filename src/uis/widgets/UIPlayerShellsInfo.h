@@ -7,7 +7,9 @@ class DataLoader;
 /*
  * UIPlayerShellsInfo
  * ------------------
- * Displays the current number of player "shells" (currency) on the UI.
+ * Displays the current number of player "shells" (currency) on the UI:
+ * a dark pill at the right end of the title bar, with a shell icon and yellow digits
+ * (like the XP counter of The Battle Cats).
  * Inherits from UITextElement for text rendering.
  * Continuously updates to reflect changes in the player's shells.
  */
@@ -24,10 +26,15 @@ public:
     // deltaTime is not used but required to override base class
     void update(float deltaTime) override;
 
+    // Pill, icon and digits
+    void render(sf::RenderWindow& window) override;
+
 private:
 
     std::shared_ptr<DataLoader> m_dataLoader; // Reference to DataLoader to access player info
 
-    const float OFFSET_Y = 10.f; // Vertical padding from the top
-    const float OFFSET_X = 10.f; // Horizontal padding from the right
+    const float OFFSET_Y = 18.f;      // Vertical padding from the top
+    const float OFFSET_X = 24.f;      // Horizontal padding from the right
+    const float PILL_HEIGHT = 74.f;
+    const float MIN_PILL_WIDTH = 300.f;
 };

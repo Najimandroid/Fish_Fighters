@@ -30,6 +30,6 @@ private:
     std::weak_ptr<Stage> m_stage; // Weak pointer to avoid ownership
 
     // Text offsets from top-right corner
-    const float OFFSET_Y = 10.f;
-    const float OFFSET_X = 10.f;
+    const float OFFSET_Y = 30.f;
+    const float OFFSET_X = 36.f;
 };

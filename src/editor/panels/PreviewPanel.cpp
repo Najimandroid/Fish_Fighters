@@ -490,6 +490,23 @@ void PreviewPanel::draw_scene(EditorContext& ctx, const SceneEntity& edited, con
             const ImVec2 max = toScreen(entity.center - half + uv.size.x, GROUND_Y);
             drawList->AddImage(texture_id(*entity.sheet), min, max, uv.uv0, uv.uv1);
         };
+    // Round shadows under both, like Stage draws them (BattlefieldLayout::entity_shadow, "shadowScale")
+    if (const sf::Texture* shadowTexture = ctx.textures.get(SHADOW_TEXTURE))
+    {
+        auto drawShadow = [&](const SceneEntity& entity)
+            {
+                const float bodyWidth = static_cast<float>(frame_width(entity.sheet, entity.frameCount) / 2);
+                const float bodyCenter = entity.center + (entity.isUnit ? bodyWidth / 2.f : -bodyWidth / 2.f);
+                const float shadowScale = static_cast<float>(read_number(*entity.data, "shadowScale", 1.0));
+                const ShadowShape shadow = entity_shadow(bodyCenter, GROUND_Y, bodyWidth, shadowScale);
+                drawList->AddImage(texture_id(*shadowTexture),
+                    toScreen(shadow.centerX - shadow.width / 2.f, shadow.centerY - shadow.height / 2.f),
+                    toScreen(shadow.centerX + shadow.width / 2.f, shadow.centerY + shadow.height / 2.f));
+            };
+        if (opponent && opponent->sheet) drawShadow(*opponent);
+        if (edited.sheet) drawShadow(edited);
+    }
+
     if (opponent && opponent->sheet) drawSprite(*opponent);
     drawSprite(edited);
 

@@ -7,9 +7,12 @@
 /*
  * UIButtonElement represents a clickable button in the UI.
  * Inherits from UIElement and adds:
- *  - Rectangle shape
- *  - Text label
+ *  - A glossy yellow button image (UISkin, 9-slice) that grows under the mouse and shrinks when pressed
+ *  - Text label (heavy outlined font)
  *  - Callback function for click events
+ *
+ * Subclasses with their own look (UIBattleIcon, UICashUp, UIRoundButton) override render()
+ * and reuse the hover / press state and get_visual_rect().
  */
 
 class UIButtonElement : public UIElement
@@ -31,9 +34,12 @@ public:
     void set_text_size(unsigned int size);
     void set_text_color(const sf::Color& color);
 
-    // Shape appearance setters
+    // Tints the button image (white keeps the yellow)
     void set_fill_color(const sf::Color& color);
-    void set_outline(float thickness, const sf::Color& color);
+
+    // A disabled button is greyed out and ignores clicks
+    void set_enabled(bool isEnabled);
+    bool is_enabled() const;
 
     // Override UIElement functions
     void update(float deltaTime) override;
@@ -43,8 +49,18 @@ public:
 
 protected:
 
-    sf::RectangleShape m_shape;         // Button background rectangle
+    // Size factor of the drawing: bigger under the mouse, smaller while pressed
+    float get_visual_scale() const;
+
+    // The button rectangle scaled by get_visual_scale() around its center
+    sf::FloatRect get_visual_rect() const;
+
+    sf::RectangleShape m_shape;         // Button rectangle (position, size and clicks; not drawn)
     sf::Text m_text;                    // Button label text
-    sf::Font m_font;                    // Font used for the text
     std::function<void()> m_callback;   // Function to execute on click
+
+    sf::Color m_tint = sf::Color::White; // Color multiplied with the button image
+    bool m_isHovered = false;            // The mouse is over the button
+    bool m_isPressed = false;            // The left button went down on it and isn't released yet
+    bool m_isEnabled = true;
 };

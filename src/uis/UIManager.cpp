@@ -1,4 +1,4 @@
-#include "UIManager.h"
+ï»¿#include "UIManager.h"
 
 #include "../core/stages/Stage.h"
 #include "../core/Game.h"
@@ -12,7 +12,12 @@
 #include "widgets/UIEquipSlider.h"
 #include "widgets/UIPlayerShellsInfo.h"
 #include "widgets/UIChapterMap.h"
+#include "widgets/UIRoundButton.h"
+#include "widgets/UIPauseMenu.h"
+#include "widgets/UITitleBar.h"
+#include "widgets/UIPatternBackground.h"
 
+#include <algorithm>
 #include <iostream>
 
 // Initialize the manager with references to the data loader and current stage
@@ -60,9 +65,20 @@ void UIManager::render_uis(sf::RenderWindow& window, sf::View& uiView, sf::View&
 // Executes deferred actions after processing events
 void UIManager::handle_ui_events(const sf::Event& event, const sf::RenderWindow& window)
 {
-    for (auto& uiElement : m_uiElements)
+    // A modal window (the pause menu) gets the events alone; the last one added is the one on top
+    auto blocking = std::find_if(m_uiElements.rbegin(), m_uiElements.rend(),
+        [](const auto& uiElement) { return uiElement->is_visible() && uiElement->is_blocking_input(); });
+
+    if (blocking != m_uiElements.rend())
     {
-        uiElement->handle_event(event, window);
+        (*blocking)->handle_event(event, window);
+    }
+    else
+    {
+        for (auto& uiElement : m_uiElements)
+        {
+            uiElement->handle_event(event, window);
+        }
     }
 
     // Execute deferred action if set by button callbacks
@@ -75,10 +91,10 @@ void UIManager::handle_ui_events(const sf::Event& event, const sf::RenderWindow&
 }
 
 /*
- * Generate Fish Tank UI screen:
- *   - Background, title, battle/upgrade/equip buttons
+ * Generate Fish Tank UI screen (the hub, laid out like The Battle Cats' Cat Base):
+ *   - The fish tank background, the wood title bar and the player's shells
+ *   - A column of big yellow buttons: BATTLE! (chapter map), UPGRADE, EQUIP, QUIT
  *   - Each button sets a deferred callback using m_pendingAction
- *   - Player shells display
  */
 void UIManager::generate_fish_tank_uis()
 {
@@ -90,19 +106,20 @@ void UIManager::generate_fish_tank_uis()
         "assets/images/textures/backgrounds/menus/fish_tank.png"
     );
 
-    auto title = std::make_shared<UITextElement>(
-        sf::Vector2f{ 0.f, 0.f },
-        sf::Vector2f{ 50.f, 50.f },
-        "Fish Tank",
-        48
-    );
+    auto titleBar = std::make_shared<UITitleBar>("Fish Tank");
+    auto shellsInfo = std::make_shared<UIPlayerShellsInfo>(m_dataLoader);
 
-    // Battle button triggers stage load and switches UI
+    // Column of buttons on the left
+    const float columnX = 70.f;
+    const float columnWidth = 560.f;
+
+    // Battle button opens the chapter map
     auto battleButton = std::make_shared<UIButtonElement>(
-        sf::Vector2f{ 200.f, 80.f },
-        sf::Vector2f{ 100.f, 300.f },
-        "BATTLE"
+        sf::Vector2f{ columnWidth, 150.f },
+        sf::Vector2f{ columnX, 190.f },
+        "BATTLE!"
     );
+    battleButton->set_text_size(70);
     battleButton->set_callback([this]()
         {
             m_pendingAction = [this]() {
@@ -112,10 +129,11 @@ void UIManager::generate_fish_tank_uis()
 
     // Upgrade button switches UI to upgrade screen
     auto upgradeButton = std::make_shared<UIButtonElement>(
-        sf::Vector2f{ 200.f, 80.f },
-        sf::Vector2f{ 100.f, 400.f },
+        sf::Vector2f{ columnWidth, 120.f },
+        sf::Vector2f{ columnX, 372.f },
         "UPGRADE"
     );
+    upgradeButton->set_text_size(52);
     upgradeButton->set_callback([this]()
         {
             m_pendingAction = [this]() {
@@ -125,10 +143,11 @@ void UIManager::generate_fish_tank_uis()
 
     // Equip button switches UI to equip screen
     auto equipButton = std::make_shared<UIButtonElement>(
-        sf::Vector2f{ 200.f, 80.f },
-        sf::Vector2f{ 100.f, 500.f },
+        sf::Vector2f{ columnWidth, 120.f },
+        sf::Vector2f{ columnX, 524.f },
         "EQUIP"
     );
+    equipButton->set_text_size(52);
     equipButton->set_callback([this]()
         {
             m_pendingAction = [this]() {
@@ -136,12 +155,14 @@ void UIManager::generate_fish_tank_uis()
                 };
         });
 
-    // Quit button closes the game
+    // Quit button closes the game (smaller, orange)
     auto quitButton = std::make_shared<UIButtonElement>(
-        sf::Vector2f{ 200.f, 80.f },
-        sf::Vector2f{ 100.f, 600.f },
+        sf::Vector2f{ 300.f, 96.f },
+        sf::Vector2f{ columnX, 676.f },
         "QUIT"
     );
+    quitButton->set_text_size(40);
+    quitButton->set_fill_color(sf::Color(255, 150, 130));
     quitButton->set_callback([this]()
         {
             m_pendingAction = [this]() {
@@ -152,161 +173,121 @@ void UIManager::generate_fish_tank_uis()
                 };
         });
 
-    auto shellsInfo = std::make_shared<UIPlayerShellsInfo>(m_dataLoader);
-
     add_ui_element(bg);
-    add_ui_element(title);
+    add_ui_element(titleBar);
+    add_ui_element(shellsInfo);
     add_ui_element(battleButton);
     add_ui_element(upgradeButton);
     add_ui_element(equipButton);
     add_ui_element(quitButton);
-    add_ui_element(shellsInfo);
 }
 
-//
-// TODO: Document the rest of the file
-//
+/*
+ * The round back button of the menus (bottom left), like The Battle Cats' curved arrow
+ */
+std::shared_ptr<UIRoundButton> UIManager::make_back_button(std::function<void()> onBack)
+{
+    const float size = 120.f;
+    auto backButton = std::make_shared<UIRoundButton>(size, sf::Vector2f{ 24.f, 1080.f - 24.f - size }, "icon_back");
+    backButton->set_callback([this, onBack]()
+        {
+            m_pendingAction = onBack;
+        });
+    return backButton;
+}
 
+/*
+ * Generate the Upgrade screen: wave pattern, title bar, shells, the upgrade carousel, back to the Fish Tank
+ */
 void UIManager::generate_upgrade_menu_uis()
 {
     m_uiElements.clear();
 
-    //background
-    auto bg = std::make_shared<UITextureElement>(
-        sf::Vector2f{ 1920.f, 1080.f },
-        sf::Vector2f{ 0.f, 0.f },
-        "assets/images/textures/backgrounds/menus/fish_tank.png"
-    );
-
-    //title text "Upgrades"
-    auto title = std::make_shared<UITextElement>(
-        sf::Vector2f{ 0.f, 0.f },
-        sf::Vector2f{ 50.f, 50.f },
-        "Upgrades",
-        48
-    );
-
-    //back to menu button
-    auto menuButton = std::make_shared<UIButtonElement>(
-        sf::Vector2f{ 100.f, 100.f },
-        sf::Vector2f{ 20.f, 1080.f - 100.f - 20.f },
-        "MENU"
-    );
-    menuButton->set_callback([this]()
-        {
-            m_pendingAction = [this]() {
-                if (auto stage = m_stage.lock())
-                {
-                    generate_fish_tank_uis();
-                }
-                };
-        });
-
-    //slider
+    auto bg = std::make_shared<UIPatternBackground>("pattern_waves");
     auto upgradeSlider = std::make_shared<UIUpgradeSlider>(m_dataLoader);
+    auto titleBar = std::make_shared<UITitleBar>("Upgrade");
 	auto shellsInfo = std::make_shared<UIPlayerShellsInfo>(m_dataLoader);
+    auto backButton = make_back_button([this]() { generate_fish_tank_uis(); });
 
     add_ui_element(bg);
-    add_ui_element(title);
     add_ui_element(upgradeSlider);
+    add_ui_element(titleBar);
     add_ui_element(shellsInfo);
-    add_ui_element(menuButton);
+    add_ui_element(backButton);
 }
 
+/*
+ * Generate the Equip screen: wave pattern, title bar, shells, the cards and the lineup,
+ * back to the Fish Tank (saves the lineup)
+ */
 void UIManager::generate_equip_menu_uis()
 {
     m_uiElements.clear();
 
-    //background
-    auto bg = std::make_shared<UITextureElement>(
-        sf::Vector2f{ 1920.f, 1080.f },
-        sf::Vector2f{ 0.f, 0.f },
-        "assets/images/textures/backgrounds/menus/fish_tank.png"
-    );
-
-    //title text "Equip Team"
-    auto title = std::make_shared<UITextElement>(
-        sf::Vector2f{ 0.f, 0.f },
-        sf::Vector2f{ 50.f, 50.f },
-        "Equip Team",
-        48
-    );
-
-    //back to menu button
-    auto menuButton = std::make_shared<UIButtonElement>(
-        sf::Vector2f{ 100.f, 100.f },
-        sf::Vector2f{ 20.f, 1080.f - 100.f - 20.f },
-        "MENU"
-    );
-    menuButton->set_callback([this]()
+    auto bg = std::make_shared<UIPatternBackground>("pattern_waves");
+    auto equipSlider = std::make_shared<UIEquipSlider>(m_dataLoader);
+    auto titleBar = std::make_shared<UITitleBar>("Equip");
+    auto shellsInfo = std::make_shared<UIPlayerShellsInfo>(m_dataLoader);
+    auto backButton = make_back_button([this]()
         {
-            m_pendingAction = [this]() {
-                if (auto stage = m_stage.lock())
-                {
-                    // Save the loadout when leaving the equip menu
-                    m_dataLoader->save_progress();
-                    generate_fish_tank_uis();
-                }
-                };
+            // Save the loadout when leaving the equip menu
+            m_dataLoader->save_progress();
+            generate_fish_tank_uis();
         });
 
-    //slider
-    auto equipSlider = std::make_shared<UIEquipSlider>(m_dataLoader);
-    auto shellsInfo = std::make_shared<UIPlayerShellsInfo>(m_dataLoader);
-
     add_ui_element(bg);
-    add_ui_element(title);
     add_ui_element(equipSlider);
+    add_ui_element(titleBar);
     add_ui_element(shellsInfo);
-    add_ui_element(menuButton);
+    add_ui_element(backButton);
 }
 
+/*
+ * Generate the battle screen (Battle Cats layout):
+ *   - Round pause and speed buttons at the top left, cash at the top right
+ *   - The 10 deploy slots at the bottom, Cash Up at the bottom left
+ *   - Health over the bases and status icons under the entities (world space)
+ *   - The pause menu (Continue / Retreat), drawn over everything while the battle is paused
+ */
 void UIManager::generate_battle_uis()
 {
 	m_uiElements.clear();
 
-    // Pause button
-    auto pauseButton = std::make_shared<UIButtonElement>(
-        sf::Vector2f{ 120.f, 60.f },
-        sf::Vector2f{ 20.f, 20.f },
-        "PAUSE"
-    );
-    pauseButton->set_callback([this]() {
+    std::string stageName;
+    if (auto stage = m_stage.lock())
+    {
+        if (auto stageData = m_dataLoader->get_stage_data(stage->get_current_uid()))
+            stageName = stageData->name;
+    }
+
+    auto pauseMenu = std::make_shared<UIPauseMenu>(stageName);
+    std::weak_ptr<UIPauseMenu> weakPauseMenu = pauseMenu; // The menu keeps these callbacks: no shared_ptr to itself
+
+    // Pauses the battle (remembering if it ran faster) and opens the menu
+    auto openPauseMenu = [this, weakPauseMenu]() {
         // defer to main loop to avoid changing state during event iteration
-        m_pendingAction = [this]() {
+        m_pendingAction = [this, weakPauseMenu]() {
             if (!m_getGameSpeedCallback || !m_setGameSpeedCallback) return;
-            auto current = m_getGameSpeedCallback();
-            if (current == GameSpeedState::PAUSED)
-                m_setGameSpeedCallback(GameSpeedState::NORMAL);
-            else
-                m_setGameSpeedCallback(GameSpeedState::PAUSED);
+            m_wasFasterBeforePause = m_getGameSpeedCallback() == GameSpeedState::FASTER;
+            m_setGameSpeedCallback(GameSpeedState::PAUSED);
+            if (auto menu = weakPauseMenu.lock()) menu->open();
+            };
+        };
+
+    pauseMenu->set_open_callback(openPauseMenu);
+    pauseMenu->set_continue_callback([this, weakPauseMenu]() {
+        m_pendingAction = [this, weakPauseMenu]() {
+            if (m_setGameSpeedCallback)
+                m_setGameSpeedCallback(m_wasFasterBeforePause ? GameSpeedState::FASTER : GameSpeedState::NORMAL);
+            if (auto menu = weakPauseMenu.lock()) menu->close();
             };
         });
-
-	// Speed up button
-    auto speedButton = std::make_shared<UIButtonElement>(
-        sf::Vector2f{ 120.f, 60.f },
-        sf::Vector2f{ 160.f, 20.f },
-        "SPEED UP"
-    );
-    speedButton->set_callback([this]() {
-        m_pendingAction = [this]() {
-            if (!m_getGameSpeedCallback || !m_setGameSpeedCallback) return;
-            auto current = m_getGameSpeedCallback();
-            if (current == GameSpeedState::FASTER)
-                m_setGameSpeedCallback(GameSpeedState::NORMAL);
-            else
-                m_setGameSpeedCallback(GameSpeedState::FASTER);
-            };
+    pauseMenu->set_is_paused_callback([this]() {
+        return m_getGameSpeedCallback && m_getGameSpeedCallback() == GameSpeedState::PAUSED;
         });
 
-    // Exit button: leaves the battle without rewards and goes back to the chapter map
-    auto exitButton = std::make_shared<UIButtonElement>(
-        sf::Vector2f{ 120.f, 60.f },
-        sf::Vector2f{ 300.f, 20.f },
-        "EXIT"
-    );
-    exitButton->set_callback([this]() {
+    // Retreat: leaves the battle without rewards and goes back to the chapter map
+    pauseMenu->set_retreat_callback([this]() {
         m_pendingAction = [this]() {
             if (m_setGameSpeedCallback) m_setGameSpeedCallback(GameSpeedState::NORMAL);
             if (auto stage = m_stage.lock())
@@ -317,22 +298,47 @@ void UIManager::generate_battle_uis()
             };
         });
 
+    // Pause button (top left)
+    auto pauseButton = std::make_shared<UIRoundButton>(100.f, sf::Vector2f{ 24.f, 24.f }, "icon_pause");
+    pauseButton->set_callback(openPauseMenu);
+
+	// Speed up button: lit while the battle runs faster
+    auto speedButton = std::make_shared<UIRoundButton>(100.f, sf::Vector2f{ 140.f, 24.f }, "icon_speed");
+    speedButton->set_callback([this]() {
+        m_pendingAction = [this]() {
+            if (!m_getGameSpeedCallback || !m_setGameSpeedCallback) return;
+            auto current = m_getGameSpeedCallback();
+            if (current == GameSpeedState::FASTER)
+                m_setGameSpeedCallback(GameSpeedState::NORMAL);
+            else
+                m_setGameSpeedCallback(GameSpeedState::FASTER);
+            };
+        });
+    speedButton->set_active_callback([this]() {
+        return m_getGameSpeedCallback && m_getGameSpeedCallback() == GameSpeedState::FASTER;
+        });
+
 	auto deploymentIcons = std::make_shared<UIDeploymentIcons>(m_dataLoader, m_stage.lock());
 	auto stageCash = std::make_shared<UIStageCash>(m_stage.lock());
 	auto cashUp = std::make_shared<UICashUp>(m_stage.lock());
 	auto baseHealthInfo = std::make_shared<UIBaseHealthInfo>(m_stage.lock());
 	auto statusIcons = std::make_shared<UIStatusIcons>(m_stage.lock(), m_dataLoader); // Status icons under every entity
 
+    // World-space widgets first, so the screen widgets are drawn over them
+	add_ui_element(statusIcons);
+	add_ui_element(baseHealthInfo);
     add_ui_element(pauseButton);
     add_ui_element(speedButton);
-    add_ui_element(exitButton);
 	add_ui_element(deploymentIcons);
 	add_ui_element(stageCash);
 	add_ui_element(cashUp);
-	add_ui_element(baseHealthInfo);
-	add_ui_element(statusIcons);
+    add_ui_element(pauseMenu); // Last: on top, and the first to get the input
 }
 
+/*
+ * Generate the chapter map: the map with its stages and the selected stage's panel (UIChapterMap),
+ * the chapter's name in the title bar, a big BATTLE! button, back to the Fish Tank
+ */
 void UIManager::generate_chapter_map_uis()
 {
     m_uiElements.clear();
@@ -341,10 +347,11 @@ void UIManager::generate_chapter_map_uis()
 
     // Battle button triggers stage load and switches UI
     auto battleButton = std::make_shared<UIButtonElement>(
-        sf::Vector2f{ 200.f, 80.f },
-        sf::Vector2f{ 1620.f, 900.f },
-        "BATTLE"
+        sf::Vector2f{ 420.f, 160.f },
+        sf::Vector2f{ 1470.f, 880.f },
+        "BATTLE!"
     );
+    battleButton->set_text_size(66);
     battleButton->set_callback([this, chapterMap]()
         {
             m_pendingAction = [this, chapterMap]() {
@@ -356,27 +363,23 @@ void UIManager::generate_chapter_map_uis()
                 };
         });
 
-    chapterMap->load_chapter(m_dataLoader->get_player_data().lock()->currentChapter);
+    const int chapterUid = m_dataLoader->get_player_data().lock()->currentChapter;
+    chapterMap->load_chapter(chapterUid);
 
-    //back to menu button
-    auto menuButton = std::make_shared<UIButtonElement>(
-        sf::Vector2f{ 100.f, 100.f },
-        sf::Vector2f{ 20.f, 1080.f - 100.f - 20.f },
-        "MENU"
-    );
-    menuButton->set_callback([this]()
-        {
-            m_pendingAction = [this]() {
-                if (auto stage = m_stage.lock())
-                {
-                    generate_fish_tank_uis();
-                }
-                };
-        });
+    // "Chapter 1 - Shallow Waters"
+    std::string title = "Chapter " + std::to_string(chapterUid);
+    if (auto chapter = m_dataLoader->get_chapter_data(chapterUid))
+        title += "  -  " + chapter->name;
+    auto titleBar = std::make_shared<UITitleBar>(title);
+    auto shellsInfo = std::make_shared<UIPlayerShellsInfo>(m_dataLoader);
+
+    auto backButton = make_back_button([this]() { generate_fish_tank_uis(); });
 
     add_ui_element(chapterMap);
+    add_ui_element(titleBar);
+    add_ui_element(shellsInfo);
     add_ui_element(battleButton);
-    add_ui_element(menuButton);
+    add_ui_element(backButton);
 }
 
 void UIManager::generate_victory_uis()
@@ -428,7 +431,7 @@ void UIManager::generate_victory_uis()
     auto shellRewardText = std::make_shared<UITextElement>(
         sf::Vector2f{ 200.f, 100.f },
         sf::Vector2f{ 0.f, 0.f },
-        '+' + std::to_string(gainedShells) + " ¤",
+        '+' + std::to_string(gainedShells) + " \xA4", // \xA4: the shells symbol (currency sign) in the game's code page
         60
     );
 

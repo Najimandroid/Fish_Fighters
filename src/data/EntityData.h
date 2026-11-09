@@ -54,6 +54,7 @@ struct EntityData
     std::string texture;                        // File path to the sprite/texture
     int frameCount = 1;                         // Number of animation frames
     int knockbackFrameIndex = 1;                // Animation frame used during knockback
+    float shadowScale = 1.0f;                   // Shadow width compared to the body ("shadowScale", optional, set in FishEditor)
 
     // ===== Upgrade Attributes =====
     int baseUpgradeCost = 100;                  // Base cost for upgrading this unit

@@ -43,6 +43,5 @@ public:
 
 protected:
 
-    sf::Text m_text;
-    sf::Font m_font;
+    sf::Text m_text; // Uses the shared heavy font of UISkin
 };

@@ -1,18 +1,14 @@
-#pragma once
+ï»¿#pragma once
 
-#include "UITextureElement.h"
+#include "UIElement.h"
 #include <functional>
 
 /*
  * UIEquipSlot
- * ------------
- * Represents one of the 10 slots (2x5 grid) where the player can
- * equip a unit. Displays the unit’s texture and cost.
- *
- * Features:
- * - Shows a unit sprite inside the slot.
- * - Displays cost text.
- * - Handles right-click unequip via callback.
+ * -----------
+ * A unit placed in the lineup of the Equip screen, drawn like a deploy slot in battle
+ * (light blue slot, the icon under a rounded frame, the deploy cost in yellow).
+ * Right-click removes it from the lineup.
  */
 
 class UIEquipSlot : public UIElement
@@ -48,12 +44,8 @@ private:
     int m_cost = 0;          // Deployment cost
     int m_slotIndex = -1;    // Slot position index
 
-    sf::Texture m_texture;
-    sf::Sprite m_sprite;
-
-    sf::RectangleShape m_shape; // Slot background
-    sf::Text m_costText;        // Shows cost
-    sf::Font m_font;
+    sf::Texture m_texture;   // Unit icon
+    sf::Text m_costText;     // Shows cost
 
     std::function<void(int)> m_onUnequip; // Called when right-click unequip
 };

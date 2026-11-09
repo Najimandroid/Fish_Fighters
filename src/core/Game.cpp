@@ -18,6 +18,11 @@ Game::Game():
     // Create fullscreen window without borders
     m_window.create(sf::VideoMode::getDesktopMode(), "Fish Fighters", sf::Style::None); //sf::Style::None
     m_window.setFramerateLimit(m_frameRate);
+
+    // Window icon (the exe's own icon comes from resources/game.rc)
+    sf::Image icon;
+    if (icon.loadFromFile("assets/images/app/game_icon.png"))
+        m_window.setIcon(icon);
     center_window();
 
     // Load all game data (units, enemies, stages, player)

@@ -53,6 +53,7 @@ set(PROJECT_SOURCES
     src/core/combat/CombatLog.cpp
 
     src/uis/UIManager.cpp
+    src/uis/UISkin.cpp
 
     src/uis/widgets/UIElement.cpp
     src/uis/widgets/UIBattleIcon.cpp
@@ -71,6 +72,12 @@ set(PROJECT_SOURCES
     src/uis/widgets/UIEquipSlider.cpp
     src/uis/widgets/UIChapterMap.cpp
     src/uis/widgets/UIStatusIcons.cpp
+    src/uis/widgets/UIRoundButton.cpp
+    src/uis/widgets/UIPanel.cpp
+    src/uis/widgets/UIPauseMenu.cpp
+    src/uis/widgets/UITitleBar.cpp
+    src/uis/widgets/UIPatternBackground.cpp
+    src/uis/widgets/UIUnitCard.cpp
 
     # ImGui theme shared by the developer tools and the editor
     src/tools/ToolsTheme.cpp
@@ -116,6 +123,16 @@ target_link_libraries(fishcore PUBLIC SFML::Graphics SFML::System)
 # Main executable
 # ---------------------------------------------------------------------
 add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})
+
+# The game's icon in Explorer and the taskbar
+if(WIN32)
+    target_sources(${PROJECT_NAME} PRIVATE resources/game.rc)
+endif()
+
+# No console window outside Debug builds (Debug keeps it for the logs); main() stays the entry point
+if(MSVC AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_link_options(${PROJECT_NAME} PRIVATE /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup)
+endif()
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     external/imgui
@@ -190,6 +207,24 @@ target_link_libraries(FishEditor PRIVATE
 
 # The editor opens this project's game_data and assets folders
 target_compile_definitions(FishEditor PRIVATE FISH_PROJECT_DIR="${CMAKE_SOURCE_DIR}")
+
+if(WIN32)
+    # The editor's icon in Explorer, the taskbar and its shortcut
+    target_sources(FishEditor PRIVATE resources/editor.rc)
+
+    # "Fish Editor" shortcut on the desktop, updated after every build so it opens the latest one
+    option(FISH_EDITOR_DESKTOP_SHORTCUT "Create or update a desktop shortcut to FishEditor after each build" ON)
+    if(FISH_EDITOR_DESKTOP_SHORTCUT)
+        add_custom_command(TARGET FishEditor POST_BUILD
+            COMMAND powershell -NoProfile -ExecutionPolicy Bypass
+                -File "${CMAKE_SOURCE_DIR}/tools/desktop_shortcut.ps1"
+                -Target "$<TARGET_FILE:FishEditor>"
+                -Name "Fish Editor"
+                -Description "Fish Fighters data editor (${CMAKE_BUILD_TYPE} build)"
+            VERBATIM
+        )
+    endif()
+endif()
 
 # ---------------------------------------------------------------------
 # Debug macro

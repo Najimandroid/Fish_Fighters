@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../data/EnemyStageData.h"
+#include "../../data/BattlefieldLayout.h"
 #include "../DataLoader.h"
 #include "../entities/BattleBase.h"
 #include "../combat/DamageCalculator.h"
@@ -179,6 +180,7 @@ private:
     // ----- Rendering -----
     sf::Texture m_backgroundTexture;         // Stage background texture
     std::vector<sf::Sprite> m_backgroundSprites; // Background sprites
+    sf::Texture m_shadowTexture;             // Soft round shadow drawn under every unit and enemy
 
     // ----- Camera -----
     sf::View* m_stageCamera;                 // Stage camera
@@ -199,4 +201,13 @@ private:
 
     // Background copies along the stage (any image size), ground row from backgrounds.json (-1 = template ratio)
     void init_background(float groundRow);
+
+    // Soft round shadow on the ground (like The Battle Cats), shape from BattlefieldLayout
+    void draw_shadow(sf::RenderWindow& window, const ShadowShape& shape) const;
+
+    // The shadow of a unit or an enemy: under its body, at its feet, following the sprite along x (knockback)
+    void draw_entity_shadow(sf::RenderWindow& window, const BattleEntity& entity, bool isUnit) const;
+
+    // The shadow of a base: under its whole image
+    void draw_base_shadow(sf::RenderWindow& window, const BattleBase& base) const;
 };

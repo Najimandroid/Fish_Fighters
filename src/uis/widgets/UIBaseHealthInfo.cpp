@@ -1,30 +1,38 @@
 #include "UIBaseHealthInfo.h"
+#include "../UISkin.h"
 #include "../../core/stages/Stage.h"
 
+#include <algorithm>
+
+namespace
+{
+    const unsigned int TEXT_SIZE = 34;
+    const float GAP_ABOVE_BASE = 12.f; // Between the top of the base image and the text
+
+    // "current / max", centered just above the base image
+    void place_health_text(sf::Text& text, const BattleBase& base)
+    {
+        text.setString(std::to_string(std::max(0, static_cast<int>(base.currentHealth)))
+            + " / " + std::to_string(static_cast<int>(base.maxHealth)));
+
+        const sf::FloatRect baseBounds = base.sprite.getGlobalBounds();
+        UISkin::set_text_anchor(text, { 0.5f, 1.f });
+        text.setPosition({ baseBounds.position.x + baseBounds.size.x / 2.f, baseBounds.position.y - GAP_ABOVE_BASE });
+    }
+}
+
 /*
- * Initializes the UI element with font and text styling.
+ * Initializes the texts with the outlined heavy font of the skin.
  */
 UIBaseHealthInfo::UIBaseHealthInfo(std::shared_ptr<Stage> stage) :
     m_stage(stage),
-    m_textEnemyBase(m_font),
-    m_textUnitBase(m_font)
+    m_textEnemyBase(UISkin::heavy_font()),
+    m_textUnitBase(UISkin::heavy_font())
 {
     isWorldSpaceUi = true; // Render positions relative to world coordinates
 
-    // Load font
-    auto success = m_font.openFromFile("assets/fonts/MPLUSRounded1c-Medium.ttf");
-
-    // Configure enemy base text appearance
-    m_textEnemyBase.setCharacterSize(20);
-    m_textEnemyBase.setFillColor(sf::Color::White);
-    m_textEnemyBase.setOutlineColor(sf::Color::Black);
-    m_textEnemyBase.setOutlineThickness(1.f);
-
-    // Configure player base text appearance
-    m_textUnitBase.setCharacterSize(20);
-    m_textUnitBase.setFillColor(sf::Color::White);
-    m_textUnitBase.setOutlineColor(sf::Color::Black);
-    m_textUnitBase.setOutlineThickness(1.f);
+    UISkin::style_text(m_textEnemyBase, TEXT_SIZE);
+    UISkin::style_text(m_textUnitBase, TEXT_SIZE);
 }
 
 /*
@@ -35,35 +43,11 @@ void UIBaseHealthInfo::update(float deltaTime)
 {
     if (auto stage = m_stage.lock())
     {
-        // Enemy base health display
-        m_textEnemyBase.setString(
-            "Health: " + std::to_string(std::max(0, (int)stage->get_enemy_base().lock()->currentHealth))
-            + " / " + std::to_string((int)stage->get_enemy_base().lock()->maxHealth)
-        );
+        if (auto enemyBase = stage->get_enemy_base().lock())
+            place_health_text(m_textEnemyBase, *enemyBase);
 
-        auto boundsEnemy = m_textEnemyBase.getLocalBounds();
-        m_textEnemyBase.setOrigin({
-            boundsEnemy.position.x + boundsEnemy.size.x / 2.f, // center horizontally
-            boundsEnemy.position.y
-            });
-        m_textEnemyBase.setPosition(
-            stage->get_enemy_base().lock()->position + sf::Vector2f{ 100.f, -80.f } // offset above base
-        );
-
-        // Player unit base health display
-        m_textUnitBase.setString(
-            "Health: " + std::to_string(std::max(0, (int)stage->get_unit_base().lock()->currentHealth))
-            + " / " + std::to_string((int)stage->get_unit_base().lock()->maxHealth)
-        );
-
-        auto boundsUnit = m_textUnitBase.getLocalBounds();
-        m_textUnitBase.setOrigin({
-            boundsUnit.position.x + boundsUnit.size.x / 2.f, // center horizontally
-            boundsUnit.position.y
-            });
-        m_textUnitBase.setPosition(
-            stage->get_unit_base().lock()->position + sf::Vector2f{ 100.f, -80.f } // offset above base
-        );
+        if (auto unitBase = stage->get_unit_base().lock())
+            place_health_text(m_textUnitBase, *unitBase);
     }
 }
 
