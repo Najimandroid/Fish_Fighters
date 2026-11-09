@@ -141,7 +141,7 @@
     },
     "UID_1": {
         "UID": 1,
-        "stageName": "Volcano Blitz",
+        "stageName": "Shallow Waters",
         "enemiesLimit": 20,
         "unitsLimit": 20,
         "baseHealth": 200,
@@ -217,6 +217,147 @@
             },
             {
                 "UID": 4,
+                "amount": 5,
+                "respawnTime": 7,
+                "spawnStart": 1,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            }
+        ],
+        "rewards": [
+            {
+                "type": "shells",
+                "amount": 300
+            }
+        ]
+    },
+    "UID_4": {
+        "UID": 4,
+        "stageName": "Waters Edge",
+        "enemiesLimit": 20,
+        "unitsLimit": 20,
+        "baseHealth": 200,
+        "length": 1920,
+        "baseTexture": "assets/images/textures/bases/RocksBase.png",
+        "backgroundTexture": "assets/images/textures/backgrounds/stages/RockyShore.png",
+        "numberOfDifferentEnemies": 2,
+        "enemies": [
+            {
+                "UID": 1,
+                "amount": 3,
+                "respawnTime": 7,
+                "spawnStart": 3,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 6,
+                "amount": 5,
+                "respawnTime": 7,
+                "spawnStart": 1,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            }
+        ],
+        "rewards": [
+            {
+                "type": "shells",
+                "amount": 300
+            }
+        ]
+    },
+    "UID_5": {
+        "UID": 5,
+        "stageName": "Coral Reef",
+        "enemiesLimit": 20,
+        "unitsLimit": 20,
+        "baseHealth": 200,
+        "length": 1920,
+        "baseTexture": "assets/images/textures/bases/PineAppleBase.png",
+        "backgroundTexture": "assets/images/textures/backgrounds/stages/CoralReef.png",
+        "numberOfDifferentEnemies": 2,
+        "enemies": [
+            {
+                "UID": 1,
+                "amount": 3,
+                "respawnTime": 7,
+                "spawnStart": 3,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 6,
+                "amount": 5,
+                "respawnTime": 7,
+                "spawnStart": 1,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            }
+        ],
+        "rewards": [
+            {
+                "type": "shells",
+                "amount": 300
+            }
+        ]
+    },
+    "UID_6": {
+        "UID": 6,
+        "stageName": "Kelp Forest",
+        "enemiesLimit": 20,
+        "unitsLimit": 20,
+        "baseHealth": 200,
+        "length": 1920,
+        "baseTexture": "assets/images/textures/bases/ShipwreckBase.png",
+        "backgroundTexture": "assets/images/textures/backgrounds/stages/KelpForest.png",
+        "numberOfDifferentEnemies": 2,
+        "enemies": [
+            {
+                "UID": 1,
+                "amount": 3,
+                "respawnTime": 7,
+                "spawnStart": 3,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 6,
                 "amount": 5,
                 "respawnTime": 7,
                 "spawnStart": 1,
