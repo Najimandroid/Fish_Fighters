@@ -1,6 +1,7 @@
 #pragma once
 
 #include "EditorContext.h"
+#include "../data/AbilityData.h"
 
 #include "imgui.h"
 
@@ -48,6 +49,10 @@ namespace EditorWidgets
         float defaultFirst, float defaultSecond, const char* help = nullptr);  // [ a, b ] lists (damageZone)
     bool scale_field(EditorContext& ctx, DataFile file, const char* label, ordered_json& object, const char* key,
         float min, float max, const char* help = nullptr);  // Optional factor shown in %, 1 = no key in the JSON, Reset button
+    // Optional number: the default isn't written to the JSON, Reset button. Shown x displayFactor
+    bool optional_number_field(EditorContext& ctx, DataFile file, const char* label, ordered_json& object, const char* key,
+        float defaultValue, float min, float max, float displayFactor = 1.f, const char* format = "%.1f",
+        float speed = 0.5f, const char* help = nullptr);
 
     // Image path with a thumbnail, a picker of the folder's images and an Import... button
     bool image_field(EditorContext& ctx, DataFile file, const char* label, ordered_json& object, const char* key,
@@ -81,13 +86,17 @@ namespace EditorWidgets
     int status_icon_index(const ProjectData& project, const std::string& statusKey);  // "iconIndex" in statuses.json, -1 if none
     int status_icon_count(EditorContext& ctx);                                         // Cells in the sheet
 
+    // Icons of types and abilities (AbilityGlossary's sheets, the same the game shows). nullptr without an icon
+    const sf::Texture* type_icon(EditorContext& ctx, EntityType type, FrameUV& uv);
+    const sf::Texture* ability_icon(EditorContext& ctx, AbilityType type, FrameUV& uv);
+
     // ===== Pickers (popups opened with ImGui::OpenPopup(id)). True when something was picked =====
     bool enemy_picker(EditorContext& ctx, const char* popupId, int& uid);
     bool unit_picker(EditorContext& ctx, const char* popupId, int& uid);
     bool image_picker(EditorContext& ctx, const char* popupId, ImageFolder folder, std::string& path);
 
     // ===== Types and abilities =====
-    // Enemy types (SHELLED, CRUSTACEAN). FISH is hidden: units have it, enemies can't
+    // Enemy types (SHELLED, CRUSTACEAN, JELLY). FISH is hidden: units have it, enemies can't
     void types_field(EditorContext& ctx, DataFile file, ordered_json& object);
 
     // Abilities list. Enemies always target every fish; units choose the enemy types they target

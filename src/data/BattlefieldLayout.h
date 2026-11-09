@@ -39,7 +39,16 @@ struct ShadowShape
     float height = 0.f;
 };
 
-// The shadow of a unit or an enemy: under its body (the hitbox, the back half of the frame, where the drawing is),
+// x of the shadow's center: under the body (the back half of the frame, where the drawing is),
+// moved forward by shadowOffset px (EntityData, "shadowOffset" in the JSON, 0 by default).
+// Units face left (their body is right of the sprite's center), enemies face right.
+inline float entity_shadow_x(float spriteCenterX, float bodyWidth, bool facesLeft, float shadowOffset)
+{
+    const float forward = facesLeft ? -1.f : 1.f;
+    return spriteCenterX - forward * bodyWidth / 2.f + forward * shadowOffset;
+}
+
+// The shadow of a unit or an enemy: centered on bodyCenterX (entity_shadow_x),
 // as wide as the body x shadowScale (EntityData, "shadowScale" in the JSON, 1 by default)
 inline ShadowShape entity_shadow(float bodyCenterX, float feetY, float bodyWidth, float shadowScale)
 {

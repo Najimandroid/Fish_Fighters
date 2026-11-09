@@ -1,5 +1,6 @@
 #include "PlayerData.h"
 #include "../core/DataLoader.h"
+#include <cmath>
 #include <iostream>
 
 /*
@@ -190,4 +191,29 @@ void PlayerData::enter_chapter(int chapterUID)
 bool PlayerData::has_completed_chapter(int chapterUID)
 {
     return completedChapters.find(chapterUID) != completedChapters.end();
+}
+
+/*
+ * Remembers an enemy met in battle
+ */
+void PlayerData::see_enemy(int enemyUID)
+{
+    seenEnemies.insert(enemyUID);
+}
+
+/*
+ * Returns true if the player has met this enemy in battle
+ */
+bool PlayerData::has_seen_enemy(int enemyUID) const
+{
+    return seenEnemies.find(enemyUID) != seenEnemies.end();
+}
+
+/*
+ * Health and attack of a unit at this level, compared to level 1: +15 % per level, compounded
+ */
+float PlayerData::stat_multiplier(int level)
+{
+    const float growth = 0.15f;
+    return level > 1 ? std::pow(1.f + growth, static_cast<float>(level - 1)) : 1.f;
 }

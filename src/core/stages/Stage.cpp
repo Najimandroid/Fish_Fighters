@@ -189,7 +189,8 @@ void Stage::update(float deltaTime)
 
 	if (is_unit_base_destroyed())
 	{
-		// Player has lost
+		// Player has lost (the enemies met are still saved)
+		m_dataLoader->save_progress();
 
 		m_units.clear();
 
@@ -594,6 +595,10 @@ void Stage::spawn_enemy(std::shared_ptr<EntityData> enemyData, sf::Vector2f magn
 
 	if (isBoss) generate_boss_shockwave();
 
+	// Met: the chapter map and the encyclopedia show it from now on (saved with the progress)
+	if (auto player = m_dataLoader->get_player_data().lock())
+		player->see_enemy(enemyData->UID);
+
 	m_enemiesCount++;
 	m_enemies[battleEnemy->currentLayer].push_back(battleEnemy);
 }
@@ -614,14 +619,9 @@ void Stage::spawn_unit(std::shared_ptr<EntityData> unitData, bool ignoreCostAndL
 	{
 		if (player->is_unit_owned(unitData->UID))
 		{
-			int level = player->get_unit_level(unitData->UID);
-			if (level > 1)
-			{
-				float growth = 0.15f;
-				float multiplier = std::pow(1.f + growth, level - 1);
-				unitMagnification.x = multiplier;
-				unitMagnification.y = multiplier;
-			}
+			const float multiplier = PlayerData::stat_multiplier(player->get_unit_level(unitData->UID));
+			unitMagnification.x = multiplier;
+			unitMagnification.y = multiplier;
 		}
 	}
 
@@ -689,17 +689,19 @@ void Stage::draw_shadow(sf::RenderWindow& window, const ShadowShape& shape) cons
 }
 
 /*
-* Under the body of a unit or an enemy (BattlefieldLayout's entity_shadow), its width set by EntityData::shadowScale.
+* Under the body of a unit or an enemy (BattlefieldLayout's entity_shadow), its width set by EntityData::shadowScale,
+* moved forward by EntityData::shadowOffset.
 * It follows the sprite along x, so it slides with a knockback, but stays on the ground (position.y raised by the layer).
 * The body is the back half of the frame: right of the sprite center for units (they face left), left for enemies.
 */
 void Stage::draw_entity_shadow(sf::RenderWindow& window, const BattleEntity& entity, bool isUnit) const
 {
 	const float bodyWidth = entity.hitbox.size.x;
-	const float bodyCenterX = entity.sprite.getPosition().x + (isUnit ? bodyWidth / 2.f : -bodyWidth / 2.f);
-	const float feetY = entity.position.y - static_cast<float>(entity.currentLayer);
+	const float shadowOffset = entity.data ? entity.data->shadowOffset : 0.f;
 	const float shadowScale = entity.data ? entity.data->shadowScale : 1.f;
-	draw_shadow(window, entity_shadow(bodyCenterX, feetY, bodyWidth, shadowScale));
+	const float centerX = entity_shadow_x(entity.sprite.getPosition().x, bodyWidth, isUnit, shadowOffset);
+	const float feetY = entity.position.y - static_cast<float>(entity.currentLayer);
+	draw_shadow(window, entity_shadow(centerX, feetY, bodyWidth, shadowScale));
 }
 
 /*

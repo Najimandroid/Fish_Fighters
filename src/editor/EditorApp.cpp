@@ -134,7 +134,12 @@ void EditorApp::draw_frame()
         m_isLayoutResetRequested = false;
     }
 
-    if (m_isLoaded) draw_panels();
+    if (m_isLoaded)
+    {
+        draw_panels();
+        m_saveDataEditor.draw(m_context);
+        draw_build_window();
+    }
     else
     {
         // The project couldn't be read: nothing can be edited until it's fixed
@@ -257,6 +262,22 @@ void EditorApp::draw_menu_bar()
             if (ImGui::MenuItem(("Play " + build.name).c_str())) launch_game(build);
             ImGui::SetItemTooltip("Saves, updates %s and starts it", build.name.c_str());
         }
+        if (!m_builds.empty()) ImGui::Separator();
+        const bool isBuilding = m_gameBuilder.get_state() == GameBuilder::State::RUNNING;
+        for (const auto& build : m_builds)
+        {
+            if (ImGui::MenuItem(("Build " + build.name).c_str(), nullptr, false, !isBuilding)) build_game(build);
+            ImGui::SetItemTooltip("Saves, then rebuilds the game (code changes included) like Visual Studio would.\n"
+                "The build copies game_data, player.json included: the project's save replaces %s's progress.", build.name.c_str());
+        }
+        if (ImGui::MenuItem("Build output", nullptr, &m_isBuildWindowOpen)) {}
+        ImGui::Separator();
+        if (ImGui::MenuItem("Save data..."))
+        {
+            m_builds = GameBuilds::find(m_projectFolder);
+            m_saveDataEditor.open(m_projectFolder, m_builds);
+        }
+        ImGui::SetItemTooltip("Edit or reset player.json (shells, cleared stages, fish, lineup, enemies met)");
         if (ImGui::MenuItem("Find builds again")) m_builds = GameBuilds::find(m_projectFolder);
         ImGui::EndMenu();
     }
@@ -497,6 +518,64 @@ void EditorApp::request_close()
 {
     if (m_isLoaded && m_project.has_unsaved_changes()) m_isCloseModalRequested = true;
     else m_isRunning = false;
+}
+
+void EditorApp::build_game(const GameBuilds::Build& build)
+{
+    // The build copies game_data: it has to be the saved, valid data
+    if (m_project.has_unsaved_changes())
+    {
+        m_project.commit_all();
+        validate();
+        if (!m_context.validation.isLoadedByGame)
+        {
+            m_context.notify("Not built: the game can't load the data (see Validation)", true);
+            return;
+        }
+        if (!save()) return;
+    }
+
+    std::string error;
+    if (!m_gameBuilder.start(build, error))
+    {
+        m_context.notify(error, true);
+        return;
+    }
+    m_isBuildWindowOpen = true;
+    m_context.notify("Building " + build.name + "...");
+}
+
+/*
+ * The output of the last build, following its end, with Play once it succeeded
+ */
+void EditorApp::draw_build_window()
+{
+    if (!m_isBuildWindowOpen) return;
+
+    ImGui::SetNextWindowSize(ImVec2(760.f, 420.f), ImGuiCond_FirstUseEver);
+    if (ImGui::Begin("Build", &m_isBuildWindowOpen))
+    {
+        const GameBuilder::State state = m_gameBuilder.get_state();
+        switch (state)
+        {
+        case GameBuilder::State::IDLE:      ImGui::TextDisabled("No build yet: Game > Build x64-Debug..."); break;
+        case GameBuilder::State::RUNNING:   ImGui::Text("Building %s...", m_gameBuilder.get_build().name.c_str()); break;
+        case GameBuilder::State::SUCCEEDED: ImGui::TextColored(ImVec4(0.45f, 0.9f, 0.6f, 1.f), "%s built", m_gameBuilder.get_build().name.c_str()); break;
+        case GameBuilder::State::FAILED:    ImGui::TextColored(ImVec4(1.f, 0.45f, 0.4f, 1.f), "%s: the build failed", m_gameBuilder.get_build().name.c_str()); break;
+        }
+        if (state == GameBuilder::State::SUCCEEDED)
+        {
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Play")) launch_game(m_gameBuilder.get_build());
+        }
+
+        ImGui::BeginChild("##log", ImVec2(0.f, 0.f), ImGuiChildFlags_Borders, ImGuiWindowFlags_HorizontalScrollbar);
+        const std::string log = m_gameBuilder.get_log();
+        ImGui::TextUnformatted(log.c_str(), log.c_str() + log.size());
+        if (state == GameBuilder::State::RUNNING) ImGui::SetScrollHereY(1.f);   // Follows the output
+        ImGui::EndChild();
+    }
+    ImGui::End();
 }
 
 void EditorApp::launch_game(const GameBuilds::Build& build)

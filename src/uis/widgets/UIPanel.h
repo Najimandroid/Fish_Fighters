@@ -6,7 +6,7 @@
 /*
  * UIPanel
  * -------
- * A box drawn from a 9-slice image of the skin: dark or light panel, driftwood bar, slot...
+ * A box drawn from a 9-slice image of the skin: dark or light steel panel, steel bar, slot...
  * Other widgets draw it behind their content (the pause menu, later the menu headers).
  *
  * Example usage:

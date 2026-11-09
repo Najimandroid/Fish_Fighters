@@ -5,7 +5,7 @@
 /*
  * UITitleBar
  * ----------
- * The driftwood bar across the top of the menus, with the screen's title on the left
+ * The riveted steel bar across the top of the menus, with the screen's title on the left
  * in big cream outlined letters, like the header of The Battle Cats' Cat Base and Upgrade screens.
  * The shells counter (UIPlayerShellsInfo) sits on its right end.
  *

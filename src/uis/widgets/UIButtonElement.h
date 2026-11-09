@@ -31,6 +31,7 @@ public:
 
     // Text setters
     void set_text(const std::string& text);
+    void set_label(const sf::String& text);   // Same, with any character (arrows...)
     void set_text_size(unsigned int size);
     void set_text_color(const sf::Color& color);
 

@@ -46,6 +46,11 @@ void UIButtonElement::set_text(const std::string& text)
     m_text.setString(text);
 }
 
+void UIButtonElement::set_label(const sf::String& text)
+{
+    m_text.setString(text);
+}
+
 // Set the text size; the outline follows
 void UIButtonElement::set_text_size(unsigned int size)
 {

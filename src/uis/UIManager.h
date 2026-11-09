@@ -58,6 +58,7 @@ public:
     void generate_fish_tank_uis();
     void generate_upgrade_menu_uis();
     void generate_equip_menu_uis();
+    void generate_encyclopedia_uis();
     void generate_battle_uis();
     void generate_chapter_map_uis();
     void generate_victory_uis();

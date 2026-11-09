@@ -16,6 +16,7 @@
 #include "widgets/UIPauseMenu.h"
 #include "widgets/UITitleBar.h"
 #include "widgets/UIPatternBackground.h"
+#include "widgets/UIEncyclopedia.h"
 
 #include <algorithm>
 #include <iostream>
@@ -92,7 +93,7 @@ void UIManager::handle_ui_events(const sf::Event& event, const sf::RenderWindow&
 
 /*
  * Generate Fish Tank UI screen (the hub, laid out like The Battle Cats' Cat Base):
- *   - The fish tank background, the wood title bar and the player's shells
+ *   - The fish tank background, the steel title bar and the player's shells
  *   - A column of big yellow buttons: BATTLE! (chapter map), UPGRADE, EQUIP, QUIT
  *   - Each button sets a deferred callback using m_pendingAction
  */
@@ -155,10 +156,24 @@ void UIManager::generate_fish_tank_uis()
                 };
         });
 
+    // Encyclopedia button: every fish and every enemy met
+    auto encyclopediaButton = std::make_shared<UIButtonElement>(
+        sf::Vector2f{ columnWidth, 120.f },
+        sf::Vector2f{ columnX, 676.f },
+        "ENCYCLOPEDIA"
+    );
+    encyclopediaButton->set_text_size(52);
+    encyclopediaButton->set_callback([this]()
+        {
+            m_pendingAction = [this]() {
+                generate_encyclopedia_uis();
+                };
+        });
+
     // Quit button closes the game (smaller, orange)
     auto quitButton = std::make_shared<UIButtonElement>(
         sf::Vector2f{ 300.f, 96.f },
-        sf::Vector2f{ columnX, 676.f },
+        sf::Vector2f{ columnX, 828.f },
         "QUIT"
     );
     quitButton->set_text_size(40);
@@ -179,7 +194,28 @@ void UIManager::generate_fish_tank_uis()
     add_ui_element(battleButton);
     add_ui_element(upgradeButton);
     add_ui_element(equipButton);
+    add_ui_element(encyclopediaButton);
     add_ui_element(quitButton);
+}
+
+/*
+ * Generate the Encyclopedia: every fish and every enemy (black until owned / met), their stats and abilities
+ */
+void UIManager::generate_encyclopedia_uis()
+{
+    m_uiElements.clear();
+
+    auto bg = std::make_shared<UIPatternBackground>("pattern_hull");
+    auto encyclopedia = std::make_shared<UIEncyclopedia>(m_dataLoader);
+    auto titleBar = std::make_shared<UITitleBar>("Encyclopedia");
+    auto shellsInfo = std::make_shared<UIPlayerShellsInfo>(m_dataLoader);
+    auto backButton = make_back_button([this]() { generate_fish_tank_uis(); });
+
+    add_ui_element(bg);
+    add_ui_element(titleBar);
+    add_ui_element(shellsInfo);
+    add_ui_element(backButton);
+    add_ui_element(encyclopedia);   // Last: its ability bubbles go over everything
 }
 
 /*
@@ -203,7 +239,7 @@ void UIManager::generate_upgrade_menu_uis()
 {
     m_uiElements.clear();
 
-    auto bg = std::make_shared<UIPatternBackground>("pattern_waves");
+    auto bg = std::make_shared<UIPatternBackground>("pattern_hull");
     auto upgradeSlider = std::make_shared<UIUpgradeSlider>(m_dataLoader);
     auto titleBar = std::make_shared<UITitleBar>("Upgrade");
 	auto shellsInfo = std::make_shared<UIPlayerShellsInfo>(m_dataLoader);
@@ -224,7 +260,7 @@ void UIManager::generate_equip_menu_uis()
 {
     m_uiElements.clear();
 
-    auto bg = std::make_shared<UIPatternBackground>("pattern_waves");
+    auto bg = std::make_shared<UIPatternBackground>("pattern_hull");
     auto equipSlider = std::make_shared<UIEquipSlider>(m_dataLoader);
     auto titleBar = std::make_shared<UITitleBar>("Equip");
     auto shellsInfo = std::make_shared<UIPlayerShellsInfo>(m_dataLoader);
@@ -290,6 +326,7 @@ void UIManager::generate_battle_uis()
     pauseMenu->set_retreat_callback([this]() {
         m_pendingAction = [this]() {
             if (m_setGameSpeedCallback) m_setGameSpeedCallback(GameSpeedState::NORMAL);
+            m_dataLoader->save_progress(); // No rewards, but the enemies met stay met
             if (auto stage = m_stage.lock())
             {
                 stage->unload();

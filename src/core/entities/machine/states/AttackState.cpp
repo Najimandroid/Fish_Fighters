@@ -55,20 +55,21 @@ void AttackState::perform(float deltaTime)
     }
 
     // ===== Swing Timing =====
-    // Progress foreswing -> attack -> backswing
-    if (m_currentAttackSwingTime <= entity->data->foreswingTime + entity->data->backswingTime)
-    {
-        // Attack becomes "ready" after foreswing
-        m_isAttackReady = (m_currentAttackSwingTime >= entity->data->foreswingTime);
-        m_currentAttackSwingTime += deltaTime;
-    }
-    else
+    // Foreswing -> the hit (once, as soon as the foreswing is over) -> backswing.
+    // The hit never depends on landing inside [foreswing, foreswing + backswing]: with a backswing of 0
+    // that window is a single instant the frames jump over, and the attack would never hit.
+    m_currentAttackSwingTime += deltaTime;
+
+    if (m_hasAttacked && m_currentAttackSwingTime >= entity->data->foreswingTime + entity->data->backswingTime)
     {
         // After swing ends, reset attack cooldown and return to idle
         entity->currentAttackCooldown = 0.0f;
         m_machine->change_state(std::make_unique<IdleState>(m_machine));
         return;
     }
+
+    // Attack becomes "ready" after foreswing
+    m_isAttackReady = (m_currentAttackSwingTime >= entity->data->foreswingTime);
 
     // ===== Attack Execution =====
     if (!m_isAttackReady || m_hasAttacked) return; // Not ready yet or already attacked

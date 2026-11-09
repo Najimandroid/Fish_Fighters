@@ -287,6 +287,7 @@ bool DataLoader::load_units(const std::string& path)
             data->frameCount = read_int(formValue, "frameCount");
             data->knockbackFrameIndex = read_int(formValue, "knockbackFrameIndex");
             data->shadowScale = read_shadow_scale(formValue);
+            data->shadowOffset = formValue.contains("shadowOffset") ? read_float(formValue, "shadowOffset") : 0.f;
 
             int formID = read_int(formValue, "form");
             m_unitsFormsDatabase[{UID, formID}] = data;
@@ -354,6 +355,7 @@ bool DataLoader::load_enemies(const std::string& path)
         data->frameCount = read_int(value, "frameCount");
         data->knockbackFrameIndex = read_int(value, "knockbackFrameIndex");
         data->shadowScale = read_shadow_scale(value);
+        data->shadowOffset = value.contains("shadowOffset") ? read_float(value, "shadowOffset") : 0.f;
 
         m_enemiesDatabase[data->UID] = data;
     }
@@ -655,6 +657,16 @@ bool DataLoader::load_player(const std::string& path)
 
         // Current chapter
         m_playerData->currentChapter = read_int(j.at("progression"), "currentChapter");
+
+        // Enemies met in battle (missing in older saves)
+        m_playerData->seenEnemies.clear();
+        if (j.at("progression").contains("seenEnemies"))
+        {
+            for (auto& enemyUid : j.at("progression").at("seenEnemies"))
+            {
+                m_playerData->seenEnemies.insert(read_int_value(enemyUid, "seenEnemies"));
+            }
+        }
     }
     catch (const std::exception& e)
     {
@@ -724,6 +736,11 @@ bool DataLoader::save_player(const std::string& path)
 
     // Current chapter
     j["progression"]["currentChapter"] = m_playerData->currentChapter;
+
+    // Enemies met in battle (sorted, so the file doesn't change order between saves)
+    std::vector<int> seenEnemies(m_playerData->seenEnemies.begin(), m_playerData->seenEnemies.end());
+    std::sort(seenEnemies.begin(), seenEnemies.end());
+    j["progression"]["seenEnemies"] = seenEnemies;
 
     // Write to a temporary file first, then replace the save,
     // so a crash in the middle of writing can't corrupt player.json

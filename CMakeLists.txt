@@ -54,6 +54,7 @@ set(PROJECT_SOURCES
 
     src/uis/UIManager.cpp
     src/uis/UISkin.cpp
+    src/uis/EntityPortraits.cpp
 
     src/uis/widgets/UIElement.cpp
     src/uis/widgets/UIBattleIcon.cpp
@@ -78,6 +79,8 @@ set(PROJECT_SOURCES
     src/uis/widgets/UITitleBar.cpp
     src/uis/widgets/UIPatternBackground.cpp
     src/uis/widgets/UIUnitCard.cpp
+    src/uis/widgets/UIAbilityList.cpp
+    src/uis/widgets/UIEncyclopedia.cpp
 
     # ImGui theme shared by the developer tools and the editor
     src/tools/ToolsTheme.cpp
@@ -166,6 +169,8 @@ set(EDITOR_SOURCES
     src/editor/AssetLibrary.cpp
     src/editor/FileDialog.cpp
     src/editor/GameBuilds.cpp
+    src/editor/GameBuilder.cpp
+    src/editor/SaveDataEditor.cpp
     src/editor/Validator.cpp
     src/editor/EditorWidgets.cpp
 

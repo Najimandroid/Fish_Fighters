@@ -62,6 +62,10 @@ namespace EntityFields
         scale_field(ctx, file, "Shadow size", entity, "shadowScale", 0.2f, 3.f,
             "Width of its round shadow in battle, compared to its body (the hitbox): 100 % by default.\n"
             "The Preview panel draws it like the game.");
+
+        optional_number_field(ctx, file, "Shadow offset", entity, "shadowOffset", 0.f, -500.f, 500.f, 1.f, "%.0f px", 1.f,
+            "Moves its shadow forward (toward where it faces), or back with a negative number. 0 by default:\n"
+            "under its body (the back half of the frame). The Preview panel draws it like the game.");
     }
 
     float damage_per_second(const ordered_json& entity, float multiplier)

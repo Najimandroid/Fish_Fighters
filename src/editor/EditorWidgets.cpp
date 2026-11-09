@@ -5,6 +5,7 @@
 #include "../data/AbilityData.h"
 #include "../data/EntityType.h"
 #include "../core/combat/DamageCalculator.h"
+#include "../core/combat/AbilityGlossary.h"
 #include "../core/entities/status/StatusEffect.h"
 #include "../data/BattlefieldLayout.h"
 
@@ -17,7 +18,6 @@
 namespace
 {
     const ImVec4 MISSING_COLOR(1.f, 0.45f, 0.4f, 1.f);
-    const ImU32 TYPE_COLORS[] = { IM_COL32(150, 120, 90, 255), IM_COL32(200, 90, 70, 255), IM_COL32(60, 140, 190, 255) };
 
     // Player-facing names of the abilities (the JSON name is shown in the tooltip)
     const char* ability_label(AbilityType type)
@@ -85,14 +85,21 @@ namespace
         return types;
     }
 
-    // One checkbox per enemy type. True when the list changed
-    bool enemy_type_checkboxes(std::vector<int>& types)
+    // One checkbox per enemy type, after its icon. True when the list changed
+    bool enemy_type_checkboxes(EditorContext& ctx, std::vector<int>& types)
     {
         bool changed = false;
-        for (int type : { static_cast<int>(EntityType::SHELLED), static_cast<int>(EntityType::CRUSTACEAN) })
+        for (EntityType enemyType : ENEMY_TYPES)
         {
+            const int type = static_cast<int>(enemyType);
             bool hasType = std::find(types.begin(), types.end(), type) != types.end();
             ImGui::PushID(type);
+            EditorWidgets::FrameUV uv;
+            if (const sf::Texture* icon = EditorWidgets::type_icon(ctx, enemyType, uv))
+            {
+                EditorWidgets::image_in_box(icon, ImVec2(ImGui::GetFrameHeight(), ImGui::GetFrameHeight()), uv);
+                ImGui::SameLine(0.f, 4.f);
+            }
             if (ImGui::Checkbox(to_string(static_cast<EntityType>(type)), &hasType))
             {
                 if (hasType) types.push_back(type);
@@ -308,19 +315,26 @@ namespace EditorWidgets
     bool scale_field(EditorContext& ctx, DataFile file, const char* label, ordered_json& object, const char* key,
         float min, float max, const char* help)
     {
+        return optional_number_field(ctx, file, label, object, key, 1.f, min, max, 100.f, "%.0f %%", 1.f, help);
+    }
+
+    bool optional_number_field(EditorContext& ctx, DataFile file, const char* label, ordered_json& object, const char* key,
+        float defaultValue, float min, float max, float displayFactor, const char* format, float speed, const char* help)
+    {
         property_label(label, help);
         ImGui::PushID(key);
 
         const bool isSet = object.contains(key);
-        float percent = static_cast<float>(read_number(object, key, 1.0)) * 100.f;
+        float shown = static_cast<float>(read_number(object, key, defaultValue)) * displayFactor;
         const float resetWidth = ImGui::CalcTextSize("Reset").x + ImGui::GetStyle().FramePadding.x * 2.f;
         ImGui::SetNextItemWidth(std::max(60.f, ImGui::GetContentRegionAvail().x - resetWidth - ImGui::GetStyle().ItemSpacing.x));
-        bool changed = ImGui::DragFloat("##value", &percent, 1.f, min * 100.f, max * 100.f, "%.0f %%", ImGuiSliderFlags_AlwaysClamp);
+        bool changed = ImGui::DragFloat("##value", &shown, speed, min * displayFactor, max * displayFactor, format, ImGuiSliderFlags_AlwaysClamp);
         if (changed)
         {
-            // 100 % is the default: no key in the JSON
-            if (std::abs(percent - 100.f) < 0.5f) object.erase(key);
-            else object[key] = number_value(percent / 100.f);
+            // The default value isn't written: no key in the JSON
+            const float value = shown / displayFactor;
+            if (std::abs(value - defaultValue) < 0.005f) object.erase(key);
+            else object[key] = number_value(value);
         }
         commit_when_done(ctx, file);
 
@@ -553,6 +567,35 @@ namespace EditorWidgets
         return it != statuses.end() ? read_int(*it, "iconIndex", -1) : -1;
     }
 
+    namespace
+    {
+        // A cell of a sheet of square icons, read left to right then top to bottom
+        const sf::Texture* sheet_cell(EditorContext& ctx, const char* sheetPath, int index, FrameUV& uv)
+        {
+            uv = {};
+            const sf::Texture* sheet = ctx.textures.get(sheetPath);
+            if (!sheet || index < 0) return nullptr;
+
+            const float cell = static_cast<float>(AbilityGlossary::ICON_CELL_SIZE);
+            const int columns = std::max(1, static_cast<int>(sheet->getSize().x) / AbilityGlossary::ICON_CELL_SIZE);
+            const ImVec2 min((index % columns) * cell, (index / columns) * cell);
+            uv.uv0 = ImVec2(min.x / sheet->getSize().x, min.y / sheet->getSize().y);
+            uv.uv1 = ImVec2((min.x + cell) / sheet->getSize().x, (min.y + cell) / sheet->getSize().y);
+            uv.size = ImVec2(cell, cell);
+            return sheet;
+        }
+    }
+
+    const sf::Texture* type_icon(EditorContext& ctx, EntityType type, FrameUV& uv)
+    {
+        return sheet_cell(ctx, AbilityGlossary::TYPE_ICONS_TEXTURE, AbilityGlossary::type_icon_index(type), uv);
+    }
+
+    const sf::Texture* ability_icon(EditorContext& ctx, AbilityType type, FrameUV& uv)
+    {
+        return sheet_cell(ctx, AbilityGlossary::ABILITY_ICONS_TEXTURE, AbilityGlossary::ability_icon_index(type), uv);
+    }
+
     int status_icon_count(EditorContext& ctx)
     {
         const sf::Texture* sheet = ctx.textures.get(STATUS_ICONS_TEXTURE);
@@ -658,7 +701,7 @@ namespace EditorWidgets
             "FISH is hidden: every unit has it.");
         ImGui::PushID("types");
         std::vector<int> types = read_type_list(object, "types");
-        if (enemy_type_checkboxes(types))
+        if (enemy_type_checkboxes(ctx, types))
         {
             object["types"] = types;
             ctx.commit(file);
@@ -692,16 +735,17 @@ namespace EditorWidgets
                 ImGui::PushID(static_cast<int>(i));
                 ImGui::TableNextRow();
 
-                // ----- Type (on hit: with the icon of the status it inflicts) -----
+                // ----- Type, after its icon (the one the game shows) -----
                 ImGui::TableSetColumnIndex(0);
                 AbilityType type = ability_from_name(read_string(ability, "type"));
-                if (const char* status = inflicted_status(type))
                 {
                     FrameUV uv;
-                    const sf::Texture* icon = status_icon(ctx, status_icon_index(ctx.project, status), uv);
-                    image_in_box(icon, ImVec2(ImGui::GetFrameHeight(), ImGui::GetFrameHeight()), uv);
-                    ImGui::SetItemTooltip("Inflicts %s", status);
-                    ImGui::SameLine(0.f, 4.f);
+                    if (const sf::Texture* icon = ability_icon(ctx, type, uv))
+                    {
+                        image_in_box(icon, ImVec2(ImGui::GetFrameHeight(), ImGui::GetFrameHeight()), uv);
+                        if (const char* status = inflicted_status(type)) ImGui::SetItemTooltip("Inflicts %s", status);
+                        ImGui::SameLine(0.f, 4.f);
+                    }
                 }
                 ImGui::SetNextItemWidth(-FLT_MIN);
                 if (ImGui::BeginCombo("##type", ability_label(type)))
@@ -743,7 +787,7 @@ namespace EditorWidgets
                 else
                 {
                     std::vector<int> targets = read_type_list(ability, "targetTypes");
-                    if (enemy_type_checkboxes(targets))
+                    if (enemy_type_checkboxes(ctx, targets))
                     {
                         ability["targetTypes"] = targets;
                         ctx.commit(file);
