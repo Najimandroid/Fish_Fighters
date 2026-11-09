@@ -1,6 +1,10 @@
 #pragma once
 
 #include <string>
+#include <vector>
+
+#include "EntityType.h"
+#include "AbilityData.h"
 
 enum AttackType;
 
@@ -27,18 +31,21 @@ struct EntityData
 
     // ===== Battle Attributes =====
     int cost = 50;                              // Deployment cost (currency required to spawn)
-    int cooldown = 1;                           // Time (in seconds) before unit can be deployed again
+    float cooldown = 1.0f;                      // Time (in seconds) before unit can be deployed again
 
     int health = 1;                             // Maximum health of the unit
 
     int attackPower = 1;                        // Base damage per attack
     float attackRange = 1.0f;                   // Effective attack range
     AttackType attackType = static_cast<AttackType>(1); // Attack style/type (single, AoE, etc.)
-    float attackFrequency = 1.0f;               // Attacks per second
+    float attackFrequency = 1.0f;               // Seconds between two attacks
     float foreswingTime = 0.0f;                 // Delay before attack is executed (wind-up)
     float backswingTime = 0.0f;                 // Delay after attack before returning to idle
 
 	std::pair<float, float> damageZone = { 0.f, 0.f }; // Damage zone offsets (start, end) relative to unit position
+
+    std::vector<EntityType> types;              // Entity's types (abilities target them), empty = no type
+    std::vector<AbilityData> abilities;         // Entity's abilities
 
     float movementSpeed = 1.0f;                 // Movement speed across the battlefield
     int knockbackCount = 1;                     // Number of knockbacks the unit can sustain before dying

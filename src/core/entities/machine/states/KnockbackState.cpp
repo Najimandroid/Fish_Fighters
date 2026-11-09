@@ -4,13 +4,14 @@
 
 #include "DeadState.h"
 #include "IdleState.h"
+#include "ParalyzedState.h"
 
 #include <iostream>
 
 // ==================
 // Constructor
 // ==================
-KnockbackState::KnockbackState(std::shared_ptr<StateMachine> machine)
+KnockbackState::KnockbackState(StateMachine* machine)
 {
     m_machine = machine;
 }
@@ -74,6 +75,8 @@ void KnockbackState::perform(float deltaTime)
     {
         if (entity->currentHealth <= 0.0f)
 			m_machine->change_state(std::make_unique<DeadState>(m_machine)); // -> death
+        else if (entity->get_status(StatusType::PARALYZED))
+			m_machine->change_state(std::make_unique<ParalyzedState>(m_machine)); // -> still paralyzed
         else
 			m_machine->change_state(std::make_unique<IdleState>(m_machine)); // -> idle recovery
     }

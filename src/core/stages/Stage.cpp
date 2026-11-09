@@ -7,6 +7,7 @@
 #include "../entities/machine/states/IdleState.h"
 
 #include "../../uis/UIManager.h"
+#include "../../utils/ImageTools.h"
 
 #include <iostream>
 
@@ -18,6 +19,7 @@ void Stage::init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<UIManag
 	m_dataLoader = dataLoader;
 	m_uiManager = uiManager;
 	m_stageCamera = stageCamera;
+	m_statusManager.init(dataLoader);
 	unload();
 }
 
@@ -48,10 +50,13 @@ void Stage::load(int uid)
 	m_enemiesCount = 0;
 	m_unitsCount = 0;
 	m_currentCash = 0;
+	m_maxCash = BASE_MAX_CASH;               // Cash Up upgrades only last for one stage
+	m_cashPerSecond = BASE_CASH_PER_SECOND;
+	m_cashRemainder = 0.f;
 	m_length = stageJson->length;
 
 	// Spawn bases with provided health and texture
-	spawn_bases(stageJson->baseHealth, stageJson->baseTexture);
+	spawn_bases(stageJson->baseHealth, stageJson->playerBaseHealth, stageJson->baseTexture);
 
 	// Copy enemy spawn data from stage JSON
 	m_enemyStageDatas.clear();
@@ -62,9 +67,10 @@ void Stage::load(int uid)
 		m_enemyStageDatas.push_back(enemyCopy);
 	}
 
-	// Load background texture and scale to 1920x1080
-	bool success = m_backgroundTexture.loadFromFile(stageJson->backgroundTexture);
-	init_background(stageJson->backgroundTexture);
+	// Load the background (any size) and repeat it along the stage
+	const BackgroundData background = m_dataLoader->get_background_data(stageJson->backgroundTexture);
+	load_background_texture(background);
+	init_background(background.groundRow);
 
 	focus_on_player_base(); // Focus camera
 
@@ -79,10 +85,15 @@ void Stage::unload()
 	m_uid = -1;
 
 	m_currentCash = 0;
+	m_cashRemainder = 0.f;
+	m_nextEntityId = 0;
 
 	m_enemies.clear();
 	m_units.clear();
 	m_enemyStageDatas.clear();
+	m_backgroundSprites.clear();
+	m_statusManager.clear_log();             // Statuses themselves are removed with their entities
+	m_combatLog.clear();
 
 	m_enemyBase = nullptr;
 	m_unitBase = nullptr;
@@ -131,7 +142,7 @@ void Stage::update(float deltaTime)
 			auto data = m_dataLoader->get_enemy_data(spawnEnemyData->UID);
 
 			//std::cout << "Spawned enemy: " << data->name << "\n";*
-			spawn_enemy(data, spawnEnemyData->magnification, spawnEnemyData->layer, spawnEnemyData->isBoss, spawnEnemyData->isBoss);
+			spawn_enemy(data, spawnEnemyData->magnification, spawnEnemyData->layer, spawnEnemyData->isBoss, spawnEnemyData->bypassEnemyLimit);
 
 			spawnEnemyData->currentTimer = 0.f;
 			spawnEnemyData->spawnedCount++;
@@ -139,6 +150,10 @@ void Stage::update(float deltaTime)
 	}
 
 	update_cash(deltaTime);
+
+	// Count down statuses before entities act, so an expired status no longer affects them this frame
+	m_statusManager.update(deltaTime, m_units);
+	m_statusManager.update(deltaTime, m_enemies);
 
 	update_bases(deltaTime);
 	update_enemies(deltaTime);
@@ -156,6 +171,8 @@ void Stage::update(float deltaTime)
 			auto stageData = m_dataLoader->get_stage_data(m_uid);
 			if (stageData)
 				player->complete_stage(stageData);
+
+			m_dataLoader->save_progress();
 		}
 		
 		m_enemies.clear();
@@ -185,7 +202,13 @@ void Stage::update_cash(float deltaTime)
 	if (deltaTime <= 0.0f) return;
 	if (m_currentCash >= m_maxCash) return;
 
-	m_currentCash += std::ceil(m_cashPerSecond * deltaTime);
+	// Accumulate fractions of cash and only add whole units,
+	// so income is exactly m_cashPerSecond whatever the frame rate
+	m_cashRemainder += m_cashPerSecond * deltaTime;
+
+	int wholeCash = static_cast<int>(m_cashRemainder);
+	m_currentCash += wholeCash;
+	m_cashRemainder -= static_cast<float>(wholeCash);
 
 	if(m_currentCash > m_maxCash)
 		m_currentCash = m_maxCash;
@@ -402,6 +425,31 @@ int Stage::get_current_uid() const
 	return m_uid;
 }
 
+const DamageCalculator& Stage::get_damage_calculator() const
+{
+	return m_damageCalculator;
+}
+
+StatusManager& Stage::get_status_manager()
+{
+	return m_statusManager;
+}
+
+CombatLog& Stage::get_combat_log()
+{
+	return m_combatLog;
+}
+
+void Stage::set_cash(int cash)
+{
+	m_currentCash = std::clamp(cash, 0, m_maxCash);
+}
+
+float Stage::get_elapsed_time() const
+{
+	return m_elapsedTime;
+}
+
 bool Stage::is_loaded() const
 {
 	return m_isLoaded;
@@ -420,11 +468,6 @@ void Stage::render(sf::RenderWindow& window)
 	window.draw(m_enemyBase->sprite);
 	window.draw(m_unitBase->sprite);
 
-#ifdef DEBUG_MODE
-	// Draw hitboxes for debugging
-	window.draw(m_enemyBase->rHitbox);
-	window.draw(m_unitBase->rHitbox);
-#endif
 
 	// Draw enemies (back to front)
 	for (auto& [layer, enemyList] : std::ranges::reverse_view(m_enemies))
@@ -434,12 +477,6 @@ void Stage::render(sf::RenderWindow& window)
 		{
 			window.draw(enemy->sprite);
 
-#ifdef DEBUG_MODE
-			// Draw hitboxes for debugging
-			window.draw(enemy->rDamageZone);
-			window.draw(enemy->rAttackRangeZone);
-			window.draw(enemy->rHitbox);
-#endif
 		}
 	}
 
@@ -451,49 +488,73 @@ void Stage::render(sf::RenderWindow& window)
 		{
 			window.draw(unit->sprite);
 
-#ifdef DEBUG_MODE
-			// Draw hitboxes for debugging
-			window.draw(unit->rDamageZone);
-			window.draw(unit->rAttackRangeZone);
-			window.draw(unit->rHitbox);
-#endif
 		}
 	}
 }
 
 /*
-* Spawn the two bases in their positions
+* Spawn the two bases in their positions.
+* They stand on the last layer (BACK_LAYER_Y), behind every unit and enemy,
+* on the ground of the background.
 */
-void Stage::spawn_bases(float health, const std::string& texture)
+void Stage::spawn_bases(float health, float playerBaseHealth, const std::string& texture)
 {
 	m_enemyBase = std::make_unique<BattleBase>(health, texture);
-	m_enemyBase->position = { 0.0f, 540.0f - m_enemyBase->texture.getSize().y / 2 };
+	m_enemyBase->position = { 0.0f, BACK_LAYER_Y - m_enemyBase->texture.getSize().y };
+	m_enemyBase->uniqueId = m_nextEntityId++;
 	m_enemyBase->update_position(1/60.f);
 
-	m_unitBase = std::make_unique<BattleBase>(350.0f, "assets/images/textures/bases/fishBaseTEST.png");
-	m_unitBase->position = { m_length, 540.0f - m_unitBase->texture.getSize().y / 2 };
+	m_unitBase = std::make_unique<BattleBase>(playerBaseHealth, "assets/images/textures/bases/fishBaseTEST.png");
+	m_unitBase->position = { m_length, BACK_LAYER_Y - m_unitBase->texture.getSize().y };
+	m_unitBase->uniqueId = m_nextEntityId++;
 	m_unitBase->update_position(1 / 60.f);
 }
 
-void Stage::init_background(const std::string& texturePath)
+/*
+* Loads the background image into m_backgroundTexture.
+* With a seamless overlap (backgrounds.json), its edges are blended so the copies join without a seam
+* (the file itself isn't changed). The rows don't move, so the ground row stays valid.
+*/
+void Stage::load_background_texture(const BackgroundData& background)
 {
-	int numberOfSprites = (m_length / 1920) + 1;
+	sf::Image image;
+	if (!image.loadFromFile(background.texture))
+	{
+		std::cerr << "Stage: can't load the background " << background.texture << "\n";
+		return;
+	}
+
+	if (background.seamlessOverlap > 0)
+		image = ImageTools::make_seamless(image, static_cast<unsigned>(background.seamlessOverlap));
+
+	if (!m_backgroundTexture.loadFromImage(image))
+		std::cerr << "Stage: can't create the background texture of " << background.texture << "\n";
+}
+
+/*
+* Copies of the background side by side along the whole stage.
+* Works with any image size: a copy every (image width x BACKGROUND_SCALE) pixels, and the image's
+* ground row (backgrounds.json, or the template's ratio) on the line units stand on.
+* With the 1280 x 1120 template: a copy every 1920 px, top at y = -200.
+*/
+void Stage::init_background(float groundRow)
+{
+	// Rebuilt from scratch on every load
+	m_backgroundSprites.clear();
+
+	const sf::Vector2u textureSize = m_backgroundTexture.getSize();
+	if (textureSize.x == 0 || textureSize.y == 0) return;
+
+	const float tileWidth = textureSize.x * BACKGROUND_SCALE;
+	const float top = BATTLE_GROUND_Y - background_ground_row(groundRow, static_cast<float>(textureSize.y)) * BACKGROUND_SCALE;
+	const int numberOfSprites = static_cast<int>(m_length / tileWidth) + 2; // One more past each base
 
 	for (int i = 0; i <= numberOfSprites; i++)
 	{
-		sf::Sprite m_backgroundSprite(m_backgroundTexture);
-
-		m_backgroundSprite.setTexture(m_backgroundTexture, true);
-		m_backgroundSprite.setPosition({ -1920.f + i * 1920.f, -200.0f }); // 150 pixels up
-
-		// Scale to 1.5f
-		sf::Vector2u texSize = m_backgroundTexture.getSize();
-		if (texSize.x > 0 && texSize.y > 0)
-		{
-			m_backgroundSprite.setScale({1.5f, 1.5f});
-		}
-
-		m_backgroundSprites.push_back(m_backgroundSprite);
+		sf::Sprite backgroundSprite(m_backgroundTexture);
+		backgroundSprite.setScale({ BACKGROUND_SCALE, BACKGROUND_SCALE });
+		backgroundSprite.setPosition({ -tileWidth + i * tileWidth, top });
+		m_backgroundSprites.push_back(backgroundSprite);
 	}
 }
 
@@ -508,9 +569,10 @@ void Stage::spawn_enemy(std::shared_ptr<EntityData> enemyData, sf::Vector2f magn
 	std::shared_ptr<BattleEnemy> battleEnemy = std::make_shared<BattleEnemy>(enemyData, magnification);
 	battleEnemy->set_current_stage(shared_from_this());
 	battleEnemy->init_state_machine();
-	battleEnemy->stateMachine->change_state(std::make_unique<IdleState>(battleEnemy->stateMachine));
+	battleEnemy->stateMachine->change_state(std::make_unique<IdleState>(battleEnemy->stateMachine.get()));
 
 	// Assign layer
+	battleEnemy->uniqueId = m_nextEntityId++;
 	battleEnemy->currentLayer = (layer > 0) ? layer : generate_random_spawn_layer();
 	battleEnemy->position.x = 0.f;
 	battleEnemy->update_position(1.f/60.f);
@@ -525,10 +587,10 @@ void Stage::spawn_enemy(std::shared_ptr<EntityData> enemyData, sf::Vector2f magn
 /*
 * Spawn a new unit
 */
-void Stage::spawn_unit(std::shared_ptr<EntityData> unitData)
+void Stage::spawn_unit(std::shared_ptr<EntityData> unitData, bool ignoreCostAndLimit)
 {
-	if (m_unitsCount >= m_unitsLimit) return;
-	if (unitData->cost > m_currentCash) return;
+	if (m_unitsCount >= m_unitsLimit && !ignoreCostAndLimit) return;
+	if (unitData->cost > m_currentCash && !ignoreCostAndLimit) return;
 	if (m_isOnEndScreen == true) return;
 
 	sf::Vector2f unitMagnification = { 1.f, 1.f };
@@ -552,32 +614,17 @@ void Stage::spawn_unit(std::shared_ptr<EntityData> unitData)
 	std::shared_ptr<BattleUnit> battleUnit = std::make_shared<BattleUnit>(unitData, unitMagnification);
 	battleUnit->set_current_stage(shared_from_this());
 	battleUnit->init_state_machine();
-	battleUnit->stateMachine->change_state(std::make_unique<IdleState>(battleUnit->stateMachine));
+	battleUnit->stateMachine->change_state(std::make_unique<IdleState>(battleUnit->stateMachine.get()));
 
+	battleUnit->uniqueId = m_nextEntityId++;
 	battleUnit->currentLayer = generate_random_spawn_layer();
 	battleUnit->position.x = m_length;
 	battleUnit->update_position(1.f / 60.f);
 	battleUnit->update_sprite();
 
 	m_unitsCount++;
-	m_currentCash -= unitData->cost;
+	if (!ignoreCostAndLimit) m_currentCash -= unitData->cost;
 	m_units[battleUnit->currentLayer].push_back(battleUnit);
-}
-
-/*
-* Remove enemy from stage
-*/
-void Stage::remove_enemy(BattleEnemy battleEnemy)
-{
-	m_enemies.erase(battleEnemy.currentLayer);
-}
-
-/*
-* Remove unit from stage
-*/
-void Stage::remove_unit(BattleUnit battleUnit)
-{
-	m_units.erase(battleUnit.currentLayer);
 }
 
 /*
@@ -587,7 +634,7 @@ int Stage::generate_random_spawn_layer()
 {
 	static std::random_device rd;
 	static std::mt19937 gen(rd());
-	std::uniform_int_distribution<> distrib(0, 50);
+	std::uniform_int_distribution<> distrib(0, MAX_BATTLE_LAYER);
 
 	return distrib(gen);
 }
@@ -606,7 +653,7 @@ void Stage::generate_boss_shockwave()
 				continue;
 
 			unit->isOnShockwave = true;
-			unit->stateMachine->change_state(std::make_unique<KnockbackState>(unit->stateMachine));
+			unit->stateMachine->change_state(std::make_unique<KnockbackState>(unit->stateMachine.get()));
 		}
 	}
 }

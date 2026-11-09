@@ -13,7 +13,7 @@
 // ==================
 // Constructor
 // ==================
-IdleState::IdleState(std::shared_ptr<StateMachine> machine)
+IdleState::IdleState(StateMachine* machine)
 {
     m_machine = machine;
 }

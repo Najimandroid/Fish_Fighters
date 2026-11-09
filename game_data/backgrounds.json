@@ -1,0 +1,25 @@
+{
+    "assets/images/textures/backgrounds/stages/CoralSeabed.png": {
+        "groundRow": 803
+    },
+    "assets/images/textures/backgrounds/stages/RockField.png": {
+        "groundRow": 827,
+        "seamlessOverlap": 128
+    },
+    "assets/images/textures/backgrounds/stages/ShallowSeabed.png": {
+        "groundRow": 764,
+        "seamlessOverlap": 265
+    },
+    "assets/images/textures/backgrounds/stages/KelpForest.png": {
+        "groundRow": 818,
+        "seamlessOverlap": 246
+    },
+    "assets/images/textures/backgrounds/stages/CoralReef.png": {
+        "seamlessOverlap": 93,
+        "groundRow": 791
+    },
+    "assets/images/textures/backgrounds/stages/RockyShore.png": {
+        "seamlessOverlap": 32,
+        "groundRow": 794
+    }
+}

@@ -12,7 +12,7 @@
 // ==================
 // Constructor
 // ==================
-AttackState::AttackState(std::shared_ptr<StateMachine> machine)
+AttackState::AttackState(StateMachine* machine)
 {
     m_machine = machine;
 }
@@ -102,19 +102,35 @@ void AttackState::perform(float deltaTime)
         return;
     }
 
-    // ===== Apply Damage =====
-    if (entity->data->attackType == 1) // Single-target attack
+    // ===== Apply Damage and On-Hit Abilities =====
+    // The DamageCalculator decides the amount, the target only applies it.
+    // Then the StatusManager rolls the attacker's on-hit abilities (the status affects the next hits).
+    if (auto stage = m_machine->get_stage().lock())
     {
-        auto target = entity->targets.begin()->lock();
-        if (target)
-            target->currentHealth -= entity->data->attackPower * entity->magnification.y;
-    }
-    else // Area attack (all targets in damage zone)
-    {
-        for (auto& targetPtr : entity->targets)
+        const DamageCalculator& damageCalculator = stage->get_damage_calculator();
+        StatusManager& statusManager = stage->get_status_manager();
+
+        auto hit = [&](BattleEntity& target)
+            {
+                const DamageResult result = damageCalculator.calculate(*entity, target);
+                target.take_damage(result);
+                stage->get_combat_log().record(*entity, target, result, stage->get_elapsed_time());
+                statusManager.apply_on_hit_abilities(*entity, target, stage->get_elapsed_time());
+            };
+
+        if (entity->data->attackType == 1) // Single-target attack
         {
-            if (auto target = targetPtr.lock())
-                target->currentHealth -= entity->data->attackPower * entity->magnification.y;
+            auto target = entity->targets.begin()->lock();
+            if (target)
+                hit(*target);
+        }
+        else // Area attack (all targets in damage zone)
+        {
+            for (auto& targetPtr : entity->targets)
+            {
+                if (auto target = targetPtr.lock())
+                    hit(*target);
+            }
         }
     }
 

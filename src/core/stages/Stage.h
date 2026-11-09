@@ -3,6 +3,9 @@
 #include "../../data/EnemyStageData.h"
 #include "../DataLoader.h"
 #include "../entities/BattleBase.h"
+#include "../combat/DamageCalculator.h"
+#include "../combat/StatusManager.h"
+#include "../combat/CombatLog.h"
 
 #include <SFML/Graphics.hpp>
 
@@ -60,13 +63,8 @@ public:
     void spawn_enemy(std::shared_ptr<EntityData> enemyData, sf::Vector2f magnification, int layer, bool isBoss, bool bypassLimit);
 
     // Spawn a new player unit in the stage
-    void spawn_unit(std::shared_ptr<EntityData> unitData);
-
-    // Remove an enemy from the stage
-    void remove_enemy(BattleEnemy battleEnemy);
-
-    // Remove a unit from the stage
-    void remove_unit(BattleUnit battleUnit);
+    // ignoreCostAndLimit: debug tools only, spawns for free even when the units limit is reached
+    void spawn_unit(std::shared_ptr<EntityData> unitData, bool ignoreCostAndLimit = false);
 
     // Generate a random layer for entity spawning
     int generate_random_spawn_layer();
@@ -119,6 +117,21 @@ public:
     // Get the loaded stage's id
 	int get_current_uid() const;
 
+    // Get the calculator that decides the damage of every hit
+    const DamageCalculator& get_damage_calculator() const;
+
+    // Get the log of the last hits (debug tools)
+    CombatLog& get_combat_log();
+
+    // Debug tools only: sets the current cash (clamped to the maximum)
+    void set_cash(int cash);
+
+    // Get the manager that applies, stacks and removes statuses
+    StatusManager& get_status_manager();
+
+    // Seconds since the stage was loaded
+    float get_elapsed_time() const;
+
     // Check if a stage is currently loaded
     bool is_loaded() const;
 
@@ -128,15 +141,20 @@ private:
     int m_uid = -1;
     std::string m_stageName = "Unknown Area ???";
 
+    static constexpr int BASE_MAX_CASH = 500;        // Wallet size at the start of every stage
+    static constexpr int BASE_CASH_PER_SECOND = 50;  // Income at the start of every stage
+
     int m_currentCash = 0;                   // Current cash available to the player
-    int m_maxCash = 500;                     // Maximum cash allowed
-	int m_cashPerSecond = 50;                // Cash gained per second (with no upgrades)
+    int m_maxCash = BASE_MAX_CASH;           // Maximum cash allowed
+	int m_cashPerSecond = BASE_CASH_PER_SECOND; // Cash gained per second (with no upgrades)
+    float m_cashRemainder = 0.f;             // Fraction of cash earned but not added yet (frame-rate independent income)
 
     int m_enemiesLimit = 5;                  // Maximum number of enemies
     int m_unitsLimit = 5;                    // Maximum number of units
 
     int m_enemiesCount = 0;                  // Current number of enemies
     int m_unitsCount = 0;                    // Current number of units
+    int m_nextEntityId = 0;                  // Next BattleEntity::uniqueId to give (reset on unload)
 
     float m_length = 0.f;                    // Distance between the enemy and player bases
 
@@ -148,6 +166,11 @@ private:
     // ----- Entities -----
     BattleEntitiesMap_t m_enemies;           // Enemy entities, stored by layer for rendering
     BattleEntitiesMap_t m_units;             // Unit entities, stored by layer
+
+    // ----- Combat -----
+    DamageCalculator m_damageCalculator;     // Decides the damage of every hit (units, enemies, bases)
+    StatusManager m_statusManager;           // Applies, stacks and removes statuses on units and enemies
+    CombatLog m_combatLog;                   // Last hits of the stage, for the debug tools
 
     // ----- Bases -----
     std::shared_ptr<BattleBase> m_enemyBase; // Enemy base
@@ -169,7 +192,11 @@ private:
 private:
 
     // Spawn bases at the start of the stage
-    void spawn_bases(float health, const std::string& texture);
+    void spawn_bases(float health, float playerBaseHealth, const std::string& texture);
 
-    void init_background(const std::string& texturePath);
+    // The background image, made seamless when backgrounds.json asks for it (the file isn't changed)
+    void load_background_texture(const BackgroundData& background);
+
+    // Background copies along the stage (any image size), ground row from backgrounds.json (-1 = template ratio)
+    void init_background(float groundRow);
 };

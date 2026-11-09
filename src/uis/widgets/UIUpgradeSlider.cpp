@@ -58,6 +58,9 @@ UIUpgradeSlider::UIUpgradeSlider(std::shared_ptr<DataLoader> dataLoader) :
 
 					icon->set_unit_level(unitLevel);
 					icon->set_upgrade_cost(calculate_upgrade_cost(unitUid, unitLevel));
+
+					// Shells were spent: save right away
+					m_dataLoader->save_progress();
 				}
 			}
 		}

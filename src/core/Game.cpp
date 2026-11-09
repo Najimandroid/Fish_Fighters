@@ -6,7 +6,7 @@
  * Constructor
  * Initializes:
  *  - SFML window (fullscreen)
- *  - ImGui for debug
+ *  - Developer tools in their own window (DEBUG_MODE)
  *  - DataLoader, Stage, UIManager
  *  - Cameras
  */
@@ -16,21 +16,17 @@ Game::Game():
 	m_uiManager(std::make_shared<UIManager>())
 {
     // Create fullscreen window without borders
-    m_window.create(sf::VideoMode::getDesktopMode(), "Fish Fighers", sf::Style::None); //sf::Style::None
+    m_window.create(sf::VideoMode::getDesktopMode(), "Fish Fighters", sf::Style::None); //sf::Style::None
     m_window.setFramerateLimit(m_frameRate);
     center_window();
 
-    // Initialize ImGui for debug UI
-#ifdef DEBUG_MODE
-    ImGui::SFML::Init(m_window);
-
-    ImGuiIO& io = ImGui::GetIO();
-    io.Fonts->Clear();
-    io.Fonts->AddFontFromFileTTF("assets/fonts/MPLUSRounded1c-Medium.ttf", 24.0f);
-    ImGui::SFML::UpdateFontTexture();
-#endif
     // Load all game data (units, enemies, stages, player)
-    m_dataLoader->load_all();
+    // If anything is missing or broken, the reason is in error_log.txt and the game closes
+    // instead of running with incomplete data (the save is not touched in that case)
+    if (!m_dataLoader->load_all())
+    {
+        m_window.close();
+    }
 
     // Initialize UIManager and Stage with references to DataLoader
     m_uiManager->init(m_dataLoader, m_stage);
@@ -48,6 +44,18 @@ Game::Game():
 
     // Set up cameras for UI and stage rendering
     init_cameras();
+
+#ifdef DEBUG_MODE
+    // Developer tools in a second window, so the game keeps its full screen
+    DebugContext debugContext;
+    debugContext.dataLoader = m_dataLoader;
+    debugContext.stage = m_stage;
+    debugContext.uiManager = m_uiManager;
+    debugContext.getGameSpeed = [this]() { return m_speedState; };
+    debugContext.setGameSpeed = [this](GameSpeedState speed) { set_game_speed(speed); };
+    debugContext.requestStepFrame = [this]() { m_isStepFrameRequested = true; };
+    m_debugTools = std::make_unique<DebugTools>(debugContext);
+#endif
 }
 
 /*
@@ -63,282 +71,23 @@ void Game::init_cameras()
     m_stageCamera.setSize(static_cast<sf::Vector2f>(m_logicalResolution));
     m_stageCamera.setCenter(m_stageCamera.getSize() / 2.f);
 
-#ifdef DEBUG_MODE
-    m_uiCamera.setViewport(sf::FloatRect{ {0.25f, 0.25f}, {0.5f, 0.5f} });
-    m_stageCamera.setViewport(sf::FloatRect{ {0.25f, 0.25f}, {0.5f, 0.5f} });
-#else
     m_uiCamera.setViewport(sf::FloatRect{ {0.f, 0.f}, {1.f, 1.f} });
     m_stageCamera.setViewport(sf::FloatRect{ {0.f, 0.f}, {1.f, 1.f} });
-#endif
 
     m_stageCamera.zoom(0.9f); // initial zoom-out for better stage visibility
-}
-
-/*
- * Renders debug UI using ImGui
- * Only active when DEBUG_MODE is defined
- */
-void Game::debug_ui()
-{
-#ifdef DEBUG_MODE
-    ImGui::SFML::Update(m_window, m_deltaClockDebug.restart());
-
-	bool isStageLoaded = m_stage->is_loaded();
-
-    /*
-    * ======================================================================================================
-    * DEBUG TIME AND PERFORMANCE PANEL
-    * ---------------------------------------
-    * FPS, delta time, pause game
-    */
-	const ImVec2 timeWindowSize = isStageLoaded ? ImVec2(500.f, 200.f) : ImVec2(500.f, 100.f);
-    ImGui::SetNextWindowSize(timeWindowSize, ImGuiCond_Always);
-    ImGui::SetNextWindowPos(ImVec2(1920.f / 2.f - timeWindowSize.x / 2.f, 0.f), ImGuiCond_Always);
-    ImGui::Begin("Time & Performance");
-
-    // FPS
-    const float fps = (m_deltaTime > 0.f) ? (1.f / m_deltaTime) : 0.f;
-    ImGui::Text("FPS: %.1f", fps);
-	// Delta time
-	ImGui::Text("Delta Time: %.4f s", m_debugDeltaTime);
-
-    // Stage specific parameters
-    if (isStageLoaded)
-    {
-        ImGui::Separator();
-
-        // Pause button
-        static bool isPaused = false;
-        if (ImGui::Checkbox("Pause", &isPaused))
-            m_speedState = isPaused ? GameSpeedState::PAUSED : GameSpeedState::NORMAL; // Toggle pause
-
-        // Frame step button
-        if (isPaused)
-        {
-            if (ImGui::Button("Step One Frame"))
-            {
-                m_deltaTime = 1.f / static_cast<float>(m_frameRate); // Advance one frame
-            }
-        }
-    }
-
-    ImGui::End();
-
-    /*
-	* =======================================================================================================
-	* Game Parameters / Stage Control Panel
-    * -----------------------------------------------------------------
-	* Control stage loading, spawn units/enemies, modify player shells
-    */
-
-    const ImVec2 gameParametersWindowSize = ImVec2(480.f, 1080.f);
-    ImGui::SetNextWindowSize(gameParametersWindowSize, ImGuiCond_Always);
-    ImGui::SetNextWindowPos(ImVec2(1920.f - gameParametersWindowSize.x, 0.f), ImGuiCond_Always);
-
-    ImGui::Begin("Game Data Tools");
-
-    if (!isStageLoaded)
-    {
-        ImGui::Text("Main Menu Debug Tools");
-
-        static int levelToLoad = 0;
-        ImGui::InputInt("Level ID", &levelToLoad);
-
-        if (ImGui::Button("Load Level"))
-        {
-            m_stage->load(levelToLoad);
-            m_uiManager->generate_battle_uis();
-        }
-
-        ImGui::Separator();
-
-        static int shellAmount = 0;
-        ImGui::InputInt("Add Shells To Player", &shellAmount);
-
-        if (ImGui::Button("Add Shells"))
-        {
-            auto playerData = m_dataLoader->get_player_data().lock();
-            if (playerData) playerData->gain_shells(shellAmount);
-        }
-    }
-    else
-    {
-        ImGui::Text("Spawn Units");
-
-        /*
-        * =======================================================================================================
-        * Spawn Unit
-        * -------------------------------------------------------------------------------------------------------
-        * Allows spawning any unit by ID and form (0 or 1).
-        */
-        static int unitId = 1;
-        ImGui::InputInt("Unit ID", &unitId);
-
-        static int unitForm = 0;
-        const char* formOptions[] = { "Base", "Evolved" };
-        ImGui::Combo("Unit Form", &unitForm, formOptions, IM_ARRAYSIZE(formOptions));
-
-        auto unitData = m_dataLoader->get_unit_data(unitId, unitForm);
-
-        // Display unit preview
-       if (unitData)
-        {
-            static sf::Texture previewTexture;
-			static sf::Sprite sprite(previewTexture);
-			static int previousUnitId = -1;
-			static int previousUnitForm = 0;
-
-            if(previousUnitId != unitId || previousUnitForm != unitForm)
-            {
-                previewTexture.loadFromFile(unitData->texture);
-
-                int frameWidth = previewTexture.getSize().x / unitData->frameCount;
-                int frameHeight = previewTexture.getSize().y;
-
-				sprite.setTexture(previewTexture);
-				sprite.setTextureRect(sf::IntRect({ 0, 0 }, { frameWidth, frameHeight }));
-
-                ImVec2 size(frameWidth, frameHeight);
-            
-                float maxPreviewSize = 200.f;
-                float scale = std::min(maxPreviewSize / size.x, maxPreviewSize / size.y);
-
-                size.x *= scale;
-                size.y *= scale;
-
-                sprite.setScale({ scale, scale });
-			}
-
-            ImGui::Image(sprite);
-			previousUnitId = unitId;
-			previousUnitForm = unitForm;
-        }
-
-        if (ImGui::Button("Spawn Unit") && unitData)
-        {
-            m_stage->spawn_unit(unitData);
-        }
-
-        ImGui::Separator();
-        ImGui::Text("Spawn Enemies");
-
-        /*
-        * =======================================================================================================
-        * Spawn Enemy
-        * -------------------------------------------------------------------------------------------------------
-        * Controls all spawn_enemy parameters:
-        * - magnification.x = HP multiplier
-        * - magnification.y = Attack multiplier
-        * - layer: -1 to 50 (-1 means random)
-        * - isBoss
-        * - generateShockwave
-        * - bypassEnemyLimit
-        */
-
-        static int enemyId = 1;
-        ImGui::InputInt("Enemy ID", &enemyId);
-
-        // Magnification
-        static float hpMultiplier = 1.0f;
-        static float attackMultiplier = 1.0f;
-
-        ImGui::SliderFloat("HP Multiplier", &hpMultiplier, 1.f, 100.0f);
-        ImGui::SliderFloat("Attack Multiplier", &attackMultiplier, 1.f, 100.0f);
-
-        // Layer
-        static int enemyLayer = -1;
-        ImGui::SliderInt("Layer", &enemyLayer, -1, 50);
-
-        // Flags
-        static bool isBoss = false;
-        ImGui::Checkbox("Is Boss", &isBoss);
-
-        static bool bypassEnemyLimit = false;
-        ImGui::Checkbox("Bypass Enemy Limit", &bypassEnemyLimit);
-
-        auto data = m_dataLoader->get_enemy_data(enemyId);
-
-		// Display enemy preview
-        if (data)
-        {
-            static sf::Texture previewTexture;
-            static sf::Sprite sprite(previewTexture);
-            static int previousEnemyId = -1;
-
-            if (previousEnemyId != enemyId)
-            {
-                previewTexture.loadFromFile(data->texture);
-
-                int frameWidth = previewTexture.getSize().x / data->frameCount;
-                int frameHeight = previewTexture.getSize().y;
-
-                sprite.setTexture(previewTexture);
-                sprite.setTextureRect(sf::IntRect({ 0, 0 }, { frameWidth, frameHeight }));
-
-                ImVec2 size(frameWidth, frameHeight);
-
-                float maxPreviewSize = 200.f;
-                float scale = std::min(maxPreviewSize / size.x, maxPreviewSize / size.y);
-
-                size.x *= scale;
-                size.y *= scale;
-
-                sprite.setScale({ scale, scale });
-            }
-
-            ImGui::Image(sprite);
-            previousEnemyId = enemyId;
-        }
-
-        if (ImGui::Button("Spawn Enemy") && data)
-        {
-            // Build magnification vector
-            sf::Vector2f magnification(hpMultiplier, attackMultiplier);
-
-            // Spawn enemy with full parameter set
-            m_stage->spawn_enemy(
-                data,
-                magnification,
-                enemyLayer,
-                isBoss,
-                bypassEnemyLimit
-            );
-        }
-
-        ImGui::Separator();
-        ImGui::Text("Stage Parameters");
-
-        /*
-        * =======================================================================================================
-        * Exit current stage
-        */
-        if (ImGui::Button("Exit Stage"))
-        {
-            m_stage->unload();
-            m_uiManager->generate_fish_tank_uis();
-        }
-    }
-
-    ImGui::End();
-
-    //======================================================================================================
-
-    ImGui::SFML::Render(m_window);
-#endif
 }
 
 void Game::calculate_delta_time()
 {
     m_deltaTime = m_deltaClock.restart().asSeconds();
-
-#ifdef DEBUG_MODE
-    m_debugDeltaTime = m_deltaClockDebug.restart().asSeconds();
-#endif
+    m_realDeltaTime = m_deltaTime;
 
     switch (m_speedState)
     {
     case GameSpeedState::PAUSED:
-        m_deltaTime = 0.f;
+        // Debug frame step: exactly one frame at normal speed
+        m_deltaTime = m_isStepFrameRequested ? 1.f / static_cast<float>(m_frameRate) : 0.f;
+        m_isStepFrameRequested = false;
 		break;
 
     case GameSpeedState::NORMAL:
@@ -354,18 +103,6 @@ void Game::calculate_delta_time()
 		break;
     }
 }
-
-#ifdef DEBUG_MODE
-ImTextureID Game::get_imgui_texture(const sf::Texture& texture)
-{
-    const sf::Texture* key = &texture;
-    auto it = m_imguiTextureCache.find(key);
-    if (it != m_imguiTextureCache.end())
-        return it->second;
-
-	// TODO: Texture SFML => IMGUI conversion
-}
-#endif
 
 void Game::run_game_loop()
 {
@@ -387,18 +124,25 @@ void Game::run_game_loop()
         m_window.setView(m_stageCamera);
         m_stage->render(m_window);
 
+#ifdef DEBUG_MODE
+        // Hitboxes, ranges, labels and selection, drawn on the battlefield under the UI
+        m_debugTools->draw_world_overlays(m_window);
+#endif
+
         // Render UI (screen-space)
         m_window.setView(m_uiCamera);
         m_uiManager->render_uis(m_window, m_uiCamera, m_stageCamera);
 
-#ifdef DEBUG_MODE
-        debug_ui();
-#endif
         m_window.display();
+
+#ifdef DEBUG_MODE
+        m_debugTools->update(m_realDeltaTime);
+#endif
     }
 
 #ifdef DEBUG_MODE
-    ImGui::SFML::Shutdown();
+    // Closes the tools window together with the game
+    m_debugTools.reset();
 #endif
 }
 
@@ -418,10 +162,6 @@ void Game::poll_events()
 {
     while (const auto event = m_window.pollEvent()) {
 
-#ifdef DEBUG_MODE
-        ImGui::SFML::ProcessEvent(m_window, *event);
-#endif 
-
         // Window close event
         if (event->is<sf::Event::Closed>())
         {
@@ -438,6 +178,10 @@ void Game::poll_events()
             if (e_keycode->code == sf::Keyboard::Key::Numpad1) m_window.setSize({ 1920, 1080 });
             else if (e_keycode->code == sf::Keyboard::Key::Numpad2) m_window.setSize({ 1280, 720 });
             else if (e_keycode->code == sf::Keyboard::Key::Numpad3) m_window.setSize({ 640, 360 });
+#ifdef DEBUG_MODE
+            // Show or hide the developer tools window
+            else if (e_keycode->code == sf::Keyboard::Key::F1) m_debugTools->toggle_window();
+#endif
             // Close game (removed)
             //else if (e_keycode->code == sf::Keyboard::Key::Escape) m_window.close();
             // Pause and speed control

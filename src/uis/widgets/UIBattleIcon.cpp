@@ -102,7 +102,7 @@ int UIBattleIcon::get_cost() const { return m_cost; }
 
 // Setters
 void UIBattleIcon::set_uid(int uid) { m_uid = uid; }
-void UIBattleIcon::set_max_cooldown(int cooldown) { m_maxCooldown = cooldown; }
+void UIBattleIcon::set_max_cooldown(float cooldown) { m_maxCooldown = cooldown; }
 
 /*
  * Sets the unit deployment cost and updates price text position

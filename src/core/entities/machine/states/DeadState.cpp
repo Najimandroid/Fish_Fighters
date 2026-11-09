@@ -7,7 +7,7 @@
 // ==================
 // Constructor
 // ==================
-DeadState::DeadState(std::shared_ptr<StateMachine> machine)
+DeadState::DeadState(StateMachine* machine)
 {
     m_machine = machine;
 }

@@ -32,18 +32,6 @@ BattleBase::BattleBase(float health_, std::string texture_)
     // ===== Sprite =====
     bool isTextureLoaded = texture.loadFromFile(texture_);
     sprite.setTexture(texture, true);
-
-#ifdef DEBUG_MODE
-    // ===== Debug Rectangles =====
-    rHitbox.setSize(hitbox.size);
-    rHitbox.setPosition(position);
-
-    rAttackRangeZone.setSize(attackRangeZone.size);
-    rAttackRangeZone.setPosition(position);
-
-    rDamageZone.setSize(damageZone.size);
-    rDamageZone.setPosition(position);
-#endif
 }
 
 // ==================
@@ -54,12 +42,7 @@ void BattleBase::update(
     const std::map<int, std::vector<std::shared_ptr<BattleEntity>>>& entityList
 )
 {
-    // If destroyed
-    if (currentHealth < 0.0f)
-    {
-        // TODO: trigger stage loss/win depending on whose base this is
-        // std::cout << "Base destroyed x_x\n";
-    }
+    // Victory and defeat are detected in Stage::update()
 
 #ifdef DEBUG_MODE
     // Debugging health in console
@@ -85,11 +68,4 @@ void BattleBase::update_position(float deltaTime)
     hitbox.position = position;
     attackRangeZone.position = position;
     damageZone.position = position;
-
-#ifdef DEBUG_MODE
-    // Update debug rectangle positions
-    rHitbox.setPosition(position);
-    rAttackRangeZone.setPosition(position);
-    rDamageZone.setPosition(position);
-#endif
 }

@@ -17,7 +17,7 @@
 class DeadState : public BaseState
 {
 public:
-    explicit DeadState(std::shared_ptr<StateMachine> machine);
+    explicit DeadState(StateMachine* machine);
 
     void enter() override;                       // Mark entity as dead
     void perform(float deltaTime) override;      // No-op (dead entities do nothing)

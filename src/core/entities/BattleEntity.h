@@ -3,6 +3,7 @@
 #include "tweeny.h"
 #include "machine/StateMachine.h"
 #include "../../data/EntityData.h"
+#include "status/StatusEffect.h"
 
 #include <SFML/Graphics/Texture.hpp>
 #include <SFML/Graphics/Sprite.hpp>
@@ -14,6 +15,7 @@
 #include <map>
 
 class Stage;
+struct DamageResult;
 
 /*
  * BattleEntity
@@ -47,6 +49,20 @@ public:
     // Handles sprite frame updates (animation)
     virtual void update_sprite();
 
+    // ====== Combat ======
+
+    // Applies a hit decided by the DamageCalculator.
+    // The entity never decides how much damage it takes; this is the only place currentHealth goes down.
+    void take_damage(const DamageResult& result);
+
+    // ====== Status Effects ======
+    // Read-only: only the StatusManager adds, changes or removes statuses
+
+    const std::vector<StatusEffect>& get_statuses() const;
+
+    // Returns the active status of this type, or nullptr if the entity doesn't have it
+    const StatusEffect* get_status(StatusType type) const;
+
     // ====== Initialization ======
 
     // Attaches StateMachine to this entity
@@ -57,6 +73,7 @@ public:
 
 public:
     // ====== Core Data ======
+    int uniqueId = -1;                             // Given by Stage on spawn, unique within a stage (debug tools, status log)
     std::shared_ptr<EntityData> data = nullptr;    // Entity template stats (cost, hp, attack, etc.)
     std::shared_ptr<StateMachine> stateMachine;    // Controls entity behavior
     std::weak_ptr<Stage> currentStage;             // Current stage reference (for spawning, targeting)
@@ -103,10 +120,9 @@ public:
     float currentFrameCooldown = 0.0f;             // Timer for switching frames
     int currentFrameIndex = 0;                     // Current animation frame index
 
-#ifdef DEBUG_MODE
-    // ====== Debug Rendering ======
-    sf::RectangleShape rHitbox;
-    sf::RectangleShape rAttackRangeZone;
-    sf::RectangleShape rDamageZone;
-#endif
+
+private:
+    // ====== Status Effects ======
+    friend class StatusManager;                    // The only class allowed to change them
+    std::vector<StatusEffect> m_activeStatuses;
 };

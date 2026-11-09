@@ -1,4 +1,5 @@
 #include "BattleEntity.h"
+#include "../combat/DamageCalculator.h"
 
 #include <iostream>
 
@@ -19,26 +20,6 @@ BattleEntity::BattleEntity() :
     // Initialize state machine
     stateMachine(std::make_shared<StateMachine>())
 {
-#ifdef DEBUG_MODE
-    // Debug rendering: show hitbox and ranges
-    rHitbox.setPosition(position);
-    rHitbox.setSize(hitbox.size);
-    rHitbox.setOutlineColor(sf::Color::Blue);
-    rHitbox.setFillColor(sf::Color::Transparent);
-    rHitbox.setOutlineThickness(1.f);
-
-    rAttackRangeZone.setPosition(position);
-    rAttackRangeZone.setSize(attackRangeZone.size);
-    rAttackRangeZone.setOutlineColor(sf::Color::Yellow);
-    rAttackRangeZone.setFillColor(sf::Color::Transparent);
-    rAttackRangeZone.setOutlineThickness(2.f);
-
-    rDamageZone.setPosition(position);
-    rDamageZone.setSize(damageZone.size);
-    rDamageZone.setOutlineColor(sf::Color::Red);
-    rDamageZone.setFillColor(sf::Color::Transparent);
-    rDamageZone.setOutlineThickness(3.f);
-#endif
 }
 
 // ==================
@@ -105,7 +86,8 @@ void BattleEntity::update_sprite()
     }
 
     // Update animation depending on current state
-    if (stateMachine->get_active_state_id() == "IDLE")
+    if (stateMachine->get_active_state_id() == "IDLE" ||
+        stateMachine->get_active_state_id() == "PARALYZED") // Paralyzed uses the idle frame
     {
         currentFrameIndex = 0;
     }
@@ -147,4 +129,31 @@ void BattleEntity::update_sprite()
         { static_cast<int>(texture.getSize().x / data->frameCount * currentFrameIndex), 0 },
         { static_cast<int>(texture.getSize().x / data->frameCount), static_cast<int>(texture.getSize().y) }
         });
+}
+
+// ==================
+// Combat
+// ==================
+void BattleEntity::take_damage(const DamageResult& result)
+{
+    // Knockback and death are handled by the states, which check currentHealth every frame
+    currentHealth -= result.finalDamage;
+}
+
+// ==================
+// Statuses
+// ==================
+// Counting down and removing statuses is done by the StatusManager
+const std::vector<StatusEffect>& BattleEntity::get_statuses() const
+{
+    return m_activeStatuses;
+}
+
+const StatusEffect* BattleEntity::get_status(StatusType type) const
+{
+    for (const StatusEffect& status : m_activeStatuses)
+    {
+        if (status.type == type) return &status;
+    }
+    return nullptr;
 }

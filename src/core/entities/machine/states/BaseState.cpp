@@ -4,7 +4,7 @@
 // ==================
 // Constructor
 // ==================
-BaseState::BaseState(std::shared_ptr<StateMachine> machine)
+BaseState::BaseState(StateMachine* machine)
 {
     m_machine = machine;
 }

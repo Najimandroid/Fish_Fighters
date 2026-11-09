@@ -21,7 +21,7 @@
 class KnockbackState : public BaseState
 {
 public:
-    explicit KnockbackState(std::shared_ptr<StateMachine> machine);
+    explicit KnockbackState(StateMachine* machine);
 
     void enter() override;                       // Setup knockback tween
     void perform(float deltaTime) override;      // Count down duration, then transition
