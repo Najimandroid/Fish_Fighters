@@ -46,6 +46,15 @@ public:
     void set_texture(const std::string& texturePath);
     void set_darkened(bool isDarkened); // visually darkens the icon when unavailable
 
+    // How much of the cost the wallet holds (0 to 1): a "water level" rises in the slot until it's affordable
+    void set_affordability(float fraction);
+
+    // The key shown in the corner (its hotkey), "" for none
+    void set_key_label(const std::string& label);
+
+    // A short shake: the click was refused (cooldown, cash, unit limit)
+    void shake();
+
 private:
 
     // Unit info
@@ -55,7 +64,16 @@ private:
     float m_currentCooldown = 0.0f;
     float m_maxCooldown = 1.0f;
     bool m_isDarkened = false;
+    float m_affordability = 1.f;
+
+    // Feedback
+    bool m_wasReady = true;   // Deployable last frame (the first frame doesn't flash)
+    bool m_isFirstUpdate = true;
+    float m_readyTime = -1.f; // Seconds since it became deployable (-1: no flash running)
+    float m_shakeTime = -1.f; // Seconds since a refused click (-1: no shake)
 
     // Visuals
     sf::Texture m_texture;    // Unit icon texture (drawn cropped into the slot)
+    sf::Text m_keyText;       // The hotkey, in a navy chip
+    sf::Text m_secondsText;   // Cooldown seconds left
 };

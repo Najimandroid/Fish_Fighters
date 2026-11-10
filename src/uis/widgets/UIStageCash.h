@@ -7,29 +7,22 @@ class Stage;
 /*
  * UIStageCash
  * -----------
- * Displays the player's current cash and maximum cash during a stage.
+ * The battle wallet, top right: a dark plate with the cash (big, yellow) and the wallet size (small),
+ * a bar showing how full the wallet is, and a pulsing "FULL" tag when it can't hold more (time to spend
+ * or to Cash Up).
  */
-
 class UIStageCash : public UITextElement
 {
 public:
-
-    /*
-     * Initializes the weak reference to the stage and prepares the text element.
-     */
     UIStageCash(std::shared_ptr<Stage> stage);
 
-    /*
-     * Updates the displayed cash value every frame.
-     * Positions the text in the top-right corner of the screen.
-     */
     void update(float deltaTime) override;
+    void render(sf::RenderWindow& window) override;
 
 private:
-
     std::weak_ptr<Stage> m_stage; // Weak pointer to avoid ownership
-
-    // Text offsets from top-right corner
-    const float OFFSET_Y = 30.f;
-    const float OFFSET_X = 36.f;
+    sf::Text m_maxText;           // "/ 500$"
+    sf::Text m_fullText;          // "FULL"
+    float m_fill = 0.f;           // 0 to 1
+    float m_time = 0.f;           // The FULL pulse
 };

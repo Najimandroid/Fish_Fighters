@@ -69,6 +69,9 @@ public:
     void generate_victory_uis();
     void generate_defeat_uis();
 
+    // A base just fell (Stage): the battle HUD goes and the speed is back to normal while the end plays
+    void begin_battle_end();
+
     // Returns true if a given world position overlaps any UI element
     bool is_mouse_over_ui(const sf::Vector2i& worldPosition) const;
 
@@ -83,6 +86,15 @@ public:
 private:
     // The round back button of the menus (bottom left): runs onBack as a deferred action
     std::shared_ptr<UIRoundButton> make_back_button(std::function<void()> onBack);
+
+    // Starts a battle (the battle start jingle, the stage, the battle screen); run it as a deferred action
+    void start_battle(int stageUid);
+
+    // Unloads the battle before going back to a menu
+    void leave_battle();
+
+    // The stage after stageUid in the current chapter (-1: none)
+    int next_stage_uid(int stageUid) const;
 
     // Darkens the bars around the 16:9 UI area while a modal window is open (screens that aren't 16:9)
     void dim_letterbox_bars(sf::RenderWindow& window, const sf::View& uiView) const;

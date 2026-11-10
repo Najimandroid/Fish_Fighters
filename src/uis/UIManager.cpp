@@ -21,6 +21,7 @@
 #include "widgets/UICashPopups.h"
 #include "widgets/UIConfirmDialog.h"
 #include "widgets/UIOptionsMenu.h"
+#include "widgets/UIResultsPanel.h"
 
 #include "../audio/AudioManager.h"
 
@@ -553,17 +554,7 @@ void UIManager::generate_chapter_map_uis()
     battleButton->set_click_sound("");   // The battle start jingle instead; the stage's theme follows it
     battleButton->set_callback([this, chapterMap]()
         {
-            m_pendingAction = [this, chapterMap]() {
-                if (auto stage = m_stage.lock())
-                {
-                    // The map opens on this stage next time (until it's won for the first time)
-                    if (auto player = m_dataLoader->get_player_data().lock())
-                        player->lastStage = chapterMap->get_selected_stage_uid();
-                    if (m_audio) m_audio->play_jingle("jingle_battle_start");
-                    stage->load(chapterMap->get_selected_stage_uid());
-                    generate_battle_uis();
-                }
-                };
+            m_pendingAction = [this, chapterMap]() { start_battle(chapterMap->get_selected_stage_uid()); };
         });
 
     const int chapterUid = m_dataLoader->get_player_data().lock()->currentChapter;
@@ -585,202 +576,111 @@ void UIManager::generate_chapter_map_uis()
     add_ui_element(backButton);
 }
 
+/*
+ * Starts a battle (from the map, RETRY or NEXT STAGE): the battle start jingle, the stage (its theme
+ * follows the jingle), the battle screen. Runs as a deferred action (the UI is rebuilt).
+ */
+void UIManager::start_battle(int stageUid)
+{
+    auto stage = m_stage.lock();
+    if (!stage || !m_dataLoader->get_stage_data(stageUid)) return;
+
+    // The map opens on this stage next time (until it's won for the first time)
+    if (auto player = m_dataLoader->get_player_data().lock())
+        player->lastStage = stageUid;
+    if (m_setGameSpeedCallback) m_setGameSpeedCallback(GameSpeedState::NORMAL);
+    if (m_audio) m_audio->play_jingle("jingle_battle_start");
+    stage->load(stageUid);   // Unloads the previous battle if any
+    generate_battle_uis();
+}
+
+/*
+ * A base just fell: the battle HUD goes (nothing to click while the end plays) and the speed is normal
+ */
+void UIManager::begin_battle_end()
+{
+    m_uiElements.clear();
+    if (m_setGameSpeedCallback) m_setGameSpeedCallback(GameSpeedState::NORMAL);
+}
+
+/*
+ * The stage after this one in its chapter (-1 if it's the last one)
+ */
+int UIManager::next_stage_uid(int stageUid) const
+{
+    auto player = m_dataLoader->get_player_data().lock();
+    if (!player) return -1;
+    auto chapter = m_dataLoader->get_chapter_data(player->currentChapter);
+    if (!chapter) return -1;
+    for (size_t i = 0; i + 1 < chapter->stages.size(); ++i)
+        if (chapter->stages[i].UID == stageUid) return chapter->stages[i + 1].UID;
+    return -1;
+}
+
+/*
+ * Victory: the results panel over the frozen battlefield (shells counting up, first clear, new fish),
+ * NEXT STAGE (or the map after a chapter's last stage), RETRY, and back to the Fish Tank
+ */
 void UIManager::generate_victory_uis()
 {
     m_uiElements.clear();
+    auto stage = m_stage.lock();
+    if (!stage) return;
 
-	//std::cout << m_stage.lock()->get_current_uid() << "\n";
+    const BattleResult result = stage->get_battle_result();
+    std::string stageName;
+    if (auto stageData = m_dataLoader->get_stage_data(result.stageUID)) stageName = stageData->name;
 
-    m_setGameSpeedCallback(GameSpeedState::NORMAL);
-
-    // Victory Text
-    auto title = std::make_shared<UITextElement>(
-        sf::Vector2f{ 200.f, 100.f },
-        sf::Vector2f{ 0.f, 0.f },
-        "Victory!",
-        72
-    );
-
-    sf::FloatRect textBounds = title->get_text().getLocalBounds();
-    title->get_text().setOrigin({
-        textBounds.position.x + textBounds.size.x / 2.f,
-        textBounds.position.y + textBounds.size.y / 2.f
-        });
-    title->set_position({ 1920.f / 2.f, 1080.f / 2.f });
-
-    // Rewards
-    auto rewards = m_dataLoader->get_stage_data(m_stage.lock()->get_current_uid())->rewards;
-    int gainedShells = 0;
-	bool isNewUnitAvailable = false;
-	int newUnitUID = -1;
-
-    for (auto& reward : rewards)
+    const int nextStage = next_stage_uid(result.stageUID);
+    UIResultsPanel::Actions actions;
+    if (nextStage >= 0)
     {
-        if(reward->type == "shells")
-        {
-            gainedShells += reward->amount;
-            continue;
-		}
-
-        if (reward->type == "unit")
-        {
-            isNewUnitAvailable = true;
-			newUnitUID = reward->unitUID;
-			continue;
-        }
+        actions.primaryLabel = "NEXT STAGE";
+        actions.primary = [this, nextStage]() { m_pendingAction = [this, nextStage]() { start_battle(nextStage); }; };
     }
-
-	// Shells Reward: "+150" and the shell icon after it, centered together
-    auto shellRewardText = std::make_shared<UITextElement>(
-        sf::Vector2f{ 200.f, 100.f },
-        sf::Vector2f{ 0.f, 0.f },
-        '+' + std::to_string(gainedShells),
-        60
-    );
-
-    const float shellIconSize = 72.f;
-    const float shellIconGap = 14.f;
-    const sf::Vector2f shellRewardCenter{ 1920.f / 2.f, 1080.f / 2.f + 100.f };
-
-    sf::FloatRect shellsTextBound = shellRewardText->get_text().getLocalBounds();
-    const float shellRewardLeft = shellRewardCenter.x - (shellsTextBound.size.x + shellIconGap + shellIconSize) / 2.f;
-    shellRewardText->get_text().setOrigin({
-        shellsTextBound.position.x,
-        shellsTextBound.position.y + shellsTextBound.size.y / 2.f
-        });
-    shellRewardText->set_position({ shellRewardLeft, shellRewardCenter.y });
-
-    shellRewardText->set_text_color(sf::Color(0, 255, 255, 255));
-
-    auto shellIcon = std::make_shared<UITextureElement>(
-        sf::Vector2f{ shellIconSize, shellIconSize },
-        sf::Vector2f{ shellRewardLeft + shellsTextBound.size.x + shellIconGap, shellRewardCenter.y - shellIconSize / 2.f },
-        "assets/images/textures/ui/icon_shell.png"
-    );
-
-	// New Unit Available Text
-    auto newUnitText = std::make_shared<UITextElement>(
-        sf::Vector2f{ 200.f, 100.f },
-        sf::Vector2f{ 0.f, 0.f },
-        "A NEW UNIT IS AVAILABLE IN THE UPGRADES MENU!",
-        46
-    );
-
-    sf::FloatRect unitTextBound = newUnitText->get_text().getLocalBounds();
-    newUnitText->get_text().setOrigin({
-        unitTextBound.position.x + unitTextBound.size.x / 2.f,
-        unitTextBound.position.y + unitTextBound.size.y / 2.f
-        });
-    newUnitText->set_position({ 1920.f / 2.f, 1080.f / 2.f + 200.f });
-
-	// Show the new unit text only if a new unit is available and not already owned by the player
-    if(isNewUnitAvailable && !(m_dataLoader->get_player_data().lock()->is_unit_owned(newUnitUID)))
-        newUnitText->set_text_color(sf::Color(255, 0, 255, 255));
     else
-        newUnitText->set_text_color(sf::Color(255, 0, 255, 0));
+    {
+        actions.primaryLabel = "MAP";
+        actions.primary = [this]() { m_pendingAction = [this]() { leave_battle(); generate_chapter_map_uis(); }; };
+    }
+    actions.secondaryLabel = "RETRY";
+    actions.secondary = [this, result]() { m_pendingAction = [this, result]() { start_battle(result.stageUID); }; };
+    actions.retry = actions.secondary;
+    actions.back = [this]() { m_pendingAction = [this]() { leave_battle(); generate_fish_tank_uis(); }; };
 
-
-    // Back to menu button
-    auto menuButton = std::make_shared<UIButtonElement>(
-        sf::Vector2f{ 100.f, 100.f },
-        sf::Vector2f{ 20.f, 1080.f - 100.f - 20.f },
-        "MENU"
-    );
-    menuButton->set_callback([this]()
-        {
-            m_pendingAction = [this]() {
-                if (auto stage = m_stage.lock())
-                {
-                    m_stage.lock()->unload();
-                    generate_fish_tank_uis();
-                }
-                };
-        });
-
-    //back to map button
-    auto mapButton = std::make_shared<UIButtonElement>(
-        sf::Vector2f{ 100.f, 100.f },
-        sf::Vector2f{ 150.f, 1080.f - 100.f - 20.f },
-        "MAP"
-    );
-    mapButton->set_callback([this]()
-        {
-            m_pendingAction = [this]() {
-                if (auto stage = m_stage.lock())
-                {
-                    m_stage.lock()->unload();
-                    generate_chapter_map_uis();
-                }
-                };
-        });
-
-    add_ui_element(title);
-    add_ui_element(shellRewardText);
-    add_ui_element(shellIcon);
-    add_ui_element(newUnitText);
-
-    add_ui_element(menuButton);
-    add_ui_element(mapButton);
+    add_ui_element(std::make_shared<UIResultsPanel>(result, stageName, m_dataLoader, actions));
 }
 
+/*
+ * Defeat: the results panel (how much of the enemy base was left, a tip), RETRY, UPGRADE, back to the map
+ */
 void UIManager::generate_defeat_uis()
 {
     m_uiElements.clear();
+    auto stage = m_stage.lock();
+    if (!stage) return;
 
-    m_setGameSpeedCallback(GameSpeedState::NORMAL);
+    const BattleResult result = stage->get_battle_result();
+    std::string stageName;
+    if (auto stageData = m_dataLoader->get_stage_data(result.stageUID)) stageName = stageData->name;
 
-    // Victory Text
-    auto title = std::make_shared<UITextElement>(
-        sf::Vector2f{ 200.f, 100.f },
-        sf::Vector2f{ 0.f, 0.f },
-        "Defeat...",
-        72
-    );
+    UIResultsPanel::Actions actions;
+    actions.primaryLabel = "RETRY";
+    actions.primary = [this, result]() { m_pendingAction = [this, result]() { start_battle(result.stageUID); }; };
+    actions.retry = actions.primary;
+    actions.secondaryLabel = "UPGRADE";
+    actions.secondary = [this]() { m_pendingAction = [this]() { leave_battle(); generate_upgrade_menu_uis(); }; };
+    actions.back = [this]() { m_pendingAction = [this]() { leave_battle(); generate_chapter_map_uis(); }; };
 
-    sf::FloatRect textBounds = title->get_text().getLocalBounds();
-    title->get_text().setOrigin({
-        textBounds.position.x + textBounds.size.x / 2.f,
-        textBounds.position.y + textBounds.size.y / 2.f
-        });
-    title->set_position({ 1920.f / 2.f, 1080.f / 2.f });
+    add_ui_element(std::make_shared<UIResultsPanel>(result, stageName, m_dataLoader, actions));
+}
 
-    //back to menu button
-    auto menuButton = std::make_shared<UIButtonElement>(
-        sf::Vector2f{ 100.f, 100.f },
-        sf::Vector2f{ 20.f, 1080.f - 100.f - 20.f },
-        "MENU"
-    );
-    menuButton->set_callback([this]()
-        {
-            m_pendingAction = [this]() {
-                if (auto stage = m_stage.lock())
-                {
-                    m_stage.lock()->unload();
-                    generate_fish_tank_uis();
-                }
-                };
-        });
-
-    //back to map button
-    auto mapButton = std::make_shared<UIButtonElement>(
-        sf::Vector2f{ 100.f, 100.f },
-        sf::Vector2f{ 150.f, 1080.f - 100.f - 20.f },
-        "MAP"
-    );
-    mapButton->set_callback([this]()
-        {
-            m_pendingAction = [this]() {
-                if (auto stage = m_stage.lock())
-                {
-                    m_stage.lock()->unload();
-                    generate_chapter_map_uis();
-                }
-                };
-        });
-
-    add_ui_element(title);
-    add_ui_element(menuButton);
-    add_ui_element(mapButton);
+/*
+ * Unloads the battle before going back to the menus
+ */
+void UIManager::leave_battle()
+{
+    if (auto stage = m_stage.lock()) stage->unload();
 }
 
 bool UIManager::is_mouse_over_ui(const sf::Vector2i& worldPosition) const

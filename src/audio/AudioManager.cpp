@@ -92,6 +92,7 @@ bool AudioManager::load_sound_list(const std::string& path)
             info.pitch = value.value("pitch", 0.f);
             info.cooldown = value.value("cooldown", 0.f);
             info.maxInstances = value.value("maxInstances", 4);
+            info.priority = value.value("priority", 50);
             if (!info.buffers.empty()) m_sounds[name] = std::move(info);
         }
     }
@@ -109,6 +110,11 @@ bool AudioManager::load_sound_list(const std::string& path)
 void AudioManager::update(float realDeltaTime)
 {
     m_clock += realDeltaTime;
+
+    // Pause ducking ramps instead of jumping
+    const float duckTarget = m_isDucked ? DUCKED_LEVEL : 1.f;
+    const float duckStep = (1.f - DUCKED_LEVEL) * realDeltaTime / DUCK_RAMP_SECONDS;
+    m_duckLevel = duckTarget < m_duckLevel ? std::max(duckTarget, m_duckLevel - duckStep) : std::min(duckTarget, m_duckLevel + duckStep);
 
     auto fade = [realDeltaTime](Track& track)
         {
@@ -268,7 +274,12 @@ void AudioManager::stop_music(float fadeSeconds)
 
 void AudioManager::set_music_ducked(bool isDucked)
 {
-    m_isDucked = isDucked;
+    m_isDucked = isDucked;   // update() ramps the level
+}
+
+void AudioManager::set_battle_mix(bool isBattle)
+{
+    m_isBattleMix = isBattle;
     if (m_current) apply_volume(*m_current);
 }
 
@@ -284,15 +295,15 @@ bool AudioManager::has_music(const std::string& name) const
 
 void AudioManager::apply_volume(Track& track) const
 {
-    const float ducking = m_isDucked ? DUCKED_LEVEL : 1.f;
-    track.music->setVolume(std::clamp(m_musicVolume * track.level * ducking, 0.f, 100.f));
+    const float battle = m_isBattleMix ? BATTLE_MUSIC_LEVEL : 1.f;
+    track.music->setVolume(std::clamp(m_musicVolume * track.level * m_duckLevel * battle, 0.f, 100.f));
 }
 
 // ==================
 // Sounds
 // ==================
 
-void AudioManager::play_sound(const std::string& name, float volumeScale)
+void AudioManager::play_sound(const std::string& name, float volumeScale, float pan)
 {
     const auto found = m_sounds.find(name);
     if (found == m_sounds.end())
@@ -306,16 +317,36 @@ void AudioManager::play_sound(const std::string& name, float volumeScale)
     }
     SoundInfo& info = found->second;
 
-    // Too soon after the last one, or too many of them at once: skipped
+    // Too soon after the last one: skipped
     if (m_clock - info.lastPlayed < info.cooldown) return;
+
+    // Too many of it at once: the oldest one gives its place
     const auto playing = std::count_if(m_voices.begin(), m_voices.end(), [&name](const Voice& voice) { return voice.name == name; });
-    if (playing >= info.maxInstances) return;
-    if (m_voices.size() >= MAX_VOICES) return;
+    if (playing >= info.maxInstances)
+    {
+        auto oldest = std::find_if(m_voices.begin(), m_voices.end(), [&name](const Voice& voice) { return voice.name == name; });
+        if (oldest != m_voices.end()) m_voices.erase(oldest);
+    }
+
+    // All the voices are busy (the last few are kept for the important sounds): the oldest voice of
+    // a lower or equal priority gives its place, else this one is skipped
+    const size_t limit = info.priority >= 80 ? MAX_VOICES : MAX_VOICES - RESERVED_VOICES;
+    if (m_voices.size() >= limit)
+    {
+        auto victim = m_voices.end();
+        for (auto it = m_voices.begin(); it != m_voices.end(); ++it)
+            if (it->priority <= info.priority && (victim == m_voices.end() || it->priority < victim->priority
+                || (it->priority == victim->priority && it->started < victim->started)))
+                victim = it;
+        if (victim == m_voices.end()) return;
+        m_voices.erase(victim);
+    }
 
     std::uniform_int_distribution<size_t> pickVariant(0, info.buffers.size() - 1);
     std::uniform_real_distribution<float> pickPitch(-info.pitch, info.pitch);
 
-    Voice voice{ name, std::make_unique<sf::Sound>(*info.buffers[pickVariant(m_random)]) };
+    Voice voice{ name, std::make_unique<sf::Sound>(*info.buffers[pickVariant(m_random)]), info.priority, m_clock };
+    voice.sound->setPan(std::clamp(pan, -1.f, 1.f));
     voice.sound->setVolume(std::clamp(m_soundVolume * info.volume * volumeScale, 0.f, 100.f));
     voice.sound->setPitch(1.f + (info.pitch > 0.f ? pickPitch(m_random) : 0.f));
     voice.sound->play();

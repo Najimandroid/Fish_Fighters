@@ -37,7 +37,16 @@ void UIDeploymentIcons::show_message(const std::string& text)
  */
 void UIDeploymentIcons::init_icons()
 {
-    const int rows = 2;
+    std::array<int, 10> equippedUnits;
+    if (auto player = m_dataLoader->get_player_data().lock())
+        equippedUnits = player->equippedUnits; // retrieve equipped unit IDs
+    else
+        equippedUnits.fill(-1); // no units equipped
+
+    // The second row only when it holds a fish: otherwise the first row sits at the bottom, giving the
+    // battlefield more room
+    const bool hasSecondRow = std::any_of(equippedUnits.begin() + 5, equippedUnits.end(), [](int uid) { return uid >= 0; });
+    const int rows = hasSecondRow ? 2 : 1;
     const int cols = 5;
 
     const float iconWidth = UIBattleIcon::WIDTH;
@@ -53,11 +62,10 @@ void UIDeploymentIcons::init_icons()
 
     int index = 0;
 
-    std::array<int, 10> equippedUnits;
-    if (auto player = m_dataLoader->get_player_data().lock())
-        equippedUnits = player->equippedUnits; // retrieve equipped unit IDs
-    else
-        equippedUnits.fill(-1); // no units equipped
+    // Keys 1 to 0 deploy the slots in order
+    const sf::Keyboard::Key keys[10] = { sf::Keyboard::Key::Num1, sf::Keyboard::Key::Num2, sf::Keyboard::Key::Num3,
+        sf::Keyboard::Key::Num4, sf::Keyboard::Key::Num5, sf::Keyboard::Key::Num6, sf::Keyboard::Key::Num7,
+        sf::Keyboard::Key::Num8, sf::Keyboard::Key::Num9, sf::Keyboard::Key::Num0 };
 
     for (int row = 0; row < rows; ++row)
     {
@@ -83,6 +91,8 @@ void UIDeploymentIcons::init_icons()
                 icon->set_uid(uid);
                 icon->set_cost(unitData->cost);
                 icon->set_max_cooldown(unitData->cooldown);
+                icon->set_hotkey(keys[index]);
+                icon->set_key_label(std::to_string((index + 1) % 10));
 
                 std::weak_ptr<EntityData> weakData = unitData;
 
@@ -95,7 +105,7 @@ void UIDeploymentIcons::init_icons()
                     {
                         auto icon = weakIcon.lock();
                         if (!icon) return;
-                        if (icon->get_if_on_cooldown()) { UIElement::play_sound("ui_error"); return; }
+                        if (icon->get_if_on_cooldown()) { icon->shake(); UIElement::play_sound("ui_error"); return; }
 
                         if (auto data = weakData.lock())
                         {
@@ -106,10 +116,11 @@ void UIDeploymentIcons::init_icons()
                             if (stage->is_unit_limit_reached())
                             {
                                 show_message("UNIT LIMIT REACHED");
+                                icon->shake();
                                 UIElement::play_sound("ui_error");
                                 return;
                             }
-                            if (stage->get_cash() < data->cost) { UIElement::play_sound("ui_error"); return; }
+                            if (stage->get_cash() < data->cost) { icon->shake(); UIElement::play_sound("ui_error"); return; }
 
                             // The stage plays the deploy sound
                             if (stage->spawn_unit(data)) icon->start_cooldown();
@@ -133,22 +144,19 @@ void UIDeploymentIcons::init_icons()
 
 /*
  * Updates each icon's state:
- * - Darkens icons if unit cannot be deployed (insufficient cash, cooldown, or empty slot)
+ * - Darkens the slots the wallet can't pay yet, and how close it is (the slots show their cooldown themselves)
  * - Updates cooldown timers
  */
 void UIDeploymentIcons::update(float deltaTime)
 {
+    auto stage = m_stage.lock();
     for (auto& icon : m_icons)
     {
-        if (m_stage.lock()->get_cash() < icon->get_cost() || icon->get_if_on_cooldown() || icon->get_uid() < 0)
-        {
-            icon->set_darkened(true);
-        }
-        else
-        {
-            icon->set_darkened(false);
-        }
-
+        if (!icon) continue;
+        // Not enough cash (the slot shows its cooldown itself); how full the wallet is toward the price
+        const int cash = stage ? stage->get_cash() : 0;
+        icon->set_darkened(icon->get_uid() < 0 || cash < icon->get_cost());
+        icon->set_affordability(icon->get_cost() > 0 ? static_cast<float>(cash) / icon->get_cost() : 1.f);
         icon->update(deltaTime);
     }
 
@@ -164,7 +172,7 @@ void UIDeploymentIcons::render(sf::RenderWindow& window)
 
     for (auto& icon : m_icons)
     {
-        icon->render(window);
+        if (icon) icon->render(window);
     }
 
     if (m_messageTime > 0.f)
@@ -191,7 +199,7 @@ void UIDeploymentIcons::handle_event(const sf::Event& event, const sf::RenderWin
 {
     for (auto& icon : m_icons)
     {
-        icon->handle_event(event, window);
+        if (icon) icon->handle_event(event, window);
     }
 }
 

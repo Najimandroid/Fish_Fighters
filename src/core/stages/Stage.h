@@ -2,6 +2,7 @@
 
 #include "../../data/EnemyStageData.h"
 #include "../../data/BattlefieldLayout.h"
+#include "../../data/BattleResult.h"
 #include "../DataLoader.h"
 #include "../entities/BattleBase.h"
 #include "../combat/DamageCalculator.h"
@@ -79,6 +80,11 @@ public:
     // ===== Sounds =====
     // Plays a sound of sfx.json (nothing without audio)
     void play_sound(const std::string& name, float volumeScale = 1.f) const;
+    // A battle sound panned to where it happens (worldX) on screen, a bit quieter when it's off screen
+    void play_sound_at(const std::string& name, float worldX, float volumeScale = 1.f) const;
+
+    // name, or fallback if sfx.json doesn't have it yet
+    void play_sound_or(const std::string& name, const std::string& fallback, float volumeScale = 1.f) const;
 
     // An attack hit at least one target: the attacker's attack sound, and the clang of a base if one was hit
     void on_attack_landed(const BattleEntity& attacker, bool hasHitBase) const;
@@ -138,6 +144,13 @@ public:
     // True when as many units as the stage allows are on the field (deploying shows a message)
     bool is_unit_limit_reached() const;
 
+    // How the last battle ended (for the results screen)
+    const BattleResult& get_battle_result() const;
+
+    // The end of the battle is playing (a base fell: the battle freezes, the losing base sinks,
+    // then the results screen opens)
+    bool is_finishing() const;
+
     // Get the loaded stage's id
 	int get_current_uid() const;
 
@@ -191,6 +204,10 @@ private:
     std::string m_musicChange;               // Theme to switch to once the enemy base is low enough ("" = none)
     float m_musicChangeBaseHealth = 50.f;    // ...at or below this % of its health
     bool m_hasMusicChanged = false;
+    float m_lastBaseAlarm = -100.f;          // Elapsed time of the last low-health alarm of the fish bowl
+    float m_musicChangeAt = -1.f;            // Elapsed time the boss theme starts (after its stinger), -1: none
+    static constexpr float BASE_ALARM_HEALTH = 0.3f;     // Below 30% of its health...
+    static constexpr float BASE_ALARM_SECONDS = 4.f;     // ...at most every 4 seconds
 
     std::vector<std::shared_ptr<EnemyStageData>> m_enemyStageDatas; // Enemy spawn datas
 
@@ -221,6 +238,14 @@ private:
     float m_elapsedTime = 0.f;               // Time elapsed since stage load
     bool m_isOnEndScreen = false;            // Is the victory/defeat screen visible
 
+    // ----- End of the battle -----
+    BattleResult m_result;
+    float m_finishTime = -1.f;               // Seconds since a base fell (-1: the battle is on)
+    bool m_isFinishJinglePlayed = false;
+    bool m_isResultsScreenShown = false;
+    static constexpr float FINISH_JINGLE_DELAY = 0.6f;    // After the explosion, so it isn't buried under it
+    static constexpr float FINISH_RESULTS_DELAY = 1.1f;   // The results screen opens
+
 private:
 
     // Spawn bases at the start of the stage
@@ -228,6 +253,14 @@ private:
 
     // Switches to the stage's second theme once the enemy base's health is low enough (once per battle)
     void update_music();
+
+    // A base fell: saves the result, freezes the battle, plays the explosion (the jingle and the results
+    // screen follow in update_finish)
+    void begin_finish(bool isVictory);
+    void update_finish(float deltaTime);
+
+    // The losing base during the finish: shaking, then sinking and fading
+    void draw_falling_base(sf::RenderWindow& window, const BattleBase& base) const;
 
     // A dead enemy's cash drop (EntityData::cashDrop) goes to the wallet, up to its size, with a "+X$" popup
     void reward_kill(const BattleEntity& enemy);

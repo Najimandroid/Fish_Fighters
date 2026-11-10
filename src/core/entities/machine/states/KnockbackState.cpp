@@ -32,7 +32,7 @@ void KnockbackState::enter()
 
     // Boing (a boss's shockwave has its own sound, played once for every fish)
     if (!entity->isOnShockwave)
-        if (auto stage = m_machine->get_stage().lock()) stage->play_sound("knockback");
+        if (auto stage = m_machine->get_stage().lock()) stage->play_sound_at("knockback", entity->position.x);
 
     // Convert duration in seconds to milliseconds for tweeny::during (expects integer-like durations)
     uint32_t totalMs = static_cast<uint32_t>(m_KNOCKBACK_DURATION * 1000.0f);

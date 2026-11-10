@@ -28,7 +28,7 @@ void DeadState::enter()
 
     // A fish faints (bloop bloop), an enemy pops
     if (auto stage = m_machine->get_stage().lock())
-        stage->play_sound(std::dynamic_pointer_cast<BattleUnit>(entity) ? "death_unit" : "death_enemy");
+        stage->play_sound_at(std::dynamic_pointer_cast<BattleUnit>(entity) ? "death_unit" : "death_enemy", entity->position.x);
 }
 
 // ==================
