@@ -564,22 +564,33 @@ void UIManager::generate_victory_uis()
         }
     }
 
-	// Shells Reward Text
+	// Shells Reward: "+150" and the shell icon after it, centered together
     auto shellRewardText = std::make_shared<UITextElement>(
         sf::Vector2f{ 200.f, 100.f },
         sf::Vector2f{ 0.f, 0.f },
-        '+' + std::to_string(gainedShells) + " \xA4", // \xA4: the shells symbol (currency sign) in the game's code page
+        '+' + std::to_string(gainedShells),
         60
     );
 
+    const float shellIconSize = 72.f;
+    const float shellIconGap = 14.f;
+    const sf::Vector2f shellRewardCenter{ 1920.f / 2.f, 1080.f / 2.f + 100.f };
+
     sf::FloatRect shellsTextBound = shellRewardText->get_text().getLocalBounds();
+    const float shellRewardLeft = shellRewardCenter.x - (shellsTextBound.size.x + shellIconGap + shellIconSize) / 2.f;
     shellRewardText->get_text().setOrigin({
-        shellsTextBound.position.x + shellsTextBound.size.x / 2.f,
+        shellsTextBound.position.x,
         shellsTextBound.position.y + shellsTextBound.size.y / 2.f
         });
-    shellRewardText->set_position({ 1920.f / 2.f, 1080.f / 2.f + 100.f});
+    shellRewardText->set_position({ shellRewardLeft, shellRewardCenter.y });
 
     shellRewardText->set_text_color(sf::Color(0, 255, 255, 255));
+
+    auto shellIcon = std::make_shared<UITextureElement>(
+        sf::Vector2f{ shellIconSize, shellIconSize },
+        sf::Vector2f{ shellRewardLeft + shellsTextBound.size.x + shellIconGap, shellRewardCenter.y - shellIconSize / 2.f },
+        "assets/images/textures/ui/icon_shell.png"
+    );
 
 	// New Unit Available Text
     auto newUnitText = std::make_shared<UITextElement>(
@@ -639,6 +650,7 @@ void UIManager::generate_victory_uis()
 
     add_ui_element(title);
     add_ui_element(shellRewardText);
+    add_ui_element(shellIcon);
     add_ui_element(newUnitText);
 
     add_ui_element(menuButton);
