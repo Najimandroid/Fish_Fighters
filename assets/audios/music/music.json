@@ -79,16 +79,41 @@
         "loopStart": 3941053,
         "loopLength": 3637895
     },
+    "theme_crab": {
+        "title": "Crab Cove",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_crab.ogg",
+        "sampleRate": 48000,
+        "loopStart": 4363636,
+        "loopLength": 4189091
+    },
+    "theme_crab_boss": {
+        "title": "King Crab",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_crab_boss.ogg",
+        "sampleRate": 48000,
+        "loopStart": 3840000,
+        "loopLength": 3544615
+    },
+    "jingle_battle_start": {
+        "title": "Battle Start",
+        "kind": "jingle",
+        "file": "assets/audios/music/jingle_battle_start.ogg",
+        "sampleRate": 48000,
+        "length": 2.438
+    },
     "jingle_victory": {
         "title": "Victory",
         "kind": "jingle",
         "file": "assets/audios/music/jingle_victory.ogg",
-        "sampleRate": 48000
+        "sampleRate": 48000,
+        "length": 2.4
     },
     "jingle_defeat": {
         "title": "Defeat",
         "kind": "jingle",
         "file": "assets/audios/music/jingle_defeat.ogg",
-        "sampleRate": 48000
+        "sampleRate": 48000,
+        "length": 5
     }
 }

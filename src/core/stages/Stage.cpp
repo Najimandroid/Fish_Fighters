@@ -102,7 +102,7 @@ void Stage::load(int uid)
 	m_musicChange = stageJson->musicChange;
 	m_musicChangeBaseHealth = stageJson->musicChangeBaseHealth;
 	m_hasMusicChanged = false;
-	if (m_audio) m_audio->play_music(stageJson->music);
+	if (m_audio) m_audio->queue_music(stageJson->music);   // After the battle start jingle
 
 	m_isLoaded = true;
 }
@@ -117,6 +117,28 @@ void Stage::update_music()
 
 	m_audio->play_music(m_musicChange, 1.5f);
 	m_hasMusicChanged = true;
+}
+
+void Stage::reward_kill(const BattleEntity& enemy)
+{
+	const int amount = enemy.data ? enemy.data->cashDrop : 0;
+	if (amount <= 0) return;
+
+	m_currentCash = std::min(m_maxCash, m_currentCash + amount);
+
+	const sf::FloatRect bounds = enemy.sprite.getGlobalBounds();
+	m_cashPopups.push_back({ { bounds.position.x + bounds.size.x / 2.f, bounds.position.y }, amount, 0.f });
+	play_sound("cash_drop");
+}
+
+const std::vector<CashPopup>& Stage::get_cash_popups() const
+{
+	return m_cashPopups;
+}
+
+bool Stage::is_unit_limit_reached() const
+{
+	return m_unitsCount >= m_unitsLimit;
 }
 
 void Stage::play_sound(const std::string& name, float volumeScale) const
@@ -140,6 +162,7 @@ void Stage::unload()
 
 	m_currentCash = 0;
 	m_cashRemainder = 0.f;
+	m_cashPopups.clear();
 	m_nextEntityId = 0;
 
 	m_enemies.clear();
@@ -169,6 +192,10 @@ void Stage::update(float deltaTime)
 	if (!m_isLoaded) return;
 
 	m_elapsedTime += deltaTime;
+
+	// The "+X$" popups rise and fade, then go
+	for (auto& popup : m_cashPopups) popup.age += deltaTime;
+	std::erase_if(m_cashPopups, [](const CashPopup& popup) { return popup.age >= CASH_POPUP_SECONDS; });
 
 	//std::cout << "[Base Health]: " << m_enemyBase->currentHealth << " / " << m_enemyBase->maxHealth << "\n";
 
@@ -226,7 +253,12 @@ void Stage::update(float deltaTime)
 		{
 			auto stageData = m_dataLoader->get_stage_data(m_uid);
 			if (stageData)
+			{
+				// A first win opens the map on the newest stage; a replay keeps it here (farming)
+				if (!player->has_completed_stage(m_uid))
+					player->lastStage = -1;
 				player->complete_stage(stageData);
+			}
 
 			m_dataLoader->save_progress();
 		}
@@ -297,6 +329,8 @@ void Stage::update_enemies(float deltaTime)
 			auto enemy = itvec.operator*();
 			if (enemy->isDead)
 			{
+				reward_kill(*enemy);
+
 				//remove enemy from map
 				std::cout << "Enemy dead\n";
 				itvec = enemyList.erase(itvec); // TODO: create remove_enemy();

@@ -84,6 +84,8 @@ void UIChapterMap::select_stage(int stageUID)
 {
     if (stageUID != m_selectedStage) play_sound("ui_select");
     m_selectedStage = stageUID;
+    if (auto player = m_playerData.lock())
+        player->lastStage = stageUID;   // The map opens here next time
     std::cout << "Selected stage " << stageUID << "\n";
 
     auto it = std::find_if(m_stageIcons.begin(), m_stageIcons.end(),
@@ -161,6 +163,13 @@ void UIChapterMap::build_stage_icons()
         for (auto [uid, position] : m_currentChapter->stages)
             if (uid == m_selectedStage) { stillInChapter = true; break; }
         if (!stillInChapter) m_selectedStage = -1;
+    }
+
+    // The last stage played, if it's in this chapter (and unlocked)
+    if (m_selectedStage == -1 && player->lastStage != -1)
+    {
+        for (const StageIcon& icon : m_stageIcons)
+            if (icon.stageUID == player->lastStage) { m_selectedStage = icon.stageUID; break; }
     }
 
     if (m_selectedStage == -1 && !m_currentChapter->stages.empty())

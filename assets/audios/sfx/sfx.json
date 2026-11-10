@@ -3,45 +3,45 @@
         "files": [
             "assets/audios/sfx/ui_click.ogg"
         ],
-        "volume": 0.55,
-        "pitch": 0.04,
-        "cooldown": 0.03,
-        "maxInstances": 2
+        "volume": 0.3,
+        "pitch": 0.03,
+        "cooldown": 0.04,
+        "maxInstances": 1
     },
     "ui_back": {
         "files": [
             "assets/audios/sfx/ui_back.ogg"
         ],
-        "volume": 0.5,
+        "volume": 0.28,
         "pitch": 0.03,
-        "cooldown": 0.03,
-        "maxInstances": 2
+        "cooldown": 0.04,
+        "maxInstances": 1
     },
     "ui_select": {
         "files": [
             "assets/audios/sfx/ui_select.ogg"
         ],
-        "volume": 0.45,
-        "pitch": 0.05,
-        "cooldown": 0.03,
-        "maxInstances": 2
+        "volume": 0.22,
+        "pitch": 0.04,
+        "cooldown": 0.06,
+        "maxInstances": 1
     },
     "ui_transition": {
         "files": [
             "assets/audios/sfx/ui_transition.ogg"
         ],
-        "volume": 0.4,
+        "volume": 0.18,
         "pitch": 0.03,
-        "cooldown": 0.1,
+        "cooldown": 0.2,
         "maxInstances": 1
     },
     "ui_error": {
         "files": [
             "assets/audios/sfx/ui_error.ogg"
         ],
-        "volume": 0.55,
+        "volume": 0.32,
         "pitch": 0,
-        "cooldown": 0.15,
+        "cooldown": 0.25,
         "maxInstances": 1
     },
     "ui_pause": {
@@ -75,7 +75,7 @@
         "files": [
             "assets/audios/sfx/purchase.ogg"
         ],
-        "volume": 0.8,
+        "volume": 0.65,
         "pitch": 0,
         "cooldown": 0.1,
         "maxInstances": 2
@@ -93,7 +93,7 @@
         "files": [
             "assets/audios/sfx/equip.ogg"
         ],
-        "volume": 0.6,
+        "volume": 0.5,
         "pitch": 0.04,
         "cooldown": 0.05,
         "maxInstances": 2
@@ -102,19 +102,10 @@
         "files": [
             "assets/audios/sfx/unequip.ogg"
         ],
-        "volume": 0.5,
+        "volume": 0.4,
         "pitch": 0.04,
         "cooldown": 0.05,
         "maxInstances": 2
-    },
-    "battle_start": {
-        "files": [
-            "assets/audios/sfx/battle_start.ogg"
-        ],
-        "volume": 0.8,
-        "pitch": 0,
-        "cooldown": 1,
-        "maxInstances": 1
     },
     "deploy": {
         "files": [
@@ -125,6 +116,15 @@
         "pitch": 0.06,
         "cooldown": 0.05,
         "maxInstances": 3
+    },
+    "cash_drop": {
+        "files": [
+            "assets/audios/sfx/cash_drop.ogg"
+        ],
+        "volume": 0.3,
+        "pitch": 0.06,
+        "cooldown": 0.06,
+        "maxInstances": 2
     },
     "cash_up": {
         "files": [

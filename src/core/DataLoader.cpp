@@ -358,6 +358,8 @@ bool DataLoader::load_enemies(const std::string& path)
         data->shadowScale = read_shadow_scale(value);
         data->shadowOffset = value.contains("shadowOffset") ? read_float(value, "shadowOffset") : 0.f;
         if (value.contains("attackSound")) data->attackSound = value.at("attackSound").get<std::string>();
+        data->cashDrop = value.contains("cashDrop") ? read_int(value, "cashDrop") : 0;
+        if (data->cashDrop < 0) throw std::runtime_error(data->name + ": \"cashDrop\" can't be negative");
 
         m_enemiesDatabase[data->UID] = data;
     }
@@ -669,6 +671,10 @@ bool DataLoader::load_player(const std::string& path)
         // Current chapter
         m_playerData->currentChapter = read_int(j.at("progression"), "currentChapter");
 
+        // Stage the map opens on (missing in older saves)
+        m_playerData->lastStage = j.at("progression").contains("lastStage")
+            ? read_int(j.at("progression"), "lastStage") : -1;
+
         // Enemies met in battle (missing in older saves)
         m_playerData->seenEnemies.clear();
         if (j.at("progression").contains("seenEnemies"))
@@ -747,6 +753,7 @@ bool DataLoader::save_player(const std::string& path)
 
     // Current chapter
     j["progression"]["currentChapter"] = m_playerData->currentChapter;
+    j["progression"]["lastStage"] = m_playerData->lastStage;
 
     // Enemies met in battle (sorted, so the file doesn't change order between saves)
     std::vector<int> seenEnemies(m_playerData->seenEnemies.begin(), m_playerData->seenEnemies.end());

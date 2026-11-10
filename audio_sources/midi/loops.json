@@ -89,6 +89,33 @@
         "loopStartSample": 3941053,
         "loopLengthSample": 3637895
     },
+    "theme_crab": {
+        "title": "Crab Cove",
+        "kind": "stage",
+        "tempo": 132,
+        "sampleRate": 48000,
+        "lengthSeconds": 178.2,
+        "loopStartSample": 4363636,
+        "loopLengthSample": 4189091
+    },
+    "theme_crab_boss": {
+        "title": "King Crab",
+        "kind": "stage",
+        "tempo": 156,
+        "sampleRate": 48000,
+        "lengthSeconds": 153.858,
+        "loopStartSample": 3840000,
+        "loopLengthSample": 3544615
+    },
+    "jingle_battle_start": {
+        "title": "Battle Start",
+        "kind": "jingle",
+        "tempo": 160,
+        "sampleRate": 48000,
+        "lengthSeconds": 2.438,
+        "loopStartSample": null,
+        "loopLengthSample": null
+    },
     "jingle_victory": {
         "title": "Victory",
         "kind": "jingle",

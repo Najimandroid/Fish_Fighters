@@ -50,6 +50,10 @@ public:
     // The music fades out quickly and the jingle plays once
     void play_jingle(const std::string& name);
 
+    // Plays this theme once the jingle playing ends (the battle start jingle, then the stage's theme);
+    // without a jingle it plays right away. play_music and play_jingle cancel it
+    void queue_music(const std::string& name);
+
     void stop_music(float fadeSeconds = 0.6f);
 
     // The pause menu: the music plays quieter while it's open
@@ -74,6 +78,7 @@ private:
         unsigned int sampleRate = 48000;
         std::uint64_t loopStart = 0;      // In samples (per channel): where the loop starts
         std::uint64_t loopLength = 0;     // 0: plays once (jingles)
+        float length = 0.f;               // Jingles: seconds until their last note ends (a queued theme starts there)
     };
 
     struct SoundInfo
@@ -91,6 +96,8 @@ private:
     {
         std::string name;
         std::unique_ptr<sf::Music> music;
+        bool isJingle = false;       // Plays once (no loop points)
+        float length = 0.f;          // Jingles: where the last note ends
         float level = 0.f;           // 0 to 1, before the music volume and the ducking
         float target = 1.f;          // Level it fades to
         float fadeSpeed = 0.f;       // Level per second (0: no fade)
@@ -122,6 +129,7 @@ private:
     float m_musicVolume = 70.f;
     float m_soundVolume = 100.f;
     bool m_isDucked = false;
+    std::string m_queuedMusic;                         // Starts when the jingle playing ends
     std::vector<std::string> m_reportedMissing;        // Unknown names already reported (once each)
 
     std::mt19937 m_random;

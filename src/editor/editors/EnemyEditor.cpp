@@ -37,6 +37,9 @@ namespace
         if (begin_properties("Stats"))
         {
             EntityFields::stats(ctx, ENEMIES_FILE, enemy);
+            int_field(ctx, ENEMIES_FILE, "Cash dropped", enemy, "cashDrop", 0, 1000000,
+                "Battle cash the player gets when it dies (up to the wallet's size), like the money enemies drop in "
+                "The Battle Cats: farming weak enemies before a boss pays for Cash Up and more fish.", 1.f, "%d $");
             end_properties();
         }
 

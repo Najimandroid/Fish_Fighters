@@ -93,6 +93,7 @@ for (const [name, info] of Object.entries(loops)) {
     // title and kind (menu / stage / jingle) are for the editor's music lists
     manifest[name] = { title: info.title, kind: info.kind, file: "assets/audios/music/" + name + ".ogg", sampleRate: RATE };
     if (looped) Object.assign(manifest[name], { loopStart: info.loopStartSample, loopLength: info.loopLengthSample });
+    else manifest[name].length = info.lengthSeconds;   // Jingles: where the last note ends (the reverb rings after it)
     console.log(name.padEnd(16), (samples.length / 2 / RATE).toFixed(2).padStart(7) + " s",
         "  " + (measured + 20 * Math.log10(gain)).toFixed(1) + " LUFS", "  peak " + (20 * Math.log10(peak * gain)).toFixed(1) + " dBFS",
         "  " + (fs.statSync(file).size / 1024 / 1024).toFixed(2) + " MB");

@@ -32,6 +32,14 @@
 
 using BattleEntitiesMap_t = std::map<int, std::vector<std::shared_ptr<BattleEntity>>>;
 
+// "+50$" rising where an enemy died and dropped cash (drawn by UICashPopups)
+struct CashPopup
+{
+    sf::Vector2f position;   // World position (above the enemy)
+    int amount = 0;
+    float age = 0.f;         // Seconds since it appeared
+};
+
 class DataLoader;
 class BattleEnemy;
 class BattleUnit;
@@ -123,6 +131,13 @@ public:
     int get_cash() const;
     int get_max_cash() const;
 
+    // The cash dropped by the enemies that just died ("+50$" texts)
+    const std::vector<CashPopup>& get_cash_popups() const;
+    static constexpr float CASH_POPUP_SECONDS = 1.2f;
+
+    // True when as many units as the stage allows are on the field (deploying shows a message)
+    bool is_unit_limit_reached() const;
+
     // Get the loaded stage's id
 	int get_current_uid() const;
 
@@ -157,6 +172,7 @@ private:
     int m_maxCash = BASE_MAX_CASH;           // Maximum cash allowed
 	int m_cashPerSecond = BASE_CASH_PER_SECOND; // Cash gained per second (with no upgrades)
     float m_cashRemainder = 0.f;             // Fraction of cash earned but not added yet (frame-rate independent income)
+    std::vector<CashPopup> m_cashPopups;     // Cash dropped by enemies, shown for CASH_POPUP_SECONDS
 
     int m_enemiesLimit = 5;                  // Maximum number of enemies
     int m_unitsLimit = 5;                    // Maximum number of units
@@ -212,6 +228,9 @@ private:
 
     // Switches to the stage's second theme once the enemy base's health is low enough (once per battle)
     void update_music();
+
+    // A dead enemy's cash drop (EntityData::cashDrop) goes to the wallet, up to its size, with a "+X$" popup
+    void reward_kill(const BattleEntity& enemy);
 
     // The background image, made seamless when backgrounds.json asks for it (the file isn't changed)
     void load_background_texture(const BackgroundData& background);

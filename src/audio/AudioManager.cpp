@@ -50,6 +50,7 @@ bool AudioManager::load_music_list(const std::string& path)
             info.sampleRate = value.value("sampleRate", 48000u);
             info.loopStart = value.value("loopStart", std::uint64_t{ 0 });
             info.loopLength = value.value("loopLength", std::uint64_t{ 0 });
+            info.length = value.value("length", 0.f);
             m_musicInfos[name] = info;
         }
     }
@@ -122,8 +123,20 @@ void AudioManager::update(float realDeltaTime)
     {
         fade(*m_current);
         apply_volume(*m_current);
+
+        // A queued theme starts once the jingle's last note ends; the jingle's reverb rings out under it
+        const bool isStopped = m_current->music->getStatus() == sf::SoundSource::Status::Stopped;
+        if (m_current->isJingle && !m_queuedMusic.empty()
+            && (isStopped || (m_current->length > 0.f && m_current->music->getPlayingOffset().asSeconds() >= m_current->length)))
+        {
+            const std::string next = m_queuedMusic;
+            m_current->target = 0.f;
+            m_current->fadeSpeed = 1.f / 1.5f;
+            m_fadingOut.push_back(std::move(m_current));
+            play_music(next, 0.f);
+        }
         // A jingle that ended is done
-        if (m_current->music->getStatus() == sf::SoundSource::Status::Stopped && m_current->fadeSpeed == 0.f)
+        else if (isStopped && m_current->fadeSpeed == 0.f)
             m_current.reset();
     }
 
@@ -176,6 +189,11 @@ std::unique_ptr<AudioManager::Track> AudioManager::open_track(const std::string&
         track->music->setLoopPoints({ toTime(info->second.loopStart), toTime(info->second.loopLength) });
         track->music->setLooping(true);
     }
+    else
+    {
+        track->isJingle = true;
+        track->length = info->second.length;
+    }
     return track;
 }
 
@@ -196,6 +214,7 @@ void AudioManager::fade_out_current(float fadeSeconds)
 
 void AudioManager::play_music(const std::string& name, float fadeSeconds)
 {
+    m_queuedMusic.clear();
     if (m_current && m_current->name == name) return;
 
     auto track = open_track(name);
@@ -213,6 +232,7 @@ void AudioManager::play_music(const std::string& name, float fadeSeconds)
 
 void AudioManager::play_jingle(const std::string& name)
 {
+    m_queuedMusic.clear();
     auto track = open_track(name);
     if (!track) return;
 
@@ -222,6 +242,14 @@ void AudioManager::play_jingle(const std::string& name)
     apply_volume(*track);
     track->music->play();
     m_current = std::move(track);
+}
+
+void AudioManager::queue_music(const std::string& name)
+{
+    const bool isJinglePlaying = m_current && m_current->isJingle
+        && m_current->music->getStatus() == sf::SoundSource::Status::Playing;
+    if (isJinglePlaying) m_queuedMusic = name;
+    else play_music(name);
 }
 
 void AudioManager::stop_music(float fadeSeconds)

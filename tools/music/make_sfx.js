@@ -212,44 +212,43 @@ const define = (name, settings, variants, build) => SOUNDS.push({ name, settings
 const PITCHES = [1, 0.92, 1.09];
 
 // ----- Menus -----
-define("ui_click", { volume: 0.55, pitch: 0.04, cooldown: 0.03, maxInstances: 2 }, 1, p => {
-    const s = new Sound(0.4);
-    tone(s, { dur: 0.06, freq: t => 950 * p * Math.pow(1.5, t / 0.06), amp: 0.35, tau: 0.025 });          // a bubbly blip, rising
-    noise(s, { dur: 0.012, amp: 0.25, tau: 0.003, filter: { type: "highpass", freq: 3000 } });           // the click
-    bubble(s, { at: 0.02, freq: 1400 * p, size: 0.03, amp: 0.15 });
+// The sounds of what gets clicked all the time are short, soft and low: a muted tap, not a melody
+define("ui_click", { volume: 0.3, pitch: 0.03, cooldown: 0.04, maxInstances: 1 }, 1, p => {
+    const s = new Sound(0.25);
+    tone(s, { dur: 0.04, freq: t => 560 * p * Math.pow(0.8, t / 0.04), wave: "triangle", amp: 0.45, tau: 0.012 });   // a muted tap
+    noise(s, { dur: 0.008, amp: 0.12, tau: 0.002, filter: { type: "bandpass", freq: 2200, q: 1.5 } });
+    filterAll(s, "lowpass", 3000);
+    reverb(s, 0.06);
+    return s;
+});
+define("ui_back", { volume: 0.28, pitch: 0.03, cooldown: 0.04, maxInstances: 1 }, 1, p => {
+    const s = new Sound(0.25);
+    tone(s, { dur: 0.05, freq: t => 420 * p * Math.pow(0.75, t / 0.05), wave: "triangle", amp: 0.45, tau: 0.015 });  // the tap, lower
+    noise(s, { dur: 0.008, amp: 0.1, tau: 0.002, filter: { type: "bandpass", freq: 1800, q: 1.5 } });
+    filterAll(s, "lowpass", 2500);
+    reverb(s, 0.06);
+    return s;
+});
+define("ui_select", { volume: 0.22, pitch: 0.04, cooldown: 0.06, maxInstances: 1 }, 1, p => {
+    const s = new Sound(0.3);
+    tone(s, { dur: 0.06, freq: 1320 * p, amp: 0.35, tau: 0.018 });                                       // a little glass tick
+    tone(s, { dur: 0.04, freq: 1980 * p, amp: 0.12, tau: 0.01 });
+    reverb(s, 0.08);
+    return s;
+});
+define("ui_transition", { volume: 0.18, pitch: 0.03, cooldown: 0.2, maxInstances: 1 }, 1, p => {
+    const s = new Sound(0.6);
+    noise(s, { dur: 0.28, amp: 0.45, attack: 0.08, release: 0.15, filter: { type: "bandpass", q: 1,
+        freq: t => 350 + 900 * Math.sin(Math.PI * Math.min(1, t / 0.28)) } });                           // a soft swish of water
+    bubbles(s, { at: 0.06, count: 3, spread: 0.15, low: 600, high: 1100, amp: 0.12 });
     reverb(s, 0.12);
     return s;
 });
-define("ui_back", { volume: 0.5, pitch: 0.03, cooldown: 0.03, maxInstances: 2 }, 1, p => {
-    const s = new Sound(0.4);
-    tone(s, { dur: 0.08, freq: t => 820 * p * Math.pow(0.6, t / 0.08), amp: 0.35, tau: 0.035 });         // the blip, falling
-    noise(s, { dur: 0.012, amp: 0.2, tau: 0.003, filter: { type: "highpass", freq: 2500 } });
-    bubble(s, { at: 0.03, freq: 700, size: 0.04, amp: 0.12 });
-    reverb(s, 0.12);
-    return s;
-});
-define("ui_select", { volume: 0.45, pitch: 0.05, cooldown: 0.03, maxInstances: 2 }, 1, p => {
-    const s = new Sound(0.6);
-    note(s, { program: 108, key: 84, velocity: 90, len: 0.12, amp: 0.8 });                              // a kalimba tink
-    bubble(s, { at: 0.01, freq: 1600 * p, size: 0.025, amp: 0.12 });
-    reverb(s, 0.15);
-    return s;
-});
-define("ui_transition", { volume: 0.4, pitch: 0.03, cooldown: 0.1, maxInstances: 1 }, 1, p => {
-    const s = new Sound(0.9);
-    noise(s, { dur: 0.45, amp: 0.5, attack: 0.12, release: 0.25, filter: { type: "bandpass", q: 1.2,
-        freq: t => 300 + 2200 * Math.sin(Math.PI * Math.min(1, t / 0.45)) } });                          // a swish of water
-    bubbles(s, { at: 0.05, count: 8, spread: 0.4, low: 450, high: 1600, amp: 0.2 });
-    reverb(s, 0.2);
-    return s;
-});
-define("ui_error", { volume: 0.55, pitch: 0, cooldown: 0.15, maxInstances: 1 }, 1, () => {
-    const s = new Sound(0.6);
-    const lp = { type: "lowpass", freq: 1100 };
-    tone(s, { dur: 0.09, freq: 196, wave: "square", amp: 0.5, tau: 0.06, filter: lp });                 // bonk...
-    tone(s, { at: 0.12, dur: 0.14, freq: 156, wave: "square", amp: 0.5, tau: 0.08, filter: lp });       // ...bonk
-    note(s, { program: 115, key: 60, velocity: 90, len: 0.1, amp: 0.4 });
-    reverb(s, 0.1);
+define("ui_error", { volume: 0.32, pitch: 0, cooldown: 0.25, maxInstances: 1 }, 1, () => {
+    const s = new Sound(0.35);
+    tone(s, { dur: 0.13, freq: t => 190 * Math.pow(0.85, t / 0.13), wave: "triangle", amp: 0.6, tau: 0.05,
+        filter: { type: "lowpass", freq: 900 } });                                                       // a dull "bonk"
+    reverb(s, 0.06);
     return s;
 });
 define("ui_pause", { volume: 0.5, pitch: 0, cooldown: 0.1, maxInstances: 1 }, 1, () => {
@@ -278,7 +277,7 @@ define("ui_start", { volume: 0.9, pitch: 0, cooldown: 0.5, maxInstances: 1 }, 1,
 });
 
 // ----- Fish Tank -----
-define("purchase", { volume: 0.8, pitch: 0, cooldown: 0.1, maxInstances: 2 }, 1, () => {
+define("purchase", { volume: 0.65, pitch: 0, cooldown: 0.1, maxInstances: 2 }, 1, () => {
     const s = new Sound(1.6);
     [2200, 2650, 3150].forEach((freq, i) => bell(s, { at: i * 0.07, freq, ratio: 1.41, index: 2, tau: 0.12, amp: 0.35, pan: -0.3 + i * 0.3 }));   // shells clinking
     [89, 93, 96].forEach((key, i) => note(s, { at: 0.2 + i * 0.06, program: 9, key, velocity: 95, len: 0.3, amp: 0.6 }));                     // sparkle
@@ -296,7 +295,7 @@ define("unlock", { volume: 0.9, pitch: 0, cooldown: 0.5, maxInstances: 1 }, 1, (
     reverb(s, 0.25);
     return s;
 });
-define("equip", { volume: 0.6, pitch: 0.04, cooldown: 0.05, maxInstances: 2 }, 1, p => {
+define("equip", { volume: 0.5, pitch: 0.04, cooldown: 0.05, maxInstances: 2 }, 1, p => {
     const s = new Sound(0.7);
     tone(s, { dur: 0.12, freq: t => 140 * p * Math.pow(0.45, t / 0.12), amp: 0.6, tau: 0.05 });       // thump
     bell(s, { freq: 420 * p, ratio: 2.41, index: 4, tau: 0.08, amp: 0.3 });                             // metal latch
@@ -305,7 +304,7 @@ define("equip", { volume: 0.6, pitch: 0.04, cooldown: 0.05, maxInstances: 2 }, 1
     reverb(s, 0.15);
     return s;
 });
-define("unequip", { volume: 0.5, pitch: 0.04, cooldown: 0.05, maxInstances: 2 }, 1, p => {
+define("unequip", { volume: 0.4, pitch: 0.04, cooldown: 0.05, maxInstances: 2 }, 1, p => {
     const s = new Sound(0.6);
     bell(s, { freq: 900 * p, ratio: 1.73, index: 2, tau: 0.05, amp: 0.25 });
     bubble(s, { at: 0.02, freq: 500 * p, size: 0.07, amp: 0.3, rise: 1.6 });                            // pops out
@@ -313,19 +312,6 @@ define("unequip", { volume: 0.5, pitch: 0.04, cooldown: 0.05, maxInstances: 2 },
     reverb(s, 0.15);
     return s;
 });
-define("battle_start", { volume: 0.8, pitch: 0, cooldown: 1, maxInstances: 1 }, 1, () => {
-    const s = new Sound(2.6);
-    // The submarine dives: "AH-OO-GAH" klaxon, then the splash and the bubbles
-    const klaxon = t => 230 + 190 * Math.min(1, t / 0.32) * (1 - Math.exp(-t / 0.08)) - (t > 0.45 ? 25 * (t - 0.45) : 0);
-    tone(s, { dur: 0.85, freq: klaxon, wave: "saw", amp: 0.55, attack: 0.02, release: 0.1, filter: { type: "bandpass", q: 1.4, freq: t => 700 + 500 * Math.min(1, t / 0.35) } });
-    tone(s, { dur: 0.85, freq: t => klaxon(t) * 1.505, wave: "saw", amp: 0.25, attack: 0.02, release: 0.1, filter: { type: "lowpass", freq: 1800 } });
-    softClip(s, 2);
-    noise(s, { at: 0.8, dur: 0.7, amp: 0.45, tau: 0.25, filter: { type: "lowpass", freq: t => 2500 * Math.pow(0.15, t / 0.7) } });
-    bubbles(s, { at: 0.85, count: 22, spread: 1.2, low: 300, high: 1800, amp: 0.25 });
-    reverb(s, 0.2);
-    return s;
-});
-
 // ----- Battle -----
 define("deploy", { volume: 0.6, pitch: 0.06, cooldown: 0.05, maxInstances: 3 }, 2, p => {
     const s = new Sound(0.8);
@@ -333,6 +319,13 @@ define("deploy", { volume: 0.6, pitch: 0.06, cooldown: 0.05, maxInstances: 3 }, 
     noise(s, { dur: 0.18, amp: 0.25, tau: 0.05, filter: { type: "bandpass", freq: 1500, q: 0.9 } });      // splash
     bubbles(s, { at: 0.08, count: 3, spread: 0.2, low: 900, high: 1600, amp: 0.15 });
     reverb(s, 0.15);
+    return s;
+});
+define("cash_drop", { volume: 0.3, pitch: 0.06, cooldown: 0.06, maxInstances: 2 }, 1, p => {
+    const s = new Sound(0.6);
+    bell(s, { freq: 2600 * p, ratio: 1.41, index: 1.5, tau: 0.07, amp: 0.4 });                          // a small shell clinks
+    bell(s, { at: 0.05, freq: 3300 * p, ratio: 1.41, index: 1.2, tau: 0.06, amp: 0.25 });
+    reverb(s, 0.12);
     return s;
 });
 define("cash_up", { volume: 0.75, pitch: 0, cooldown: 0.1, maxInstances: 1 }, 1, () => {

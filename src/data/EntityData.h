@@ -60,6 +60,9 @@ struct EntityData
     // ===== Sound =====
     std::string attackSound;                    // Sound of its hits ("attackSound", optional, set in FishEditor; empty: "attack_slap")
 
+    // ===== Reward (enemies) =====
+    int cashDrop = 0;                           // Battle cash the player gets when it dies ("cashDrop", optional, set in FishEditor)
+
     // ===== Upgrade Attributes =====
     int baseUpgradeCost = 100;                  // Base cost for upgrading this unit
 };

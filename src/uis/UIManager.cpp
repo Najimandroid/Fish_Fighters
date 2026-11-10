@@ -18,6 +18,7 @@
 #include "widgets/UIPatternBackground.h"
 #include "widgets/UIEncyclopedia.h"
 #include "widgets/UITitleScreen.h"
+#include "widgets/UICashPopups.h"
 
 #include "../audio/AudioManager.h"
 
@@ -452,9 +453,11 @@ void UIManager::generate_battle_uis()
 	auto cashUp = std::make_shared<UICashUp>(m_stage.lock());
 	auto baseHealthInfo = std::make_shared<UIBaseHealthInfo>(m_stage.lock());
 	auto statusIcons = std::make_shared<UIStatusIcons>(m_stage.lock(), m_dataLoader); // Status icons under every entity
+	auto cashPopups = std::make_shared<UICashPopups>(m_stage.lock());              // "+X$" where enemies drop cash
 
     // World-space widgets first, so the screen widgets are drawn over them
 	add_ui_element(statusIcons);
+	add_ui_element(cashPopups);
 	add_ui_element(baseHealthInfo);
     add_ui_element(pauseButton);
     add_ui_element(speedButton);
@@ -481,12 +484,16 @@ void UIManager::generate_chapter_map_uis()
         "BATTLE!"
     );
     battleButton->set_text_size(66);
-    battleButton->set_click_sound("battle_start");   // The submarine dives; the stage starts its own music
+    battleButton->set_click_sound("");   // The battle start jingle instead; the stage's theme follows it
     battleButton->set_callback([this, chapterMap]()
         {
             m_pendingAction = [this, chapterMap]() {
                 if (auto stage = m_stage.lock())
                 {
+                    // The map opens on this stage next time (until it's won for the first time)
+                    if (auto player = m_dataLoader->get_player_data().lock())
+                        player->lastStage = chapterMap->get_selected_stage_uid();
+                    if (m_audio) m_audio->play_jingle("jingle_battle_start");
                     stage->load(chapterMap->get_selected_stage_uid());
                     generate_battle_uis();
                 }

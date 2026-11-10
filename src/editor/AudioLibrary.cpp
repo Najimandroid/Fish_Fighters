@@ -35,12 +35,16 @@ void AudioLibrary::refresh()
             }
         };
 
-    for (const auto& [name, value] : read(MUSIC_LIST).items())
+    // Kept in locals: a range-for over read(...).items() would iterate a temporary destroyed before the loop (C++20)
+    const nlohmann::json musicList = read(MUSIC_LIST);
+    const nlohmann::json soundList = read(SOUND_LIST);
+
+    for (const auto& [name, value] : musicList.items())
     {
         if (!value.is_object()) continue;
         m_music.push_back({ name, value.value("title", name), value.value("kind", "stage"), value.value("file", "") });
     }
-    for (const auto& [name, value] : read(SOUND_LIST).items())
+    for (const auto& [name, value] : soundList.items())
     {
         if (!value.is_object()) continue;
         std::string file;

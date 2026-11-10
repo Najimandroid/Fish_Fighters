@@ -103,5 +103,7 @@ public:
     std::unordered_set<int> completedStages;      // Set of stage UIDs completed by the player
     std::unordered_set<int> completedChapters;      // Set of chapter UIDs completed by the player
     int currentChapter = 1;                         // Current chapter selected by the player
+    int lastStage = -1;                             // Stage the map opens on: the last one played
+                                                    // (-1 after a first win: the newest stage)
     std::unordered_set<int> seenEnemies;            // Enemy UIDs met in battle
 };
