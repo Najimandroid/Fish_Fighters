@@ -71,6 +71,7 @@ void UIChapterMap::load_chapter(int chapterUID)
     }
     else
     {
+        m_backgroundTexture.setSmooth(true);   // Drawn at 2x: smooth instead of stepped edges
         m_background.setTextureRect(sf::IntRect({ 0, 0 }, static_cast<sf::Vector2i>(m_backgroundTexture.getSize())));
         m_background.setPosition({ 0.f, 0.f });
         m_background.setScale({ 2.f, 2.f });

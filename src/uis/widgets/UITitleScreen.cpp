@@ -41,11 +41,22 @@ void UITitleScreen::update(float deltaTime)
     }
 }
 
-// Any key starts the game, like the START button (the mouse goes through the button)
+// Any key starts the game, like the START button (the mouse goes through the button); not the modifier
+// and system keys (Alt+Tab, the Windows key, volume keys...) or Escape
 void UITitleScreen::handle_event(const sf::Event& event, const sf::RenderWindow&)
 {
-    if (event.is<sf::Event::KeyPressed>() && m_startCallback)
+    const auto* keyPressed = event.getIf<sf::Event::KeyPressed>();
+    if (!keyPressed || !m_startCallback) return;
+
+    using Key = sf::Keyboard::Key;
+    switch (keyPressed->code)
+    {
+    case Key::LAlt: case Key::RAlt: case Key::LControl: case Key::RControl: case Key::LShift: case Key::RShift:
+    case Key::LSystem: case Key::RSystem: case Key::Tab: case Key::Escape: case Key::Menu: case Key::Unknown:
+        return;
+    default:
         m_startCallback();
+    }
 }
 
 /*

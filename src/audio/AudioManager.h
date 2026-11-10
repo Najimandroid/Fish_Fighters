@@ -2,6 +2,8 @@
 
 #include <SFML/Audio.hpp>
 
+#include "../data/Settings.h"
+
 #include <cstdint>
 #include <list>
 #include <map>
@@ -71,6 +73,13 @@ public:
     void set_music_volume(float volume);
     void set_sound_volume(float volume);
 
+    // The Options sliders (0 to 1, the loudness follows their square) and "mute in background"
+    void apply_settings(const Settings& settings);
+
+    // The window lost (true) or got back (false) the focus: everything fades out over 150 ms,
+    // if the player's settings ask for it
+    void set_focus_muted(bool isUnfocused);
+
 private:
     struct MusicInfo
     {
@@ -128,6 +137,10 @@ private:
     float m_clock = 0.f;               // Seconds since the start (cooldowns)
     float m_musicVolume = 70.f;
     float m_soundVolume = 100.f;
+    float m_masterVolume = 100.f;                      // The listener's global volume, before the focus fade
+    bool m_muteInBackground = true;
+    bool m_isUnfocused = false;
+    float m_focusLevel = 1.f;                          // 0 to 1: fades to 0 while unfocused (if muted then)
     bool m_isDucked = false;
     std::string m_queuedMusic;                         // Starts when the jingle playing ends
     std::vector<std::string> m_reportedMissing;        // Unknown names already reported (once each)
@@ -135,5 +148,7 @@ private:
     std::mt19937 m_random;
 
     static constexpr float DUCKED_LEVEL = 0.4f;        // Music level while the game is paused
+    static constexpr float MUSIC_REFERENCE = 70.f;     // Music volume with the Music slider at 100%
+    static constexpr float FOCUS_FADE_SECONDS = 0.15f;
     static constexpr size_t MAX_VOICES = 48;           // Sounds at once, all together
 };

@@ -4,7 +4,7 @@
 namespace
 {
     const sf::Vector2f SCREEN_SIZE{ 1920.f, 1080.f };
-    const sf::Vector2f PANEL_SIZE{ 640.f, 470.f };
+    const sf::Vector2f PANEL_SIZE{ 640.f, 590.f };
     const sf::Vector2f PANEL_POSITION = (SCREEN_SIZE - PANEL_SIZE) / 2.f;
     const sf::Vector2f BUTTON_SIZE{ 400.f, 96.f };
     const float BUTTON_X = (SCREEN_SIZE.x - BUTTON_SIZE.x) / 2.f;
@@ -18,7 +18,8 @@ UIPauseMenu::UIPauseMenu(const std::string& stageName) :
     m_title(UISkin::heavy_font(), "PAUSED"),
     m_stageName(UISkin::heavy_font(), stageName),
     m_continueButton(BUTTON_SIZE, { BUTTON_X, PANEL_POSITION.y + 210.f }, "CONTINUE"),
-    m_retreatButton(BUTTON_SIZE, { BUTTON_X, PANEL_POSITION.y + 330.f }, "RETREAT")
+    m_optionsButton(BUTTON_SIZE, { BUTTON_X, PANEL_POSITION.y + 330.f }, "OPTIONS"),
+    m_retreatButton(BUTTON_SIZE, { BUTTON_X, PANEL_POSITION.y + 450.f }, "RETREAT")
 {
     m_dim.setFillColor(sf::Color(0, 0, 0, 150));
 
@@ -32,9 +33,10 @@ UIPauseMenu::UIPauseMenu(const std::string& stageName) :
 
     m_continueButton.set_text_size(40);
     m_retreatButton.set_text_size(40);
+    m_optionsButton.set_text_size(40);
     m_retreatButton.set_fill_color(RETREAT_TINT);
     m_continueButton.set_click_sound("");          // UIManager's continue callback plays "ui_unpause"
-    m_retreatButton.set_click_sound("ui_back");
+    // RETREAT asks first (UIManager's confirm dialog plays "ui_back" if the player confirms)
 
     m_continueButton.set_callback([this]() { if (m_continueCallback) m_continueCallback(); });
 
@@ -54,6 +56,11 @@ void UIPauseMenu::set_continue_callback(std::function<void()> callback)
 void UIPauseMenu::set_retreat_callback(std::function<void()> callback)
 {
     m_retreatButton.set_callback(callback);
+}
+
+void UIPauseMenu::set_options_callback(std::function<void()> callback)
+{
+    m_optionsButton.set_callback(callback);
 }
 
 void UIPauseMenu::set_is_paused_callback(std::function<bool()> callback)
@@ -77,6 +84,7 @@ void UIPauseMenu::update(float deltaTime)
         close();
 
     m_continueButton.update(deltaTime);
+    m_optionsButton.update(deltaTime);
     m_retreatButton.update(deltaTime);
 }
 
@@ -89,15 +97,17 @@ void UIPauseMenu::render(sf::RenderWindow& window)
     window.draw(m_title);
     window.draw(m_stageName);
     m_continueButton.render(window);
+    m_optionsButton.render(window);
     m_retreatButton.render(window);
 }
 
 void UIPauseMenu::handle_event(const sf::Event& event, const sf::RenderWindow& window)
 {
-    // Escape opens the menu, or works like "Continue" when it's open
+    // Escape, P or Space opens the menu, or works like "Continue" when it's open
     if (const auto* keyPressed = event.getIf<sf::Event::KeyPressed>())
     {
-        if (keyPressed->code == sf::Keyboard::Key::Escape)
+        if (keyPressed->code == sf::Keyboard::Key::Escape || keyPressed->code == sf::Keyboard::Key::P
+            || keyPressed->code == sf::Keyboard::Key::Space)
         {
             if (m_isVisible && m_continueCallback) m_continueCallback();
             else if (!m_isVisible && m_openCallback) m_openCallback();
@@ -108,6 +118,7 @@ void UIPauseMenu::handle_event(const sf::Event& event, const sf::RenderWindow& w
     if (!m_isVisible) return;
 
     m_continueButton.handle_event(event, window);
+    m_optionsButton.handle_event(event, window);
     m_retreatButton.handle_event(event, window);
 }
 

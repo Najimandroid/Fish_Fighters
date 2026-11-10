@@ -151,6 +151,15 @@ void AudioManager::update(float realDeltaTime)
         });
 
     m_voices.remove_if([](const Voice& voice) { return voice.sound->getStatus() == sf::SoundSource::Status::Stopped; });
+
+    // Focus fade: everything (music and sounds) through the listener's global volume
+    const float focusTarget = (m_isUnfocused && m_muteInBackground) ? 0.f : 1.f;
+    if (m_focusLevel != focusTarget)
+    {
+        const float step = realDeltaTime / FOCUS_FADE_SECONDS;
+        m_focusLevel = focusTarget > m_focusLevel ? std::min(focusTarget, m_focusLevel + step) : std::max(focusTarget, m_focusLevel - step);
+        sf::Listener::setGlobalVolume(m_masterVolume * m_focusLevel);
+    }
 }
 
 // ==================
@@ -332,4 +341,20 @@ void AudioManager::set_music_volume(float volume)
 void AudioManager::set_sound_volume(float volume)
 {
     m_soundVolume = std::clamp(volume, 0.f, 100.f);
+}
+
+void AudioManager::apply_settings(const Settings& settings)
+{
+    auto curve = [](float slider) { slider = std::clamp(slider, 0.f, 1.f); return slider * slider; };
+
+    m_masterVolume = 100.f * curve(settings.masterVolume);
+    sf::Listener::setGlobalVolume(m_masterVolume * m_focusLevel);
+    set_music_volume(MUSIC_REFERENCE * curve(settings.musicVolume));
+    set_sound_volume(100.f * curve(settings.effectsVolume));
+    m_muteInBackground = settings.muteInBackground;
+}
+
+void AudioManager::set_focus_muted(bool isUnfocused)
+{
+    m_isUnfocused = isUnfocused;
 }

@@ -9,6 +9,9 @@
 
 class Stage;
 class UIRoundButton;
+class UIButtonElement;
+class UIConfirmDialog;
+class UIOptionsMenu;
 class AudioManager;
 enum class GameSpeedState;
 
@@ -74,9 +77,23 @@ public:
     void set_get_game_speed_callback(std::function<GameSpeedState()> callback);
     void set_quit_game_callback(std::function<void()> callback);
 
+    // Switches between fullscreen (true) and a window (Options > Display); the Game applies it
+    void set_fullscreen_callback(std::function<void(bool)> callback);
+
 private:
     // The round back button of the menus (bottom left): runs onBack as a deferred action
     std::shared_ptr<UIRoundButton> make_back_button(std::function<void()> onBack);
+
+    // Darkens the bars around the 16:9 UI area while a modal window is open (screens that aren't 16:9)
+    void dim_letterbox_bars(sf::RenderWindow& window, const sf::View& uiView) const;
+
+    // "Quit Fish Fighters?" dialog that quitButton opens (add it last, so it's on top)
+    std::shared_ptr<UIConfirmDialog> make_quit_dialog(const std::shared_ptr<UIButtonElement>& quitButton);
+
+    // The Options window (add it after the screen's other elements) and a button that opens it
+    std::shared_ptr<UIOptionsMenu> make_options_menu();
+    std::shared_ptr<UIButtonElement> make_options_button(const std::shared_ptr<UIOptionsMenu>& optionsMenu,
+        sf::Vector2f size, sf::Vector2f position, unsigned int textSize);
 
     // Starts a Fish Tank menu screen: clears the UI, plays the Fish Tank theme (kept if it already plays)
     // and the transition sound
@@ -93,6 +110,7 @@ private:
 	std::function<void(GameSpeedState)> m_setGameSpeedCallback; // Callback to set game speed state
     std::function<GameSpeedState()> m_getGameSpeedCallback;     // Callback to get current game speed state
     std::function<void()> m_quitGameCallback;                   // Callback to quit game
+    std::function<void(bool)> m_fullscreenCallback;             // Callback to change the window mode
 
     bool m_wasFasterBeforePause = false;                        // "Continue" goes back to this speed
 };

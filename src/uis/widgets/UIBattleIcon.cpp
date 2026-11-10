@@ -25,6 +25,7 @@ UIBattleIcon::UIBattleIcon(sf::Vector2f position, const std::string& iconTexture
     // Load icon texture
     set_texture(iconTexturePath);
     set_click_sound("");   // The deploy (or its error) makes the sound
+    set_fires_on_press(true);   // Real-time play: deploys the moment it's pressed
 
     // Price text: yellow outlined digits
     UISkin::style_text(m_text, COST_SIZE, UISkin::NUMBER);

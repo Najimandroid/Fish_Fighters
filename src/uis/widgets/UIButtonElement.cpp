@@ -140,21 +140,49 @@ void UIButtonElement::handle_event(const sf::Event& event, const sf::RenderWindo
             && get_bounds().contains(window.mapPixelToCoords(mouseButtonPressed->position)))
         {
             m_isPressed = true;
-            if (!m_isEnabled)
-            {
-                play_sound("ui_error");
-            }
-            else if (m_callback)
-            {
-                play_sound(m_clickSound);
-                m_callback(); // execute callback if set
-            }
+            if (m_firesOnPress) activate();
         }
     }
     else if (const auto* mouseButtonReleased = event.getIf<sf::Event::MouseButtonReleased>())
     {
-        if (mouseButtonReleased->button == sf::Mouse::Button::Left) m_isPressed = false;
+        // A click counts when the button is released over the button it was pressed on:
+        // sliding off before letting go cancels it
+        if (mouseButtonReleased->button == sf::Mouse::Button::Left)
+        {
+            const bool isClick = m_isPressed && !m_firesOnPress
+                && get_bounds().contains(window.mapPixelToCoords(mouseButtonReleased->position));
+            m_isPressed = false;
+            if (isClick) activate();
+        }
     }
+    else if (const auto* keyPressed = event.getIf<sf::Event::KeyPressed>())
+    {
+        if (m_hotkey && keyPressed->code == *m_hotkey) activate();
+    }
+}
+
+// A click or the hotkey: the error sound if disabled, else the click sound and the callback
+void UIButtonElement::activate()
+{
+    if (!m_isEnabled)
+    {
+        play_sound("ui_error");
+    }
+    else if (m_callback)
+    {
+        play_sound(m_clickSound);
+        m_callback();
+    }
+}
+
+void UIButtonElement::set_fires_on_press(bool firesOnPress)
+{
+    m_firesOnPress = firesOnPress;
+}
+
+void UIButtonElement::set_hotkey(std::optional<sf::Keyboard::Key> key)
+{
+    m_hotkey = key;
 }
 
 // Return the button's bounding rectangle for collision or interaction checks

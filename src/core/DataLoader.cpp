@@ -792,6 +792,67 @@ bool DataLoader::save_player(const std::string& path)
     return true;
 }
 
+/*
+ * The player's options (settings.json). Anything missing or unreadable keeps its default:
+ * options never stop the game from starting.
+ */
+void DataLoader::load_settings()
+{
+    m_settings = Settings{};
+
+    std::ifstream file(m_dataFolder + "settings.json");
+    if (!file) return;
+
+    try
+    {
+        const json j = json::parse(file);
+        auto readVolume = [&j](const char* section, const char* key, float& value)
+            {
+                if (j.contains(section) && j.at(section).contains(key) && j.at(section).at(key).is_number())
+                    value = std::clamp(j.at(section).at(key).get<float>(), 0.f, 1.f);
+            };
+        auto readBool = [&j](const char* section, const char* key, bool& value)
+            {
+                if (j.contains(section) && j.at(section).contains(key) && j.at(section).at(key).is_boolean())
+                    value = j.at(section).at(key).get<bool>();
+            };
+        readVolume("audio", "master", m_settings.masterVolume);
+        readVolume("audio", "music", m_settings.musicVolume);
+        readVolume("audio", "effects", m_settings.effectsVolume);
+        readBool("audio", "muteInBackground", m_settings.muteInBackground);
+        readBool("display", "fullscreen", m_settings.fullscreen);
+    }
+    catch (const std::exception& exception)
+    {
+        std::cerr << "settings.json is unreadable, the default options are used: " << exception.what() << "\n";
+        m_settings = Settings{};
+    }
+}
+
+bool DataLoader::save_settings()
+{
+    json j;
+    j["audio"]["master"] = m_settings.masterVolume;
+    j["audio"]["music"] = m_settings.musicVolume;
+    j["audio"]["effects"] = m_settings.effectsVolume;
+    j["audio"]["muteInBackground"] = m_settings.muteInBackground;
+    j["display"]["fullscreen"] = m_settings.fullscreen;
+
+    std::ofstream file(m_dataFolder + "settings.json", std::ios::trunc);
+    if (!file)
+    {
+        std::cerr << "Can't save the options to " << m_dataFolder << "settings.json\n";
+        return false;
+    }
+    file << j.dump(4);
+    return static_cast<bool>(file);
+}
+
+Settings& DataLoader::get_settings()
+{
+    return m_settings;
+}
+
 const std::shared_ptr<EntityData> DataLoader::get_unit_data(int uid, int form = 0) const
 {
     auto it = m_unitsFormsDatabase.find({ uid, form });

@@ -19,6 +19,8 @@
 #include "widgets/UIEncyclopedia.h"
 #include "widgets/UITitleScreen.h"
 #include "widgets/UICashPopups.h"
+#include "widgets/UIConfirmDialog.h"
+#include "widgets/UIOptionsMenu.h"
 
 #include "../audio/AudioManager.h"
 
@@ -104,16 +106,34 @@ void UIManager::generate_title_uis()
     );
     quitButton->set_text_size(38);
     quitButton->set_fill_color(sf::Color(255, 150, 130));
-    quitButton->set_click_sound("ui_back");
-    quitButton->set_callback([this]()
-        {
-            m_pendingAction = [this]() { if (m_quitGameCallback) m_quitGameCallback(); };
-        });
+    auto quitDialog = make_quit_dialog(quitButton);
+
+    auto optionsMenu = make_options_menu();
+    auto optionsButton = make_options_button(optionsMenu, { 280.f, 90.f }, { 290.f, 1080.f - 30.f - 90.f }, 38);
 
     add_ui_element(bg);
     add_ui_element(title);
     add_ui_element(startButton);
     add_ui_element(quitButton);
+    add_ui_element(optionsButton);
+    add_ui_element(optionsMenu);  // Windows last: on top, and the only ones getting the input while open
+    add_ui_element(quitDialog);
+}
+
+/*
+ * "Quit Fish Fighters?" before closing the game (title screen and Fish Tank): quitButton opens it.
+ * The button keeps a weak_ptr (the screen's element list owns the dialog).
+ */
+std::shared_ptr<UIConfirmDialog> UIManager::make_quit_dialog(const std::shared_ptr<UIButtonElement>& quitButton)
+{
+    auto dialog = std::make_shared<UIConfirmDialog>("Quit Fish Fighters?", "Your progress is saved.", "QUIT", "CANCEL");
+    std::weak_ptr<UIConfirmDialog> weakDialog = dialog;
+    quitButton->set_callback([this, weakDialog]()
+        {
+            if (auto dialog = weakDialog.lock())
+                dialog->open([this]() { m_pendingAction = [this]() { if (m_quitGameCallback) m_quitGameCallback(); }; });
+        });
+    return dialog;
 }
 
 // Add a UI element to the manager
@@ -145,9 +165,43 @@ void UIManager::render_uis(sf::RenderWindow& window, sf::View& uiView, sf::View&
         }
         else
         {
+            // A window (pause, options, confirmation) dims the screen inside the 16:9 UI area itself;
+            // on other screen shapes the bars around that area are dimmed with it
+            if (element->is_visible() && element->is_blocking_input())
+                dim_letterbox_bars(window, uiView);
             element->render(window);
         }
     }
+}
+
+/*
+ * Darkens the parts of the window outside the UI view (the bars on screens that aren't 16:9),
+ * like the modal windows darken the screen
+ */
+void UIManager::dim_letterbox_bars(sf::RenderWindow& window, const sf::View& uiView) const
+{
+    const sf::Vector2f size = static_cast<sf::Vector2f>(window.getSize());
+    const sf::FloatRect area{ { uiView.getViewport().position.x * size.x, uiView.getViewport().position.y * size.y },
+        { uiView.getViewport().size.x * size.x, uiView.getViewport().size.y * size.y } };
+    if (area.size.x >= size.x - 1.f && area.size.y >= size.y - 1.f) return;   // 16:9: no bars
+
+    window.setView(sf::View(sf::FloatRect{ { 0.f, 0.f }, size }));
+    sf::RectangleShape bar;
+    bar.setFillColor(sf::Color(0, 0, 0, 150));
+    const sf::FloatRect bars[] = {
+        { { 0.f, 0.f }, { area.position.x, size.y } },                                        // Left
+        { { area.position.x + area.size.x, 0.f }, { size.x - area.position.x - area.size.x, size.y } },   // Right
+        { { area.position.x, 0.f }, { area.size.x, area.position.y } },                       // Top
+        { { area.position.x, area.position.y + area.size.y }, { area.size.x, size.y - area.position.y - area.size.y } } // Bottom
+    };
+    for (const sf::FloatRect& rect : bars)
+    {
+        if (rect.size.x <= 0.f || rect.size.y <= 0.f) continue;
+        bar.setPosition(rect.position);
+        bar.setSize(rect.size);
+        window.draw(bar);
+    }
+    window.setView(uiView);
 }
 
 // Handle input events for all UI elements
@@ -258,24 +312,18 @@ void UIManager::generate_fish_tank_uis()
                 };
         });
 
-    // Quit button closes the game (smaller, orange)
+    // Options and Quit share the last row (Quit smaller, orange, and it asks first)
+    auto optionsMenu = make_options_menu();
+    auto optionsButton = make_options_button(optionsMenu, { 300.f, 96.f }, { columnX, 828.f }, 40);
+
     auto quitButton = std::make_shared<UIButtonElement>(
-        sf::Vector2f{ 300.f, 96.f },
-        sf::Vector2f{ columnX, 828.f },
+        sf::Vector2f{ 230.f, 96.f },
+        sf::Vector2f{ columnX + columnWidth - 230.f, 828.f },
         "QUIT"
     );
     quitButton->set_text_size(40);
     quitButton->set_fill_color(sf::Color(255, 150, 130));
-    quitButton->set_click_sound("ui_back");
-    quitButton->set_callback([this]()
-        {
-            m_pendingAction = [this]() {
-                if (m_quitGameCallback)
-                {
-                    m_quitGameCallback();
-                }
-                };
-        });
+    auto quitDialog = make_quit_dialog(quitButton);
 
     add_ui_element(bg);
     add_ui_element(titleBar);
@@ -284,7 +332,10 @@ void UIManager::generate_fish_tank_uis()
     add_ui_element(upgradeButton);
     add_ui_element(equipButton);
     add_ui_element(encyclopediaButton);
+    add_ui_element(optionsButton);
     add_ui_element(quitButton);
+    add_ui_element(optionsMenu);  // Windows last: on top while open
+    add_ui_element(quitDialog);
 }
 
 /*
@@ -414,17 +465,29 @@ void UIManager::generate_battle_uis()
         return m_getGameSpeedCallback && m_getGameSpeedCallback() == GameSpeedState::PAUSED;
         });
 
-    // Retreat: leaves the battle without rewards and goes back to the chapter map
-    pauseMenu->set_retreat_callback([this]() {
-        m_pendingAction = [this]() {
-            if (m_setGameSpeedCallback) m_setGameSpeedCallback(GameSpeedState::NORMAL);
-            m_dataLoader->save_progress(); // No rewards, but the enemies met stay met
-            if (auto stage = m_stage.lock())
-            {
-                stage->unload();
-                generate_chapter_map_uis();
-            }
-            };
+    // Options: the same window as in the menus, over the pause menu
+    auto optionsMenu = make_options_menu();
+    std::weak_ptr<UIOptionsMenu> weakOptionsMenu = optionsMenu;
+    pauseMenu->set_options_callback([weakOptionsMenu]() { if (auto menu = weakOptionsMenu.lock()) menu->open(); });
+
+    // Retreat: asks first, then leaves the battle without rewards and goes back to the chapter map
+    auto retreatDialog = std::make_shared<UIConfirmDialog>("Retreat?",
+        "You'll lose this battle and earn no shells.", "RETREAT", "KEEP FIGHTING");
+    std::weak_ptr<UIConfirmDialog> weakRetreatDialog = retreatDialog;
+    pauseMenu->set_retreat_callback([this, weakRetreatDialog]() {
+        auto dialog = weakRetreatDialog.lock();
+        if (!dialog) return;
+        dialog->open([this]() {
+            m_pendingAction = [this]() {
+                if (m_setGameSpeedCallback) m_setGameSpeedCallback(GameSpeedState::NORMAL);
+                m_dataLoader->save_progress(); // No rewards, but the enemies met stay met
+                if (auto stage = m_stage.lock())
+                {
+                    stage->unload();
+                    generate_chapter_map_uis();
+                }
+                };
+            });
         });
 
     // Pause button (top left), its sound is the pause menu's
@@ -447,6 +510,7 @@ void UIManager::generate_battle_uis()
     speedButton->set_active_callback([this]() {
         return m_getGameSpeedCallback && m_getGameSpeedCallback() == GameSpeedState::FASTER;
         });
+    speedButton->set_hotkey(sf::Keyboard::Key::F);
 
 	auto deploymentIcons = std::make_shared<UIDeploymentIcons>(m_dataLoader, m_stage.lock());
 	auto stageCash = std::make_shared<UIStageCash>(m_stage.lock());
@@ -464,7 +528,9 @@ void UIManager::generate_battle_uis()
 	add_ui_element(deploymentIcons);
 	add_ui_element(stageCash);
 	add_ui_element(cashUp);
-    add_ui_element(pauseMenu); // Last: on top, and the first to get the input
+    add_ui_element(pauseMenu); // On top, and the first to get the input
+    add_ui_element(retreatDialog); // Over the pause menu while it asks
+    add_ui_element(optionsMenu);   // Over the pause menu while open
 }
 
 /*
@@ -741,4 +807,30 @@ void UIManager::set_get_game_speed_callback(std::function<GameSpeedState()> call
 void UIManager::set_quit_game_callback(std::function<void()> callback)
 {
     m_quitGameCallback = callback;
+}
+
+void UIManager::set_fullscreen_callback(std::function<void(bool)> callback)
+{
+    m_fullscreenCallback = callback;
+}
+
+/*
+ * The Options window: audio, display, controls (UIOptionsMenu)
+ */
+std::shared_ptr<UIOptionsMenu> UIManager::make_options_menu()
+{
+    return std::make_shared<UIOptionsMenu>(m_dataLoader, m_audio, [this](bool fullscreen)
+        {
+            if (m_fullscreenCallback) m_fullscreenCallback(fullscreen);
+        });
+}
+
+std::shared_ptr<UIButtonElement> UIManager::make_options_button(const std::shared_ptr<UIOptionsMenu>& optionsMenu,
+    sf::Vector2f size, sf::Vector2f position, unsigned int textSize)
+{
+    auto button = std::make_shared<UIButtonElement>(size, position, "OPTIONS");
+    button->set_text_size(textSize);
+    std::weak_ptr<UIOptionsMenu> weakMenu = optionsMenu;
+    button->set_callback([weakMenu]() { if (auto menu = weakMenu.lock()) menu->open(); });
+    return button;
 }

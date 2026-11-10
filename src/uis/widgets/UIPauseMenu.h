@@ -6,8 +6,8 @@
 /*
  * UIPauseMenu
  * -----------
- * The window shown over the battle when it's paused: the stage name, "Continue" and "Retreat".
- * Opened by the pause button or Escape, closed by "Continue" or Escape.
+ * The window shown over the battle when it's paused: the stage name, "Continue", "Options" and "Retreat".
+ * Opened by the pause button, Escape, P or Space, closed by "Continue" or the same keys.
  * While open it dims the battle and takes every input event (is_blocking_input).
  *
  * It doesn't change the game speed itself: UIManager gives it callbacks that do.
@@ -27,6 +27,9 @@ public:
 
     // Called by "Retreat": leaves the battle
     void set_retreat_callback(std::function<void()> callback);
+
+    // Called by "Options": opens the Options window over the menu
+    void set_options_callback(std::function<void()> callback);
 
     // The menu closes itself when the battle isn't paused anymore (debug keys, developer tools)
     void set_is_paused_callback(std::function<bool()> callback);
@@ -49,6 +52,7 @@ private:
     sf::Text m_title;                  // "PAUSED"
     sf::Text m_stageName;
     UIButtonElement m_continueButton;
+    UIButtonElement m_optionsButton;
     UIButtonElement m_retreatButton;
 
     std::function<void()> m_openCallback;

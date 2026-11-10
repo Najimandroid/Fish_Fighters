@@ -15,6 +15,7 @@
 #endif
 
 #include <memory>
+#include <optional>
 
 /*
  * Game class
@@ -66,6 +67,12 @@ private:
     // Initializes UI and stage cameras with correct viewports and zoom
     void init_cameras();
 
+    // Fits the views to the window: the UI letterboxed at 16:9, the battlefield filling the window
+    void update_viewports();
+
+    // Creates the window, fullscreen (borderless, desktop size) or as a resizable 16:9 window
+    void create_window(bool fullscreen);
+
 	// Calculates delta time and applies pause/speed modifiers
 	void calculate_delta_time();
 
@@ -82,6 +89,7 @@ private:
     float m_deltaTime = 0.0f;      // Delta time in seconds since the last frame (scaled by game speed)
     float m_realDeltaTime = 0.0f;  // Delta time in seconds since the last frame (not scaled)
     bool m_isStepFrameRequested = false; // Debug: play exactly one frame while paused
+    std::optional<bool> m_requestedFullscreen; // Options > Display: the window mode to switch to next frame
 
     const int m_frameRate = 120;    // Maximum framerate
     const sf::Vector2u m_logicalResolution = { 1920, 1080 }; // Reference resolution

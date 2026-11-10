@@ -14,6 +14,7 @@ UITextureElement::UITextureElement(sf::Vector2f size, sf::Vector2f position, con
     {
         std::cerr << "Failed to load texture: " << texturePath << "\n";
     }
+    m_texture.setSmooth(true);   // Scaled pictures stay smooth instead of stepping
 
     // Set the texture rectangle to cover the full texture
     m_sprite.setTextureRect(sf::IntRect(
@@ -50,6 +51,7 @@ void UITextureElement::set_texture(const std::string& texturePath)
         std::cerr << "Failed to load texture: " << texturePath << "\n";
         return;
     }
+    m_texture.setSmooth(true);
 
     m_sprite.setTexture(m_texture);
     apply_scale();

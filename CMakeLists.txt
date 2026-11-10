@@ -65,6 +65,9 @@ set(PROJECT_SOURCES
     src/uis/widgets/UITextureElement.cpp
     src/uis/widgets/UIDeploymentIcons.cpp
     src/uis/widgets/UICashPopups.cpp
+    src/uis/widgets/UIConfirmDialog.cpp
+    src/uis/widgets/UIOptionsMenu.cpp
+    src/uis/widgets/UISlider.cpp
     src/uis/widgets/UIStageCash.cpp
     src/uis/widgets/UICashUp.cpp
     src/uis/widgets/UIBaseHealthInfo.cpp

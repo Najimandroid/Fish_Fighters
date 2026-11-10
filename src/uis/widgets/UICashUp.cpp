@@ -22,6 +22,7 @@ UICashUp::UICashUp(std::shared_ptr<Stage> stage) :
     m_icon(m_texture), // Initialize sprite with texture
     m_levelText(UISkin::heavy_font())
 {
+    set_fires_on_press(true);   // Real-time play: works the moment it's pressed
     // Load both icon textures once (update() only switches between them)
     auto success = m_texture.loadFromFile("assets/images/textures/icons/uis/cash_up.png");
     success = m_disabledTexture.loadFromFile("assets/images/textures/icons/uis/cash_up_disabled.png");

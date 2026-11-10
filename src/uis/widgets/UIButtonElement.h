@@ -45,6 +45,13 @@ public:
     // Sound of a click (sfx.json name, "ui_click" by default; empty: silent, the callback plays its own)
     void set_click_sound(const std::string& soundName);
 
+    // Menu buttons fire when released over the button (sliding off cancels the click);
+    // battle buttons (deploy slots, Cash Up) fire as soon as they're pressed
+    void set_fires_on_press(bool firesOnPress);
+
+    // A key that works like a click (F for the speed button, 1-0 for the deploy slots...)
+    void set_hotkey(std::optional<sf::Keyboard::Key> key);
+
     // Override UIElement functions
     void update(float deltaTime) override;
     void render(sf::RenderWindow& window) override;
@@ -59,6 +66,9 @@ protected:
     // The button rectangle scaled by get_visual_scale() around its center
     sf::FloatRect get_visual_rect() const;
 
+    // Runs a click: the error sound when disabled, else the click sound and the callback
+    void activate();
+
     sf::RectangleShape m_shape;         // Button rectangle (position, size and clicks; not drawn)
     sf::Text m_text;                    // Button label text
     std::function<void()> m_callback;   // Function to execute on click
@@ -68,4 +78,6 @@ protected:
     bool m_isPressed = false;            // The left button went down on it and isn't released yet
     bool m_isEnabled = true;
     std::string m_clickSound = "ui_click";
+    bool m_firesOnPress = false;
+    std::optional<sf::Keyboard::Key> m_hotkey;
 };
