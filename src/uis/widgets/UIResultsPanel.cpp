@@ -94,6 +94,7 @@ UIResultsPanel::UIResultsPanel(const BattleResult& result, const std::string& st
     m_primaryButton.set_callback(m_actions.primary);
     m_primaryButton.set_hotkey(sf::Keyboard::Key::Enter);
     m_secondaryButton.set_text_size(38);
+    m_secondaryButton.set_style(UIButtonElement::Style::Secondary);
     m_secondaryButton.set_callback(m_actions.secondary);
     m_backButton.set_click_sound("ui_back");
     m_backButton.set_callback(m_actions.back);

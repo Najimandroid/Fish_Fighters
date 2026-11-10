@@ -14,6 +14,17 @@ namespace
     const float ARROW_Y = 412.f;
     const unsigned int NAME_SIZE = 44;
     const unsigned int DESCRIPTION_SIZE = 30;
+    const float STATS_X = DESCRIPTION_PANEL.position.x + 790.f;     // The right column of the panel: the upgrade
+    const float DESCRIPTION_WIDTH = 690.f;                            // The left column: description and abilities
+    const unsigned int STAT_SIZE = 30;
+    const sf::Color BETTER{ 110, 220, 120 };                          // Green: what the upgrade adds
+    const sf::Color CORAL{ 255, 128, 104 };
+
+    std::string format_stat(float value)
+    {
+        const int rounded = static_cast<int>(std::lround(value));
+        return std::to_string(rounded);
+    }
 }
 
 /*
@@ -157,7 +168,12 @@ void UIUpgradeSlider::init_icons()
  */
 int UIUpgradeSlider::calculate_upgrade_cost(int uid, int level)
 {
-	int baseCost = m_dataLoader->get_unit_data(uid, 0)->baseUpgradeCost;
+	return calculate_upgrade_cost(*m_dataLoader, uid, level);
+}
+
+int UIUpgradeSlider::calculate_upgrade_cost(const DataLoader& dataLoader, int uid, int level)
+{
+	int baseCost = dataLoader.get_unit_data(uid, 0)->baseUpgradeCost;
 	if (level <= 0) return baseCost;
 
 	float factor = 1.5f;          // Level-up multiplier
@@ -223,19 +239,104 @@ void UIUpgradeSlider::update(float deltaTime)
 	{
 		auto unitData = m_dataLoader->get_unit_data(uid, player->get_unit_form(uid));
 		m_unitName.setString(unitData->name);
-		m_description.setString(UISkin::wrap_text(unitData->description, DESCRIPTION_SIZE, DESCRIPTION_PANEL.size.x - 2.f * TEXT_PADDING));
+		m_description.setString(UISkin::wrap_text(unitData->description, DESCRIPTION_SIZE, DESCRIPTION_WIDTH));
 		m_abilities.set_abilities(unitData->abilities);
 		m_describedUid = uid;
+		m_describedLevel = -1;   // The numbers too
 
 		// Name centered, description and abilities left-aligned under it
 		UISkin::set_text_anchor(m_unitName, { 0.5f, 0.5f });
-		m_unitName.setPosition({ DESCRIPTION_PANEL.position.x + DESCRIPTION_PANEL.size.x / 2.f, DESCRIPTION_PANEL.position.y + 44.f });
+		m_unitName.setPosition({ DESCRIPTION_PANEL.position.x + TEXT_PADDING + DESCRIPTION_WIDTH / 2.f, DESCRIPTION_PANEL.position.y + 44.f });
 		UISkin::set_text_anchor(m_description, { 0.f, 0.f });
 		m_description.setPosition({ DESCRIPTION_PANEL.position.x + TEXT_PADDING, DESCRIPTION_PANEL.position.y + 80.f });
 
 		const float descriptionBottom = m_description.getGlobalBounds().position.y + m_description.getGlobalBounds().size.y;
 		m_abilities.set_position({ DESCRIPTION_PANEL.position.x + TEXT_PADDING, descriptionBottom + 16.f });
 	}
+	if (uid != m_describedUid || level != m_describedLevel) describe_upgrade(uid, level);
+	m_describedUid = uid;
+}
+
+/*
+ * The upgrade's numbers: level, health and attack now and after it (the level multiplies both), the evolution
+ * coming, the price
+ */
+void UIUpgradeSlider::describe_upgrade(int uid, int level)
+{
+	m_describedLevel = level;
+	m_statRows.clear();
+	m_evolutionLine.clear();
+	m_isMaxLevel = level >= UIUpgradeIcon::MAX_LEVEL;
+	m_cost = calculate_upgrade_cost(uid, level);
+
+	auto player = m_dataLoader->get_player_data().lock();
+	auto data = m_dataLoader->get_unit_data(uid, player ? player->get_unit_form(uid) : 0);
+	if (!data) return;
+
+	const int now = std::max(1, level), next = m_isMaxLevel ? level : level <= 0 ? 1 : level + 1;
+	const float nowFactor = level <= 0 ? 0.f : PlayerData::stat_multiplier(now), nextFactor = PlayerData::stat_multiplier(next);
+	m_statRows.push_back({ "Level", level <= 0 ? "-" : std::to_string(level), std::to_string(next), next > level });
+	m_statRows.push_back({ "Health", level <= 0 ? "-" : format_stat(data->health * nowFactor), format_stat(data->health * nextFactor), !m_isMaxLevel });
+	m_statRows.push_back({ "Attack", level <= 0 ? "-" : format_stat(data->attackPower * nowFactor), format_stat(data->attackPower * nextFactor), !m_isMaxLevel });
+
+	// Evolutions at levels 10 and 30 (when the fish has that form)
+	for (const auto& [atLevel, form] : { std::pair{ 10, 1 }, std::pair{ 30, 2 } })
+	{
+		if (level >= atLevel) continue;
+		// A form that doesn't exist comes back as the last one: no evolution then
+		auto evolved = m_dataLoader->get_unit_data(uid, form);
+		if (!evolved || evolved == data || evolved == m_dataLoader->get_unit_data(uid, form - 1)) break;
+		m_evolutionLine = next == atLevel ? "Evolves into " + evolved->name + "!" : "Evolves at level " + std::to_string(atLevel);
+		break;
+	}
+}
+
+/*
+ * The right column of the panel (now -> next) and the price under the button
+ */
+void UIUpgradeSlider::render_upgrade_info(sf::RenderWindow& window)
+{
+	auto drawText = [&window](const std::string& string, unsigned int size, sf::Color color, sf::Vector2f position, sf::Vector2f anchor)
+		{
+			sf::Text text(UISkin::heavy_font(), string);
+			UISkin::style_text(text, size, color);
+			UISkin::set_text_anchor(text, anchor);
+			text.setPosition(position);
+			window.draw(text);
+			return text.getGlobalBounds();
+		};
+
+	float y = DESCRIPTION_PANEL.position.y + 44.f;
+	drawText(m_isMaxLevel ? "MAX LEVEL" : "NEXT LEVEL", 34, UISkin::TITLE, { STATS_X + 190.f, y }, { 0.5f, 0.5f });
+	y += 62.f;
+	for (const StatRow& row : m_statRows)
+	{
+		drawText(row.name, STAT_SIZE, UISkin::TEXT, { STATS_X, y }, { 0.f, 0.5f });
+		drawText(row.now, STAT_SIZE, UISkin::TEXT, { STATS_X + 250.f, y }, { 1.f, 0.5f });
+		if (!m_isMaxLevel)
+		{
+			drawText(">", STAT_SIZE, UISkin::TITLE, { STATS_X + 285.f, y }, { 0.5f, 0.5f });
+			drawText(row.next, STAT_SIZE, row.isBetter ? BETTER : UISkin::TEXT, { STATS_X + 385.f, y }, { 1.f, 0.5f });
+		}
+		y += 48.f;
+	}
+	if (!m_evolutionLine.empty())
+		drawText(UISkin::wrap_text(m_evolutionLine, 28, 420.f), 28, UISkin::NUMBER, { STATS_X, y + 10.f }, { 0.f, 0.f });
+
+	// Under the button: the price, or what is missing
+	auto player = m_dataLoader->get_player_data().lock();
+	if (!player || m_upgradeIcons.empty()) return;
+	const float centerX = UPGRADE_BUTTON.position.x + UPGRADE_BUTTON.size.x / 2.f;
+	const float priceY = UPGRADE_BUTTON.position.y + UPGRADE_BUTTON.size.y + 46.f;
+	if (m_isMaxLevel)
+	{
+		drawText("MAX LEVEL", 40, UISkin::TITLE, { centerX, priceY }, { 0.5f, 0.5f });
+		return;
+	}
+	const sf::FloatRect price = drawText(std::to_string(m_cost), 44, UISkin::NUMBER, { centerX + 24.f, priceY }, { 0.5f, 0.5f });
+	UISkin::draw_fitted(window, UISkin::texture("icon_shell"), { { price.position.x - 62.f, priceY - 26.f }, { 52.f, 52.f } });
+	if (player->shells < m_cost)
+		drawText("Need " + std::to_string(m_cost - player->shells) + " more shells", 28, CORAL, { centerX, priceY + 50.f }, { 0.5f, 0.5f });
 }
 
 /*
@@ -255,6 +356,7 @@ void UIUpgradeSlider::render(sf::RenderWindow& window)
 	m_descriptionPanel.render(window);
 	window.draw(m_unitName);
 	window.draw(m_description);
+	render_upgrade_info(window);
 	m_abilities.render(window);   // Last: its bubble goes over everything
 }
 

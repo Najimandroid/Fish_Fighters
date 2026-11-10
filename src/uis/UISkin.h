@@ -54,7 +54,8 @@ namespace UISkin
     };
 
     // Submarine look: riveted steel panels and bars, yellow buttons, light blue screens (slots)
-    inline constexpr NineSlice BUTTON_YELLOW{ "button_yellow", 40.f };
+    inline constexpr NineSlice BUTTON_YELLOW{ "button_yellow", 40.f };   // The screen's main action
+    inline constexpr NineSlice BUTTON_STEEL{ "button_steel", 40.f };     // Secondary actions, choices not selected
     inline constexpr NineSlice PANEL_DARK{ "panel_dark", 40.f, false, true };
     inline constexpr NineSlice PANEL_LIGHT{ "panel_light", 40.f, false, true };
     inline constexpr NineSlice BAR_METAL{ "bar_metal", 48.f, true, true };

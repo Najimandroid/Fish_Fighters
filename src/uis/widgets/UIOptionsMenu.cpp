@@ -13,7 +13,6 @@ namespace
     const float SLIDER_WIDTH = 440.f;
     const float SLIDER_HEIGHT = 22.f;
     const float MASTER_Y = 305.f, MUSIC_Y = 375.f, EFFECTS_Y = 445.f, MUTE_Y = 520.f;   // Row centers
-    const sf::Color UNSELECTED_TINT{ 150, 150, 150 };    // A choice that isn't the current one
     const unsigned int HEADER_SIZE = 34;
     const unsigned int ROW_SIZE = 34;
 }
@@ -119,9 +118,10 @@ void UIOptionsMenu::refresh_buttons()
 {
     const Settings& settings = m_dataLoader->get_settings();
     m_muteButton.set_text(settings.muteInBackground ? "ON" : "OFF");
-    m_muteButton.set_fill_color(settings.muteInBackground ? sf::Color::White : UNSELECTED_TINT);
-    m_fullscreenButton.set_fill_color(settings.fullscreen ? sf::Color::White : UNSELECTED_TINT);
-    m_windowedButton.set_fill_color(settings.fullscreen ? UNSELECTED_TINT : sf::Color::White);
+    using Style = UIButtonElement::Style;
+    m_muteButton.set_style(settings.muteInBackground ? Style::Primary : Style::Secondary);
+    m_fullscreenButton.set_style(settings.fullscreen ? Style::Primary : Style::Secondary);
+    m_windowedButton.set_style(settings.fullscreen ? Style::Secondary : Style::Primary);
 }
 
 void UIOptionsMenu::update(float deltaTime)

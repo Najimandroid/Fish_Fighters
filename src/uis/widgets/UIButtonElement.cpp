@@ -8,7 +8,7 @@ namespace
     const float PRESSED_SCALE = 0.94f;            // Size while pressed
     const float CORNER_SCALE = 0.7f;              // Corners of the yellow image on screen (outline about 5 px)
     const sf::Color PRESSED_TINT{ 215, 215, 215 };
-    const sf::Color DISABLED_TINT{ 140, 140, 140 };
+    const sf::Color DISABLED_TINT{ 165, 165, 170 };      // On the steel image: a flat grey
     const sf::Color DISABLED_TEXT{ 190, 190, 190 };
 }
 
@@ -72,6 +72,11 @@ void UIButtonElement::set_fill_color(const sf::Color& color)
     m_tint = color;
 }
 
+void UIButtonElement::set_style(Style style)
+{
+    m_style = style;
+}
+
 void UIButtonElement::set_enabled(bool isEnabled)
 {
     m_isEnabled = isEnabled;
@@ -109,11 +114,13 @@ void UIButtonElement::render(sf::RenderWindow& window)
 {
     if (!m_isVisible) return;
 
+    // Disabled: the steel image greyed (a yellow image tinted grey turns olive, which reads as "not selected")
     sf::Color tint = m_tint;
-    if (!m_isEnabled) tint = tint * DISABLED_TINT;
+    if (!m_isEnabled) tint = DISABLED_TINT;
     else if (m_isPressed) tint = tint * PRESSED_TINT;
+    const bool isSteel = !m_isEnabled || m_style == Style::Secondary;
 
-    UISkin::draw_nine_slice(window, UISkin::BUTTON_YELLOW, get_visual_rect(), CORNER_SCALE, tint);
+    UISkin::draw_nine_slice(window, isSteel ? UISkin::BUTTON_STEEL : UISkin::BUTTON_YELLOW, get_visual_rect(), CORNER_SCALE, tint);
 
     const float scale = get_visual_scale();
     const sf::Color textColor = m_text.getFillColor();

@@ -34,6 +34,7 @@ public:
 
     // Calculate the upgrade cost of a unit given its UID and current level
     int calculate_upgrade_cost(int uid, int level);
+    static int calculate_upgrade_cost(const DataLoader& dataLoader, int uid, int level);
 
     // UI update/render/event methods
     void update(float deltaTime) override;
@@ -61,6 +62,16 @@ private:
     sf::Text m_description;
     UIAbilityList m_abilities;  // Under the description: "Strong against Jelly"... (hover: what it does)
     int m_describedUid = -1;   // The description is wrapped again only when the selection changes
+    int m_describedLevel = -1;
+
+    // What the upgrade gives: { name, now, next } rows, the evolution line; what it costs
+    struct StatRow { std::string name, now, next; bool isBetter = false; };
+    std::vector<StatRow> m_statRows;
+    std::string m_evolutionLine;
+    int m_cost = 0;
+    bool m_isMaxLevel = false;
+    void describe_upgrade(int uid, int level);
+    void render_upgrade_info(sf::RenderWindow& window);
 
     // Card layout: bottom-aligned on CARDS_BOTTOM, the selected card centered
     const sf::Vector2f baseIconSize = { 300.0f, 300.0f };

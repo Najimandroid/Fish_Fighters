@@ -28,7 +28,6 @@ namespace
     const float STAT_COLUMN_WIDTH = 420.f;
     const float STAT_ROW_HEIGHT = 42.f;
 
-    const sf::Color DIMMED_BUTTON{ 140, 150, 160 };
 
     const char* SORT_NAMES[] = { "No.", "Name", "Health", "Attack", "Range", "Speed" };
 
@@ -201,13 +200,13 @@ void UIEncyclopedia::select(int index)
  */
 void UIEncyclopedia::refresh_buttons()
 {
-    m_fishTab.set_fill_color(m_book == Book::FISH ? sf::Color::White : DIMMED_BUTTON);
-    m_enemiesTab.set_fill_color(m_book == Book::ENEMIES ? sf::Color::White : DIMMED_BUTTON);
+    m_fishTab.set_style(m_book == Book::FISH ? UIButtonElement::Style::Primary : UIButtonElement::Style::Secondary);
+    m_enemiesTab.set_style(m_book == Book::ENEMIES ? UIButtonElement::Style::Primary : UIButtonElement::Style::Secondary);
 
     for (int key = 0; key < static_cast<int>(m_sortButtons.size()); ++key)
     {
         const bool isActive = key == static_cast<int>(m_sortKey);
-        m_sortButtons[key]->set_fill_color(isActive ? sf::Color::White : DIMMED_BUTTON);
+        m_sortButtons[key]->set_style(isActive ? UIButtonElement::Style::Primary : UIButtonElement::Style::Secondary);
         sf::String label = SORT_NAMES[key];
         if (isActive) label += m_isDescending ? sf::String(U" \u25BC") : sf::String(U" \u25B2");
         m_sortButtons[key]->set_label(label);

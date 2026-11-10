@@ -38,6 +38,10 @@ public:
     // Tints the button image (white keeps the yellow)
     void set_fill_color(const sf::Color& color);
 
+    // Yellow for the screen's main action, steel blue for the others (and choices not selected)
+    enum class Style { Primary, Secondary };
+    void set_style(Style style);
+
     // A disabled button is greyed out and ignores clicks (a click on it plays the error sound)
     void set_enabled(bool isEnabled);
     bool is_enabled() const;
@@ -77,6 +81,7 @@ protected:
     bool m_isHovered = false;            // The mouse is over the button
     bool m_isPressed = false;            // The left button went down on it and isn't released yet
     bool m_isEnabled = true;
+    Style m_style = Style::Primary;
     std::string m_clickSound = "ui_click";
     bool m_firesOnPress = false;
     std::optional<sf::Keyboard::Key> m_hotkey;

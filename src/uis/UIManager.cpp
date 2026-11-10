@@ -22,6 +22,9 @@
 #include "widgets/UIConfirmDialog.h"
 #include "widgets/UIOptionsMenu.h"
 #include "widgets/UIResultsPanel.h"
+#include "widgets/UIBadge.h"
+#include "widgets/UIUpgradeIcon.h"
+#include "UISkin.h"
 
 #include "../audio/AudioManager.h"
 
@@ -270,6 +273,12 @@ void UIManager::generate_fish_tank_uis()
                     generate_chapter_map_uis();
                 };
         });
+    // Under BATTLE!: the stage the map will open on
+    auto nextStage = std::make_shared<UITextElement>(sf::Vector2f{ columnWidth, 30.f }, sf::Vector2f{ 0.f, 0.f }, next_stage_label(), 26);
+    UISkin::style_text(nextStage->get_text(), 26, UISkin::OUTLINE);
+    nextStage->get_text().setOutlineThickness(0.f);
+    UISkin::set_text_anchor(nextStage->get_text(), { 0.5f, 0.5f });
+    nextStage->set_position({ columnX + columnWidth / 2.f, 190.f + 150.f - 24.f });
 
     // Upgrade button switches UI to upgrade screen
     auto upgradeButton = std::make_shared<UIButtonElement>(
@@ -278,6 +287,7 @@ void UIManager::generate_fish_tank_uis()
         "UPGRADE"
     );
     upgradeButton->set_text_size(52);
+    upgradeButton->set_style(UIButtonElement::Style::Secondary);
     upgradeButton->set_callback([this]()
         {
             m_pendingAction = [this]() {
@@ -292,6 +302,7 @@ void UIManager::generate_fish_tank_uis()
         "EQUIP"
     );
     equipButton->set_text_size(52);
+    equipButton->set_style(UIButtonElement::Style::Secondary);
     equipButton->set_callback([this]()
         {
             m_pendingAction = [this]() {
@@ -306,6 +317,7 @@ void UIManager::generate_fish_tank_uis()
         "ENCYCLOPEDIA"
     );
     encyclopediaButton->set_text_size(52);
+    encyclopediaButton->set_style(UIButtonElement::Style::Secondary);
     encyclopediaButton->set_callback([this]()
         {
             m_pendingAction = [this]() {
@@ -316,6 +328,11 @@ void UIManager::generate_fish_tank_uis()
     // Options and Quit share the last row (Quit smaller, orange, and it asks first)
     auto optionsMenu = make_options_menu();
     auto optionsButton = make_options_button(optionsMenu, { 300.f, 96.f }, { columnX, 828.f }, 40);
+    optionsButton->set_style(UIButtonElement::Style::Secondary);
+
+    // "!" on UPGRADE when a fish can be upgraded or unlocked with the shells there are
+    auto upgradeBadge = std::make_shared<UIBadge>(sf::Vector2f{ columnX + columnWidth - 14.f, 372.f + 12.f }, "!");
+    upgradeBadge->set_visible(is_upgrade_available());
 
     auto quitButton = std::make_shared<UIButtonElement>(
         sf::Vector2f{ 230.f, 96.f },
@@ -333,6 +350,8 @@ void UIManager::generate_fish_tank_uis()
     add_ui_element(upgradeButton);
     add_ui_element(equipButton);
     add_ui_element(encyclopediaButton);
+    add_ui_element(nextStage);
+    add_ui_element(upgradeBadge);
     add_ui_element(optionsButton);
     add_ui_element(quitButton);
     add_ui_element(optionsMenu);  // Windows last: on top while open
@@ -717,6 +736,41 @@ void UIManager::set_quit_game_callback(std::function<void()> callback)
 void UIManager::set_fullscreen_callback(std::function<void(bool)> callback)
 {
     m_fullscreenCallback = callback;
+}
+
+/*
+ * "Stage 5 - Clam Leader": the stage the chapter map opens on (the last one played, else the first not cleared)
+ */
+std::string UIManager::next_stage_label() const
+{
+    auto player = m_dataLoader->get_player_data().lock();
+    if (!player) return "";
+    auto chapter = m_dataLoader->get_chapter_data(player->currentChapter);
+    if (!chapter || chapter->stages.empty()) return "";
+
+    int index = -1;
+    for (size_t i = 0; i < chapter->stages.size() && player->lastStage >= 0; ++i)
+        if (chapter->stages[i].UID == player->lastStage) index = static_cast<int>(i);
+    for (size_t i = 0; i < chapter->stages.size() && index < 0; ++i)
+        if (!player->has_completed_stage(chapter->stages[i].UID)) index = static_cast<int>(i);
+    if (index < 0) index = static_cast<int>(chapter->stages.size()) - 1;
+
+    auto stage = m_dataLoader->get_stage_data(chapter->stages[index].UID);
+    return "Stage " + std::to_string(index + 1) + (stage ? "  -  " + stage->name : "");
+}
+
+/*
+ * A fish waiting to be unlocked, or one the shells can upgrade
+ */
+bool UIManager::is_upgrade_available() const
+{
+    auto player = m_dataLoader->get_player_data().lock();
+    if (!player) return false;
+    if (!player->unitsWaitingToBeUnlocked.empty()) return true;
+    for (const auto& [uid, unit] : player->ownedUnits)
+        if (unit.level < UIUpgradeIcon::MAX_LEVEL && player->shells >= UIUpgradeSlider::calculate_upgrade_cost(*m_dataLoader, uid, unit.level))
+            return true;
+    return false;
 }
 
 /*

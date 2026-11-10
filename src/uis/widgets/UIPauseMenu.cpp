@@ -34,6 +34,7 @@ UIPauseMenu::UIPauseMenu(const std::string& stageName) :
     m_continueButton.set_text_size(40);
     m_retreatButton.set_text_size(40);
     m_optionsButton.set_text_size(40);
+    m_optionsButton.set_style(UIButtonElement::Style::Secondary);
     m_retreatButton.set_fill_color(RETREAT_TINT);
     m_continueButton.set_click_sound("");          // UIManager's continue callback plays "ui_unpause"
     // RETREAT asks first (UIManager's confirm dialog plays "ui_back" if the player confirms)

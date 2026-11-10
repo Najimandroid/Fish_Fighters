@@ -93,6 +93,10 @@ private:
     // Unloads the battle before going back to a menu
     void leave_battle();
 
+    // The hub: the stage the map opens on ("Stage 5 - Clam Leader"), and whether something can be upgraded
+    std::string next_stage_label() const;
+    bool is_upgrade_available() const;
+
     // The stage after stageUid in the current chapter (-1: none)
     int next_stage_uid(int stageUid) const;
 

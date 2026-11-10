@@ -46,7 +46,7 @@ UIConfirmDialog::UIConfirmDialog(const std::string& question, const std::string&
             if (onConfirm) onConfirm();
         });
 
-    m_cancelButton.set_text_size(38);
+    m_cancelButton.set_text_size(38);   // The safe choice stays yellow: it's the one to take
     m_cancelButton.set_callback([this]() { close(); });
 
     m_isVisible = false;
