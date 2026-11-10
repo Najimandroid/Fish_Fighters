@@ -67,7 +67,8 @@ void UIBattleIcon::update(float deltaTime)
     if (isReady && !m_wasReady && !m_isFirstUpdate)
     {
         m_readyTime = 0.f;
-        if (hasCooldownEnded) play_sound("unit_ready");
+        if (hasCooldownEnded && m_maxCooldown >= 5.f)
+            play_sound("unit_ready", 1.f, std::clamp((m_shape.getPosition().x + WIDTH / 2.f) / 1920.f * 2.f - 1.f, -1.f, 1.f) * 0.5f);
     }
     m_wasReady = isReady;
     m_isFirstUpdate = false;

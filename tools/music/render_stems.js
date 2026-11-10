@@ -63,6 +63,41 @@ function renderPings(events) {
     return out;
 }
 
+// A theremin (the creature feature): a sine with a little 2nd and 3rd harmonic, a vibrato fading in (6 Hz, up to
+// +-35 cents), a slight tremolo, gliding between legato notes; a phrase's first note can swoop up into place.
+// events: [[seconds, frequency, length (beats), velocity, glide (seconds), swoop (semitones)]]
+function renderTheremin(events, tempo) {
+    const spb = 60 / tempo;
+    const end = Math.max(0, ...events.map(e => e[0] + e[2] * spb)) + 1;
+    const out = new Float32Array(Math.ceil(end * RATE) * 2);
+    let phase = 0, previous = null;
+    for (const [start, frequency, beats, velocity, glide = 0.07, swoop = 0] of events) {
+        const length = beats * spb, first = Math.round(start * RATE);
+        const frames = Math.round((length + 0.15) * RATE);
+        // Glide from the previous note when it ends right before this one
+        const from = previous && start - previous.end < 0.05 && glide > 0 ? previous.frequency
+            : swoop > 0 ? frequency * Math.pow(2, -swoop / 12) : frequency;
+        const glideTime = previous && start - previous.end < 0.05 && glide > 0 ? glide : swoop > 0 ? 0.2 : 0;
+        const amplitude = Math.pow(velocity / 127, 1.5) * 0.35;
+        let lowpassed = 0;
+        const lowpassAlpha = 1 - Math.exp(-2 * Math.PI * 3500 / RATE);
+        for (let i = 0; i < frames; i++) {
+            const t = i / RATE;
+            const f0 = glideTime > 0 && t < glideTime ? from * Math.pow(frequency / from, t / glideTime) : frequency;
+            const vibrato = 35 * Math.min(1, t / 0.25) * Math.sin(2 * Math.PI * 6 * t);
+            phase += 2 * Math.PI * f0 * Math.pow(2, vibrato / 1200) / RATE;
+            const voice = Math.sin(phase) + 0.18 * Math.sin(2 * phase) + 0.06 * Math.sin(3 * phase);
+            const envelope = Math.min(1, t / 0.04) * (t > length ? Math.max(0, 1 - (t - length) / 0.15) : 1);
+            const tremolo = 1 - 0.05 * (0.5 + 0.5 * Math.sin(2 * Math.PI * 6 * t));
+            lowpassed += lowpassAlpha * (voice * amplitude * envelope * tremolo - lowpassed);
+            out[(first + i) * 2] += lowpassed;
+            out[(first + i) * 2 + 1] += lowpassed;
+        }
+        previous = { end: start + length, frequency };
+    }
+    return out;
+}
+
 // Electric zaps (jellyfish): crackles (sparse clicks through a band-pass), a clipped mains-like buzz and a falling
 // "zzap" whine, all fading out. Each zap draws its randomness from its own seed, so both body copies are identical.
 // events: [[seconds, velocity, duration (seconds), seed, pan (-1..1)]]
@@ -149,8 +184,9 @@ function applyEffects(samples, stem) {
     if (fx.lowpass) out = lowpass(out, fx.lowpass);
     if (fx.chorus) out = chorus(out, fx.chorus, stem.loopSeconds);
     if (fx.echo) out = echo(out, fx.echo, stem.tempo);
-    const gain = Math.pow(10, (stem.gainDb || 0) / 20), pan = stem.pan || 0;
-    const left = gain * Math.min(1, 1 - pan), right = gain * Math.min(1, 1 + pan);
+    // Constant-power panning, a bit wider than written (center = unchanged level on both sides)
+    const gain = Math.pow(10, (stem.gainDb || 0) / 20), pan = Math.max(-0.9, Math.min(0.9, (stem.pan || 0) * 1.5));
+    const left = gain * Math.SQRT2 * Math.cos((pan + 1) * Math.PI / 4), right = gain * Math.SQRT2 * Math.sin((pan + 1) * Math.PI / 4);
     for (let i = 0; i < out.length; i += 2) { out[i] *= left; out[i + 1] *= right; }
     return out;
 }
@@ -172,6 +208,7 @@ for (const song of fs.readdirSync(STEMS_MIDI)) {
         const dry = stem.synth === "bubbles" ? renderBubbles(stem.events)
             : stem.synth === "ping" ? renderPings(stem.events)
             : stem.synth === "zaps" ? renderZaps(stem.events)
+            : stem.synth === "theremin" ? renderTheremin(stem.events, stem.tempo)
             : render(font, stem, RATE);
         const wet = applyEffects(dry, stem);
         const group = groups.get(stem.group) || { parts: [], samples: new Float32Array(0) };

@@ -107,6 +107,10 @@ void Stage::load(int uid)
 	m_hasMusicChanged = false;
 	m_lastBaseAlarm = -100.f;
 	m_musicChangeAt = -1.f;
+	m_isWalletFullArmed = true;
+	m_lastUnitBaseHealth = -1.f;
+	m_lastUnitBaseHit = -100.f;
+	m_hasAlarmed30 = m_hasAlarmed10 = false;
 	if (m_audio)
 	{
 		m_audio->set_battle_mix(true);                     // Music -5 dB under the battle
@@ -130,7 +134,8 @@ void Stage::update_music()
 	if (m_audio->has_sound("boss_stinger"))
 	{
 		m_audio->stop_music(0.4f);
-		play_sound("boss_stinger");
+		const int semitones = AudioManager::key_distance("D", m_audio->get_music_key(m_musicChange));
+		m_audio->play_sound("boss_stinger", 1.f, 0.f, std::pow(2.f, semitones / 12.f));
 		m_musicChangeAt = m_elapsedTime + 1.2f;
 	}
 	else m_audio->play_music(m_musicChange, 1.5f);
@@ -177,16 +182,16 @@ void Stage::play_sound(const std::string& name, float volumeScale) const
 void Stage::on_attack_landed(const BattleEntity& attacker, bool hasHitBase) const
 {
 	const std::string& sound = attacker.data && !attacker.data->attackSound.empty() ? attacker.data->attackSound : DEFAULT_ATTACK_SOUND;
-	play_sound_at(sound, attacker.position.x);
+	const bool isEnemyAttacker = dynamic_cast<const BattleEnemy*>(&attacker) != nullptr;
+	play_sound_at(sound, attacker.position.x, 1.f, isEnemyAttacker ? 0.97f : 1.03f);
 	if (!hasHitBase) return;
 
 	// A fish hits the rock cave, an enemy hits the glass fish bowl (each base sounds like what it's made of)
-	const bool isEnemyAttacker = dynamic_cast<const BattleEnemy*>(&attacker) != nullptr;
 	const std::string baseSound = isEnemyAttacker ? "base_hit_bowl" : "base_hit_cave";
 	play_sound_at(m_audio && m_audio->has_sound(baseSound) ? baseSound : "base_hit", attacker.position.x);
 }
 
-void Stage::play_sound_at(const std::string& name, float worldX, float volumeScale) const
+void Stage::play_sound_at(const std::string& name, float worldX, float volumeScale, float pitch) const
 {
 	if (!m_audio) return;
 	float pan = 0.f;
@@ -197,7 +202,7 @@ void Stage::play_sound_at(const std::string& name, float worldX, float volumeSca
 		pan = std::clamp(offset, -1.f, 1.f) * 0.6f;
 		if (std::abs(offset) > 1.f) volumeScale *= 0.7f;   // Off screen: -3 dB
 	}
-	m_audio->play_sound(name, volumeScale, pan);
+	m_audio->play_sound(name, volumeScale, pan, pitch);
 }
 
 /*
@@ -316,12 +321,26 @@ void Stage::update(float deltaTime)
 		if (m_audio) m_audio->play_music(m_musicChange, 0.f);
 	}
 
-	// The fish bowl is in danger: a warning, now and then
-	if (m_unitBase->currentHealth > 0.f && m_unitBase->currentHealth < m_unitBase->maxHealth * BASE_ALARM_HEALTH
-		&& m_elapsedTime - m_lastBaseAlarm >= BASE_ALARM_SECONDS && m_audio && m_audio->has_sound("base_alarm"))
+	// The fish bowl is in danger: a warning when it drops below 30%, then every 4 s at most while it's being hit,
+	// and once more, higher, at 10%
+	const float bowlHealth = m_unitBase->currentHealth;
+	if (m_lastUnitBaseHealth >= 0.f && bowlHealth < m_lastUnitBaseHealth) m_lastUnitBaseHit = m_elapsedTime;
+	m_lastUnitBaseHealth = bowlHealth;
+	if (bowlHealth > 0.f && m_audio)
 	{
-		m_lastBaseAlarm = m_elapsedTime;
-		play_sound("base_alarm");
+		if (!m_hasAlarmed10 && bowlHealth < m_unitBase->maxHealth * 0.1f)
+		{
+			m_hasAlarmed10 = m_hasAlarmed30 = true;
+			m_lastBaseAlarm = m_elapsedTime;
+			m_audio->play_sound("base_alarm", 1.f, 0.f, 1.06f);
+		}
+		else if (bowlHealth < m_unitBase->maxHealth * BASE_ALARM_HEALTH
+			&& (!m_hasAlarmed30 || (m_elapsedTime - m_lastBaseAlarm >= BASE_ALARM_SECONDS && m_elapsedTime - m_lastUnitBaseHit <= 1.f)))
+		{
+			m_hasAlarmed30 = true;
+			m_lastBaseAlarm = m_elapsedTime;
+			play_sound("base_alarm");
+		}
 	}
 
 	// Checks if the Player has won or lost
@@ -428,6 +447,7 @@ void Stage::draw_falling_base(sf::RenderWindow& window, const BattleBase& base) 
 void Stage::update_cash(float deltaTime)
 {
 	if (deltaTime <= 0.0f) return;
+	if (m_currentCash < m_maxCash * 0.9f) m_isWalletFullArmed = true;   // Spent: the next time it fills up chimes again
 	if (m_currentCash >= m_maxCash) return;
 
 	// Accumulate fractions of cash and only add whole units,
@@ -440,6 +460,12 @@ void Stage::update_cash(float deltaTime)
 
 	if(m_currentCash > m_maxCash)
 		m_currentCash = m_maxCash;
+
+	if (m_currentCash >= m_maxCash && m_isWalletFullArmed)
+	{
+		m_isWalletFullArmed = false;
+		play_sound("wallet_full");
+	}
 
 	//std::cout << "[CURRENT BANK]: " << m_currentCash << "$ / " << m_maxCash << "$\n";
 }

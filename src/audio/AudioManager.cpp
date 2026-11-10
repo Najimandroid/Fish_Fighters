@@ -51,6 +51,7 @@ bool AudioManager::load_music_list(const std::string& path)
             info.loopStart = value.value("loopStart", std::uint64_t{ 0 });
             info.loopLength = value.value("loopLength", std::uint64_t{ 0 });
             info.length = value.value("length", 0.f);
+            info.key = value.value("key", std::string{});
             m_musicInfos[name] = info;
         }
     }
@@ -137,7 +138,7 @@ void AudioManager::update(float realDeltaTime)
         {
             const std::string next = m_queuedMusic;
             m_current->target = 0.f;
-            m_current->fadeSpeed = 1.f / 1.5f;
+            m_current->fadeSpeed = 1.f / 0.35f;   // Only the crash and the room ring under the theme's first beat
             m_fadingOut.push_back(std::move(m_current));
             play_music(next, 0.f);
         }
@@ -293,6 +294,31 @@ bool AudioManager::has_music(const std::string& name) const
     return m_musicInfos.contains(name);
 }
 
+const std::string& AudioManager::get_music_key(const std::string& name) const
+{
+    static const std::string none;
+    const auto found = m_musicInfos.find(name);
+    return found != m_musicInfos.end() ? found->second.key : none;
+}
+
+int AudioManager::key_distance(const std::string& from, const std::string& to)
+{
+    auto pitchClass = [](const std::string& key) -> int
+        {
+            if (key.empty()) return -1;
+            static const int letters[] = { 9, 11, 0, 2, 4, 5, 7 };   // A B C D E F G
+            if (key[0] < 'A' || key[0] > 'G') return -1;
+            int pc = letters[key[0] - 'A'];
+            if (key.size() > 1) pc += key[1] == '#' ? 1 : key[1] == 'b' ? -1 : 0;
+            return (pc + 12) % 12;
+        };
+    const int a = pitchClass(from), b = pitchClass(to);
+    if (a < 0 || b < 0) return 0;
+    int distance = (b - a + 12) % 12;
+    if (distance > 5) distance -= 12;
+    return distance;
+}
+
 void AudioManager::apply_volume(Track& track) const
 {
     const float battle = m_isBattleMix ? BATTLE_MUSIC_LEVEL : 1.f;
@@ -303,7 +329,7 @@ void AudioManager::apply_volume(Track& track) const
 // Sounds
 // ==================
 
-void AudioManager::play_sound(const std::string& name, float volumeScale, float pan)
+void AudioManager::play_sound(const std::string& name, float volumeScale, float pan, float pitch)
 {
     const auto found = m_sounds.find(name);
     if (found == m_sounds.end())
@@ -348,7 +374,7 @@ void AudioManager::play_sound(const std::string& name, float volumeScale, float 
     Voice voice{ name, std::make_unique<sf::Sound>(*info.buffers[pickVariant(m_random)]), info.priority, m_clock };
     voice.sound->setPan(std::clamp(pan, -1.f, 1.f));
     voice.sound->setVolume(std::clamp(m_soundVolume * info.volume * volumeScale, 0.f, 100.f));
-    voice.sound->setPitch(1.f + (info.pitch > 0.f ? pickPitch(m_random) : 0.f));
+    voice.sound->setPitch(pitch * (1.f + (info.pitch > 0.f ? pickPitch(m_random) : 0.f)));
     voice.sound->play();
     m_voices.push_back(std::move(voice));
     info.lastPlayed = m_clock;

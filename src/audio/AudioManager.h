@@ -67,9 +67,16 @@ public:
     const std::string& get_current_music() const;
     bool has_music(const std::string& name) const;
 
+    // A theme's tonic from music.json ("D", "Eb"...), "" if unknown
+    const std::string& get_music_key(const std::string& name) const;
+
+    // Semitones from one key to another, folded into -6..+5 (to shift a sound into a theme's key)
+    static int key_distance(const std::string& from, const std::string& to);
+
     // ===== Sounds =====
-    // volumeScale multiplies the sound's own volume (sfx.json); pan: -1 left to 1 right (where it happens)
-    void play_sound(const std::string& name, float volumeScale = 1.f, float pan = 0.f);
+    // volumeScale multiplies the sound's own volume (sfx.json); pan: -1 left to 1 right (where it happens);
+    // pitch: a factor on top of the sound's random variation
+    void play_sound(const std::string& name, float volumeScale = 1.f, float pan = 0.f, float pitch = 1.f);
     bool has_sound(const std::string& name) const;
 
     // ===== Volumes (0 to 100) =====
@@ -91,6 +98,7 @@ private:
         std::uint64_t loopStart = 0;      // In samples (per channel): where the loop starts
         std::uint64_t loopLength = 0;     // 0: plays once (jingles)
         float length = 0.f;               // Jingles: seconds until their last note ends (a queued theme starts there)
+        std::string key;                  // Its tonic ("D", "Eb"...), "" if unknown
     };
 
     struct SoundInfo

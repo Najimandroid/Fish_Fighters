@@ -1,4 +1,4 @@
-// Turns Waveform's renders (audio_sources/waveform/Fish Fighters Music/Exported/<piece>.wav, 48 kHz float) into the
+// Turns the mixes (audio_sources/waveform/Fish Fighters Music/Exported/<piece>.wav, 48 kHz float, from mix_music.js) into the
 // game's files: assets/audios/music/<piece>.ogg and assets/audios/music/music.json (loop points in samples).
 //
 // - Loudness: the themes at -16 LUFS (measured over their loop), the jingles at -15 LUFS, peaks kept under -1 dBFS.
@@ -66,7 +66,10 @@ for (const [name, info] of Object.entries(loops)) {
                 samples[at] = samples[at] * (1 - w) + samples[(start - CROSSFADE + i) * 2 + ch] * w;
             }
         }
-        samples = samples.slice(0, (end + RATE / 20) * 2);   // 50 ms past the loop end, never played
+        // 50 ms past the loop end, never played: the loop's own start, so the encoder sees the same music after the loop
+        // end as after the loop start (a downbeat right after the loop start is otherwise smeared back only there)
+        for (let i = 0; i < (RATE / 20) * 2; i++) samples[end * 2 + i] = samples[start * 2 + i];
+        samples = samples.slice(0, (end + RATE / 20) * 2);
         measured = loudness(samples.subarray(start * 2, end * 2));
     } else {
         let frames = samples.length / 2;
@@ -92,6 +95,7 @@ for (const [name, info] of Object.entries(loops)) {
 
     // title and kind (menu / stage / jingle) are for the editor's music lists
     manifest[name] = { title: info.title, kind: info.kind, file: "assets/audios/music/" + name + ".ogg", sampleRate: RATE };
+    if (info.key) manifest[name].key = info.key;   // The tonic: the battle start jingle and the boss stinger match it
     if (looped) Object.assign(manifest[name], { loopStart: info.loopStartSample, loopLength: info.loopLengthSample });
     else manifest[name].length = info.lengthSeconds;   // Jingles: where the last note ends (the reverb rings after it)
     console.log(name.padEnd(16), (samples.length / 2 / RATE).toFixed(2).padStart(7) + " s",

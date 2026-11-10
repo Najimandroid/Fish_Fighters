@@ -44,9 +44,9 @@ void UIManager::init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<Sta
 
     // Every widget's sounds (clicks, selections, purchases...) go to the AudioManager
     std::weak_ptr<AudioManager> weakAudio = audio;
-    UIElement::set_sound_player([weakAudio](const std::string& name)
+    UIElement::set_sound_player([weakAudio](const std::string& name, float pitch, float pan)
         {
-            if (auto audio = weakAudio.lock()) audio->play_sound(name);
+            if (auto audio = weakAudio.lock()) audio->play_sound(name, 1.f, pan, pitch);
         });
 }
 
@@ -589,7 +589,12 @@ void UIManager::start_battle(int stageUid)
     if (auto player = m_dataLoader->get_player_data().lock())
         player->lastStage = stageUid;
     if (m_setGameSpeedCallback) m_setGameSpeedCallback(GameSpeedState::NORMAL);
-    if (m_audio) m_audio->play_jingle("jingle_battle_start");
+    if (m_audio)
+    {
+        // The version ending on the tonic of the theme that follows it
+        const std::string keyed = "jingle_battle_start_" + m_audio->get_music_key(m_dataLoader->get_stage_data(stageUid)->music);
+        m_audio->play_jingle(m_audio->has_music(keyed) ? keyed : "jingle_battle_start");
+    }
     stage->load(stageUid);   // Unloads the previous battle if any
     generate_battle_uis();
 }

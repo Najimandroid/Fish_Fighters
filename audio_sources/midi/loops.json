@@ -2,6 +2,7 @@
     "theme_default": {
         "title": "Reef Rumble",
         "kind": "stage",
+        "key": "F",
         "tempo": 152,
         "sampleRate": 48000,
         "lengthSeconds": 164.201,
@@ -11,6 +12,7 @@
     "theme_calm": {
         "title": "Kelp Garden",
         "kind": "stage",
+        "key": "Eb",
         "tempo": 100,
         "sampleRate": 48000,
         "lengthSeconds": 198.537,
@@ -20,6 +22,7 @@
     "theme_serious": {
         "title": "Deep Current",
         "kind": "stage",
+        "key": "D",
         "tempo": 138,
         "sampleRate": 48000,
         "lengthSeconds": 173.891,
@@ -29,6 +32,7 @@
     "theme_stressful": {
         "title": "Pressure Alarm",
         "kind": "stage",
+        "key": "C",
         "tempo": 172,
         "sampleRate": 48000,
         "lengthSeconds": 136.727,
@@ -36,17 +40,19 @@
         "loopLengthSample": 3214884
     },
     "theme_boss": {
-        "title": "Leviathan",
+        "title": "Leviathan's Waltz",
         "kind": "stage",
-        "tempo": 160,
+        "key": "D",
+        "tempo": 162,
         "sampleRate": 48000,
-        "lengthSeconds": 150,
-        "loopStartSample": 3744000,
-        "loopLengthSample": 3456000
+        "lengthSeconds": 168.481,
+        "loopStartSample": 4266667,
+        "loopLengthSample": 3840000
     },
     "theme_title": {
         "title": "Fish Fighters!",
         "kind": "menu",
+        "key": "F",
         "tempo": 168,
         "sampleRate": 48000,
         "lengthSeconds": 102.848,
@@ -56,6 +62,7 @@
     "theme_base": {
         "title": "Fish Tank",
         "kind": "menu",
+        "key": "Bb",
         "tempo": 112,
         "sampleRate": 48000,
         "lengthSeconds": 175.688,
@@ -65,6 +72,7 @@
     "theme_shanty": {
         "title": "Sunken Galleon",
         "kind": "stage",
+        "key": "D",
         "tempo": 126,
         "sampleRate": 48000,
         "lengthSeconds": 186.679,
@@ -74,6 +82,7 @@
     "theme_jelly": {
         "title": "Jellyfish Lair",
         "kind": "stage",
+        "key": "E",
         "tempo": 124,
         "sampleRate": 48000,
         "lengthSeconds": 193.754,
@@ -81,17 +90,19 @@
         "loopLengthSample": 4459355
     },
     "theme_jelly_boss": {
-        "title": "Jellyfish King",
+        "title": "The Jellyfish King's Tango",
         "kind": "stage",
-        "tempo": 152,
+        "key": "E",
+        "tempo": 132,
         "sampleRate": 48000,
-        "lengthSeconds": 157.875,
-        "loopStartSample": 3941053,
-        "loopLengthSample": 3637895
+        "lengthSeconds": 181.137,
+        "loopStartSample": 4538182,
+        "loopLengthSample": 4189091
     },
     "theme_crab": {
         "title": "Crab Cove",
         "kind": "stage",
+        "key": "A",
         "tempo": 132,
         "sampleRate": 48000,
         "lengthSeconds": 178.2,
@@ -99,26 +110,99 @@
         "loopLengthSample": 4189091
     },
     "theme_crab_boss": {
-        "title": "King Crab",
+        "title": "King Crab's Paso Doble",
         "kind": "stage",
+        "key": "A",
+        "tempo": 128,
+        "sampleRate": 48000,
+        "lengthSeconds": 157.43,
+        "loopStartSample": 3960000,
+        "loopLengthSample": 3600000
+    },
+    "theme_danger": {
+        "title": "It Came From The Trench!",
+        "kind": "stage",
+        "key": "G",
         "tempo": 156,
         "sampleRate": 48000,
-        "lengthSeconds": 153.858,
-        "loopStartSample": 3840000,
-        "loopLengthSample": 3544615
+        "lengthSeconds": 141.154,
+        "loopStartSample": 3544616,
+        "loopLengthSample": 3249231
     },
     "jingle_battle_start": {
-        "title": "Battle Start",
+        "title": "Battle Stations! (C)",
         "kind": "jingle",
-        "tempo": 140,
+        "key": "C",
+        "tempo": 160,
         "sampleRate": 48000,
-        "lengthSeconds": 2.786,
+        "lengthSeconds": 2.25,
+        "loopStartSample": null,
+        "loopLengthSample": null
+    },
+    "jingle_battle_start_D": {
+        "title": "Battle Stations! (D)",
+        "kind": "jingle",
+        "key": "D",
+        "tempo": 160,
+        "sampleRate": 48000,
+        "lengthSeconds": 2.25,
+        "loopStartSample": null,
+        "loopLengthSample": null
+    },
+    "jingle_battle_start_Eb": {
+        "title": "Battle Stations! (Eb)",
+        "kind": "jingle",
+        "key": "Eb",
+        "tempo": 160,
+        "sampleRate": 48000,
+        "lengthSeconds": 2.25,
+        "loopStartSample": null,
+        "loopLengthSample": null
+    },
+    "jingle_battle_start_E": {
+        "title": "Battle Stations! (E)",
+        "kind": "jingle",
+        "key": "E",
+        "tempo": 160,
+        "sampleRate": 48000,
+        "lengthSeconds": 2.25,
+        "loopStartSample": null,
+        "loopLengthSample": null
+    },
+    "jingle_battle_start_F": {
+        "title": "Battle Stations! (F)",
+        "kind": "jingle",
+        "key": "F",
+        "tempo": 160,
+        "sampleRate": 48000,
+        "lengthSeconds": 2.25,
+        "loopStartSample": null,
+        "loopLengthSample": null
+    },
+    "jingle_battle_start_G": {
+        "title": "Battle Stations! (G)",
+        "kind": "jingle",
+        "key": "G",
+        "tempo": 160,
+        "sampleRate": 48000,
+        "lengthSeconds": 2.25,
+        "loopStartSample": null,
+        "loopLengthSample": null
+    },
+    "jingle_battle_start_A": {
+        "title": "Battle Stations! (A)",
+        "kind": "jingle",
+        "key": "A",
+        "tempo": 160,
+        "sampleRate": 48000,
+        "lengthSeconds": 2.25,
         "loopStartSample": null,
         "loopLengthSample": null
     },
     "jingle_victory": {
         "title": "Victory",
         "kind": "jingle",
+        "key": "F",
         "tempo": 150,
         "sampleRate": 48000,
         "lengthSeconds": 2.4,
@@ -128,6 +212,7 @@
     "jingle_defeat": {
         "title": "Defeat",
         "kind": "jingle",
+        "key": "F",
         "tempo": 96,
         "sampleRate": 48000,
         "lengthSeconds": 5,

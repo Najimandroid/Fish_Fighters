@@ -134,7 +134,7 @@ void UIResultsPanel::update(float deltaTime)
         m_shownShells = static_cast<int>(std::round(eased * m_result.shells));
         if (m_time >= m_nextTick && progress < 1.f)
         {
-            play_sound("count_tick");
+            play_sound("reward_tick", 1.f + 0.25f * progress);
             m_nextTick = m_time + TICK_SECONDS;
         }
         if (progress >= 1.f)

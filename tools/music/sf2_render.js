@@ -188,7 +188,8 @@ const timecents = tc => Math.pow(2, tc / 1200);
 const centibels = cb => Math.pow(10, -cb / 200);
 
 // bend: semitones the pitch slides by over the held part of the note (0 = none)
-function renderVoice(font, region, key, velocity, start, length, out, rate, gain, bend = 0) {
+// vibrato: { cents, hz, delay } added on top of the instrument's own (a player's vibrato on long notes), or null
+function renderVoice(font, region, key, velocity, start, length, out, rate, gain, bend = 0, vibrato = null) {
     const v = region.value, sample = region.sample;
     const data = font.data;
 
@@ -249,7 +250,7 @@ function renderVoice(font, region, key, velocity, start, length, out, rate, gain
     const vibDelay = timecents(v(GEN.delayVibLFO)), vibFreq = 8.176 * Math.pow(2, v(GEN.freqVibLFO) / 1200), vibToPitch = v(GEN.vibLfoToPitch);
     const modLfoDelay = timecents(v(GEN.delayModLFO)), modLfoFreq = 8.176 * Math.pow(2, v(GEN.freqModLFO) / 1200);
     const modLfoToPitch = v(GEN.modLfoToPitch), modLfoToFilter = v(GEN.modLfoToFilterFc), modLfoToVolume = v(GEN.modLfoToVolume);
-    const isPitchModulated = modEnvToPitch !== 0 || vibToPitch !== 0 || modLfoToPitch !== 0;
+    const isPitchModulated = modEnvToPitch !== 0 || vibToPitch !== 0 || modLfoToPitch !== 0 || vibrato !== null;
 
     // Low-pass (biquad) from initialFilterFc (with its modulators), the modulation envelope and LFO; like FluidSynth:
     // off above 13500 cents when nothing moves it, at least 1500 cents, Q in cB (0 = 0.707), level compensated
@@ -291,8 +292,10 @@ function renderVoice(font, region, key, velocity, start, length, out, rate, gain
             const vib = t > vibDelay ? triangle((t - vibDelay) * vibFreq) : 0;
             const modLfo = t > modLfoDelay ? triangle((t - modLfoDelay) * modLfoFreq) : 0;
             const bendCents = bend ? bend * 100 * Math.min(1, f / Math.max(1, heldFrames)) : 0;
+            // The player's vibrato fades in after its delay (over 0.2 s)
+            const playerCents = vibrato ? vibrato.cents * Math.min(1, Math.max(0, (t - vibrato.delay) / 0.2)) * Math.sin(2 * Math.PI * vibrato.hz * t) : 0;
             step = isPitchModulated || bend
-                ? baseStep * Math.pow(2, (modEnv * modEnvToPitch + vib * vibToPitch + modLfo * modLfoToPitch + bendCents) / 1200)
+                ? baseStep * Math.pow(2, (modEnv * modEnvToPitch + vib * vibToPitch + modLfo * modLfoToPitch + bendCents + playerCents) / 1200)
                 : baseStep;
             if (useFilter) setFilter(filterFc + modEnv * modEnvToFilter + modLfo * modLfoToFilter);
             lfoVolume = modLfoToVolume ? centibels(-modLfo * modLfoToVolume) : 1;
@@ -317,7 +320,9 @@ function renderVoice(font, region, key, velocity, start, length, out, rate, gain
 
 // notes: [[startSeconds, lengthSeconds, key, velocity, bend?], ...]. Returns interleaved stereo Float32Array.
 // Channel 10 plays the drum kit numbered program (bank 128: 0 Standard, 8 Room, 16 Power, 40 Brush...)
-function render(font, { notes, channel, program, volume = 100 }, rate = 48000, tail = 3) {
+// vibrato: { cents, hz, delay (seconds), minBeats } on notes held at least minBeats (tempo: the song's, for beats)
+function render(font, { notes, channel, program, volume = 100, vibrato = null, tempo = 120 }, rate = 48000, tail = 3) {
+    const minVibratoSeconds = vibrato ? (vibrato.minBeats || 0) * 60 / tempo : Infinity;
     const isDrums = channel === 10;
     const bank = isDrums ? 128 : 0;
     const end = Math.max(0, ...notes.map(n => n[0] + n[1])) + tail;
@@ -341,7 +346,7 @@ function render(font, { notes, channel, program, volume = 100 }, rate = 48000, t
         for (const region of font.regions(bank, program, key, velocity)) {
             // Drums play their whole sample (one-shots), unless cut by their exclusive class
             const held = isDrums ? Math.min(cuts[i], 4) : length;
-            renderVoice(font, region, key, velocity, start, held, out, rate, gain, bend);
+            renderVoice(font, region, key, velocity, start, held, out, rate, gain, bend, vibrato && length >= minVibratoSeconds ? vibrato : null);
         }
     });
     return out;

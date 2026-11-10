@@ -81,7 +81,7 @@ public:
     // Plays a sound of sfx.json (nothing without audio)
     void play_sound(const std::string& name, float volumeScale = 1.f) const;
     // A battle sound panned to where it happens (worldX) on screen, a bit quieter when it's off screen
-    void play_sound_at(const std::string& name, float worldX, float volumeScale = 1.f) const;
+    void play_sound_at(const std::string& name, float worldX, float volumeScale = 1.f, float pitch = 1.f) const;
 
     // name, or fallback if sfx.json doesn't have it yet
     void play_sound_or(const std::string& name, const std::string& fallback, float volumeScale = 1.f) const;
@@ -206,6 +206,10 @@ private:
     bool m_hasMusicChanged = false;
     float m_lastBaseAlarm = -100.f;          // Elapsed time of the last low-health alarm of the fish bowl
     float m_musicChangeAt = -1.f;            // Elapsed time the boss theme starts (after its stinger), -1: none
+    bool m_isWalletFullArmed = true;         // "wallet_full" plays when the cash reaches the max, again after it dropped
+    float m_lastUnitBaseHealth = -1.f;       // To know when the fish bowl was last hit
+    float m_lastUnitBaseHit = -100.f;
+    bool m_hasAlarmed30 = false, m_hasAlarmed10 = false;
     static constexpr float BASE_ALARM_HEALTH = 0.3f;     // Below 30% of its health...
     static constexpr float BASE_ALARM_SECONDS = 4.f;     // ...at most every 4 seconds
 
