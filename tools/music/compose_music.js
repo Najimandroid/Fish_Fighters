@@ -1623,41 +1623,50 @@ const CRAB = {
 }
 
 // =====================================================================================================
-// 13. Battle start: the submarine dives (bubbles, a snare and timpani roll), then the motif's call to arms in two
-//     rising "da-da-DUM"s, a turn on C7 and a big F major
+// 13. Battle start: general quarters on the submarine. No tune (that's the victory jingle's): a sonar ping, war
+//     drums speeding up under a swelling timpani roll and tremolo strings, the brass hammering a C power chord
+//     twice, then a C7sus4 left hanging - unresolved, the stage's theme answers it (a victory lands home on F)
 // =====================================================================================================
 {
-    const song = new Song("jingle_battle_start", "Fish Fighters - Battle Start", 160, { kind: "jingle",
-        mix: { lead: 0, brass: -1, strings: -6, bass: -5, drums: -3, bubbles: -6 } });
-    const steel = song.part("Steel drums", 114, { group: "lead", volume: 112, fx: { echo: { beats: 0.5, feedback: 0.2, mix: 0.12 } } });
-    const bells = song.part("Glockenspiel", 9, { group: "lead", volume: 80, pan: 0.3 });
-    const brass = song.part("Brass", 61, { group: "brass", volume: 110, pan: -0.15 });
-    const strings = song.part("Strings", 48, { group: "strings", volume: 96 });
-    const tuba = song.part("Tuba", 58, { group: "bass", volume: 104 });
-    const kit = song.drums("Kit", 0, { group: "drums", volume: 98 });
-    const timpani = song.part("Timpani", 47, { group: "drums", volume: 104 });
+    const song = new Song("jingle_battle_start", "Fish Fighters - Battle Start", 140, { kind: "jingle",
+        mix: { brass: 0, strings: -6, bass: -4, drums: -2, bubbles: -9 } });
+    const brass = song.part("Brass", 61, { group: "brass", volume: 112, pan: -0.1 });
+    const trombones = song.part("Trombones", 57, { group: "brass", volume: 108, pan: 0.15 });
+    const strings = song.part("Tremolo strings", 44, { group: "strings", volume: 100 });
+    const tuba = song.part("Tuba", 58, { group: "bass", volume: 108 });
+    const kit = song.drums("Kit", 0, { group: "drums", volume: 100 });
+    const taiko = song.part("Taiko", 116, { group: "drums", volume: 104 });
+    const timpani = song.part("Timpani", 47, { group: "drums", volume: 106 });
+    const ping = song.synth("Sonar", "ping", { group: "bubbles", fx: { echo: { beats: 1, feedback: 0.35, mix: 0.35 } } });
     const bub = song.synth("Bubbles", "bubbles", { group: "bubbles" });
 
-    const CALL = "r:1 C5:.25 C5:.25 F5:.5 A5:.25 A5:.25 C6:.5 D6:.25 C6:.25 A5:.25 C6:.25 F6:2";
-    steel.play(CALL, { velocity: 108, gate: 0.9 });
-    bells.play(CALL, { velocity: 72 });
-    brass.play(CALL, { velocity: 110, gate: 0.85, transpose: -12 });
-    let previous = null;
-    for (const [symbol, at, length, velocity] of [["F", 1, 0.45, 96], ["F", 1.5, 0.45, 90], ["F", 2, 0.45, 96], ["F", 2.5, 0.45, 90], ["C7", 3, 0.9, 98], ["F", 4, 2, 110]]) {
-        previous = voice(symbol, 57, previous);
-        previous.forEach(n => brass.hit(at, n, velocity - 10, length));
+    // Bar 1: the ping, the war drums speeding up, the rolls swelling, the submarine diving
+    ping.add(0, 1180, 104);
+    [[0, 112], [1, 100], [2, 106], [2.5, 98], [3, 108], [3.25, 96], [3.5, 110], [3.75, 116]].forEach(([t, v]) => taiko.hit(t, 45, v, 0.8));
+    roll(timpani, 0, 4, pitch("C2"), 36, 112);
+    roll(kit, 2, 2, SNARE, 40, 118);
+    ["C3", "G3", "C4"].forEach(n => strings.hit(0, pitch(n), 80, 4));
+    bubbles(bub, 0, { count: 16, spread: 4, low: 200, high: 1600, velocity: 90 });
+
+    // Bar 2: DUM - DUM - and the C7sus4 held, without its third
+    const POWER = ["C3", "G3", "C4", "G4"].map(pitch);
+    const HANG = ["C3", "F3", "G3", "Bb3", "C4", "F4", "G4"].map(pitch);
+    for (const [t, velocity] of [[4, 112], [4.5, 106]]) {
+        POWER.forEach(n => brass.hit(t, n, velocity, 0.3));
+        POWER.slice(0, 2).forEach(n => trombones.hit(t, n - 12, velocity - 4, 0.3));
+        tuba.hit(t, pitch("C2"), velocity, 0.3);
+        taiko.hit(t, 45, velocity + 4, 0.8);
+        kit.hit(t, KICK, velocity + 4);
     }
-    voice("C7", 62).forEach(n => strings.hit(1, n, 70, 3));
-    voice("Fadd9", 65).forEach(n => strings.hit(4, n, 96, 2.5));
-    tuba.hit(1, pitch("F2"), 100, 0.4).hit(2, pitch("A2"), 96, 0.4).hit(3, pitch("C2"), 100, 0.9).hit(4, pitch("F1"), 114, 2.5);
-    roll(kit, 0, 1, SNARE, 40, 110);
-    roll(timpani, 0, 1, 41, 40, 104);
-    kit.hit(1, KICK, 110).hit(1, SNARE, 100).hit(2, KICK, 110).hit(2, SNARE, 104);
-    roll(kit, 3, 1, SNARE, 70, 112);
-    kit.hit(4, CRASH, 122, 2).hit(4, KICK, 122);
-    timpani.hit(4, pitch("F2"), 116, 2);
-    bubbles(bub, 0, { count: 14, spread: 1, low: 250, high: 1400, velocity: 95 });
-    bubbles(bub, 4, { count: 16, spread: 2, low: 400, high: 2000, velocity: 90 });
+    kit.hit(4, CRASH, 114, 1);
+    HANG.forEach(n => brass.hit(5, n, 114, 1.5));
+    HANG.slice(0, 4).forEach(n => trombones.hit(5, n - 12, 108, 1.5));
+    voice("C7sus4", 67).forEach(n => strings.hit(5, n, 100, 1.5));
+    tuba.hit(5, pitch("C2"), 116, 1.5);
+    timpani.hit(5, pitch("C2"), 120, 1.5);
+    taiko.hit(5, 45, 124, 1);
+    kit.hit(5, CRASH, 124, 1.5).hit(5, KICK, 124);
+    bubbles(bub, 5, { count: 14, spread: 1.5, low: 500, high: 2200, velocity: 88 });
     songs.push(song);
 }
 

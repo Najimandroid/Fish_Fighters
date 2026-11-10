@@ -100,7 +100,7 @@
         "kind": "jingle",
         "file": "assets/audios/music/jingle_battle_start.ogg",
         "sampleRate": 48000,
-        "length": 2.438
+        "length": 2.786
     },
     "jingle_victory": {
         "title": "Victory",

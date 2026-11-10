@@ -110,9 +110,9 @@
     "jingle_battle_start": {
         "title": "Battle Start",
         "kind": "jingle",
-        "tempo": 160,
+        "tempo": 140,
         "sampleRate": 48000,
-        "lengthSeconds": 2.438,
+        "lengthSeconds": 2.786,
         "loopStartSample": null,
         "loopLengthSample": null
     },

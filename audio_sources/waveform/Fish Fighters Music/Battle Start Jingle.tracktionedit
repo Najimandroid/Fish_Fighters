@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <EDIT appVersion="Waveform 14.1.24" projectID="C:\Users\najim\Documents\C++_Games\Fish_Fighters\audio_sources\waveform\Fish Fighters Music\Battle Start Jingle.tracktionedit"
-      creationTime="1794241433132" lastSignificantChange="1a1c2c8af65"
+      creationTime="1794241433132" lastSignificantChange="1a1c3e8155d"
       modifiedBy="najim">
-  <TRANSPORT endToEnd="1" position="48.0" start="54.0" scrubInterval="1.939644208190785"
+  <TRANSPORT endToEnd="1" position="40.0" start="40.0" scrubInterval="1.939644208190785"
              automationRead="1"/>
   <PITCHSEQUENCE>
     <PITCH startBeat="0.0" pitch="60"/>
@@ -39,10 +39,10 @@
   <TRACKCOMPS/>
   <VIEWSTATE minimalTransportBar="1" hiddenClips="" lockedClips="" chordTrackVisible="0"
              arrangerTrackVisible="0" enabledTrackTags="" currentSidePanel="Files"
-             browserSelection="result/all" viewleft="-2.567931431850112" viewright="94.41427897768915">
+             browserSelection="result/all" viewleft="-2.567931431850113" viewright="94.41427897768915">
     <PLUGINPANEL/>
-    <RENDERER2 renderSettings="{&quot;tracks&quot;: &quot;&quot;, &quot;mutedTracks&quot;: &quot;&quot;, &quot;includeSourceTracks&quot;: true, &quot;clips&quot;: &quot;&quot;, &quot;wrapRemainder&quot;: false, &quot;includeTails&quot;: true, &quot;destination&quot;: &quot;C:\\Users\\najim\\Documents\\C++_Games\\Fish_Fighters\\audio_sources\\waveform\\Fish Fighters Music\\Exported\\theme_crab_boss.wav&quot;, &quot;format&quot;: &quot;wav&quot;, &quot;sampleRate&quot;: 48000.0, &quot;bitDepth&quot;: 32, &quot;quality&quot;: 0, &quot;channelLayout&quot;: &quot;&quot;, &quot;normalise&quot;: false, &quot;normaliseByRMS&quot;: false, &quot;normaliseByLUFS&quot;: false, &quot;normaliseToLevelDb&quot;: 0.0, &quot;limitTruePeak&quot;: true, &quot;truePeakCeilingDb&quot;: -1.0, &quot;trimSilence&quot;: false, &quot;dither&quot;: false, &quot;realTime&quot;: false, &quot;usePlugins&quot;: true, &quot;useMasterPlugins&quot;: true, &quot;separateFiles&quot;: false, &quot;onlySelectedTracks&quot;: false, &quot;onlyMarkedRegion&quot;: false, &quot;addToLibrary&quot;: false, &quot;addAcidMetadata&quot;: false, &quot;addTagMetadata&quot;: false, &quot;advanced&quot;: false, &quot;category&quot;: &quot;tracks&quot;, &quot;renderTogether&quot;: false, &quot;markerClips&quot;: false, &quot;arrangerClips&quot;: false, &quot;selectedClipsRange&quot;: false, &quot;eachSelectedClip&quot;: false, &quot;includeMasterPlugins&quot;: false, &quot;overwriteExisting&quot;: true, &quot;namePattern&quot;: &quot;&quot;, &quot;destinationKind&quot;: &quot;&quot;, &quot;items&quot;: []}"
-               renderSettingsEditName="Crab King Theme"/>
+    <RENDERER2 renderSettings="{&quot;tracks&quot;: &quot;&quot;, &quot;mutedTracks&quot;: &quot;&quot;, &quot;includeSourceTracks&quot;: true, &quot;clips&quot;: &quot;&quot;, &quot;wrapRemainder&quot;: false, &quot;includeTails&quot;: true, &quot;destination&quot;: &quot;C:\\Users\\najim\\Documents\\C++_Games\\Fish_Fighters\\audio_sources\\waveform\\Fish Fighters Music\\Exported\\jingle_battle_start.wav&quot;, &quot;format&quot;: &quot;wav&quot;, &quot;sampleRate&quot;: 48000.0, &quot;bitDepth&quot;: 32, &quot;quality&quot;: 0, &quot;channelLayout&quot;: &quot;&quot;, &quot;normalise&quot;: false, &quot;normaliseByRMS&quot;: false, &quot;normaliseByLUFS&quot;: false, &quot;normaliseToLevelDb&quot;: 0.0, &quot;limitTruePeak&quot;: true, &quot;truePeakCeilingDb&quot;: -1.0, &quot;trimSilence&quot;: false, &quot;dither&quot;: false, &quot;realTime&quot;: false, &quot;usePlugins&quot;: true, &quot;useMasterPlugins&quot;: true, &quot;separateFiles&quot;: false, &quot;onlySelectedTracks&quot;: false, &quot;onlyMarkedRegion&quot;: false, &quot;addToLibrary&quot;: false, &quot;addAcidMetadata&quot;: false, &quot;addTagMetadata&quot;: false, &quot;advanced&quot;: false, &quot;category&quot;: &quot;tracks&quot;, &quot;renderTogether&quot;: false, &quot;markerClips&quot;: false, &quot;arrangerClips&quot;: false, &quot;selectedClipsRange&quot;: false, &quot;eachSelectedClip&quot;: false, &quot;includeMasterPlugins&quot;: false, &quot;overwriteExisting&quot;: true, &quot;namePattern&quot;: &quot;&quot;, &quot;destinationKind&quot;: &quot;&quot;, &quot;items&quot;: []}"
+               renderSettingsEditName="Battle Start Jingle"/>
   </VIEWSTATE>
   <EDITMIXGROUPS/>
   <SCENES/>
@@ -60,11 +60,11 @@
   <TRACK id="1003" colour="ff00ffaa">
     <MODIFIERS/>
     <CLIPSLOTS/>
-    <AUDIOCLIP name="01_lead" start="0.0" length="5.3500625" offset="0.0" id="1088"
-               source="..\..\stems\jingle_battle_start\01_lead.wav" sync="0"
-               elastiqueMode="0" pan="0.0" colour="ff00ffaa" proxyAllowed="1"
+    <AUDIOCLIP name="01_brass" start="0.0" length="5.888729166666667" offset="0.0"
+               id="1100" source="..\..\stems\jingle_battle_start\01_brass.wav"
+               sync="0" elastiqueMode="0" pan="0.0" colour="ff00ffaa" proxyAllowed="1"
                resamplingQuality="lagrange">
-      <LOOPINFO rootNote="-1" numBeats="10.700125" oneShot="0" denominator="4"
+      <LOOPINFO rootNote="-1" numBeats="11.77745833333333" oneShot="0" denominator="4"
                 numerator="4" bpm="0.0" inMarker="0" outMarker="-1"/>
       <AUTOMATIONCURVES/>
     </AUDIOCLIP>
@@ -82,11 +82,11 @@
   <TRACK id="1006" colour="ff00aaff">
     <MODIFIERS/>
     <CLIPSLOTS/>
-    <AUDIOCLIP name="02_brass" start="0.0" length="5.3500625" offset="0.0" id="1090"
-               source="..\..\stems\jingle_battle_start\02_brass.wav" sync="0"
-               elastiqueMode="0" pan="0.0" colour="ff00aaff" proxyAllowed="1"
+    <AUDIOCLIP name="02_strings" start="0.0" length="5.888729166666667" offset="0.0"
+               id="1102" source="..\..\stems\jingle_battle_start\02_strings.wav"
+               sync="0" elastiqueMode="0" pan="0.0" colour="ff00aaff" proxyAllowed="1"
                resamplingQuality="lagrange">
-      <LOOPINFO rootNote="-1" numBeats="10.700125" oneShot="0" denominator="4"
+      <LOOPINFO rootNote="-1" numBeats="11.77745833333333" oneShot="0" denominator="4"
                 numerator="4" bpm="0.0" inMarker="0" outMarker="-1"/>
       <AUTOMATIONCURVES/>
     </AUDIOCLIP>
@@ -104,11 +104,11 @@
   <TRACK id="1009" colour="ff5500ff">
     <MODIFIERS/>
     <CLIPSLOTS/>
-    <AUDIOCLIP name="03_strings" start="0.0" length="5.3500625" offset="0.0"
-               id="1092" source="..\..\stems\jingle_battle_start\03_strings.wav"
+    <AUDIOCLIP name="03_bass" start="0.0" length="5.888729166666667" offset="0.0"
+               id="1104" source="..\..\stems\jingle_battle_start\03_bass.wav"
                sync="0" elastiqueMode="0" pan="0.0" colour="ff5500ff" proxyAllowed="1"
                resamplingQuality="lagrange">
-      <LOOPINFO rootNote="-1" numBeats="10.700125" oneShot="0" denominator="4"
+      <LOOPINFO rootNote="-1" numBeats="11.77745833333333" oneShot="0" denominator="4"
                 numerator="4" bpm="0.0" inMarker="0" outMarker="-1"/>
       <AUTOMATIONCURVES/>
     </AUDIOCLIP>
@@ -126,11 +126,11 @@
   <TRACK id="1012" colour="ffff00aa">
     <MODIFIERS/>
     <CLIPSLOTS/>
-    <AUDIOCLIP name="04_bass" start="0.0" length="5.3500625" offset="0.0" id="1094"
-               source="..\..\stems\jingle_battle_start\04_bass.wav" sync="0"
-               elastiqueMode="0" pan="0.0" colour="ffff00aa" proxyAllowed="1"
+    <AUDIOCLIP name="04_drums" start="0.0" length="5.888729166666667" offset="0.0"
+               id="1106" source="..\..\stems\jingle_battle_start\04_drums.wav"
+               sync="0" elastiqueMode="0" pan="0.0" colour="ffff00aa" proxyAllowed="1"
                resamplingQuality="lagrange">
-      <LOOPINFO rootNote="-1" numBeats="10.700125" oneShot="0" denominator="4"
+      <LOOPINFO rootNote="-1" numBeats="11.77745833333333" oneShot="0" denominator="4"
                 numerator="4" bpm="0.0" inMarker="0" outMarker="-1"/>
       <AUTOMATIONCURVES/>
     </AUDIOCLIP>
@@ -148,11 +148,11 @@
   <TRACK id="1015" colour="ffffff00">
     <MODIFIERS/>
     <CLIPSLOTS/>
-    <AUDIOCLIP name="05_drums" start="0.0" length="5.3500625" offset="0.0" id="1096"
-               source="..\..\stems\jingle_battle_start\05_drums.wav" sync="0"
-               elastiqueMode="0" pan="0.0" colour="ffffff00" proxyAllowed="1"
+    <AUDIOCLIP name="05_bubbles" start="0.0" length="5.888729166666667" offset="0.0"
+               id="1108" source="..\..\stems\jingle_battle_start\05_bubbles.wav"
+               sync="0" elastiqueMode="0" pan="0.0" colour="ffffff00" proxyAllowed="1"
                resamplingQuality="lagrange">
-      <LOOPINFO rootNote="-1" numBeats="10.700125" oneShot="0" denominator="4"
+      <LOOPINFO rootNote="-1" numBeats="11.77745833333333" oneShot="0" denominator="4"
                 numerator="4" bpm="0.0" inMarker="0" outMarker="-1"/>
       <AUTOMATIONCURVES/>
     </AUDIOCLIP>
@@ -170,14 +170,6 @@
   <TRACK id="1018" colour="ffffaa00">
     <MODIFIERS/>
     <CLIPSLOTS/>
-    <AUDIOCLIP name="06_bubbles" start="0.0" length="5.3500625" offset="0.0"
-               id="1098" source="..\..\stems\jingle_battle_start\06_bubbles.wav"
-               sync="0" elastiqueMode="0" pan="0.0" colour="ffffaa00" proxyAllowed="1"
-               resamplingQuality="lagrange">
-      <LOOPINFO rootNote="-1" numBeats="10.700125" oneShot="0" denominator="4"
-                numerator="4" bpm="0.0" inMarker="0" outMarker="-1"/>
-      <AUTOMATIONCURVES/>
-    </AUDIOCLIP>
     <PLUGIN type="volume" id="1019" enabled="1" volume="0.740818202495575"
             pan="0.0">
       <MODIFIERASSIGNMENTS/>
