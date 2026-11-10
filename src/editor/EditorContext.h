@@ -3,6 +3,7 @@
 #include "ProjectData.h"
 #include "TextureCache.h"
 #include "AssetLibrary.h"
+#include "AudioLibrary.h"
 
 #include "imgui.h"
 
@@ -71,7 +72,7 @@ struct ValidationReport
 /*
  * EditorContext
  * -------------
- * Everything the panels share: the project, its images, the selection, the validation report.
+ * Everything the panels share: the project, its images and audio, the selection, the validation report.
  * Panels never talk to each other: they read and change this context.
  *
  * Rules for the panels:
@@ -84,14 +85,15 @@ struct ValidationReport
 class EditorContext
 {
 public:
-    EditorContext(ProjectData& project, TextureCache& textures, AssetLibrary& assets, sf::RenderWindow& window) :
-        project(project), textures(textures), assets(assets), window(window)
+    EditorContext(ProjectData& project, TextureCache& textures, AssetLibrary& assets, AudioLibrary& audio, sf::RenderWindow& window) :
+        project(project), textures(textures), assets(assets), audio(audio), window(window)
     {
     }
 
     ProjectData& project;
     TextureCache& textures;
     AssetLibrary& assets;
+    AudioLibrary& audio;      // Music and sounds of the game (lists and previews)
     sf::RenderWindow& window;
 
     Selection selection;

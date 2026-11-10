@@ -5,11 +5,11 @@
 /*
  * UIPatternBackground
  * -------------------
- * Fills the screen with a small image repeated in every direction (the wave pattern of the menus),
+ * Fills the screen with a small image repeated in every direction (the riveted hull wall of the menus),
  * like the patterned wallpapers behind The Battle Cats' menus.
  *
  * Example usage:
- *   auto background = std::make_shared<UIPatternBackground>("pattern_waves");
+ *   auto background = std::make_shared<UIPatternBackground>("pattern_hull");
  */
 
 class UIPatternBackground : public UIElement

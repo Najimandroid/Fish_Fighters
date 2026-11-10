@@ -1,15 +1,32 @@
 #include "UIDeploymentIcons.h"
+#include "../UISkin.h"
 #include "../../core/stages/Stage.h"
 
+#include <algorithm>
+#include <cstdint>
 #include <iostream>
+
+namespace
+{
+    const sf::Color MESSAGE_COLOR{ 255, 128, 104 };   // Warm red, outlined like every text
+    const unsigned int MESSAGE_SIZE = 46;
+}
 
 /*
  * Stores references to the DataLoader and Stage, then initializes the icons grid.
  */
 UIDeploymentIcons::UIDeploymentIcons(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<Stage> stage) :
-    m_dataLoader(dataLoader), m_stage(stage)
+    m_dataLoader(dataLoader), m_stage(stage),
+    m_message(UISkin::heavy_font())
 {
+    UISkin::style_text(m_message, MESSAGE_SIZE, MESSAGE_COLOR);
     init_icons();
+}
+
+void UIDeploymentIcons::show_message(const std::string& text)
+{
+    m_message.setString(text);
+    m_messageTime = MESSAGE_SECONDS;
 }
 
 /*
@@ -77,13 +94,26 @@ void UIDeploymentIcons::init_icons()
                 icon->set_callback([this, weakIcon, weakData]()
                     {
                         auto icon = weakIcon.lock();
-                        if (!icon || icon->get_if_on_cooldown()) return;
+                        if (!icon) return;
+                        if (icon->get_if_on_cooldown()) { UIElement::play_sound("ui_error"); return; }
 
                         if (auto data = weakData.lock())
                         {
-                            if (m_stage.lock()->get_cash() < data->cost) return;
-                            m_stage.lock()->spawn_unit(data);
-                            icon->start_cooldown();
+                            auto stage = m_stage.lock();
+                            if (!stage) return;
+
+                            // The stage's units limit: nothing spawns, the slot doesn't start its cooldown
+                            if (stage->is_unit_limit_reached())
+                            {
+                                show_message("UNIT LIMIT REACHED");
+                                UIElement::play_sound("ui_error");
+                                return;
+                            }
+                            if (stage->get_cash() < data->cost) { UIElement::play_sound("ui_error"); return; }
+
+                            // The stage plays the deploy sound
+                            if (stage->spawn_unit(data)) icon->start_cooldown();
+                            else UIElement::play_sound("ui_error");
                         }
                     });
             }
@@ -121,10 +151,12 @@ void UIDeploymentIcons::update(float deltaTime)
 
         icon->update(deltaTime);
     }
+
+    m_messageTime = std::max(0.f, m_messageTime - deltaTime);
 }
 
 /*
- * Draws all icons to the window if visible.
+ * Draws all icons to the window if visible, and the message over them while it lasts.
  */
 void UIDeploymentIcons::render(sf::RenderWindow& window)
 {
@@ -133,6 +165,22 @@ void UIDeploymentIcons::render(sf::RenderWindow& window)
     for (auto& icon : m_icons)
     {
         icon->render(window);
+    }
+
+    if (m_messageTime > 0.f)
+    {
+        // Pops in bigger, settles, fades out over its last 0.4 seconds
+        const float age = MESSAGE_SECONDS - m_messageTime;
+        const float scale = 1.f + 0.25f * std::max(0.f, 1.f - age / 0.15f);
+        const std::uint8_t alpha = static_cast<std::uint8_t>(255.f * std::min(1.f, m_messageTime / 0.4f));
+
+        const sf::FloatRect slots = get_bounds();
+        UISkin::set_text_anchor(m_message, { 0.5f, 1.f });
+        m_message.setScale({ scale, scale });
+        m_message.setPosition({ slots.position.x + slots.size.x / 2.f, slots.position.y - 14.f });
+        m_message.setFillColor(sf::Color(MESSAGE_COLOR.r, MESSAGE_COLOR.g, MESSAGE_COLOR.b, alpha));
+        m_message.setOutlineColor(sf::Color(UISkin::OUTLINE.r, UISkin::OUTLINE.g, UISkin::OUTLINE.b, alpha));
+        window.draw(m_message);
     }
 }
 

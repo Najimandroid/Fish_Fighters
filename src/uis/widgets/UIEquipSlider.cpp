@@ -45,7 +45,7 @@ UIEquipSlider::UIEquipSlider(std::shared_ptr<DataLoader> dataLoader)
     m_nextButton(ARROW_SIZE, { 1920.f - 36.f - ARROW_SIZE, ARROW_Y }, "icon_play"),
     m_lineupPanel(lineup_panel_rect().size, lineup_panel_rect().position, UISkin::PANEL_DARK, 1.2f),
     m_lineupTitle(UISkin::heavy_font(), "LINEUP"),
-    m_hint(UISkin::heavy_font(), "Drag a fish into the lineup  -  right click a fish of the lineup to remove it"),
+    m_hint(UISkin::heavy_font(), "Drag a fish into the lineup  -  drag within the lineup to reorder  -  right click to remove"),
     m_ghostCost(UISkin::heavy_font())
 {
     if (!m_placeholderTexture.loadFromFile("assets/images/textures/icons/placeholder.png")) {
@@ -56,6 +56,8 @@ UIEquipSlider::UIEquipSlider(std::shared_ptr<DataLoader> dataLoader)
     m_tempGhost = std::make_unique<TempGhost>(m_placeholderTexture);
 
     m_previousButton.set_icon_flipped(true);
+    m_previousButton.set_click_sound("");   // move_to_index plays the selection sound
+    m_nextButton.set_click_sound("");
     m_previousButton.set_callback([this]() { move_to_index(m_currentIndex - 1); });
     m_nextButton.set_callback([this]() { move_to_index(m_currentIndex + 1); });
 
@@ -168,6 +170,7 @@ void UIEquipSlider::init_icons()
                 {
                     // Unequip the clicked slot
                     player->unequip_unit(slotIndex);
+                    play_sound("unequip");
 
                     // Refresh all slots and redraw ghosts in order
                     refresh_slots_after_unequip();
@@ -255,36 +258,7 @@ void UIEquipSlider::update(float deltaTime)
     if (m_mouseDown && !m_dragging)
     {
         if (m_holdClock.getElapsedTime().asMilliseconds() >= HOLD_THRESHOLD_MS)
-        {
-            if (!m_equipIcons.empty())
-            {
-                DragInfo dragInfo;
-                int uid = m_equipIcons[m_currentIndex]->get_uid();
-                dragInfo.uid = uid;
-                dragInfo.cost = m_dataLoader->get_unit_data(uid, m_dataLoader->get_player_data().lock()->get_unit_form(uid))->cost;
-                dragInfo.level = m_dataLoader->get_player_data().lock()->get_unit_level(uid);
-
-                // Load texture into cache if needed
-                auto it = m_unitTextures.find(uid);
-                if (it == m_unitTextures.end())
-                {
-                    sf::Texture tex;
-                    if (!tex.loadFromFile(m_dataLoader->get_unit_icon_texture_path(uid, m_dataLoader->get_player_data().lock()->get_unit_form(uid))))
-                        tex = m_placeholderTexture;
-                    auto [insertIt, _] = m_unitTextures.emplace(uid, std::move(tex));
-                    dragInfo.texture = &insertIt->second;
-                }
-                else
-                {
-                    dragInfo.texture = &it->second;
-                }
-
-                dragInfo.iconSize = m_equipIcons[m_currentIndex]->get_size();
-
-                start_drag(dragInfo, m_mouseDownPos);
-                m_dragging = true;
-            }
-        }
+            begin_drag(m_mouseDownPos);
     }
 
     if (!m_tempGhost || !m_tempGhost->active)
@@ -325,10 +299,11 @@ void UIEquipSlider::render(sf::RenderWindow& window)
 
     render_lineup(window);
 
-    for (auto& slot : m_slots)
+    // The unit lifted out of the lineup is drawn by the ghost only
+    for (int i = 0; i < static_cast<int>(m_slots.size()); ++i)
     {
-        if (slot.ghost)
-            slot.ghost->render(window);
+        if (m_slots[i].ghost && !(m_dragging && i == m_dragFromSlot))
+            m_slots[i].ghost->render(window);
     }
 
     render_ghost(window);
@@ -344,9 +319,10 @@ void UIEquipSlider::render_lineup(sf::RenderWindow& window)
     m_lineupPanel.render(window);
     window.draw(m_lineupTitle);
 
-    for (auto& slot : m_slots)
+    for (int i = 0; i < static_cast<int>(m_slots.size()); ++i)
     {
-        if (slot.ghost) continue;
+        const EquipSlot& slot = m_slots[i];
+        if (slot.ghost && !(m_dragging && i == m_dragFromSlot)) continue;
         UISkin::draw_nine_slice(window, UISkin::SLOT, slot.bounds, 1.f, UISkin::EMPTY_SLOT_TINT);
         UISkin::draw_nine_slice(window, UISkin::SLOT_FRAME, slot.bounds, 1.f);
     }
@@ -408,9 +384,15 @@ void UIEquipSlider::handle_event(const sf::Event& event, const sf::RenderWindow&
         if (mousePressed->button == sf::Mouse::Button::Left)
         {
             sf::Vector2f mousePos = window.mapPixelToCoords(mousePressed->position);
-            if (!m_equipIcons.empty() && m_equipIcons[m_currentIndex]->get_bounds().contains(mousePos))
+            m_dragFromSlot = -1;
+            for (int i = 0; i < static_cast<int>(m_slots.size()); ++i)
+                if (m_slots[i].ghost && m_slots[i].bounds.contains(mousePos))
+                    m_dragFromSlot = i;
+
+            if (m_dragFromSlot >= 0
+                || (!m_equipIcons.empty() && m_equipIcons[m_currentIndex]->get_bounds().contains(mousePos)))
             {
-                // Pressed on current icon -> start hold timer
+                // Pressed on a unit of the lineup or the current card -> start hold timer
                 m_mouseDown = true;
                 m_mouseDownPos = mousePos;
                 m_holdClock.restart();
@@ -442,36 +424,7 @@ void UIEquipSlider::handle_event(const sf::Event& event, const sf::RenderWindow&
             float dx = mousePos.x - m_mouseDownPos.x;
             float dy = mousePos.y - m_mouseDownPos.y;
             if (std::sqrt(dx * dx + dy * dy) > 5.f)
-            {
-                if (!m_equipIcons.empty())
-                {
-                    DragInfo dragInfo;
-                    int uid = m_equipIcons[m_currentIndex]->get_uid();
-                    dragInfo.uid = uid;
-                    dragInfo.cost = m_dataLoader->get_unit_data(uid, m_dataLoader->get_player_data().lock()->get_unit_form(uid))->cost;
-                    dragInfo.level = m_dataLoader->get_player_data().lock()->get_unit_level(uid);
-
-                    // Load/cached texture for ghost
-                    auto it = m_unitTextures.find(uid);
-                    if (it == m_unitTextures.end())
-                    {
-                        sf::Texture tex;
-                        if (!tex.loadFromFile(m_dataLoader->get_unit_icon_texture_path(uid, m_dataLoader->get_player_data().lock()->get_unit_form(uid))))
-                            tex = m_placeholderTexture;
-                        auto [insertIt, _] = m_unitTextures.emplace(uid, std::move(tex));
-                        dragInfo.texture = &insertIt->second;
-                    }
-                    else
-                    {
-                        dragInfo.texture = &it->second;
-                    }
-
-                    dragInfo.iconSize = m_equipIcons[m_currentIndex]->get_size();
-
-                    start_drag(dragInfo, mousePos);
-                    m_dragging = true;
-                }
-            }
+                begin_drag(mousePos);
         }
 
         // While dragging, move ghost with cursor
@@ -493,11 +446,12 @@ void UIEquipSlider::handle_event(const sf::Event& event, const sf::RenderWindow&
             }
             m_mouseDown = false;
             m_dragging = false;
+            m_dragFromSlot = -1;
         }
     }
 
-    // Forward event handling to equipped slots (so they can handle clicks)
-    for (int i = 0; i < static_cast<int>(m_slots.size()); ++i)
+    // Forward event handling to equipped slots (so they can handle clicks), not while one is dragged
+    for (int i = 0; i < static_cast<int>(m_slots.size()) && !m_dragging; ++i)
     {
         if (m_slots[i].ghost)
             m_slots[i].ghost->handle_event(event, window);
@@ -518,6 +472,8 @@ void UIEquipSlider::move_to_index(int newIndex)
 {
     if (newIndex < 0 || newIndex >= static_cast<int>(m_equipIcons.size()) || newIndex == m_currentIndex)
         return;
+
+    play_sound("ui_select");
 
     sf::Vector2f screenCenter(1920.f / 2.0f - baseIconSize.x / 2.f, CARDS_BOTTOM);
 
@@ -542,6 +498,57 @@ void UIEquipSlider::move_to_index(int newIndex)
     }
 
     m_currentIndex = newIndex;
+}
+
+/*
+ * begin_drag
+ * ----------
+ * Lifts the pressed unit: the lineup slot m_dragFromSlot if the press was on one, else the selected card
+ */
+void UIEquipSlider::begin_drag(const sf::Vector2f& startPos)
+{
+    if (m_dragFromSlot >= 0)
+    {
+        auto slot = std::dynamic_pointer_cast<UIEquipSlot>(m_slots[m_dragFromSlot].ghost);
+        if (!slot) { m_mouseDown = false; m_dragFromSlot = -1; return; }
+        start_drag(make_drag_info(slot->get_uid(), m_slots[m_dragFromSlot].bounds.size), startPos);
+    }
+    else
+    {
+        if (m_equipIcons.empty()) return;
+        start_drag(make_drag_info(m_equipIcons[m_currentIndex]->get_uid(), m_equipIcons[m_currentIndex]->get_size()), startPos);
+    }
+    m_dragging = true;
+}
+
+/*
+ * make_drag_info
+ * --------------
+ * The unit's cost, level and icon (loaded once into the texture cache)
+ */
+UIEquipSlider::DragInfo UIEquipSlider::make_drag_info(int uid, const sf::Vector2f& iconSize)
+{
+    DragInfo dragInfo;
+    dragInfo.uid = uid;
+    dragInfo.iconSize = iconSize;
+
+    auto player = m_dataLoader->get_player_data().lock();
+    const int form = player ? player->get_unit_form(uid) : 0;
+    if (auto unitData = m_dataLoader->get_unit_data(uid, form))
+        dragInfo.cost = unitData->cost;
+    if (player)
+        dragInfo.level = player->get_unit_level(uid);
+
+    auto it = m_unitTextures.find(uid);
+    if (it == m_unitTextures.end())
+    {
+        sf::Texture tex;
+        if (!tex.loadFromFile(m_dataLoader->get_unit_icon_texture_path(uid, form)))
+            tex = m_placeholderTexture;
+        it = m_unitTextures.emplace(uid, std::move(tex)).first;
+    }
+    dragInfo.texture = &it->second;
+    return dragInfo;
 }
 
 /*
@@ -644,6 +651,27 @@ void UIEquipSlider::end_drag(const sf::Vector2f& pos)
         }
     }
 
+    // A unit of the lineup: dropped on another slot, it swaps with the unit there (or moves to the
+    // end of the lineup on an empty slot, the lineup has no gaps); anywhere else, it goes back
+    if (m_dragFromSlot >= 0)
+    {
+        auto player = m_dataLoader->get_player_data().lock();
+        if (player && targetSlot != -1 && targetSlot != m_dragFromSlot
+            && player->equippedUnits[m_dragFromSlot] == m_tempGhost->uid)
+        {
+            auto& lineup = player->equippedUnits;
+            const int equippedCount = static_cast<int>(std::count_if(lineup.begin(), lineup.end(), [](int uid) { return uid >= 0; }));
+            if (targetSlot < equippedCount)
+                std::swap(lineup[m_dragFromSlot], lineup[targetSlot]);
+            else
+                std::rotate(lineup.begin() + m_dragFromSlot, lineup.begin() + m_dragFromSlot + 1, lineup.begin() + equippedCount);
+            play_sound("equip");
+            refresh_slots_after_unequip();
+        }
+        m_tempGhost->active = false;
+        return;
+    }
+
     // If released on any slot area
     if (targetSlot != -1)
     {
@@ -680,6 +708,7 @@ void UIEquipSlider::end_drag(const sf::Vector2f& pos)
                 if (auto player = m_dataLoader->get_player_data().lock())
                 {
                     player->equip_unit(m_tempGhost->uid, finalSlot);
+                    play_sound("equip");
 
                     auto slotGhost = std::make_shared<UIEquipSlot>(
                         m_tempGhost->uid,
@@ -697,6 +726,7 @@ void UIEquipSlider::end_drag(const sf::Vector2f& pos)
                         if (auto player = m_dataLoader->get_player_data().lock()) {
                             // Unequip the clicked slot
                             player->unequip_unit(slotIndex);
+                            play_sound("unequip");
 
                             // Refresh all slots and redraw ghosts in order
                             refresh_slots_after_unequip();
@@ -765,6 +795,7 @@ void UIEquipSlider::refresh_slots_after_unequip()
 
             // Unequip from PlayerData
             player->unequip_unit(slotIndex);
+            play_sound("unequip");
 
             // Refresh all slots
             this->refresh_slots_after_unequip();

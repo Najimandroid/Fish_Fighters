@@ -4,6 +4,7 @@
 #include "../../data/AbilityData.h"
 
 #include <deque>
+#include <functional>
 #include <map>
 #include <memory>
 #include <random>
@@ -83,6 +84,9 @@ public:
     // Counts down every status of every entity in `entityList` and removes expired ones
     void update(float deltaTime, const std::map<int, std::vector<std::shared_ptr<BattleEntity>>>& entityList);
 
+    // Called each time an on-hit ability lands its status (applied or stacked): the Stage plays its sound
+    void set_on_status_landed(std::function<void(StatusType)> callback);
+
     // ===== Debug =====
     // Applies a status directly (no ability, no chance roll), logged with "Debug" as the source
     StatusOutcome debug_apply(BattleEntity& target, StatusType type, float value, float duration, float stageTime);
@@ -119,4 +123,6 @@ private:
 
     std::deque<StatusLogEntry> m_log;
     static constexpr size_t MAX_LOG_ENTRIES = 200;
+
+    std::function<void(StatusType)> m_onStatusLanded;
 };

@@ -32,11 +32,20 @@
 
 using BattleEntitiesMap_t = std::map<int, std::vector<std::shared_ptr<BattleEntity>>>;
 
+// "+50$" rising where an enemy died and dropped cash (drawn by UICashPopups)
+struct CashPopup
+{
+    sf::Vector2f position;   // World position (above the enemy)
+    int amount = 0;
+    float age = 0.f;         // Seconds since it appeared
+};
+
 class DataLoader;
 class BattleEnemy;
 class BattleUnit;
 class EnemyData;
 class UIManager;
+class AudioManager;
 
 class Stage : public std::enable_shared_from_this<Stage>
 {
@@ -45,8 +54,8 @@ public:
     // Constructor
     Stage();
 
-    // Initialize stage with references to DataLoader and UIManager
-    void init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<UIManager> uiManager, sf::View* stageCamera);
+    // Initialize stage with references to DataLoader, UIManager and AudioManager
+    void init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<UIManager> uiManager, std::shared_ptr<AudioManager> audio, sf::View* stageCamera);
 
     // Load a stage by its unique ID
     void load(int uid);
@@ -63,9 +72,16 @@ public:
     // Spawn a new enemy in the stage
     void spawn_enemy(std::shared_ptr<EntityData> enemyData, sf::Vector2f magnification, int layer, bool isBoss, bool bypassLimit);
 
-    // Spawn a new player unit in the stage
+    // Spawn a new player unit in the stage; false if it can't (units limit, cash, end screen)
     // ignoreCostAndLimit: debug tools only, spawns for free even when the units limit is reached
-    void spawn_unit(std::shared_ptr<EntityData> unitData, bool ignoreCostAndLimit = false);
+    bool spawn_unit(std::shared_ptr<EntityData> unitData, bool ignoreCostAndLimit = false);
+
+    // ===== Sounds =====
+    // Plays a sound of sfx.json (nothing without audio)
+    void play_sound(const std::string& name, float volumeScale = 1.f) const;
+
+    // An attack hit at least one target: the attacker's attack sound, and the clang of a base if one was hit
+    void on_attack_landed(const BattleEntity& attacker, bool hasHitBase) const;
 
     // Generate a random layer for entity spawning
     int generate_random_spawn_layer();
@@ -115,6 +131,13 @@ public:
     int get_cash() const;
     int get_max_cash() const;
 
+    // The cash dropped by the enemies that just died ("+50$" texts)
+    const std::vector<CashPopup>& get_cash_popups() const;
+    static constexpr float CASH_POPUP_SECONDS = 1.2f;
+
+    // True when as many units as the stage allows are on the field (deploying shows a message)
+    bool is_unit_limit_reached() const;
+
     // Get the loaded stage's id
 	int get_current_uid() const;
 
@@ -149,6 +172,7 @@ private:
     int m_maxCash = BASE_MAX_CASH;           // Maximum cash allowed
 	int m_cashPerSecond = BASE_CASH_PER_SECOND; // Cash gained per second (with no upgrades)
     float m_cashRemainder = 0.f;             // Fraction of cash earned but not added yet (frame-rate independent income)
+    std::vector<CashPopup> m_cashPopups;     // Cash dropped by enemies, shown for CASH_POPUP_SECONDS
 
     int m_enemiesLimit = 5;                  // Maximum number of enemies
     int m_unitsLimit = 5;                    // Maximum number of units
@@ -161,6 +185,12 @@ private:
 
     std::shared_ptr<DataLoader> m_dataLoader;
     std::weak_ptr<UIManager> m_uiManager;
+    std::shared_ptr<AudioManager> m_audio;   // Music and sounds of the battle
+
+    // ----- Music -----
+    std::string m_musicChange;               // Theme to switch to once the enemy base is low enough ("" = none)
+    float m_musicChangeBaseHealth = 50.f;    // ...at or below this % of its health
+    bool m_hasMusicChanged = false;
 
     std::vector<std::shared_ptr<EnemyStageData>> m_enemyStageDatas; // Enemy spawn datas
 
@@ -195,6 +225,12 @@ private:
 
     // Spawn bases at the start of the stage
     void spawn_bases(float health, float playerBaseHealth, const std::string& texture);
+
+    // Switches to the stage's second theme once the enemy base's health is low enough (once per battle)
+    void update_music();
+
+    // A dead enemy's cash drop (EntityData::cashDrop) goes to the wallet, up to its size, with a "+X$" popup
+    void reward_kill(const BattleEntity& enemy);
 
     // The background image, made seamless when backgrounds.json asks for it (the file isn't changed)
     void load_background_texture(const BackgroundData& background);

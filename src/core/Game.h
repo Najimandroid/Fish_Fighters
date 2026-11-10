@@ -8,6 +8,7 @@
 #include "DataLoader.h"
 #include "stages/Stage.h"
 #include "../uis/UIManager.h"
+#include "../audio/AudioManager.h"
 
 #ifdef DEBUG_MODE
 #include "../debug/DebugTools.h"
@@ -22,7 +23,7 @@
  * Responsibilities include:
  *   - Creating and managing the SFML window
  *   - Handling input and events
- *   - Managing the stage and UI systems
+ *   - Managing the stage, UI and audio systems
  *   - Updating and rendering game objects each frame
  *   - Owning the developer tools (DEBUG_MODE), which run in their own window
  *
@@ -93,6 +94,7 @@ private:
     std::shared_ptr<DataLoader> m_dataLoader; // Loads unit and game data
     std::shared_ptr<Stage> m_stage;           // Handles gameplay and units
     std::shared_ptr<UIManager> m_uiManager;   // Handles UI elements and interactions
+    std::shared_ptr<AudioManager> m_audio;    // Music and sound effects
 
 	// ----- Debug -----
 #ifdef DEBUG_MODE

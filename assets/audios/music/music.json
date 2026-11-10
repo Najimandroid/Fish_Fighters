@@ -1,0 +1,119 @@
+{
+    "theme_default": {
+        "title": "Reef Rumble",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_default.ogg",
+        "sampleRate": 48000,
+        "loopStart": 4092632,
+        "loopLength": 3789474
+    },
+    "theme_calm": {
+        "title": "Kelp Garden",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_calm.ogg",
+        "sampleRate": 48000,
+        "loopStart": 4838400,
+        "loopLength": 4608000
+    },
+    "theme_serious": {
+        "title": "Deep Current",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_serious.ogg",
+        "sampleRate": 48000,
+        "loopStart": 4340870,
+        "loopLength": 4006957
+    },
+    "theme_stressful": {
+        "title": "Pressure Alarm",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_stressful.ogg",
+        "sampleRate": 48000,
+        "loopStart": 3348837,
+        "loopLength": 3214884
+    },
+    "theme_boss": {
+        "title": "Leviathan",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_boss.ogg",
+        "sampleRate": 48000,
+        "loopStart": 3744000,
+        "loopLength": 3456000
+    },
+    "theme_title": {
+        "title": "Fish Fighters!",
+        "kind": "menu",
+        "file": "assets/audios/music/theme_title.ogg",
+        "sampleRate": 48000,
+        "loopStart": 2605715,
+        "loopLength": 2331429
+    },
+    "theme_base": {
+        "title": "Fish Tank",
+        "kind": "menu",
+        "file": "assets/audios/music/theme_base.ogg",
+        "sampleRate": 48000,
+        "loopStart": 4320000,
+        "loopLength": 4114286
+    },
+    "theme_shanty": {
+        "title": "Sunken Galleon",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_shanty.ogg",
+        "sampleRate": 48000,
+        "loopStart": 4571428,
+        "loopLength": 4388571
+    },
+    "theme_jelly": {
+        "title": "Jellyfish Lair",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_jelly.ogg",
+        "sampleRate": 48000,
+        "loopStart": 4830968,
+        "loopLength": 4459355
+    },
+    "theme_jelly_boss": {
+        "title": "Jellyfish King",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_jelly_boss.ogg",
+        "sampleRate": 48000,
+        "loopStart": 3941053,
+        "loopLength": 3637895
+    },
+    "theme_crab": {
+        "title": "Crab Cove",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_crab.ogg",
+        "sampleRate": 48000,
+        "loopStart": 4363636,
+        "loopLength": 4189091
+    },
+    "theme_crab_boss": {
+        "title": "King Crab",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_crab_boss.ogg",
+        "sampleRate": 48000,
+        "loopStart": 3840000,
+        "loopLength": 3544615
+    },
+    "jingle_battle_start": {
+        "title": "Battle Start",
+        "kind": "jingle",
+        "file": "assets/audios/music/jingle_battle_start.ogg",
+        "sampleRate": 48000,
+        "length": 2.786
+    },
+    "jingle_victory": {
+        "title": "Victory",
+        "kind": "jingle",
+        "file": "assets/audios/music/jingle_victory.ogg",
+        "sampleRate": 48000,
+        "length": 2.4
+    },
+    "jingle_defeat": {
+        "title": "Defeat",
+        "kind": "jingle",
+        "file": "assets/audios/music/jingle_defeat.ogg",
+        "sampleRate": 48000,
+        "length": 5
+    }
+}

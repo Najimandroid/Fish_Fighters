@@ -32,6 +32,11 @@ void UIButtonElement::set_callback(std::function<void()> callback)
     m_callback = callback;
 }
 
+void UIButtonElement::set_click_sound(const std::string& soundName)
+{
+    m_clickSound = soundName;
+}
+
 void UIButtonElement::center_text()
 {
     UISkin::set_text_anchor(m_text, { 0.5f, 0.5f });
@@ -42,6 +47,11 @@ void UIButtonElement::center_text()
 }
 
 void UIButtonElement::set_text(const std::string& text)
+{
+    m_text.setString(text);
+}
+
+void UIButtonElement::set_label(const sf::String& text)
 {
     m_text.setString(text);
 }
@@ -130,7 +140,15 @@ void UIButtonElement::handle_event(const sf::Event& event, const sf::RenderWindo
             && get_bounds().contains(window.mapPixelToCoords(mouseButtonPressed->position)))
         {
             m_isPressed = true;
-            if (m_isEnabled && m_callback) m_callback(); // execute callback if set
+            if (!m_isEnabled)
+            {
+                play_sound("ui_error");
+            }
+            else if (m_callback)
+            {
+                play_sound(m_clickSound);
+                m_callback(); // execute callback if set
+            }
         }
     }
     else if (const auto* mouseButtonReleased = event.getIf<sf::Event::MouseButtonReleased>())

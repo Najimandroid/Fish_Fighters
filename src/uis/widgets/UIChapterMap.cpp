@@ -1,5 +1,6 @@
 ﻿#include "UIChapterMap.h"
 #include "../UISkin.h"
+#include "../EntityPortraits.h"
 
 #include "../../core/stages/Stage.h"
 
@@ -36,8 +37,10 @@ UIChapterMap::UIChapterMap(std::shared_ptr<DataLoader> dataLoader)
     m_stageName(UISkin::heavy_font()),
     m_stageDetails(UISkin::heavy_font()),
     m_rewardText(UISkin::heavy_font()),
-    m_clearedText(UISkin::heavy_font(), "CLEARED!")
+    m_clearedText(UISkin::heavy_font(), "CLEARED!"),
+    m_enemiesTitle(UISkin::heavy_font(), "ENEMIES")
 {
+    UISkin::style_text(m_enemiesTitle, 28, UISkin::TITLE);
     m_offsetTween = tweeny::from(0.f, 0.f).to(0.f, 0.f).during(1).via(tweeny::easing::linear);
 
     m_marker.setOrigin(sf::Vector2f(m_marker.getTexture().getSize()) / 2.f);
@@ -79,7 +82,10 @@ void UIChapterMap::load_chapter(int chapterUID)
 
 void UIChapterMap::select_stage(int stageUID)
 {
+    if (stageUID != m_selectedStage) play_sound("ui_select");
     m_selectedStage = stageUID;
+    if (auto player = m_playerData.lock())
+        player->lastStage = stageUID;   // The map opens here next time
     std::cout << "Selected stage " << stageUID << "\n";
 
     auto it = std::find_if(m_stageIcons.begin(), m_stageIcons.end(),
@@ -159,6 +165,13 @@ void UIChapterMap::build_stage_icons()
         if (!stillInChapter) m_selectedStage = -1;
     }
 
+    // The last stage played, if it's in this chapter (and unlocked)
+    if (m_selectedStage == -1 && player->lastStage != -1)
+    {
+        for (const StageIcon& icon : m_stageIcons)
+            if (icon.stageUID == player->lastStage) { m_selectedStage = icon.stageUID; break; }
+    }
+
     if (m_selectedStage == -1 && !m_currentChapter->stages.empty())
     {
         // Chercher le premier stage non complété
@@ -233,6 +246,15 @@ void UIChapterMap::describe_selected_stage()
     }
     m_rewardText.setString(std::to_string(shells) + (hasNewFish ? "   + a new fish!" : ""));
 
+    // Every enemy of the stage once, in the order of the waves
+    m_stageEnemies.clear();
+    for (const auto& wave : stage->enemies)
+    {
+        if (std::find(m_stageEnemies.begin(), m_stageEnemies.end(), wave->UID) == m_stageEnemies.end()
+            && m_dataLoader->get_enemy_data(wave->UID))
+            m_stageEnemies.push_back(wave->UID);
+    }
+
     const float left = INFO_PANEL.position.x + 40.f;
     const float top = INFO_PANEL.position.y;
     UISkin::set_text_anchor(m_stageName, { 0.f, 0.5f });
@@ -241,8 +263,10 @@ void UIChapterMap::describe_selected_stage()
     m_stageDetails.setPosition({ left, top + 106.f });
     UISkin::set_text_anchor(m_rewardText, { 0.f, 0.5f });
     m_rewardText.setPosition({ left + 52.f, top + 150.f });   // After the shell icon
-    UISkin::set_text_anchor(m_clearedText, { 1.f, 0.5f });
-    m_clearedText.setPosition({ INFO_PANEL.position.x + INFO_PANEL.size.x - 40.f, top + 48.f });
+    // CLEARED right after the name (the enemies use the right of the panel)
+    const sf::FloatRect nameBounds = m_stageName.getGlobalBounds();
+    UISkin::set_text_anchor(m_clearedText, { 0.f, 0.5f });
+    m_clearedText.setPosition({ nameBounds.position.x + nameBounds.size.x + 24.f, top + 50.f });
 }
 
 std::vector<sf::CircleShape> UIChapterMap::make_dotted_line(sf::Vector2f from, sf::Vector2f to, float spacing, float radius)
@@ -335,8 +359,49 @@ void UIChapterMap::render(sf::RenderWindow& window)
         { { INFO_PANEL.position.x + 40.f, INFO_PANEL.position.y + 130.f }, { 40.f, 40.f } });
     window.draw(m_rewardText);
 
-    if (auto player = m_playerData.lock(); player && player->has_completed_stage(m_selectedStage))
+    auto player = m_playerData.lock();
+    if (player && player->has_completed_stage(m_selectedStage))
         window.draw(m_clearedText);
+
+    render_stage_enemies(window, player.get());
+}
+
+/*
+ * The enemies of the selected stage in slots on the right of the info panel, like The Battle Cats:
+ * black until the player has met them in battle
+ */
+void UIChapterMap::render_stage_enemies(sf::RenderWindow& window, const PlayerData* player)
+{
+    if (m_stageEnemies.empty()) return;
+
+    const float right = INFO_PANEL.position.x + INFO_PANEL.size.x - 34.f;
+    const float slotsTop = INFO_PANEL.position.y + 76.f;
+    const float gap = 10.f;
+    const float maxWidth = 640.f;
+    const float count = static_cast<float>(m_stageEnemies.size());
+    const float slotSize = std::min(88.f, (maxWidth - gap * (count - 1.f)) / count);
+    const float left = right - count * slotSize - (count - 1.f) * gap;
+
+    UISkin::set_text_anchor(m_enemiesTitle, { 0.f, 0.5f });
+    m_enemiesTitle.setPosition({ left, INFO_PANEL.position.y + 50.f });
+    window.draw(m_enemiesTitle);
+
+    for (size_t i = 0; i < m_stageEnemies.size(); ++i)
+    {
+        auto enemy = m_dataLoader->get_enemy_data(m_stageEnemies[i]);
+        if (!enemy) continue;
+
+        const sf::FloatRect slot{ { left + static_cast<float>(i) * (slotSize + gap), slotsTop }, { slotSize, slotSize } };
+        const float frameScale = slotSize / 124.f;
+        const bool isKnown = player && player->has_seen_enemy(enemy->UID);
+
+        UISkin::draw_nine_slice(window, UISkin::SLOT, slot, frameScale);
+        const sf::FloatRect inner = UISkin::slot_inner(slot, frameScale);
+        const float padding = inner.size.x * 0.08f;
+        EntityPortraits::draw_enemy(window, *enemy,
+            { inner.position + sf::Vector2f{ padding, padding }, inner.size - sf::Vector2f{ padding, padding } * 2.f }, !isKnown);
+        UISkin::draw_nine_slice(window, UISkin::SLOT_FRAME, slot, frameScale);
+    }
 }
 
 void UIChapterMap::handle_event(const sf::Event& event, const sf::RenderWindow& window)

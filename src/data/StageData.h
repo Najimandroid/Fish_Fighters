@@ -42,6 +42,11 @@ struct StageData
     std::string baseTexture;               // Texture used for the enemy base in this stage
     std::string backgroundTexture;         // Background image for the battlefield (any size, its ground row in backgrounds.json)
 
+    // ===== Music (names of assets/audios/music/music.json, set in FishEditor) =====
+    std::string music = "theme_default";   // Plays from the start ("music", optional)
+    std::string musicChange;               // Optional: switches to this theme... ("musicChange": { "music", "baseHealth" })
+    float musicChangeBaseHealth = 50.f;    // ...once the enemy base is at or below this % of its health
+
     // ===== Rewards =====
     std::vector<std::shared_ptr<RewardData>> rewards;
     // Rewards given to the player after completing the stage

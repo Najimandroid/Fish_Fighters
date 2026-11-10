@@ -24,7 +24,8 @@ class DataLoader;
  *
  * Features:
  * - Displays available fish units as cards (UIEquipIcon), the selected one big in the middle.
- * - Allows dragging units into the lineup slots (drawn like the deploy slots in battle).
+ * - Allows dragging units into the lineup slots (drawn like the deploy slots in battle),
+ *   and a unit of the lineup onto another slot to swap them.
  * - Animates slider movement when switching between icons (keys, arrows or a click on a side card).
  * - Works with DataLoader to fetch unit textures and player data.
  */
@@ -93,6 +94,9 @@ private:
     };
 
     // Drag helpers
+    // begin_drag: starts dragging the pressed unit (the selected card, or the lineup slot m_dragFromSlot)
+    void begin_drag(const sf::Vector2f& startPos);
+    DragInfo make_drag_info(int uid, const sf::Vector2f& iconSize);
     void start_drag(const DragInfo& dragInfo, const sf::Vector2f& startPos);
     void update_drag_position(const sf::Vector2f& pos);
     void end_drag(const sf::Vector2f& pos);
@@ -130,6 +134,7 @@ private:
     // Drag state tracking
     bool m_mouseDown = false;
     bool m_dragging = false;
+    int m_dragFromSlot = -1;          // Lineup slot being dragged to another slot (-1: a card is dragged)
     sf::Vector2f m_mouseDownPos{ 0.f, 0.f };
     sf::Clock m_holdClock;
     static constexpr int HOLD_THRESHOLD_MS = 50; // Long press threshold

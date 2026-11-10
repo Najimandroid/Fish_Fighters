@@ -16,15 +16,104 @@
 #include "widgets/UIPauseMenu.h"
 #include "widgets/UITitleBar.h"
 #include "widgets/UIPatternBackground.h"
+#include "widgets/UIEncyclopedia.h"
+#include "widgets/UITitleScreen.h"
+#include "widgets/UICashPopups.h"
+
+#include "../audio/AudioManager.h"
 
 #include <algorithm>
 #include <iostream>
 
-// Initialize the manager with references to the data loader and current stage
-void UIManager::init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<Stage> stage)
+namespace
+{
+    const std::string MENU_MUSIC = "theme_base";     // The Fish Tank menus
+    const std::string TITLE_MUSIC = "theme_title";   // The title screen
+    const float TITLE_MUSIC_TEMPO = 168.f;           // Its tempo: the title bounces on the beat
+}
+
+// Initialize the manager with references to the data loader, current stage and audio
+void UIManager::init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<Stage> stage, std::shared_ptr<AudioManager> audio)
 {
     m_dataLoader = dataLoader;
     m_stage = stage;
+    m_audio = audio;
+
+    // Every widget's sounds (clicks, selections, purchases...) go to the AudioManager
+    std::weak_ptr<AudioManager> weakAudio = audio;
+    UIElement::set_sound_player([weakAudio](const std::string& name)
+        {
+            if (auto audio = weakAudio.lock()) audio->play_sound(name);
+        });
+}
+
+/*
+ * Clears the screen for a Fish Tank menu: the Fish Tank theme (it keeps playing from one menu to the next)
+ * and a swish of water between the screens
+ */
+void UIManager::enter_menu_screen()
+{
+    m_uiElements.clear();
+    if (m_audio)
+    {
+        m_audio->play_music(MENU_MUSIC);
+        m_audio->play_sound("ui_transition");
+    }
+}
+
+/*
+ * Title screen: the fish tank behind the bouncing "FISH FIGHTERS" title, bubbles, the title theme,
+ * a big START button (or any key), QUIT in the corner
+ */
+void UIManager::generate_title_uis()
+{
+    m_uiElements.clear();
+    if (m_audio) m_audio->play_music(TITLE_MUSIC, 0.f);
+
+    auto bg = std::make_shared<UITextureElement>(
+        sf::Vector2f{ 1920.f, 1080.f },
+        sf::Vector2f{ 0.f, 0.f },
+        "assets/images/textures/backgrounds/menus/fish_tank.png"
+    );
+    auto title = std::make_shared<UITitleScreen>(TITLE_MUSIC_TEMPO);
+
+    // START (or any key): the splash sound, then the Fish Tank
+    auto start = [this]()
+        {
+            m_pendingAction = [this]() { generate_fish_tank_uis(); };
+        };
+    title->set_start_callback([this, start]()
+        {
+            if (m_audio) m_audio->play_sound("ui_start");
+            start();
+        });
+
+    auto startButton = std::make_shared<UIButtonElement>(
+        sf::Vector2f{ 560.f, 170.f },
+        sf::Vector2f{ 960.f - 280.f, 650.f },
+        "START"
+    );
+    startButton->set_text_size(84);
+    startButton->set_click_sound("ui_start");
+    startButton->set_callback(start);
+
+    auto quitButton = std::make_shared<UIButtonElement>(
+        sf::Vector2f{ 240.f, 90.f },
+        sf::Vector2f{ 30.f, 1080.f - 30.f - 90.f },
+        "QUIT"
+    );
+    quitButton->set_text_size(38);
+    quitButton->set_fill_color(sf::Color(255, 150, 130));
+    quitButton->set_click_sound("ui_back");
+    quitButton->set_callback([this]()
+        {
+            m_pendingAction = [this]() { if (m_quitGameCallback) m_quitGameCallback(); };
+        });
+
+    add_ui_element(bg);
+    add_ui_element(title);
+    add_ui_element(startButton);
+    add_ui_element(quitButton);
 }
 
 // Add a UI element to the manager
@@ -92,13 +181,13 @@ void UIManager::handle_ui_events(const sf::Event& event, const sf::RenderWindow&
 
 /*
  * Generate Fish Tank UI screen (the hub, laid out like The Battle Cats' Cat Base):
- *   - The fish tank background, the wood title bar and the player's shells
+ *   - The fish tank background, the steel title bar and the player's shells
  *   - A column of big yellow buttons: BATTLE! (chapter map), UPGRADE, EQUIP, QUIT
  *   - Each button sets a deferred callback using m_pendingAction
  */
 void UIManager::generate_fish_tank_uis()
 {
-    m_uiElements.clear();
+    enter_menu_screen();
 
     auto bg = std::make_shared<UITextureElement>(
         sf::Vector2f{ 1920.f, 1080.f },
@@ -155,14 +244,29 @@ void UIManager::generate_fish_tank_uis()
                 };
         });
 
+    // Encyclopedia button: every fish and every enemy met
+    auto encyclopediaButton = std::make_shared<UIButtonElement>(
+        sf::Vector2f{ columnWidth, 120.f },
+        sf::Vector2f{ columnX, 676.f },
+        "ENCYCLOPEDIA"
+    );
+    encyclopediaButton->set_text_size(52);
+    encyclopediaButton->set_callback([this]()
+        {
+            m_pendingAction = [this]() {
+                generate_encyclopedia_uis();
+                };
+        });
+
     // Quit button closes the game (smaller, orange)
     auto quitButton = std::make_shared<UIButtonElement>(
         sf::Vector2f{ 300.f, 96.f },
-        sf::Vector2f{ columnX, 676.f },
+        sf::Vector2f{ columnX, 828.f },
         "QUIT"
     );
     quitButton->set_text_size(40);
     quitButton->set_fill_color(sf::Color(255, 150, 130));
+    quitButton->set_click_sound("ui_back");
     quitButton->set_callback([this]()
         {
             m_pendingAction = [this]() {
@@ -179,7 +283,28 @@ void UIManager::generate_fish_tank_uis()
     add_ui_element(battleButton);
     add_ui_element(upgradeButton);
     add_ui_element(equipButton);
+    add_ui_element(encyclopediaButton);
     add_ui_element(quitButton);
+}
+
+/*
+ * Generate the Encyclopedia: every fish and every enemy (black until owned / met), their stats and abilities
+ */
+void UIManager::generate_encyclopedia_uis()
+{
+    enter_menu_screen();
+
+    auto bg = std::make_shared<UIPatternBackground>("pattern_hull");
+    auto encyclopedia = std::make_shared<UIEncyclopedia>(m_dataLoader);
+    auto titleBar = std::make_shared<UITitleBar>("Encyclopedia");
+    auto shellsInfo = std::make_shared<UIPlayerShellsInfo>(m_dataLoader);
+    auto backButton = make_back_button([this]() { generate_fish_tank_uis(); });
+
+    add_ui_element(bg);
+    add_ui_element(titleBar);
+    add_ui_element(shellsInfo);
+    add_ui_element(backButton);
+    add_ui_element(encyclopedia);   // Last: its ability bubbles go over everything
 }
 
 /*
@@ -189,6 +314,7 @@ std::shared_ptr<UIRoundButton> UIManager::make_back_button(std::function<void()>
 {
     const float size = 120.f;
     auto backButton = std::make_shared<UIRoundButton>(size, sf::Vector2f{ 24.f, 1080.f - 24.f - size }, "icon_back");
+    backButton->set_click_sound("ui_back");
     backButton->set_callback([this, onBack]()
         {
             m_pendingAction = onBack;
@@ -201,9 +327,9 @@ std::shared_ptr<UIRoundButton> UIManager::make_back_button(std::function<void()>
  */
 void UIManager::generate_upgrade_menu_uis()
 {
-    m_uiElements.clear();
+    enter_menu_screen();
 
-    auto bg = std::make_shared<UIPatternBackground>("pattern_waves");
+    auto bg = std::make_shared<UIPatternBackground>("pattern_hull");
     auto upgradeSlider = std::make_shared<UIUpgradeSlider>(m_dataLoader);
     auto titleBar = std::make_shared<UITitleBar>("Upgrade");
 	auto shellsInfo = std::make_shared<UIPlayerShellsInfo>(m_dataLoader);
@@ -222,9 +348,9 @@ void UIManager::generate_upgrade_menu_uis()
  */
 void UIManager::generate_equip_menu_uis()
 {
-    m_uiElements.clear();
+    enter_menu_screen();
 
-    auto bg = std::make_shared<UIPatternBackground>("pattern_waves");
+    auto bg = std::make_shared<UIPatternBackground>("pattern_hull");
     auto equipSlider = std::make_shared<UIEquipSlider>(m_dataLoader);
     auto titleBar = std::make_shared<UITitleBar>("Equip");
     auto shellsInfo = std::make_shared<UIPlayerShellsInfo>(m_dataLoader);
@@ -270,6 +396,7 @@ void UIManager::generate_battle_uis()
             if (!m_getGameSpeedCallback || !m_setGameSpeedCallback) return;
             m_wasFasterBeforePause = m_getGameSpeedCallback() == GameSpeedState::FASTER;
             m_setGameSpeedCallback(GameSpeedState::PAUSED);
+            if (m_audio) m_audio->play_sound("ui_pause");   // The Game lowers the music while paused
             if (auto menu = weakPauseMenu.lock()) menu->open();
             };
         };
@@ -279,6 +406,7 @@ void UIManager::generate_battle_uis()
         m_pendingAction = [this, weakPauseMenu]() {
             if (m_setGameSpeedCallback)
                 m_setGameSpeedCallback(m_wasFasterBeforePause ? GameSpeedState::FASTER : GameSpeedState::NORMAL);
+            if (m_audio) m_audio->play_sound("ui_unpause");
             if (auto menu = weakPauseMenu.lock()) menu->close();
             };
         });
@@ -290,6 +418,7 @@ void UIManager::generate_battle_uis()
     pauseMenu->set_retreat_callback([this]() {
         m_pendingAction = [this]() {
             if (m_setGameSpeedCallback) m_setGameSpeedCallback(GameSpeedState::NORMAL);
+            m_dataLoader->save_progress(); // No rewards, but the enemies met stay met
             if (auto stage = m_stage.lock())
             {
                 stage->unload();
@@ -298,8 +427,9 @@ void UIManager::generate_battle_uis()
             };
         });
 
-    // Pause button (top left)
+    // Pause button (top left), its sound is the pause menu's
     auto pauseButton = std::make_shared<UIRoundButton>(100.f, sf::Vector2f{ 24.f, 24.f }, "icon_pause");
+    pauseButton->set_click_sound("");
     pauseButton->set_callback(openPauseMenu);
 
 	// Speed up button: lit while the battle runs faster
@@ -323,9 +453,11 @@ void UIManager::generate_battle_uis()
 	auto cashUp = std::make_shared<UICashUp>(m_stage.lock());
 	auto baseHealthInfo = std::make_shared<UIBaseHealthInfo>(m_stage.lock());
 	auto statusIcons = std::make_shared<UIStatusIcons>(m_stage.lock(), m_dataLoader); // Status icons under every entity
+	auto cashPopups = std::make_shared<UICashPopups>(m_stage.lock());              // "+X$" where enemies drop cash
 
     // World-space widgets first, so the screen widgets are drawn over them
 	add_ui_element(statusIcons);
+	add_ui_element(cashPopups);
 	add_ui_element(baseHealthInfo);
     add_ui_element(pauseButton);
     add_ui_element(speedButton);
@@ -341,7 +473,7 @@ void UIManager::generate_battle_uis()
  */
 void UIManager::generate_chapter_map_uis()
 {
-    m_uiElements.clear();
+    enter_menu_screen();
 
     auto chapterMap = std::make_shared<UIChapterMap>(m_dataLoader);
 
@@ -352,11 +484,16 @@ void UIManager::generate_chapter_map_uis()
         "BATTLE!"
     );
     battleButton->set_text_size(66);
+    battleButton->set_click_sound("");   // The battle start jingle instead; the stage's theme follows it
     battleButton->set_callback([this, chapterMap]()
         {
             m_pendingAction = [this, chapterMap]() {
                 if (auto stage = m_stage.lock())
                 {
+                    // The map opens on this stage next time (until it's won for the first time)
+                    if (auto player = m_dataLoader->get_player_data().lock())
+                        player->lastStage = chapterMap->get_selected_stage_uid();
+                    if (m_audio) m_audio->play_jingle("jingle_battle_start");
                     stage->load(chapterMap->get_selected_stage_uid());
                     generate_battle_uis();
                 }
@@ -427,22 +564,33 @@ void UIManager::generate_victory_uis()
         }
     }
 
-	// Shells Reward Text
+	// Shells Reward: "+150" and the shell icon after it, centered together
     auto shellRewardText = std::make_shared<UITextElement>(
         sf::Vector2f{ 200.f, 100.f },
         sf::Vector2f{ 0.f, 0.f },
-        '+' + std::to_string(gainedShells) + " \xA4", // \xA4: the shells symbol (currency sign) in the game's code page
+        '+' + std::to_string(gainedShells),
         60
     );
 
+    const float shellIconSize = 72.f;
+    const float shellIconGap = 14.f;
+    const sf::Vector2f shellRewardCenter{ 1920.f / 2.f, 1080.f / 2.f + 100.f };
+
     sf::FloatRect shellsTextBound = shellRewardText->get_text().getLocalBounds();
+    const float shellRewardLeft = shellRewardCenter.x - (shellsTextBound.size.x + shellIconGap + shellIconSize) / 2.f;
     shellRewardText->get_text().setOrigin({
-        shellsTextBound.position.x + shellsTextBound.size.x / 2.f,
+        shellsTextBound.position.x,
         shellsTextBound.position.y + shellsTextBound.size.y / 2.f
         });
-    shellRewardText->set_position({ 1920.f / 2.f, 1080.f / 2.f + 100.f});
+    shellRewardText->set_position({ shellRewardLeft, shellRewardCenter.y });
 
     shellRewardText->set_text_color(sf::Color(0, 255, 255, 255));
+
+    auto shellIcon = std::make_shared<UITextureElement>(
+        sf::Vector2f{ shellIconSize, shellIconSize },
+        sf::Vector2f{ shellRewardLeft + shellsTextBound.size.x + shellIconGap, shellRewardCenter.y - shellIconSize / 2.f },
+        "assets/images/textures/ui/icon_shell.png"
+    );
 
 	// New Unit Available Text
     auto newUnitText = std::make_shared<UITextElement>(
@@ -502,6 +650,7 @@ void UIManager::generate_victory_uis()
 
     add_ui_element(title);
     add_ui_element(shellRewardText);
+    add_ui_element(shellIcon);
     add_ui_element(newUnitText);
 
     add_ui_element(menuButton);

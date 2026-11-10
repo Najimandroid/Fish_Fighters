@@ -74,6 +74,16 @@ public:
     // Returns true if the player has completed the given chapter
     bool has_completed_chapter(int chapterUID);
 
+    // Remembers an enemy met in battle (the chapter map and the encyclopedia stop showing it in black)
+    void see_enemy(int enemyUID);
+
+    // Returns true if the player has met this enemy in battle
+    bool has_seen_enemy(int enemyUID) const;
+
+    // ===== Levels =====
+    // Health and attack of a unit at this level, compared to level 1 (x1.15 per level)
+    static float stat_multiplier(int level);
+
 public:
     // Currency
     int shells = 0;
@@ -93,4 +103,7 @@ public:
     std::unordered_set<int> completedStages;      // Set of stage UIDs completed by the player
     std::unordered_set<int> completedChapters;      // Set of chapter UIDs completed by the player
     int currentChapter = 1;                         // Current chapter selected by the player
+    int lastStage = -1;                             // Stage the map opens on: the last one played
+                                                    // (-1 after a first win: the newest stage)
+    std::unordered_set<int> seenEnemies;            // Enemy UIDs met in battle
 };

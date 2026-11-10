@@ -55,20 +55,21 @@ void AttackState::perform(float deltaTime)
     }
 
     // ===== Swing Timing =====
-    // Progress foreswing -> attack -> backswing
-    if (m_currentAttackSwingTime <= entity->data->foreswingTime + entity->data->backswingTime)
-    {
-        // Attack becomes "ready" after foreswing
-        m_isAttackReady = (m_currentAttackSwingTime >= entity->data->foreswingTime);
-        m_currentAttackSwingTime += deltaTime;
-    }
-    else
+    // Foreswing -> the hit (once, as soon as the foreswing is over) -> backswing.
+    // The hit never depends on landing inside [foreswing, foreswing + backswing]: with a backswing of 0
+    // that window is a single instant the frames jump over, and the attack would never hit.
+    m_currentAttackSwingTime += deltaTime;
+
+    if (m_hasAttacked && m_currentAttackSwingTime >= entity->data->foreswingTime + entity->data->backswingTime)
     {
         // After swing ends, reset attack cooldown and return to idle
         entity->currentAttackCooldown = 0.0f;
         m_machine->change_state(std::make_unique<IdleState>(m_machine));
         return;
     }
+
+    // Attack becomes "ready" after foreswing
+    m_isAttackReady = (m_currentAttackSwingTime >= entity->data->foreswingTime);
 
     // ===== Attack Execution =====
     if (!m_isAttackReady || m_hasAttacked) return; // Not ready yet or already attacked
@@ -109,6 +110,8 @@ void AttackState::perform(float deltaTime)
     {
         const DamageCalculator& damageCalculator = stage->get_damage_calculator();
         StatusManager& statusManager = stage->get_status_manager();
+        int hitCount = 0;
+        bool hasHitBase = false;
 
         auto hit = [&](BattleEntity& target)
             {
@@ -116,6 +119,8 @@ void AttackState::perform(float deltaTime)
                 target.take_damage(result);
                 stage->get_combat_log().record(*entity, target, result, stage->get_elapsed_time());
                 statusManager.apply_on_hit_abilities(*entity, target, stage->get_elapsed_time());
+                ++hitCount;
+                if (dynamic_cast<BattleBase*>(&target)) hasHitBase = true;
             };
 
         if (entity->data->attackType == 1) // Single-target attack
@@ -132,6 +137,9 @@ void AttackState::perform(float deltaTime)
                     hit(*target);
             }
         }
+
+        // One sound per attack, even when an area attack hits several targets
+        if (hitCount > 0) stage->on_attack_landed(*entity, hasHitBase);
     }
 
     // Clear targets

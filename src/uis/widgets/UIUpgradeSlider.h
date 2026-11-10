@@ -4,6 +4,7 @@
 #include "UIButtonElement.h"
 #include "UIRoundButton.h"
 #include "UIPanel.h"
+#include "UIAbilityList.h"
 
 class DataLoader;
 
@@ -12,7 +13,7 @@ class DataLoader;
  * ----------------
  * The Upgrade screen's carousel, like The Battle Cats' upgrade screen: unit cards in a row
  * (the selected one big in the middle), arrows on both sides, a big UPGRADE! button, and a panel
- * with the selected unit's name and description.
+ * with the selected unit's name, description and abilities (UIAbilityList: hover one to see what it does).
  * Left / Right keys, the arrows or a click on a side card move it.
  * Works with DataLoader to fetch player data and unit info.
  */
@@ -58,6 +59,7 @@ private:
     UIPanel m_descriptionPanel;
     sf::Text m_unitName;
     sf::Text m_description;
+    UIAbilityList m_abilities;  // Under the description: "Strong against Jelly"... (hover: what it does)
     int m_describedUid = -1;   // The description is wrapped again only when the selection changes
 
     // Card layout: bottom-aligned on CARDS_BOTTOM, the selected card centered

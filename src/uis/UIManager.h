@@ -9,6 +9,7 @@
 
 class Stage;
 class UIRoundButton;
+class AudioManager;
 enum class GameSpeedState;
 
 /*
@@ -39,8 +40,8 @@ public:
 
     UIManager() = default;
 
-    // Initialize UIManager with game data and stage reference
-    void init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<Stage> stage);
+    // Initialize UIManager with game data, stage and audio references (the widgets' sounds go to the audio)
+    void init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<Stage> stage, std::shared_ptr<AudioManager> audio);
 
     // Add a single UI element to the manager
     void add_ui_element(std::shared_ptr<UIElement> element);
@@ -55,9 +56,11 @@ public:
     void handle_ui_events(const sf::Event& event, const sf::RenderWindow& window);
 
     // Generate specific UI layouts/screens
+    void generate_title_uis();      // Title screen (the title theme), START goes to the Fish Tank
     void generate_fish_tank_uis();
     void generate_upgrade_menu_uis();
     void generate_equip_menu_uis();
+    void generate_encyclopedia_uis();
     void generate_battle_uis();
     void generate_chapter_map_uis();
     void generate_victory_uis();
@@ -75,8 +78,13 @@ private:
     // The round back button of the menus (bottom left): runs onBack as a deferred action
     std::shared_ptr<UIRoundButton> make_back_button(std::function<void()> onBack);
 
+    // Starts a Fish Tank menu screen: clears the UI, plays the Fish Tank theme (kept if it already plays)
+    // and the transition sound
+    void enter_menu_screen();
+
     std::shared_ptr<DataLoader> m_dataLoader = nullptr;         // Reference to game data
     std::weak_ptr<Stage> m_stage;                               // Reference to current game stage
+    std::shared_ptr<AudioManager> m_audio;                      // Music and sounds
 
     std::vector<std::shared_ptr<UIElement>> m_uiElements;       // All active UI elements
 

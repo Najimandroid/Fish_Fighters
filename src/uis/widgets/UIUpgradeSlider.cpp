@@ -8,7 +8,8 @@
 namespace
 {
     const sf::FloatRect UPGRADE_BUTTON{ { 60.f, 690.f }, { 470.f, 140.f } };
-    const sf::FloatRect DESCRIPTION_PANEL{ { 570.f, 670.f }, { 1290.f, 252.f } };
+    const sf::FloatRect DESCRIPTION_PANEL{ { 570.f, 660.f }, { 1290.f, 396.f } };   // Down to the bottom: room for the abilities
+    const float TEXT_PADDING = 50.f;
     const float ARROW_SIZE = 96.f;
     const float ARROW_Y = 412.f;
     const unsigned int NAME_SIZE = 44;
@@ -28,9 +29,12 @@ UIUpgradeSlider::UIUpgradeSlider(std::shared_ptr<DataLoader> dataLoader) :
 	m_description(UISkin::heavy_font())
 {
 	m_upgradeButton.set_text_size(60);
+	m_upgradeButton.set_click_sound("");   // upgrade_selected plays "purchase" or "unlock"
 	m_upgradeButton.set_callback([this]() { upgrade_selected(); });
 
 	m_previousButton.set_icon_flipped(true);
+	m_previousButton.set_click_sound("");   // move_to_index plays the selection sound
+	m_nextButton.set_click_sound("");
 	m_previousButton.set_callback([this]() { move_to_index(m_currentIndex - 1); });
 	m_nextButton.set_callback([this]() { move_to_index(m_currentIndex + 1); });
 
@@ -58,10 +62,17 @@ void UIUpgradeSlider::upgrade_selected()
 
 		if (player->spend_shells(upgradeCost))
 		{
+			// Shells clinking for a level, a fanfare for a new fish
 			if (player->is_unit_owned(unitUid))
+			{
 				player->upgrade_unit(unitUid); // Upgrade if owned
+				play_sound("purchase");
+			}
 			else
+			{
 				player->unlock_unit(unitUid); // Unlock if not owned
+				play_sound("unlock");
+			}
 
 			// The form (and so the name and icon) can change with the level
 			auto icon = m_upgradeIcons[m_currentIndex];
@@ -212,13 +223,18 @@ void UIUpgradeSlider::update(float deltaTime)
 	{
 		auto unitData = m_dataLoader->get_unit_data(uid, player->get_unit_form(uid));
 		m_unitName.setString(unitData->name);
-		m_description.setString(UISkin::wrap_text(unitData->description, DESCRIPTION_SIZE, DESCRIPTION_PANEL.size.x - 100.f));
+		m_description.setString(UISkin::wrap_text(unitData->description, DESCRIPTION_SIZE, DESCRIPTION_PANEL.size.x - 2.f * TEXT_PADDING));
+		m_abilities.set_abilities(unitData->abilities);
 		m_describedUid = uid;
 
+		// Name centered, description and abilities left-aligned under it
 		UISkin::set_text_anchor(m_unitName, { 0.5f, 0.5f });
-		m_unitName.setPosition({ DESCRIPTION_PANEL.position.x + DESCRIPTION_PANEL.size.x / 2.f, DESCRIPTION_PANEL.position.y + 46.f });
-		UISkin::set_text_anchor(m_description, { 0.5f, 0.f });
-		m_description.setPosition({ DESCRIPTION_PANEL.position.x + DESCRIPTION_PANEL.size.x / 2.f, DESCRIPTION_PANEL.position.y + 86.f });
+		m_unitName.setPosition({ DESCRIPTION_PANEL.position.x + DESCRIPTION_PANEL.size.x / 2.f, DESCRIPTION_PANEL.position.y + 44.f });
+		UISkin::set_text_anchor(m_description, { 0.f, 0.f });
+		m_description.setPosition({ DESCRIPTION_PANEL.position.x + TEXT_PADDING, DESCRIPTION_PANEL.position.y + 80.f });
+
+		const float descriptionBottom = m_description.getGlobalBounds().position.y + m_description.getGlobalBounds().size.y;
+		m_abilities.set_position({ DESCRIPTION_PANEL.position.x + TEXT_PADDING, descriptionBottom + 16.f });
 	}
 }
 
@@ -239,6 +255,7 @@ void UIUpgradeSlider::render(sf::RenderWindow& window)
 	m_descriptionPanel.render(window);
 	window.draw(m_unitName);
 	window.draw(m_description);
+	m_abilities.render(window);   // Last: its bubble goes over everything
 }
 
 /*
@@ -280,6 +297,7 @@ void UIUpgradeSlider::handle_event(const sf::Event& event, const sf::RenderWindo
 	m_previousButton.handle_event(event, window);
 	m_nextButton.handle_event(event, window);
 	m_upgradeButton.handle_event(event, window);
+	m_abilities.handle_event(event, window);
 }
 
 /*
@@ -290,6 +308,8 @@ void UIUpgradeSlider::move_to_index(int newIndex)
 {
 	if (newIndex < 0 || newIndex >= static_cast<int>(m_upgradeIcons.size()) || newIndex == m_currentIndex)
 		return;
+
+	play_sound("ui_select");
 
 	const float centerX = 1920.f / 2.0f - baseIconSize.x / 2.f;
 

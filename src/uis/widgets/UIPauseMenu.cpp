@@ -33,6 +33,8 @@ UIPauseMenu::UIPauseMenu(const std::string& stageName) :
     m_continueButton.set_text_size(40);
     m_retreatButton.set_text_size(40);
     m_retreatButton.set_fill_color(RETREAT_TINT);
+    m_continueButton.set_click_sound("");          // UIManager's continue callback plays "ui_unpause"
+    m_retreatButton.set_click_sound("ui_back");
 
     m_continueButton.set_callback([this]() { if (m_continueCallback) m_continueCallback(); });
 

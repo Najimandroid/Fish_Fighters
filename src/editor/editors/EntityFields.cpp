@@ -37,6 +37,9 @@ namespace EntityFields
             "Wind-up: seconds between the start of the attack and the hit.", 0.01f, "%.2f s");
         number_field(ctx, file, "Backswing", entity, "backswing", 0.f, 60.f,
             "Recovery: seconds after the hit before it can move again.", 0.01f, "%.2f s");
+        sound_field(ctx, file, "Attack sound", entity, "attackSound", "attack_", "attack_slap",
+            "Played when its attack hits (once per attack, even when it hits several targets).\n"
+            "The sounds are in assets/audios/sfx (made by tools/music/make_sfx.js).");
 
         property_label("Damage per second");
         ImGui::TextDisabled("%.1f (one target, without abilities)", damage_per_second(entity));
@@ -62,6 +65,10 @@ namespace EntityFields
         scale_field(ctx, file, "Shadow size", entity, "shadowScale", 0.2f, 3.f,
             "Width of its round shadow in battle, compared to its body (the hitbox): 100 % by default.\n"
             "The Preview panel draws it like the game.");
+
+        optional_number_field(ctx, file, "Shadow offset", entity, "shadowOffset", 0.f, -500.f, 500.f, 1.f, "%.0f px", 1.f,
+            "Moves its shadow forward (toward where it faces), or back with a negative number. 0 by default:\n"
+            "under its body (the back half of the frame). The Preview panel draws it like the game.");
     }
 
     float damage_per_second(const ordered_json& entity, float multiplier)

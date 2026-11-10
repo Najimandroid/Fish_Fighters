@@ -287,6 +287,8 @@ bool DataLoader::load_units(const std::string& path)
             data->frameCount = read_int(formValue, "frameCount");
             data->knockbackFrameIndex = read_int(formValue, "knockbackFrameIndex");
             data->shadowScale = read_shadow_scale(formValue);
+            data->shadowOffset = formValue.contains("shadowOffset") ? read_float(formValue, "shadowOffset") : 0.f;
+            if (formValue.contains("attackSound")) data->attackSound = formValue.at("attackSound").get<std::string>();
 
             int formID = read_int(formValue, "form");
             m_unitsFormsDatabase[{UID, formID}] = data;
@@ -354,6 +356,10 @@ bool DataLoader::load_enemies(const std::string& path)
         data->frameCount = read_int(value, "frameCount");
         data->knockbackFrameIndex = read_int(value, "knockbackFrameIndex");
         data->shadowScale = read_shadow_scale(value);
+        data->shadowOffset = value.contains("shadowOffset") ? read_float(value, "shadowOffset") : 0.f;
+        if (value.contains("attackSound")) data->attackSound = value.at("attackSound").get<std::string>();
+        data->cashDrop = value.contains("cashDrop") ? read_int(value, "cashDrop") : 0;
+        if (data->cashDrop < 0) throw std::runtime_error(data->name + ": \"cashDrop\" can't be negative");
 
         m_enemiesDatabase[data->UID] = data;
     }
@@ -396,6 +402,15 @@ bool DataLoader::load_stages(const std::string& path)
         data->backgroundTexture = value.at("backgroundTexture").get<std::string>();
         if (value.contains("backgroundGroundRow"))
             throw std::runtime_error(data->name + ": the ground line belongs to the background now, in backgrounds.json (\"groundRow\")");
+
+        // Optional music: a theme from the start, and another one once the enemy base is low enough
+        if (value.contains("music")) data->music = value.at("music").get<std::string>();
+        if (value.contains("musicChange"))
+        {
+            const auto& change = value.at("musicChange");
+            data->musicChange = change.at("music").get<std::string>();
+            data->musicChangeBaseHealth = read_float(change, "baseHealth");
+        }
 
         // Just to avoid resizing the vector too many times
         size_t numberOfDifferentEnemies = value.at("numberOfDifferentEnemies").get<size_t>();
@@ -655,6 +670,20 @@ bool DataLoader::load_player(const std::string& path)
 
         // Current chapter
         m_playerData->currentChapter = read_int(j.at("progression"), "currentChapter");
+
+        // Stage the map opens on (missing in older saves)
+        m_playerData->lastStage = j.at("progression").contains("lastStage")
+            ? read_int(j.at("progression"), "lastStage") : -1;
+
+        // Enemies met in battle (missing in older saves)
+        m_playerData->seenEnemies.clear();
+        if (j.at("progression").contains("seenEnemies"))
+        {
+            for (auto& enemyUid : j.at("progression").at("seenEnemies"))
+            {
+                m_playerData->seenEnemies.insert(read_int_value(enemyUid, "seenEnemies"));
+            }
+        }
     }
     catch (const std::exception& e)
     {
@@ -724,6 +753,12 @@ bool DataLoader::save_player(const std::string& path)
 
     // Current chapter
     j["progression"]["currentChapter"] = m_playerData->currentChapter;
+    j["progression"]["lastStage"] = m_playerData->lastStage;
+
+    // Enemies met in battle (sorted, so the file doesn't change order between saves)
+    std::vector<int> seenEnemies(m_playerData->seenEnemies.begin(), m_playerData->seenEnemies.end());
+    std::sort(seenEnemies.begin(), seenEnemies.end());
+    j["progression"]["seenEnemies"] = seenEnemies;
 
     // Write to a temporary file first, then replace the save,
     // so a crash in the middle of writing can't corrupt player.json

@@ -5,6 +5,8 @@
 #include "AssetLibrary.h"
 #include "EditorContext.h"
 #include "GameBuilds.h"
+#include "GameBuilder.h"
+#include "SaveDataEditor.h"
 
 #include "panels/ContentPanel.h"
 #include "panels/PropertiesPanel.h"
@@ -70,6 +72,10 @@ private:
     void request_close();
     void launch_game(const GameBuilds::Build& build);
 
+    // Rebuilds the game in that build folder (saves first), the progress shows in the Build window
+    void build_game(const GameBuilds::Build& build);
+    void draw_build_window();
+
 private:
     std::filesystem::path m_projectFolder;
     sf::RenderWindow m_window;
@@ -77,6 +83,7 @@ private:
     ProjectData m_project;
     TextureCache m_textures;
     AssetLibrary m_assets;
+    AudioLibrary m_audio;
     EditorContext m_context;
 
     ContentPanel m_contentPanel;
@@ -87,6 +94,10 @@ private:
 
     std::vector<GameBuilds::Build> m_builds;
     bool m_isUpdatingBuildsOnSave = true;
+
+    GameBuilder m_gameBuilder;          // Game > Build: runs CMake in the background
+    bool m_isBuildWindowOpen = false;
+    SaveDataEditor m_saveDataEditor;    // Game > Save data: player.json of the project and the builds
 
     bool m_isImGuiReady = false;
     bool m_isLoaded = false;

@@ -12,6 +12,7 @@
 namespace fs = std::filesystem;
 using EditorWidgets::read_int;
 using EditorWidgets::read_string;
+using EditorWidgets::read_number;
 
 namespace
 {
@@ -52,6 +53,13 @@ namespace
     void add(ValidationReport& report, bool isError, std::string message, Selection target)
     {
         report.issues.push_back({ isError, std::move(message), std::move(target) });
+    }
+
+    // "attackSound": a sound of assets/audios/sfx/sfx.json (optional)
+    void check_attack_sound(const AudioLibrary& audio, ValidationReport& report, const ordered_json& entity, const std::string& owner, const Selection& target)
+    {
+        if (entity.contains("attackSound") && !audio.find_sound(read_string(entity, "attackSound")))
+            add(report, false, owner + ": its attack sound \"" + read_string(entity, "attackSound") + "\" isn't in sfx.json (silent hits)", target);
     }
 
     void check_image(const ProjectData& project, ValidationReport& report, const std::string& path,
@@ -106,7 +114,7 @@ namespace
     // ==================
     // Units
     // ==================
-    void check_units(const ProjectData& project, TextureCache& textures, ValidationReport& report)
+    void check_units(const ProjectData& project, TextureCache& textures, const AudioLibrary& audio, ValidationReport& report)
     {
         check_unique_uids(project, report, DataFile::UNITS, "units", ContentKind::UNIT);
 
@@ -141,6 +149,7 @@ namespace
                 previousMaxLevel = maxLevel;
 
                 check_sprite(project, textures, report, form, owner, target);
+                check_attack_sound(audio, report, form, owner, target);
 
                 if (!project.exists(AssetLibrary::unit_icon_path(uid, formIndex)))
                     add(report, false, owner + ": no deploy icon (" + AssetLibrary::unit_icon_path(uid, formIndex) + ")", target);
@@ -151,7 +160,7 @@ namespace
     // ==================
     // Enemies
     // ==================
-    void check_enemies(const ProjectData& project, TextureCache& textures, ValidationReport& report)
+    void check_enemies(const ProjectData& project, TextureCache& textures, const AudioLibrary& audio, ValidationReport& report)
     {
         check_unique_uids(project, report, DataFile::ENEMIES, "enemies", ContentKind::ENEMY);
 
@@ -160,13 +169,14 @@ namespace
             const ordered_json& enemy = *project.find_uid(DataFile::ENEMIES, uid);
             const std::string owner = "Enemy " + std::to_string(uid) + " '" + ProjectQueries::enemy_name(project, uid) + "'";
             check_sprite(project, textures, report, enemy, owner, { ContentKind::ENEMY, uid });
+            check_attack_sound(audio, report, enemy, owner, { ContentKind::ENEMY, uid });
         }
     }
 
     // ==================
     // Stages
     // ==================
-    void check_stages(const ProjectData& project, ValidationReport& report)
+    void check_stages(const ProjectData& project, const AudioLibrary& audio, ValidationReport& report)
     {
         check_unique_uids(project, report, DataFile::STAGES, "stages", ContentKind::STAGE);
 
@@ -178,6 +188,18 @@ namespace
 
             check_image(project, report, read_string(stage, "baseTexture"), owner, "enemy base image", target);
             check_image(project, report, read_string(stage, "backgroundTexture"), owner, "background", target);
+
+            // Music: names of assets/audios/music/music.json
+            if (stage.contains("music") && !audio.find_music(read_string(stage, "music")))
+                add(report, false, owner + ": its theme \"" + read_string(stage, "music") + "\" isn't in music.json (no music in that battle)", target);
+            if (stage.contains("musicChange"))
+            {
+                const ordered_json& change = stage["musicChange"];
+                if (!change.is_object() || !audio.find_music(read_string(change, "music")))
+                    add(report, false, owner + ": the theme it changes to isn't in music.json", target);
+                else if (read_number(change, "baseHealth", 50.0) <= 0.0 || read_number(change, "baseHealth", 50.0) > 100.0)
+                    add(report, false, owner + ": the theme changes at an enemy base health outside 1-100%", target);
+            }
 
             if (stage.contains("enemies") && stage["enemies"].is_array())
             {
@@ -252,15 +274,15 @@ namespace
 
 namespace Validator
 {
-    ValidationReport run(const ProjectData& project, TextureCache& textures)
+    ValidationReport run(const ProjectData& project, TextureCache& textures, const AudioLibrary& audio)
     {
         ValidationReport report;
         report.hasRun = true;
 
         check_with_game_loader(project, report);
-        check_units(project, textures, report);
-        check_enemies(project, textures, report);
-        check_stages(project, report);
+        check_units(project, textures, audio, report);
+        check_enemies(project, textures, audio, report);
+        check_stages(project, audio, report);
         check_chapters(project, report);
         check_backgrounds(project, report);
 

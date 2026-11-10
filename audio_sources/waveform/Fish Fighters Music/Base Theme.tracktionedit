@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<EDIT appVersion="Waveform 14.1.24" projectID="C:\Users\najim\Documents\C++_Games\Fish_Fighters\audio_sources\waveform\Fish Fighters Music\Base Theme.tracktionedit"
+      creationTime="1794241433132" lastSignificantChange="1a1c1f1f4e5"
+      modifiedBy="najim">
+  <TRANSPORT endToEnd="1" position="48.0" start="54.0" scrubInterval="1.939644208190785"
+             automationRead="1"/>
+  <PITCHSEQUENCE>
+    <PITCH startBeat="0.0" pitch="60"/>
+  </PITCHSEQUENCE>
+  <TEMPOSEQUENCE>
+    <TEMPO startBeat="0.0" bpm="120.0" curve="1.0"/>
+    <TIMESIG numerator="4" denominator="4" startBeat="0.0"/>
+  </TEMPOSEQUENCE>
+  <VIDEO/>
+  <CLICKTRACK level="0.6025595664978027"/>
+  <MASTERVOLUME>
+    <PLUGIN type="volume" volume="0.740818202495575" id="1001" enabled="1">
+      <MODIFIERASSIGNMENTS/>
+    </PLUGIN>
+  </MASTERVOLUME>
+  <RACKS/>
+  <MASTERPLUGINS>
+    <PLUGIN type="naturalReverb" id="1059" enabled="1" preDelay="0.1588239967823029"
+            size="0.5294119715690613" decay="0.2705880105495453" lowCut="0.3647060096263885"
+            highCut="0.8794119954109192" pan="0.5" mix="0.2205879986286163">
+      <MODIFIERASSIGNMENTS/>
+    </PLUGIN>
+    <PLUGIN type="limiter" id="1060" enabled="1">
+      <MODIFIERASSIGNMENTS/>
+    </PLUGIN>
+  </MASTERPLUGINS>
+  <INPUTDEVICES>
+    <INPUTDEVICE deviceID="all_midi_in" name="All MIDI Ins"/>
+    <INPUTDEVICE deviceID="wavein_6c2f1dbb" name="Input channel 1 + 2">
+      <INPUTDEVICEDESTINATION targetID="1024" targetIndex="0"/>
+    </INPUTDEVICE>
+  </INPUTDEVICES>
+  <TRACKCOMPS/>
+  <VIEWSTATE minimalTransportBar="1" hiddenClips="" lockedClips="" chordTrackVisible="0"
+             arrangerTrackVisible="0" enabledTrackTags="" currentSidePanel="Files"
+             browserSelection="result/all" viewleft="-2.567931431850112" viewright="94.41427897768915">
+    <PLUGINPANEL/>
+    <RENDERER2 renderSettings="{&quot;tracks&quot;: &quot;&quot;, &quot;mutedTracks&quot;: &quot;&quot;, &quot;includeSourceTracks&quot;: true, &quot;clips&quot;: &quot;&quot;, &quot;wrapRemainder&quot;: false, &quot;includeTails&quot;: true, &quot;destination&quot;: &quot;C:\\Users\\najim\\Documents\\C++_Games\\Fish_Fighters\\audio_sources\\waveform\\Fish Fighters Music\\Exported\\theme_title.wav&quot;, &quot;format&quot;: &quot;wav&quot;, &quot;sampleRate&quot;: 48000.0, &quot;bitDepth&quot;: 32, &quot;quality&quot;: 0, &quot;channelLayout&quot;: &quot;&quot;, &quot;normalise&quot;: false, &quot;normaliseByRMS&quot;: false, &quot;normaliseByLUFS&quot;: false, &quot;normaliseToLevelDb&quot;: 0.0, &quot;limitTruePeak&quot;: true, &quot;truePeakCeilingDb&quot;: -1.0, &quot;trimSilence&quot;: false, &quot;dither&quot;: false, &quot;realTime&quot;: false, &quot;usePlugins&quot;: true, &quot;useMasterPlugins&quot;: true, &quot;separateFiles&quot;: false, &quot;onlySelectedTracks&quot;: false, &quot;onlyMarkedRegion&quot;: false, &quot;addToLibrary&quot;: false, &quot;addAcidMetadata&quot;: false, &quot;addTagMetadata&quot;: false, &quot;advanced&quot;: false, &quot;category&quot;: &quot;tracks&quot;, &quot;renderTogether&quot;: false, &quot;markerClips&quot;: false, &quot;arrangerClips&quot;: false, &quot;selectedClipsRange&quot;: false, &quot;eachSelectedClip&quot;: false, &quot;includeMasterPlugins&quot;: false, &quot;overwriteExisting&quot;: true, &quot;namePattern&quot;: &quot;&quot;, &quot;destinationKind&quot;: &quot;&quot;, &quot;items&quot;: []}"
+               renderSettingsEditName="Title Theme"/>
+  </VIEWSTATE>
+  <EDITMIXGROUPS/>
+  <SCENES/>
+  <AUDIOEDITING/>
+  <AUTOMAPXML/>
+  <ARRANGERTRACK name="Arranger" id="1027"/>
+  <CHORDTRACK name="Chord" id="1029"/>
+  <MARKERTRACK id="1002" name="Marker"/>
+  <TEMPOTRACK name="Global" id="1028">
+    <MODIFIERS/>
+  </TEMPOTRACK>
+  <MASTERTRACK name="Master" id="1030">
+    <MODIFIERS/>
+  </MASTERTRACK>
+  <TRACK id="1003" colour="ff00ffaa">
+    <MODIFIERS/>
+    <CLIPSLOTS/>
+    <AUDIOCLIP name="01_lead" start="0.0" length="177.8025" offset="0.0" id="1185"
+               source="..\..\stems\theme_base\01_lead.wav" sync="0" elastiqueMode="0"
+               pan="0.0" colour="ff00ffaa" proxyAllowed="1" resamplingQuality="lagrange">
+      <LOOPINFO rootNote="-1" numBeats="355.605" oneShot="0" denominator="4"
+                numerator="4" bpm="0.0" inMarker="0" outMarker="-1"/>
+      <AUTOMATIONCURVES/>
+    </AUDIOCLIP>
+    <PLUGIN type="volume" id="1004" enabled="1" volume="0.740818202495575"
+            pan="0.0">
+      <MODIFIERASSIGNMENTS/>
+    </PLUGIN>
+    <PLUGIN type="level" id="1005" enabled="1">
+      <MODIFIERASSIGNMENTS/>
+    </PLUGIN>
+    <OUTPUTDEVICES>
+      <DEVICE name="(default audio output)"/>
+    </OUTPUTDEVICES>
+  </TRACK>
+  <TRACK id="1006" colour="ff00aaff">
+    <MODIFIERS/>
+    <CLIPSLOTS/>
+    <AUDIOCLIP name="02_kalimba" start="0.0" length="177.8025" offset="0.0"
+               id="1187" source="..\..\stems\theme_base\02_kalimba.wav" sync="0"
+               elastiqueMode="0" pan="0.0" colour="ff00aaff" proxyAllowed="1"
+               resamplingQuality="lagrange">
+      <LOOPINFO rootNote="-1" numBeats="355.605" oneShot="0" denominator="4"
+                numerator="4" bpm="0.0" inMarker="0" outMarker="-1"/>
+      <AUTOMATIONCURVES/>
+    </AUDIOCLIP>
+    <PLUGIN type="volume" id="1007" enabled="1" volume="0.740818202495575"
+            pan="0.0">
+      <MODIFIERASSIGNMENTS/>
+    </PLUGIN>
+    <PLUGIN type="level" id="1008" enabled="1">
+      <MODIFIERASSIGNMENTS/>
+    </PLUGIN>
+    <OUTPUTDEVICES>
+      <DEVICE name="(default audio output)"/>
+    </OUTPUTDEVICES>
+  </TRACK>
+  <TRACK id="1009" colour="ff5500ff">
+    <MODIFIERS/>
+    <CLIPSLOTS/>
+    <AUDIOCLIP name="03_keys" start="0.0" length="177.8025" offset="0.0" id="1189"
+               source="..\..\stems\theme_base\03_keys.wav" sync="0" elastiqueMode="0"
+               pan="0.0" colour="ff5500ff" proxyAllowed="1" resamplingQuality="lagrange">
+      <LOOPINFO rootNote="-1" numBeats="355.605" oneShot="0" denominator="4"
+                numerator="4" bpm="0.0" inMarker="0" outMarker="-1"/>
+      <AUTOMATIONCURVES/>
+    </AUDIOCLIP>
+    <PLUGIN type="volume" id="1010" enabled="1" volume="0.740818202495575"
+            pan="0.0">
+      <MODIFIERASSIGNMENTS/>
+    </PLUGIN>
+    <PLUGIN type="level" id="1011" enabled="1">
+      <MODIFIERASSIGNMENTS/>
+    </PLUGIN>
+    <OUTPUTDEVICES>
+      <DEVICE name="(default audio output)"/>
+    </OUTPUTDEVICES>
+  </TRACK>
+  <TRACK id="1012" colour="ffff00aa">
+    <MODIFIERS/>
+    <CLIPSLOTS/>
+    <AUDIOCLIP name="04_guitar" start="0.0" length="177.8025" offset="0.0" id="1191"
+               source="..\..\stems\theme_base\04_guitar.wav" sync="0" elastiqueMode="0"
+               pan="0.0" colour="ffff00aa" proxyAllowed="1" resamplingQuality="lagrange">
+      <LOOPINFO rootNote="-1" numBeats="355.605" oneShot="0" denominator="4"
+                numerator="4" bpm="0.0" inMarker="0" outMarker="-1"/>
+      <AUTOMATIONCURVES/>
+    </AUDIOCLIP>
+    <PLUGIN type="volume" id="1013" enabled="1" volume="0.740818202495575"
+            pan="0.0">
+      <MODIFIERASSIGNMENTS/>
+    </PLUGIN>
+    <PLUGIN type="level" id="1014" enabled="1">
+      <MODIFIERASSIGNMENTS/>
+    </PLUGIN>
+    <OUTPUTDEVICES>
+      <DEVICE name="(default audio output)"/>
+    </OUTPUTDEVICES>
+  </TRACK>
+  <TRACK id="1015" colour="ffffff00">
+    <MODIFIERS/>
+    <CLIPSLOTS/>
+    <AUDIOCLIP name="05_bass" start="0.0" length="177.8025" offset="0.0" id="1193"
+               source="..\..\stems\theme_base\05_bass.wav" sync="0" elastiqueMode="0"
+               pan="0.0" colour="ffffff00" proxyAllowed="1" resamplingQuality="lagrange">
+      <LOOPINFO rootNote="-1" numBeats="355.605" oneShot="0" denominator="4"
+                numerator="4" bpm="0.0" inMarker="0" outMarker="-1"/>
+      <AUTOMATIONCURVES/>
+    </AUDIOCLIP>
+    <PLUGIN type="volume" id="1016" enabled="1" volume="0.740818202495575"
+            pan="0.0">
+      <MODIFIERASSIGNMENTS/>
+    </PLUGIN>
+    <PLUGIN type="level" id="1017" enabled="1">
+      <MODIFIERASSIGNMENTS/>
+    </PLUGIN>
+    <OUTPUTDEVICES>
+      <DEVICE name="(default audio output)"/>
+    </OUTPUTDEVICES>
+  </TRACK>
+  <TRACK id="1018" colour="ffffaa00">
+    <MODIFIERS/>
+    <CLIPSLOTS/>
+    <AUDIOCLIP name="06_drums" start="0.0" length="177.8025" offset="0.0" id="1195"
+               source="..\..\stems\theme_base\06_drums.wav" sync="0" elastiqueMode="0"
+               pan="0.0" colour="ffffaa00" proxyAllowed="1" resamplingQuality="lagrange">
+      <LOOPINFO rootNote="-1" numBeats="355.605" oneShot="0" denominator="4"
+                numerator="4" bpm="0.0" inMarker="0" outMarker="-1"/>
+      <AUTOMATIONCURVES/>
+    </AUDIOCLIP>
+    <PLUGIN type="volume" id="1019" enabled="1" volume="0.740818202495575"
+            pan="0.0">
+      <MODIFIERASSIGNMENTS/>
+    </PLUGIN>
+    <PLUGIN type="level" id="1020" enabled="1">
+      <MODIFIERASSIGNMENTS/>
+    </PLUGIN>
+    <OUTPUTDEVICES>
+      <DEVICE name="(default audio output)"/>
+    </OUTPUTDEVICES>
+  </TRACK>
+  <TRACK id="1021" colour="ff00ff00">
+    <MODIFIERS/>
+    <CLIPSLOTS/>
+    <AUDIOCLIP name="07_bubbles" start="0.0" length="177.8025" offset="0.0"
+               id="1197" source="..\..\stems\theme_base\07_bubbles.wav" sync="0"
+               elastiqueMode="0" pan="0.0" colour="ff00ff00" proxyAllowed="1"
+               resamplingQuality="lagrange">
+      <LOOPINFO rootNote="-1" numBeats="355.605" oneShot="0" denominator="4"
+                numerator="4" bpm="0.0" inMarker="0" outMarker="-1"/>
+      <AUTOMATIONCURVES/>
+    </AUDIOCLIP>
+    <PLUGIN type="volume" id="1022" enabled="1" volume="0.740818202495575"
+            pan="0.0">
+      <MODIFIERASSIGNMENTS/>
+    </PLUGIN>
+    <PLUGIN type="level" id="1023" enabled="1">
+      <MODIFIERASSIGNMENTS/>
+    </PLUGIN>
+    <OUTPUTDEVICES>
+      <DEVICE name="(default audio output)"/>
+    </OUTPUTDEVICES>
+  </TRACK>
+  <TRACK id="1024" colour="ff00ffff">
+    <MODIFIERS/>
+    <CLIPSLOTS/>
+    <PLUGIN type="volume" id="1025" enabled="1" volume="0.740818202495575"
+            pan="0.0">
+      <MODIFIERASSIGNMENTS/>
+    </PLUGIN>
+    <PLUGIN type="level" id="1026" enabled="1">
+      <MODIFIERASSIGNMENTS/>
+    </PLUGIN>
+    <OUTPUTDEVICES>
+      <DEVICE name="(default audio output)"/>
+    </OUTPUTDEVICES>
+  </TRACK>
+</EDIT>

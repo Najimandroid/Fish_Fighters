@@ -46,4 +46,10 @@ private:
 
     // Weak reference to the current stage (needed to spawn units)
     std::weak_ptr<Stage> m_stage;
+
+    // A short message over the slots ("UNIT LIMIT REACHED"), popping in and fading out
+    void show_message(const std::string& text);
+    sf::Text m_message;
+    float m_messageTime = 0.f;                         // Seconds left
+    static constexpr float MESSAGE_SECONDS = 1.6f;
 };
