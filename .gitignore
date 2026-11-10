@@ -32,3 +32,4 @@ audio_sources/midi/stems/
 audio_sources/waveform/*/Exported/
 audio_sources/waveform/*/Backups/
 audio_sources/waveform/*/.tmp_*
+game_data/settings.json
