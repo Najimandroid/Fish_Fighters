@@ -122,8 +122,8 @@
         "file": "assets/audios/music/theme_energetic.ogg",
         "sampleRate": 48000,
         "key": "A",
-        "loopStart": 4830968,
-        "loopLength": 4459355
+        "loopStart": 4404706,
+        "loopLength": 4065882
     },
     "theme_energetic_boss": {
         "title": "Riptide Rampage",
@@ -131,8 +131,8 @@
         "file": "assets/audios/music/theme_energetic_boss.ogg",
         "sampleRate": 48000,
         "key": "A",
-        "loopStart": 4538182,
-        "loopLength": 4189091
+        "loopStart": 4160000,
+        "loopLength": 3840000
     },
     "theme_preboss": {
         "title": "Something Stirs Below",
@@ -142,6 +142,24 @@
         "key": "D",
         "loopStart": 5348572,
         "loopLength": 4937143
+    },
+    "theme_neon": {
+        "title": "Neon Riptide",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_neon.ogg",
+        "sampleRate": 48000,
+        "key": "A",
+        "loopStart": 4547369,
+        "loopLength": 4244211
+    },
+    "theme_neon_boss": {
+        "title": "Neon Headliner",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_neon_boss.ogg",
+        "sampleRate": 48000,
+        "key": "A",
+        "loopStart": 4320000,
+        "loopLength": 4032000
     },
     "jingle_battle_start": {
         "title": "Battle Stations! (C)",
