@@ -73,6 +73,7 @@ set(PROJECT_SOURCES
     src/uis/widgets/UIFishTank.cpp
     src/uis/widgets/UIFishParade.cpp
     src/uis/widgets/UITutorial.cpp
+    src/uis/widgets/UIBattleIntro.cpp
     src/uis/widgets/UIStageCash.cpp
     src/uis/widgets/UICashUp.cpp
     src/uis/widgets/UIBaseHealthInfo.cpp

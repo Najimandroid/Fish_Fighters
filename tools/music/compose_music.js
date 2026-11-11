@@ -23,6 +23,11 @@
 //   theme_jelly_boss "High Voltage Majesty" 138 BPM  dark electro: the eel crowned, 808/909, synth bass, a choir in the back
 //   theme_crab       "Crab Cove"      132 BPM  a sideways tiptoe in A minor: bassoon, flamenco strums, castanets and claves
 //   theme_crab_boss  "King Crab's Sideways Stomp" 120 BPM  heavy and jumpy: chugs, freezes, scuttles, taiko; the cove's pinches
+//   theme_energetic  "Riptide Rush"   136 BPM  dance: nu-disco / electro-funk, fast funk bass, alto sax on the motif, 909, synths
+//   theme_energetic_boss "Riptide Rampage" 144 BPM  its boss version, all electro: A minor, polysynth, saw and square going crazy, 909 and taiko
+//   theme_neon       "Neon Riptide"   152 BPM  Riptide Rush gone crazy (neon party stages): louder basses, jazzy sax, wild synths, a sax solo
+//   theme_neon_boss  "Neon Headliner" 160 BPM  its boss version, a dubstep / phonk concert: cowbell, sliding 808, wobble drops, the crowd chanting
+//   theme_preboss    "Something Stirs Below" 112 BPM  before a boss: sonar, heartbeat, pizzicato ostinato, horns in D minor
 //   jingle_battle_start, jingle_victory, jingle_defeat
 
 const fs = require("fs");
@@ -390,6 +395,36 @@ function zaps(synth, start, { count = 1, spread = 0, velocity = 90, duration = [
             duration[0] + (duration[1] - duration[0]) * r(3), Math.floor(r(4) * 1e6), (r(5) - 0.5) * 1.4);
     }
 }
+
+// ===== Crowd (the concert themes, a render_stems.js synth) =====
+// "hey!" shouted by the whole crowd on each of these beats; the same shouts in both body copies
+function hey(synth, beats, velocity = 110) {
+    for (const t of [].concat(beats)) synth.add(t, velocity, "hey", Math.floor(hash(synth.name, Math.round((t - ORIGIN) * 1000), "hey") * 1e6));
+}
+// A cheer: the crowd roaring for that many seconds
+function cheer(synth, beat, seconds = 2, velocity = 100) {
+    synth.add(beat, velocity, "cheer", Math.floor(hash(synth.name, Math.round((beat - ORIGIN) * 1000), "cheer") * 1e6), seconds);
+}
+
+// ===== Dance synths (the Riptide and Neon themes) =====
+// A wobble bass note (render_stems.js): its length and its wobbles given in beats, turned into seconds with the tempo
+function wobble(synth, song, beat, note, beats, perBeat = 2, velocity = 110) {
+    synth.add(beat, +(440 * Math.pow(2, (note - 69) / 12)).toFixed(3), beats * 60 / song.tempo, velocity, perBeat * song.tempo / 60);
+}
+// A 32nd-note arpeggio burst up and down the chord for that many beats
+function burst(part, symbol, start, beats = 2, center = 69, velocity = 66) {
+    const notes = voice(symbol, center);
+    const up = [...notes, ...notes.map(n => n + 12), notes[0] + 24];
+    const run = [...up, ...up.slice(1, -1).reverse()];
+    for (let i = 0; i * 0.125 < beats - 1e-6; i++) part.hit(start + i * 0.125, run[i % run.length], velocity + (i % 4 === 0 ? 10 : 0), 0.1);
+}
+// A voice chop stuttering in 32nds into the next beat
+function stutter(part, symbol, start, center = 69, velocity = 94) {
+    const notes = voice(symbol, center);
+    for (let i = 0; i < 8; i++) notes.forEach(n => part.hit(start + i * 0.125, n, velocity - (i % 2) * 14, 0.08));
+}
+// A synth note diving an octave (or more) as it holds
+const dive = (part, note, start, beats = 2, velocity = 104, semitones = -12) => part.hit(start, note, velocity, beats * 0.95, semitones);
 
 // ===== Writing the files =====
 function vlq(value) {
@@ -1953,6 +1988,632 @@ const CRAB = {
         beat(kit, a2 + 44, 1, GULP);
         kit.hit(a2, CRASH, 112, 1).hit(a2 + 32, CRASH, 108, 1);
         gulp(a2 + 47, band);
+    });
+    songs.push(song);
+}
+
+// The dance theme and its boss version share their tune and their bass
+const RIPTIDE = {
+    A: "Am7 | D7 | Am7 | D7 | Fmaj7 | E7 | Am7 | E7 | Am7 | D7 | Am7 | D7 | Fmaj7 | G | E7 | E7",
+    B: "Fmaj7 | G | Em7 | Am7 | Dm7 | G | Fmaj7 | E7",
+    C: "Am7 | Am7 | D7 | D7 | Fmaj7 | Fmaj7 | E7 | E7",
+    D: "Am7 | D7 | Am7 | D7 | Fmaj7 | E7 | Am7 | E7",
+    // The motif (A D F E D A'), syncopated like the Fish Tank's, then answered
+    get TUNE() {
+        const head = "A4:.5 D5:.5 F5:.75 E5:.25 r:.5 D5:.5 A5:1 | r:.5 F#5:.5 A5:.5 F#5:.5 r:.5 E5:.25 D5:.75 r:.5 | " +
+                     "A4:.5 D5:.5 F5:.75 E5:.25 r:.5 D5:.5 C6:1 | r:.5 B5:.5 A5:.5 F#5:.5 r:.5 E5:.25 F#5:.75 r:.5 | ";
+        return head + "C6:.5 A5:.5 F5:.5 A5:.5 r:.5 G5:.5 E5:1 | G#5:.5 B5:.5 D6:.75 B5:.25 r:.5 G#5:.5 E5:1 | " +
+            "A5:.5 G5:.5 E5:.5 D5:.5 C5:.5 D5:.5 E5:.5 G5:.5 | A5:1.5 r:.5 G#5:.5 B5:.5 D6:1 | " +
+            head + "F5:.5 A5:.5 C6:.5 E6:.5 r:.5 D6:.5 C6:1 | B5:.5 D6:.5 G6:.75 F6:.25 r:.5 D6:.5 B5:1 | " +
+            "G#5:.5 B5:.5 E6:.5 D6:.5 B5:.5 G#5:.5 E5:.5 D5:.5 | E5:1 r:1 E5:.25 G#5:.25 B5:.25 D6:.25 E6:1";
+    },
+    LIFT: "A5:2 C6:2 | B5:1.5 A5:.5 G5:2 | G5:1 B5:1 E6:2 | C6:4 | A5:2 F5:2 | B5:1.5 D6:.5 G5:2 | A5:1 C6:1 F6:1 E6:1 | E6:2 G#5:2",
+    LICKS: "A5:.25 C6:.25 A5:.25 G5:.25 E5:.5 r:1.5 G5:.5 A5:.5 | r:2 E5:.25 G5:.25 A5:.25 C6:.25 D6:.5 C6:.5 | " +
+           "F#5:.25 A5:.25 F#5:.25 E5:.25 D5:.5 r:1.5 E5:.5 F#5:.5 | r:2 D5:.25 F#5:.25 A5:.25 C6:.25 D6:1 | " +
+           "A5:4 | C6:4 | B5:4 | B5:2 G#5:2",
+    // Synth madness (the D parts): the motif in leaps and sixteenths
+    MAD: "A5:.25 E6:.25 A5:.25 E6:.25 D6:.5 C6:.5 A5:1 r:1 | F#5:.25 A5:.25 D6:.25 F#6:.25 E6:.5 D6:.5 A5:2 | " +
+         "A5:.25 E6:.25 A5:.25 E6:.25 D6:.5 C6:.5 E6:1 r:1 | F#6:.5 E6:.5 D6:.5 C6:.5 A5:2 | " +
+         "C6:.25 F6:.25 A6:.25 F6:.25 E6:.5 C6:.5 A5:2 | G#5:.25 B5:.25 E6:.25 G#6:.25 B6:1 r:2 | " +
+         "A6:.25 G6:.25 E6:.25 D6:.25 C6:.25 A5:.25 G5:.25 E5:.25 A5:2 | E6:4",
+    BASS: [[0, 0.2, "R", 112], [0.25, 0.12, "R", 66], [0.5, 0.2, "8", 96], [0.75, 0.18, "R", 80],
+           [1, 0.2, "R", 104], [1.25, 0.12, "8", 72], [1.5, 0.2, "8", 92], [1.75, 0.18, "5", 84],
+           [2, 0.2, "R", 108], [2.25, 0.12, "R", 66], [2.5, 0.2, "8", 96], [2.75, 0.18, "R", 80],
+           [3, 0.2, "7", 96], [3.25, 0.12, "8", 74], [3.5, 0.2, "5", 90], [3.75, 0.2, "app", 88]],
+    minor: text => text.replace(/F#5/g, "F5").replace(/F#6/g, "F6"),
+};
+// Crazy moments over a part: 32nd bursts in the phrase gaps, stutters into the phrase ends, a dive closing it
+function madness(prog, start, bars, { arpPart, chopPart, divePart, center = 69, velocity = 64, diveNote = 81 }) {
+    for (let bar = 1; bar < bars; bar += 2) burst(arpPart, chordAt(prog, start + bar * 4 + 2).symbol, start + bar * 4 + 2, 2, center, velocity);
+    for (let bar = 3; bar < bars; bar += 4) stutter(chopPart, chordAt(prog, start + bar * 4 + 3).symbol, start + bar * 4 + 3, center);
+    if (divePart) dive(divePart, diveNote, start + bars * 4 - 2, 2, 100);
+}
+
+// =====================================================================================================
+// 12c. "Riptide Rush" - an energetic battle theme you could dance on: nu-disco / electro-funk at 136 BPM in A
+//     (dorian). Four on the floor on an 808/909, a fast funk bass in sixteenths (fingered, a synth sub under it),
+//     the motif on alto sax, Rhodes house stabs, synths going crazy in every gap (32nd bursts, stuttering chops,
+//     dives) and a whole part of synth madness.
+//     Intro 4 | A 16 (the groove: sax) | B 8 (the lift) | A' 16 (sax and synth) | C 8 (the drop) | D 8 (synth madness)
+// =====================================================================================================
+{
+    const song = new Song("theme_energetic", "Fish Fighters - Riptide Rush", 136, { introBars: 4, bodyBars: 56, key: "A",
+        mix: { lead: 0, keys: -6, arp: -7, bass: 1, drums: 0, pad: -10, fx: -12 } });
+    const sax = song.part("Alto sax", 65, { group: "lead", volume: 108, pan: 0.05, vibrato: { cents: 20, hz: 5.5, delay: 0.2, minBeats: 1 },
+        fx: { echo: { beats: 0.75, feedback: 0.2, mix: 0.12 } } });
+    const synthLead = song.part("Saw lead", 81, { group: "lead", volume: 98, pan: -0.1, fx: { lowpass: 4800, echo: { beats: 0.75, feedback: 0.3, mix: 0.2 } } });
+    const square = song.part("Square lead", 80, { group: "lead", volume: 88, pan: 0.2, fx: { lowpass: 3600 } });
+    const rhodes = song.part("Rhodes", 4, { group: "keys", volume: 96, pan: -0.25, fx: { chorus: { mix: 0.4 } } });
+    const poly = song.part("Polysynth", 90, { group: "keys", volume: 84, pan: 0.25 });
+    const arpSynth = song.part("Square arpeggio", 80, { group: "arp", volume: 82, pan: 0.35, fx: { lowpass: 3000, echo: { beats: 0.75, feedback: 0.3, mix: 0.25 } } });
+    const chops = song.part("Voice chops", 54, { group: "arp", volume: 94, pan: -0.3, fx: { echo: { beats: 0.5, feedback: 0.3, mix: 0.25 } } });
+    const bass = song.part("Funk bass", 33, { group: "bass", volume: 114 });
+    const sub = song.part("Synth sub", 38, { group: "bass", volume: 98, fx: { lowpass: 700 } });
+    const sweep = song.part("Sweep", 95, { group: "pad", volume: 88 });
+    const kit = song.drums("909", 25, { group: "drums", volume: 106 });
+    const bub = song.synth("Bubbles", "bubbles", { group: "fx" });
+
+    const HOUSE = { [KICK]: "X...X...X...X...", [CLAP]: "....X.......X...", [OPEN_HAT]: "..o...o...o...o.", [HAT]: "g.g.g.g.g.g.g.g." };
+    const HOUSE_FULL = { [KICK]: "X...X...X...X...", [CLAP]: "....X.......X...", [OPEN_HAT]: "..x...x...x...x.", [HAT]: "gggggggggggggggg", [SHAKER]: "g.o.g.o.g.o.g.o." };
+    const FILL = { [KICK]: "X...X...X...X...", [CLAP]: "....X.......XXXX", [OPEN_HAT]: "..x...x.........", [SNARE]: "............xxxx" };
+    const STABS = [[0.5, 0.2, 72], [1.5, 0.2, 66], [2.5, 0.2, 72], [3.25, 0.2, 62], [3.5, 0.2, 70]];
+    const ARP = { pattern: [0, 2, 1, 3, 2, 1, 3, 2], rate: 0.25, center: 69, velocity: 62, accent: 10, gate: 0.6 };
+    const SUB = [[0, 0.9, "R", 100], [1, 0.9, "R", 96], [2, 0.9, "R", 100], [3, 0.9, "R", 96]];
+    const crazy = { arpPart: arpSynth, chopPart: chops, divePart: synthLead };
+    const floor = (start, bars, kitBeat) => { for (let bar = 0; bar < bars; bar++) beat(kit, start + bar * 4, 1, bar % 8 === 7 ? FILL : kitBeat); };
+    const groove = (prog, start, bars, full) => {
+        bassline(bass, prog, { pattern: RIPTIDE.BASS });
+        bassline(sub, prog, { pattern: SUB });
+        comp(rhodes, prog, { pattern: STABS, center: 62 });
+        floor(start, bars, full ? HOUSE_FULL : HOUSE);
+    };
+
+    // Intro: the kick alone, the bass joins, a burst and a sweep up into the groove
+    beat(kit, 0, 2, { [KICK]: "X...X...X...X...", [HAT]: "g.g.g.g.g.g.g.g." });
+    beat(kit, 8, 2, { [KICK]: "X...X...X...X...", [CLAP]: "....X.......X...", [OPEN_HAT]: "..o...o...o...o." });
+    bassline(bass, progression("D7 | Am7 | E7", 4), { pattern: RIPTIDE.BASS });
+    sustain(sweep, progression("Am7 | E7", 8), { center: 64, velocity: 70 });
+    burst(arpSynth, "E7", 12, 4, 69, 60);
+    roll(kit, 14, 2, CLAP, 50, 112);
+
+    song.body(s => {
+        const a = s, b = s + 64, a2 = s + 96, c = s + 160, d = s + 192;
+        const pA = progression(RIPTIDE.A, a), pB = progression(RIPTIDE.B, b), pA2 = progression(RIPTIDE.A, a2);
+        const pC = progression(RIPTIDE.C, c), pD = progression(RIPTIDE.D, d);
+
+        // A: the groove - the sax on the tune, the synths going crazy in its gaps
+        sax.at(a).play(RIPTIDE.TUNE, { velocity: 102, gate: 0.8 });
+        for (let p = 0; p < 4; p++) shape(sax, a + p * 16, a + p * 16 + 16, { peak: 10, ending: -6 });
+        groove(pA, a, 16, false);
+        madness(pA, a, 16, crazy);
+        kit.hit(a, CRASH, 106, 1);
+        bubbles(bub, a + 30, { count: 6, spread: 2, low: 400, high: 1400 });
+
+        // B: the lift - the saw soars with scoops, the polysynth holds the chords, a 32nd arpeggio, a dive out
+        synthLead.at(b).play(RIPTIDE.LIFT, { velocity: 106, gate: 0.95 });
+        [0, 8, 16, 24].forEach(t => bendAt(synthLead, b + t, 2));
+        bendAt(synthLead, b + 30, -12);
+        sustain(poly, pB, { center: 62, velocity: 74 });
+        arp(arpSynth, pB, { ...ARP, rate: 0.125, pattern: [0, 1, 2, 3, 4, 5, 4, 3, 2, 1] });
+        bassline(bass, pB, { pattern: RIPTIDE.BASS });
+        bassline(sub, pB, { pattern: SUB });
+        floor(b, 6, HOUSE_FULL);
+        beat(kit, b + 24, 2, { [KICK]: "X...X...X...X...", [CLAP]: "x.x.x.x.xxxxxxxx" });
+        kit.hit(b, CRASH, 108, 1);
+
+        // A': the sax and the saw together (an octave apart), the arpeggio, the full kit, crazier gaps
+        sax.at(a2).play(RIPTIDE.TUNE, { velocity: 106, gate: 0.8 });
+        synthLead.at(a2).play(RIPTIDE.TUNE, { velocity: 86, gate: 0.6, transpose: 12 });
+        for (let p = 0; p < 4; p++) shape(sax, a2 + p * 16, a2 + p * 16 + 16, { peak: 10, ending: -6 });
+        groove(pA2, a2, 16, true);
+        arp(arpSynth, pA2, { ...ARP, velocity: 54 });
+        madness(pA2, a2, 16, { ...crazy, divePart: square, velocity: 70 });
+        kit.hit(a2, CRASH, 110, 1).hit(a2 + 32, CRASH, 106, 1);
+
+        // C: the drop - bass and kick, vocal chops and sax licks answering; then the build (sweep, bursts, roll)
+        sax.at(c).play(RIPTIDE.LICKS, { velocity: 106, gate: 0.85 });
+        bassline(bass, pC, { pattern: RIPTIDE.BASS });
+        beat(kit, c, 4, { [KICK]: "X...X...X...X...", [HAT]: "..x...x...x...x." });
+        comp(chops, progression("Am7 | Am7 | D7 | D7", c), { pattern: [[0.5, 0.3, 96], [1.75, 0.3, 84], [2.5, 0.3, 92], [3.5, 0.2, 84]], center: 69 });
+        bassline(sub, progression("Fmaj7 | Fmaj7 | E7 | E7", c + 16), { pattern: SUB });
+        sustain(sweep, progression("Fmaj7 | Fmaj7 | E7 | E7", c + 16), { center: 64, velocity: 80 });
+        [c + 16, c + 20, c + 24].forEach(t => burst(arpSynth, chordAt(pC, t).symbol, t, 4, 69, 60));
+        beat(kit, c + 16, 2, { [KICK]: "X...X...X...X...", [CLAP]: "....X.......X..." });
+        beat(kit, c + 24, 1, { [KICK]: "X...X...X...X...", [CLAP]: "x.x.x.x.x.x.x.x." });
+        roll(kit, c + 28, 4, SNARE, 50, 120);
+        bubbles(bub, c + 18, { count: 10, spread: 6, low: 300, high: 1400 });
+
+        // D: synth madness - the saw on the motif in leaps, the square under it, bursts and stutters everywhere
+        synthLead.at(d).play(RIPTIDE.MAD, { velocity: 108, gate: 0.85 });
+        square.at(d).play(RIPTIDE.MAD, { velocity: 84, gate: 0.6, transpose: -12 });
+        bendAt(synthLead, d + 28, -12);
+        groove(pD, d, 8, true);
+        for (let bar = 0; bar < 8; bar++) stutter(chops, chordAt(pD, d + bar * 4 + 3).symbol, d + bar * 4 + 3);
+        madness(pD, d, 8, { ...crazy, divePart: null, velocity: 70 });
+        kit.hit(d, CRASH, 112, 1);
+    });
+    songs.push(song);
+}
+
+// =====================================================================================================
+// 12e. "Riptide Rampage" - Riptide Rush's boss version, all electro: 144 BPM in A minor, the same tune and fast bass
+//     with a gritty synth bass, a big polysynth for the chords, synth brass stabs, a saw lead and a square going
+//     crazy, a 909 hit hard with taiko for the boss's weight, and a part of synth madness.
+//     Intro 4 | A 16 (sax) | B 8 (the saw sings the lift) | A' 16 (everyone) | C 8 (taiko drop) | D 8 (synth madness)
+// =====================================================================================================
+{
+    const song = new Song("theme_energetic_boss", "Fish Fighters - Riptide Rampage", 144, { introBars: 4, bodyBars: 56, key: "A",
+        mix: { lead: 0, keys: -5, brass: -4, arp: -7, bass: 1, drums: 1, fx: -12 } });
+    const sax = song.part("Alto sax", 65, { group: "lead", volume: 110, pan: 0.05, vibrato: { cents: 22, hz: 5.8, delay: 0.15, minBeats: 1 } });
+    const saw = song.part("Saw lead", 81, { group: "lead", volume: 102, pan: -0.1, fx: { lowpass: 5200, echo: { beats: 0.75, feedback: 0.3, mix: 0.2 } } });
+    const square = song.part("Square lead", 80, { group: "lead", volume: 88, pan: 0.2, fx: { lowpass: 3600 } });
+    const poly = song.part("Polysynth", 90, { group: "keys", volume: 96, fx: { chorus: { mix: 0.5 } } });
+    const brass = song.part("Synth brass", 63, { group: "brass", volume: 106, pan: -0.2 });
+    const arpSynth = song.part("Arpeggio", 80, { group: "arp", volume: 82, pan: 0.35, fx: { lowpass: 3000, echo: { beats: 0.75, feedback: 0.3, mix: 0.2 } } });
+    const chops = song.part("Voice chops", 54, { group: "arp", volume: 94, pan: -0.35 });
+    const bass = song.part("Funk bass", 33, { group: "bass", volume: 114 });
+    const grit = song.part("Synth bass", 39, { group: "bass", volume: 102, fx: { lowpass: 1800 } });
+    const kit = song.drums("909", 25, { group: "drums", volume: 110 });
+    const taiko = song.part("Taiko", 116, { group: "drums", volume: 110 });
+    const bub = song.synth("Bubbles", "bubbles", { group: "fx" });
+
+    const A = "Am | F | Am | F | Dm | E | Am | E | Am | F | Am | F | Dm | G | E | E";
+    const B = "F | G | Em | Am | Dm | G | F | E";
+    const C = "Am | Am | F | F | Dm | Dm | E | E";
+    const D = "Am | F | Am | F | Dm | E | Am | E";
+    const TUNE = RIPTIDE.minor(RIPTIDE.TUNE).replace("C6:.5 A5:.5 F5:.5 A5:.5 r:.5 G5:.5 E5:1", "D6:.5 A5:.5 F5:.5 A5:.5 r:.5 G5:.5 E5:1")
+        .replace("F5:.5 A5:.5 C6:.5 E6:.5 r:.5 D6:.5 C6:1", "F5:.5 A5:.5 D6:.5 F6:.5 r:.5 E6:.5 D6:1");
+    const ELECTRO = { [KICK]: "X...X...X...X.x.", [CLAP]: "....X.......X...", [SNARE]: "....X.......X...", [OPEN_HAT]: "..x...x...x...x.", [HAT]: "gggggggggggggggg" };
+    const FILL = { [KICK]: "X...X...X...X...", [CLAP]: "....X.......XXXX", [SNARE]: "............xxxx" };
+    const GRIT = [[0, 0.45, "R", 104], [0.5, 0.45, "R", 80], [1, 0.45, "R", 100], [1.5, 0.45, "8", 84],
+                  [2, 0.45, "R", 104], [2.5, 0.45, "R", 80], [3, 0.45, "5", 96], [3.5, 0.45, "R", 84]];
+    const crazy = { arpPart: arpSynth, chopPart: chops, divePart: saw };
+    const hard = (start, bars) => {
+        for (let bar = 0; bar < bars; bar++) beat(kit, start + bar * 4, 1, bar % 8 === 7 ? FILL : ELECTRO);
+        for (let bar = 0; bar < bars; bar++) taiko.hit(start + bar * 4, pitch("D2"), 118, 0.5);
+    };
+    const basses = prog => { bassline(bass, prog, { pattern: RIPTIDE.BASS }); bassline(grit, prog, { pattern: GRIT }); };
+    const stabs = (prog, start, bars) => {
+        for (const bar of bars) [0, 0.75, 1.5].forEach(o => voice(chordAt(prog, start + bar * 4 + o).symbol, 60).forEach(n => brass.hit(start + bar * 4 + o, n, 106, 0.3)));
+    };
+
+    // Intro: a rising burst, taiko, the polysynth's chord, the bass kicks in
+    sustain(poly, progression("Am | Am", 0), { center: 60, velocity: 80 });
+    [0, 4].forEach(t => burst(arpSynth, "Am", t, 4, 69, 56));
+    [8, 10, 12, 13, 14, 15].forEach(t => taiko.hit(t, pitch("D2"), 120, 0.5));
+    basses(progression("Am | E", 8));
+    beat(kit, 8, 2, ELECTRO);
+    stabs(progression("Am | E", 8), 8, [0, 1]);
+    dive(saw, pitch("E6"), 14, 2, 100);
+
+    song.body(s => {
+        const a = s, b = s + 64, a2 = s + 96, c = s + 160, d = s + 192;
+        const pA = progression(A, a), pB = progression(B, b), pA2 = progression(A, a2), pC = progression(C, c), pD = progression(D, d);
+
+        // A: the sax on the tune, the polysynth's chords, the basses, the hard 909 and taiko, crazy synths in the gaps
+        sax.at(a).play(TUNE, { velocity: 104, gate: 0.8 });
+        for (let p = 0; p < 4; p++) shape(sax, a + p * 16, a + p * 16 + 16, { peak: 10, ending: -6 });
+        sustain(poly, pA, { center: 60, velocity: 66 });
+        basses(pA);
+        hard(a, 16);
+        stabs(pA, a, [5, 7, 13, 15]);
+        madness(pA, a, 16, crazy);
+        kit.hit(a, CRASH, 110, 1);
+
+        // B: the saw sings the lift with scoops, brass holds the chords, a 32nd arpeggio, half time with taiko
+        saw.at(b).play(RIPTIDE.LIFT, { velocity: 106, gate: 0.95 });
+        [0, 8, 16, 24].forEach(t => bendAt(saw, b + t, 2));
+        bendAt(saw, b + 30, -12);
+        sustain(brass, pB, { center: 60, velocity: 80 });
+        arp(arpSynth, pB, { pattern: [0, 1, 2, 3, 4, 5, 4, 3, 2, 1], rate: 0.125, center: 69, velocity: 58, accent: 10, gate: 0.6 });
+        basses(pB);
+        beat(kit, b, 8, { [KICK]: "X.......X.......", [CLAP]: "........X.......", [RIDE]: "x.x.x.x.x.x.x.x." });
+        for (let bar = 0; bar < 8; bar++) [0, 2].forEach(o => taiko.hit(b + bar * 4 + o, pitch("D2"), 118, 0.5));
+
+        // A': everyone - sax, saw an octave up, the square an octave down, brass stabs on every bar's start
+        sax.at(a2).play(TUNE, { velocity: 108, gate: 0.8 });
+        saw.at(a2).play(TUNE, { velocity: 86, gate: 0.6, transpose: 12 });
+        square.at(a2).play(TUNE, { velocity: 80, gate: 0.6, transpose: -12 });
+        for (let p = 0; p < 4; p++) shape(sax, a2 + p * 16, a2 + p * 16 + 16, { peak: 10, ending: -6 });
+        sustain(poly, pA2, { center: 64, velocity: 70 });
+        basses(pA2);
+        hard(a2, 16);
+        stabs(pA2, a2, [1, 3, 5, 7, 9, 11, 13, 15]);
+        madness(pA2, a2, 16, { ...crazy, divePart: square, velocity: 70 });
+        kit.hit(a2, CRASH, 112, 1).hit(a2 + 32, CRASH, 110, 1);
+
+        // C: the taiko drop - taiko, bass and polysynth chords, sax licks, stutters; then the build
+        sax.at(c).play(RIPTIDE.minor(RIPTIDE.LICKS), { velocity: 106, gate: 0.85 });
+        basses(pC);
+        sustain(poly, pC, { center: 60, velocity: 70 });
+        for (let bar = 0; bar < 8; bar++) [[0, 122], [2.5, 108], [3, 114]].forEach(([o, v]) => taiko.hit(c + bar * 4 + o, pitch("D2"), v, 0.5));
+        for (let bar = 0; bar < 4; bar++) stutter(chops, chordAt(pC, c + bar * 4 + 3).symbol, c + bar * 4 + 3);
+        [c + 16, c + 20, c + 24].forEach(t => burst(arpSynth, chordAt(pC, t).symbol, t, 4, 69, 62));
+        beat(kit, c + 16, 2, { [KICK]: "X...X...X...X..." });
+        beat(kit, c + 24, 1, { [KICK]: "X.X.X.X.X.X.X.X." });
+        roll(kit, c + 28, 4, SNARE, 50, 122);
+
+        // D: synth madness in minor - the saw on the motif in leaps, the square under it, stutters every bar
+        saw.at(d).play(RIPTIDE.minor(RIPTIDE.MAD), { velocity: 108, gate: 0.85 });
+        square.at(d).play(RIPTIDE.minor(RIPTIDE.MAD), { velocity: 84, gate: 0.6, transpose: -12 });
+        bendAt(saw, d + 28, -12);
+        basses(pD);
+        hard(d, 8);
+        for (let bar = 0; bar < 8; bar++) stutter(chops, chordAt(pD, d + bar * 4 + 3).symbol, d + bar * 4 + 3);
+        madness(pD, d, 8, { ...crazy, divePart: null, velocity: 70 });
+        kit.hit(d, CRASH, 114, 1);
+        bubbles(bub, d + 20, { count: 8, spread: 6, low: 300, high: 1200 });
+    });
+    songs.push(song);
+}
+
+// =====================================================================================================
+// 12d. "Something Stirs Below" - before a boss shows up (the stage's theme until the base is hit hard enough, then
+//     the boss theme takes over). Tense, not frantic: the sonar searching, a heartbeat on timpani, a ticking wood
+//     block, a pizzicato ostinato and a low synth pulse; horns play the motif slowly in D minor, a celesta glints
+//     its fragments far away. The middle gets closer (heartbeat twice as fast, low brass), the breakdown goes quiet
+//     (only the heart and the sonar, faster), then a timpani roll into the tune again.
+//     Intro 4 | A 16 | B 8 (closer) | C 8 (silence before) | A' 16
+// =====================================================================================================
+{
+    const song = new Song("theme_preboss", "Fish Fighters - Something Stirs Below", 112, { introBars: 4, bodyBars: 48, key: "D",
+        mix: { lead: 0, strings: -5, bass: -4, drums: -4, fx: -6 } });
+    const horns = song.part("Horns", 60, { group: "lead", volume: 104, pan: -0.1, vibrato: { cents: 12, hz: 5, delay: 0.3, minBeats: 1.5 } });
+    const celesta = song.part("Celesta", 8, { group: "lead", volume: 78, pan: 0.35, fx: { echo: { beats: 0.75, feedback: 0.45, mix: 0.4 } } });
+    const trombones = song.part("Low brass", 57, { group: "lead", volume: 98, pan: 0.15 });
+    const pizz = song.part("Pizzicato", 45, { group: "strings", volume: 92, pan: 0.3 });
+    const tremolo = song.part("Tremolo strings", 44, { group: "strings", volume: 88, pan: -0.25 });
+    const pulse = song.part("Pulse", 39, { group: "bass", volume: 104, fx: { lowpass: 900 } });
+    const timpani = song.part("Timpani", 47, { group: "drums", volume: 108 });
+    const kit = song.drums("Kit", 0, { group: "drums", volume: 88 });
+    const ping = song.synth("Sonar", "ping", { group: "fx", fx: { echo: { beats: 1.5, feedback: 0.45, mix: 0.45 } } });
+
+    const A = "Dm | Dm | Bb | A | Dm | Gm | Eb | A | Dm | Dm | Bb | A | Dm | Gm | Eb | A";
+    const B = "Gm | Gm | Dm | Dm | Eb | Eb | A | A";
+    const C = "Dm | Dm | Dm | Dm | Eb | Eb | A | A";
+    const MOTIF = "D4:2 G4:2 | Bb4:3 A4:1 | G4:2 F4:2 | E4:4 | D4:2 G4:2 | Bb4:2 D5:2 | Eb5:3 D5:1 | C#5:4 | " +
+                  "D5:2 C5:2 | Bb4:3 A4:1 | G4:2 Bb4:2 | A4:4 | F4:2 G4:2 | Bb4:2 G4:2 | G4:3 F4:1 | E4:2 C#4:2";
+    const CLOSER = "G2:4 | Bb2:4 | A2:4 | F2:4 | Eb2:4 | G2:4 | A2:4 | C#3:4";
+    const OSTINATO = { pattern: ["R", "5", "8", "5", "3", "5", "8", "5"], rate: 0.25, base: 50, velocity: 58, accent: 8, gate: 0.4 };
+    const PULSE = [[0, 0.4, "R", 96], [0.5, 0.4, "R", 62], [1, 0.4, "R", 88], [1.5, 0.4, "R", 62],
+                   [2, 0.4, "R", 92], [2.5, 0.4, "R", 62], [3, 0.4, "R", 88], [3.5, 0.4, "app", 70]];
+    const TICK = { [WOOD_HIGH]: "o.g.o.g.o.g.o.g." };
+    const D2 = pitch("D2"), A1 = pitch("A1");
+    // The heartbeat: lub-dub on the timpani (and a soft kick under it), once or twice a bar
+    const heart = (start, bars, perBar = 1, velocity = 100) => {
+        for (let bar = 0; bar < bars; bar++)
+            for (let k = 0; k < perBar; k++) {
+                const t = start + bar * 4 + k * (4 / perBar);
+                timpani.hit(t, D2, velocity, 0.4).hit(t + 0.35, D2, velocity - 22, 0.4);
+                kit.hit(t, KICK, velocity - 30, 0.2);
+            }
+    };
+    const glint = (t) => celesta.at(t).play("D6:.5 G6:.5 Bb6:1", { velocity: 70, gate: 0.9 });
+
+    // Intro: the sonar searching in the dark, the heart starts, the pulse and the strings creep in
+    ping.add(0, 1180, 100).add(8, 1180, 90);
+    heart(4, 3, 1, 92);
+    sustain(tremolo, progression("Dm | Dm", 8), { center: 50, velocity: 50 });
+    bassline(pulse, progression("Dm | A", 8), { pattern: PULSE });
+    glint(6);
+
+    song.body(s => {
+        const a = s, b = s + 64, c = s + 96, a2 = s + 128;
+        const pA = progression(A, a), pB = progression(B, b), pC = progression(C, c), pA2 = progression(A, a2);
+
+        // A: horns on the motif, slow; the ostinato, the pulse, the ticking, the heart; the sonar every 4 bars
+        horns.at(a).play(MOTIF, { velocity: 92, gate: 0.95 });
+        for (let p = 0; p < 4; p++) shape(horns, a + p * 16, a + p * 16 + 16, { peak: 10, ending: -8 });
+        figure(pizz, pA, OSTINATO);
+        bassline(pulse, pA, { pattern: PULSE });
+        sustain(tremolo, pA, { center: 50, velocity: 48 });
+        beat(kit, a, 16, TICK);
+        heart(a, 16, 1, 96);
+        for (let bar = 0; bar < 16; bar += 4) ping.add(a + bar * 4, 1180, 90);
+        [3, 7, 11, 15].forEach(bar => glint(a + bar * 4 + 2));
+
+        // B: closer - low brass climbing, the heart twice as fast, the strings louder, the sonar answering itself
+        trombones.at(b).play(CLOSER, { velocity: 100, gate: 0.98 });
+        sustain(tremolo, pB, { center: 55, velocity: 70 });
+        figure(pizz, pB, { ...OSTINATO, velocity: 66 });
+        bassline(pulse, pB, { pattern: PULSE });
+        beat(kit, b, 8, TICK);
+        heart(b, 8, 2, 102);
+        for (let bar = 0; bar < 8; bar += 2) ping.add(b + bar * 4, 1180, 96).add(b + bar * 4 + 3, 880, 70);
+        roll(timpani, b + 28, 4, A1, 50, 100);
+
+        // C: silence before - only the heart and the sonar, faster and faster; a high string harmonic; then the roll
+        heart(c, 8, 1, 90);
+        sustain(tremolo, progression("Dm | Dm | Dm | Dm", c), { center: 81, velocity: 40 });
+        for (let bar = 0; bar < 4; bar++) ping.add(c + bar * 4, 1180, 84);
+        for (let t = 16; t < 32; t += 2) ping.add(c + t, 1180, 88 + (t - 16));
+        bassline(pulse, progression("Eb | Eb | A | A", c + 16), { pattern: [[0, 3.9, "R", 90]] });
+        roll(timpani, c + 24, 8, D2, 40, 120);
+        roll(kit, c + 28, 4, SNARE, 40, 110);
+
+        // A': everyone, darker - horns and low brass together, the heart on every half bar, the sonar on every phrase
+        horns.at(a2).play(MOTIF, { velocity: 100, gate: 0.95 });
+        trombones.at(a2).play(MOTIF, { velocity: 88, gate: 0.95, transpose: -12 });
+        for (let p = 0; p < 4; p++) shape(horns, a2 + p * 16, a2 + p * 16 + 16, { peak: 10, ending: -8 });
+        figure(pizz, pA2, { ...OSTINATO, velocity: 64 });
+        bassline(pulse, pA2, { pattern: PULSE });
+        sustain(tremolo, pA2, { center: 52, velocity: 60 });
+        beat(kit, a2, 16, TICK);
+        heart(a2, 16, 2, 100);
+        for (let bar = 0; bar < 16; bar += 2) ping.add(a2 + bar * 4, 1180, 92);
+        [7, 15].forEach(bar => glint(a2 + bar * 4 + 2));
+    });
+    songs.push(song);
+}
+
+// =====================================================================================================
+// 12f. "Neon Riptide" - Riptide Rush gone absolutely crazy, for the neon underwater party stages. 152 BPM in A:
+//     the same tune and fast funk bass, louder (a slap bass doubling it), the alto sax jazzier (falls, a bebop
+//     solo answered by a tenor), the synths crazy all the way through (a saw lead answering the sax with dives,
+//     32nd-note bursts, stuttering vocal chops, neon zaps), an 808/909 with fills.
+//     Intro 4 | A 16 | B 8 (the lift: the saw screams) | C 8 (the drop) | B' 8 (the lift again, crazier) |
+//     A' 16 (everyone) | D 8 (sax solo, the saw answering)
+// =====================================================================================================
+const NEON = {
+    D: "Am7 | D7 | Bm7b5 E7 | Am7 | Fmaj7 | E7 | Am7 D7 | E7",
+    SOLO: "E5:.25 F5:.25 F#5:.25 G5:.25 A5:.25 C6:.25 E6:.25 D6:.25 C6:.5 A5:.5 G5:.25 G#5:.25 A5:.5 | " +
+          "F#5:.25 A5:.25 C6:.25 D6:.25 Eb6:.25 D6:.25 C6:.25 A5:.25 F#5:.5 D5:.5 E5:.25 F#5:.25 A5:.5 | " +
+          "D6:.25 C6:.25 B5:.25 A5:.25 F5:.5 D5:.5 G#5:.25 B5:.25 D6:.25 F6:.25 E6:1 | " +
+          "C6:.5 B5:.25 Bb5:.25 A5:.5 E5:.5 G5:1.5 r:.5 | " +
+          "A5:.25 C6:.25 E6:.25 G6:.25 F6:.25 E6:.25 C6:.25 A5:.25 G5:.25 F5:.25 E5:.25 C5:.25 E5:1 | " +
+          "G#5:.25 B5:.25 D6:.25 F6:.25 E6:.25 D6:.25 B5:.25 G#5:.25 F5:.5 E5:.5 D#5:.5 E5:.5 | " +
+          "A5:.25 G5:.25 E5:.25 C5:.25 A4:.5 C5:.5 F#5:.25 A5:.25 C6:.25 D6:.25 F#6:1 | " +
+          "E6:.25 D6:.25 B5:.25 G#5:.25 F5:.25 E5:.25 D5:.25 B4:.25 E5:2",
+    ANSWERS: "r:4 | r:3 A3:.25 C4:.25 E4:.25 G4:.25 | r:4 | r:3.5 E4:.25 G4:.25 | r:4 | r:4 | r:4 | r:2 E3:.5 G#3:.5 B3:.5 D4:.5",
+    FALLS: [[0, 3], [2, 3], [4, 3], [5, 3], [8, 3], [10, 3]],
+    STUTTER: [[3, 0.1, 96], [3.125, 0.1, 80], [3.25, 0.1, 92], [3.375, 0.1, 80], [3.5, 0.1, 96], [3.625, 0.1, 84], [3.75, 0.2, 100]],
+    ARP32: { pattern: [0, 1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1], rate: 0.125, center: 69, velocity: 56, accent: 12, gate: 0.7 },
+};
+function jazzFalls(part, start, falls, semitones = -3) {
+    for (const [bar, offset] of falls) bendAt(part, start + bar * 4 + offset, semitones);
+}
+{
+    const song = new Song("theme_neon", "Fish Fighters - Neon Riptide", 152, { introBars: 4, bodyBars: 64, key: "A",
+        mix: { lead: 0, synth: -1, keys: -7, arp: -7, bass: 3, drums: 1, fx: -8 } });
+    const sax = song.part("Alto sax", 65, { group: "lead", volume: 110, pan: 0.05, vibrato: { cents: 28, hz: 6, delay: 0.12, minBeats: 0.75 },
+        fx: { echo: { beats: 0.75, feedback: 0.2, mix: 0.12 } } });
+    const tenor = song.part("Tenor sax", 66, { group: "lead", volume: 100, pan: -0.3, vibrato: { cents: 25, hz: 5.5, delay: 0.15, minBeats: 0.75 } });
+    const saw = song.part("Saw lead", 81, { group: "synth", volume: 104, pan: -0.1, fx: { lowpass: 5200, echo: { beats: 0.75, feedback: 0.35, mix: 0.25 } } });
+    const square = song.part("Square lead", 80, { group: "synth", volume: 92, pan: 0.2, fx: { lowpass: 3800 } });
+    const rhodes = song.part("Rhodes", 4, { group: "keys", volume: 96, pan: -0.25, fx: { chorus: { mix: 0.45 } } });
+    const arpSynth = song.part("Arpeggio", 80, { group: "arp", volume: 84, pan: 0.4, fx: { lowpass: 3200, echo: { beats: 0.375, feedback: 0.35, mix: 0.3 } } });
+    const chops = song.part("Voice chops", 54, { group: "arp", volume: 96, pan: -0.35, fx: { echo: { beats: 0.5, feedback: 0.3, mix: 0.25 } } });
+    const bass = song.part("Funk bass", 33, { group: "bass", volume: 114 });
+    const slap = song.part("Slap bass", 36, { group: "bass", volume: 100, pan: 0.1 });
+    const sub = song.part("Synth sub", 38, { group: "bass", volume: 100, fx: { lowpass: 700 } });
+    const kit = song.drums("909", 25, { group: "drums", volume: 108 });
+    const zap = song.synth("Neon zaps", "zaps", { group: "fx", fx: { echo: { beats: 0.75, feedback: 0.35, mix: 0.3 } } });
+    const bub = song.synth("Bubbles", "bubbles", { group: "fx" });
+
+    const PARTY = { [KICK]: "X...X...X...X...", [CLAP]: "....X.......X...", [OPEN_HAT]: "..x...x...x...x.", [HAT]: "gggggggggggggggg" };
+    const PARTY_FILL = { [KICK]: "X...X...X...X...", [CLAP]: "....X.......X.xx", [OPEN_HAT]: "..x...x...x.....", [HAT]: "gggggggggggg....", [SNARE]: "............xxxx" };
+    const BREAK = { [KICK]: "X.....X...X..X..", [SNARE]: "....X..g.g..X..g", [HAT]: "x.x.x.x.x.x.x.x.", [OPEN_HAT]: "..............o." };
+    const STABS = [[0.5, 0.15, 76], [1.5, 0.15, 70], [2.5, 0.15, 76], [3.25, 0.15, 66], [3.5, 0.15, 74]];
+    const SUB = [[0, 0.9, "R", 102], [1, 0.9, "R", 98], [2, 0.9, "R", 102], [3, 0.9, "R", 98]];
+    const SLAP = [[0, 0.15, "R", 110], [0.75, 0.12, "8", 96], [1.5, 0.15, "8", 100], [2, 0.15, "R", 108], [2.75, 0.12, "8", 96], [3.5, 0.15, "5", 100]];
+    const party = (start, bars) => { for (let bar = 0; bar < bars; bar++) beat(kit, start + bar * 4, 1, bar % 4 === 3 ? PARTY_FILL : PARTY); };
+    const basses = prog => {
+        bassline(bass, prog, { pattern: RIPTIDE.BASS });
+        bassline(slap, prog, { pattern: SLAP });
+        bassline(sub, prog, { pattern: SUB });
+    };
+    const lasers = (start, bars) => { for (let bar = 3; bar < bars; bar += 4) zaps(zap, start + bar * 4 + 3, { count: 3, spread: 0.75, velocity: 98 }); };
+    // The saw answering the sax: a dive into the end of every other bar (the sax rests there)
+    const answers = (prog, start, bars) => { for (let bar = 1; bar < bars; bar += 2) dive(saw, above(chord(chordAt(prog, start + bar * 4 + 3).symbol).root, 76), start + bar * 4 + 3.5, 0.5, 96, -7); };
+    const lift = (prog, start, octave, velocity) => {
+        saw.at(start).play(RIPTIDE.LIFT, { velocity, gate: 0.95, transpose: 12 * octave });
+        square.at(start).play(RIPTIDE.LIFT, { velocity: velocity - 20, gate: 0.6, transpose: 12 * (octave - 1) });
+        [0, 8, 16, 24].forEach(t => bendAt(saw, start + t, 2));
+        bendAt(saw, start + 30, -12);
+        arp(arpSynth, prog, NEON.ARP32);
+        basses(prog);
+    };
+
+    // Intro: a laser countdown, the bass alone, then everything slams in
+    zaps(zap, 0, { count: 4, spread: 3, velocity: 100 });
+    bassline(bass, progression("Am7 | D7 | Am7 | E7", 0), { pattern: RIPTIDE.BASS });
+    burst(arpSynth, "Am7", 8, 4, 69, 56);
+    beat(kit, 8, 1, { [KICK]: "X...X...X...X...", [HAT]: "gggggggggggggggg" });
+    beat(kit, 12, 1, { [KICK]: "X...X...X...X...", [SNARE]: "xxxxxxxxxxxxxxxx" });
+    dive(saw, pitch("A5"), 12, 4, 104);
+
+    song.body(s => {
+        const a = s, b = s + 64, c = s + 96, b2 = s + 128, a2 = s + 160, d = s + 224;
+        const pA = progression(RIPTIDE.A, a), pB = progression(RIPTIDE.B, b), pC = progression(RIPTIDE.C, c);
+        const pB2 = progression(RIPTIDE.B, b2), pA2 = progression(RIPTIDE.A, a2), pD = progression(NEON.D, d);
+
+        // A: the sax on the tune with jazzy falls, the saw answering, bursts, stutters, lasers
+        sax.at(a).play(RIPTIDE.TUNE, { velocity: 104, gate: 0.82 });
+        jazzFalls(sax, a, NEON.FALLS);
+        for (let p = 0; p < 4; p++) shape(sax, a + p * 16, a + p * 16 + 16, { peak: 10, ending: -6 });
+        basses(pA);
+        comp(rhodes, pA, { pattern: STABS, center: 62 });
+        party(a, 16);
+        answers(pA, a, 16);
+        madness(pA, a, 16, { arpPart: arpSynth, chopPart: chops, divePart: null, velocity: 62 });
+        kit.hit(a, CRASH, 110, 1).hit(a + 32, CRASH, 108, 1);
+        lasers(a, 16);
+
+        // B: the lift - the saw screams it an octave up with scoops, the square doubles it, the 32nd arpeggio, a dive
+        lift(pB, b, 1, 108);
+        party(b, 6);
+        beat(kit, b + 24, 2, { [KICK]: "X...X...X...X...", [CLAP]: "x.x.x.x.xxxxxxxx", [SNARE]: "........xxxxxxxx" });
+        kit.hit(b, CRASH, 110, 1);
+
+        // C: the drop - bass and kick, sax licks, chops on the off-beats; then the build with diving synths
+        sax.at(c).play(RIPTIDE.LICKS, { velocity: 106, gate: 0.85 });
+        jazzFalls(sax, c, [[4, 0], [5, 0]], -2);
+        basses(progression("Am7 | Am7 | D7 | D7", c));
+        beat(kit, c, 4, { [KICK]: "X...X...X...X...", [HAT]: "..x...x...x...x." });
+        comp(chops, progression("Am7 | Am7 | D7 | D7", c), { pattern: [[0.5, 0.2, 100], [1.75, 0.2, 86], [2.5, 0.2, 96], [3.5, 0.1, 86], [3.625, 0.1, 80], [3.75, 0.1, 90]], center: 69 });
+        basses(progression("Fmaj7 | Fmaj7 | E7 | E7", c + 16));
+        arp(arpSynth, progression("Fmaj7 | Fmaj7 | E7 | E7", c + 16), { ...NEON.ARP32, velocity: 62 });
+        [c + 16, c + 20, c + 24].forEach(t => dive(square, pitch("E6"), t, 4, 92, -7));
+        beat(kit, c + 16, 2, { [KICK]: "X...X...X...X...", [CLAP]: "....X.......X..." });
+        beat(kit, c + 24, 1, { [KICK]: "X...X...X...X...", [CLAP]: "x.x.x.x.x.x.x.x." });
+        roll(kit, c + 28, 4, SNARE, 50, 122);
+        zaps(zap, c + 28, { count: 6, spread: 3.5, velocity: 104 });
+
+        // B': the lift again, crazier - stutters on every bar, lasers, claps doubling the kick
+        lift(pB2, b2, 1, 104);
+        madness(pB2, b2, 8, { arpPart: arpSynth, chopPart: chops, divePart: null, velocity: 66 });
+        for (let bar = 0; bar < 8; bar++) stutter(chops, chordAt(pB2, b2 + bar * 4 + 3).symbol, b2 + bar * 4 + 3);
+        for (let bar = 0; bar < 8; bar++) beat(kit, b2 + bar * 4, 1, bar % 4 === 3 ? PARTY_FILL : { ...PARTY, [CLAP]: "X...X...X...X..." });
+        lasers(b2, 8);
+        kit.hit(b2, CRASH, 112, 1);
+
+        // A': everyone - sax and tenor (an octave down), the saw an octave up, the arpeggio, chops, lasers
+        sax.at(a2).play(RIPTIDE.TUNE, { velocity: 108, gate: 0.82 });
+        tenor.at(a2).play(RIPTIDE.TUNE, { velocity: 92, gate: 0.82, transpose: -12 });
+        saw.at(a2).play(RIPTIDE.TUNE, { velocity: 86, gate: 0.55, transpose: 12 });
+        jazzFalls(sax, a2, NEON.FALLS);
+        jazzFalls(saw, a2, NEON.FALLS, -5);
+        for (let p = 0; p < 4; p++) shape(sax, a2 + p * 16, a2 + p * 16 + 16, { peak: 10, ending: -6 });
+        basses(pA2);
+        comp(rhodes, pA2, { pattern: STABS, center: 62 });
+        arp(arpSynth, pA2, { ...NEON.ARP32, velocity: 50 });
+        comp(chops, pA2, { pattern: NEON.STUTTER, center: 69 });
+        party(a2, 16);
+        kit.hit(a2, CRASH, 112, 1).hit(a2 + 32, CRASH, 110, 1);
+        lasers(a2, 16);
+
+        // D: the sax solo - bebop over a jazz turnaround and a breakbeat, the tenor and the saw answering
+        sax.at(d).play(NEON.SOLO, { velocity: 108, gate: 0.9 });
+        tenor.at(d).play(NEON.ANSWERS, { velocity: 96, gate: 0.8 });
+        bendAt(sax, d + 30, 3);
+        answers(pD, d, 8);
+        basses(pD);
+        comp(rhodes, pD, { pattern: [[0, 0.3, 74], [1.5, 0.2, 66], [2.5, 0.3, 72], [3.5, 0.2, 64]], center: 62 });
+        beat(kit, d, 7, BREAK);
+        beat(kit, d + 28, 1, { [KICK]: "X...X...X.X.X.X.", [SNARE]: "....x..x.xxxxxxx" });
+        bubbles(bub, d + 4, { count: 10, spread: 8, low: 400, high: 1600 });
+    });
+    songs.push(song);
+}
+
+// =====================================================================================================
+// 12g. "Neon Headliner" - Neon Riptide's boss version, a dubstep / phonk concert. 160 BPM in A minor with a half-time
+//     backbeat: a phonk cowbell riff (agogo), a distorted 808 sliding between its notes, trap hi-hat rolls; drops of
+//     wobble bass with the saw screaming; the sax still on the tune; and the crowd chanting "hey! hey!" all along.
+//     Intro 4 | A 16 (phonk: sax, cowbell, 808) | B 8 (the build: the crowd claps along) | C 8 (wobble drop) |
+//     A' 16 (phonk and wobble) | D 8 (the last drop: triplet wobbles, the crowd on every beat)
+// =====================================================================================================
+{
+    const song = new Song("theme_neon_boss", "Fish Fighters - Neon Headliner", 160, { introBars: 4, bodyBars: 56, key: "A",
+        mix: { lead: 0, cowbell: -3, bass: 2, wobble: 1, drums: 1, crowd: -3, arp: -8, fx: -10 } });
+    const sax = song.part("Alto sax", 65, { group: "lead", volume: 112, pan: 0.05, vibrato: { cents: 30, hz: 6, delay: 0.1, minBeats: 0.75 } });
+    const saw = song.part("Saw lead", 81, { group: "lead", volume: 100, pan: -0.1, fx: { lowpass: 5200, echo: { beats: 0.75, feedback: 0.35, mix: 0.25 } } });
+    const cowbell = song.part("Cowbell", 113, { group: "cowbell", volume: 108, pan: 0.15, fx: { echo: { beats: 0.75, feedback: 0.25, mix: 0.15 } } });
+    const sub808 = song.part("808", 38, { group: "bass", volume: 116, fx: { lowpass: 600 } });
+    const wob = song.synth("Wobble", "wobble", { group: "wobble" });
+    const arpSynth = song.part("Arpeggio", 80, { group: "arp", volume: 80, pan: 0.4, fx: { lowpass: 3000 } });
+    const chops = song.part("Voice chops", 54, { group: "arp", volume: 94, pan: -0.35 });
+    const kit = song.drums("808/909", 25, { group: "drums", volume: 112 });
+    const crowd = song.synth("Crowd", "chant", { group: "crowd", fx: { lowpass: 3500 } });
+    const zap = song.synth("Neon zaps", "zaps", { group: "fx", fx: { echo: { beats: 0.75, feedback: 0.35, mix: 0.3 } } });
+
+    const A = "Am | F | Am | F | Dm | E | Am | E | Am | F | Am | F | Dm | G | E | E";
+    const D = "Am | F | Dm | E | Am | F | Dm | E";
+    const TUNE = RIPTIDE.minor(RIPTIDE.TUNE).replace("C6:.5 A5:.5 F5:.5 A5:.5 r:.5 G5:.5 E5:1", "D6:.5 A5:.5 F5:.5 A5:.5 r:.5 G5:.5 E5:1")
+        .replace("F5:.5 A5:.5 C6:.5 E6:.5 r:.5 D6:.5 C6:1", "F5:.5 A5:.5 D6:.5 F6:.5 r:.5 E6:.5 D6:1");
+    // The phonk cowbell riff: repetitive, minor, two bars
+    const COWBELL = "A5:.25 r:.25 A5:.25 r:.25 C6:.25 r:.25 A5:.25 r:.25 E6:.5 r:.25 D6:.25 C6:.5 r:.5 | " +
+                    "A5:.25 r:.25 A5:.25 r:.25 C6:.25 r:.25 A5:.25 r:.25 G5:.5 r:.25 A5:.25 E5:.5 r:.5";
+    const cowbellRiff = (start, bars, velocity = 100) => { for (let t = 0; t < bars; t += 2) cowbell.at(start + t * 4).play(COWBELL, { velocity, gate: 0.6 }); };
+    // The 808: long notes on the chord's root, the last one of every two bars sliding down an octave
+    const PHONK_808 = [[0, 1.4, "R", 114], [1.75, 0.25, "R", 92], [2.5, 1.4, "8", 106]];
+    const slides808 = (prog, start, bars) => {
+        bassline(sub808, prog, { pattern: PHONK_808, base: 28 });
+        for (let bar = 1; bar < bars; bar += 2) bendAt(sub808, start + bar * 4 + 2.5, -12);
+    };
+    // Half-time phonk drums: the snare on 3, trap hi-hat rolls closing every bar
+    const PHONK = { [KICK]: "X......X..X.....", [SNARE]: "........X.......", [CLAP]: "........X.......", [HAT]: "x.x.x.x.x.x.xxxx", [OPEN_HAT]: "......o........." };
+    const PHONK_ROLL = { [KICK]: "X......X..X.....", [SNARE]: "........X...xxxx", [HAT]: "xxxxxxxxxxxxxxxx" };
+    const phonk = (start, bars) => { for (let bar = 0; bar < bars; bar++) beat(kit, start + bar * 4, 1, bar % 4 === 3 ? PHONK_ROLL : PHONK); };
+    // A wobble drop bar: "wub" (1/8), "wub-wub" (1/16), a triplet, the 1/16s again
+    const wobbleBars = (prog, start, bars, triplets = false) => {
+        for (let bar = 0; bar < bars; bar++) {
+            const t = start + bar * 4, root = above(chord(chordAt(prog, t).symbol).root, 28);
+            wobble(wob, song, t, root, 1.5, 2, 112);
+            wobble(wob, song, t + 1.5, root, 0.5, 4, 108);
+            wobble(wob, song, t + 2, root + (bar % 2 ? 12 : 0), 1, triplets ? 6 : 3, 110);
+            wobble(wob, song, t + 3, root, 1, triplets ? 6 : 4, 108);
+        }
+    };
+    const chants = (start, bars) => { for (const bar of bars) hey(crowd, [start + bar * 4 + 1, start + bar * 4 + 3], 112); };
+
+    // Intro: the crowd roars, the cowbell riff alone, the crowd chants it in, the drop comes
+    cheer(crowd, 0, 3, 100);
+    cowbellRiff(0, 4, 96);
+    hey(crowd, [4, 6, 8, 9, 10, 11, 12, 13, 14, 15], 110);
+    beat(kit, 8, 1, { [HAT]: "x.x.x.x.x.x.xxxx" });
+    beat(kit, 12, 1, { [SNARE]: "xxxxxxxxxxxxxxxx" });
+    dive(saw, pitch("A5"), 12, 4, 104);
+
+    song.body(s => {
+        const a = s, b = s + 64, c = s + 96, a2 = s + 128, d = s + 192;
+        const pA = progression(A, a), pB = progression("F | G | Em | Am | Dm | G | F | E", b), pC = progression(D, c);
+        const pA2 = progression(A, a2), pD = progression(D, d);
+
+        // A: phonk - the sax on the tune, the cowbell riff, the sliding 808, half-time drums, the crowd on the phrase ends
+        sax.at(a).play(TUNE, { velocity: 106, gate: 0.82 });
+        jazzFalls(sax, a, NEON.FALLS);
+        for (let p = 0; p < 4; p++) shape(sax, a + p * 16, a + p * 16 + 16, { peak: 10, ending: -6 });
+        cowbellRiff(a, 16, 88);
+        slides808(pA, a, 16);
+        phonk(a, 16);
+        madness(pA, a, 16, { arpPart: arpSynth, chopPart: chops, divePart: null, velocity: 60 });
+        cheer(crowd, a, 2, 96);
+        chants(a, [3, 7, 11, 15]);
+
+        // B: the build - the saw sings the lift, the crowd claps along ("hey!" on 2 and 4), rolls tightening
+        saw.at(b).play(RIPTIDE.LIFT, { velocity: 104, gate: 0.95, transpose: 12 });
+        [0, 8, 16, 24].forEach(t => bendAt(saw, b + t, 2));
+        cowbellRiff(b, 8, 80);
+        slides808(pB, b, 8);
+        arp(arpSynth, pB, NEON.ARP32);
+        beat(kit, b, 4, PHONK);
+        beat(kit, b + 16, 2, { [KICK]: "X...X...X...X...", [SNARE]: "x.x.x.x.x.x.x.x." });
+        beat(kit, b + 24, 2, { [KICK]: "X.X.X.X.X.X.X.X.", [SNARE]: "xxxxxxxxxxxxxxxx" });
+        chants(b, [0, 1, 2, 3, 4, 5, 6, 7]);
+        cheer(crowd, b + 28, 1.5, 106);
+
+        // C: the wobble drop - wub bass, half-time drums, the saw screaming, the crowd on every bar's 3, lasers
+        wobbleBars(pC, c, 8);
+        bassline(sub808, pC, { pattern: [[0, 1.9, "R", 110], [2, 1.9, "R", 104]], base: 28 });
+        phonk(c, 8);
+        for (let bar = 0; bar < 8; bar += 2) dive(saw, pitch("E6"), c + bar * 4 + 2, 2, 100);
+        for (let bar = 0; bar < 8; bar++) hey(crowd, [c + bar * 4 + 2], 116);
+        for (let bar = 3; bar < 8; bar += 4) zaps(zap, c + bar * 4 + 3, { count: 4, spread: 0.75, velocity: 100 });
+        kit.hit(c, CRASH, 116, 1);
+
+        // A': phonk and wobble together - the sax, the cowbell, the 808, a lighter wobble, the crowd louder
+        sax.at(a2).play(TUNE, { velocity: 110, gate: 0.82 });
+        saw.at(a2).play(TUNE, { velocity: 82, gate: 0.55, transpose: 12 });
+        jazzFalls(sax, a2, NEON.FALLS);
+        for (let p = 0; p < 4; p++) shape(sax, a2 + p * 16, a2 + p * 16 + 16, { peak: 10, ending: -6 });
+        cowbellRiff(a2, 16, 92);
+        slides808(pA2, a2, 16);
+        for (let bar = 0; bar < 16; bar += 4) wobbleBars(pA2, a2 + bar * 4 + 12, 1);   // A wobble bar closing each phrase
+        phonk(a2, 16);
+        madness(pA2, a2, 16, { arpPart: arpSynth, chopPart: chops, divePart: null, velocity: 64 });
+        cheer(crowd, a2, 2.5, 104);
+        chants(a2, [1, 3, 5, 7, 9, 11, 13, 15]);
+
+        // D: the last drop - triplet wobbles, the sax licks, stutters, the crowd shouting every beat
+        wobbleBars(pD, d, 8, true);
+        sax.at(d).play(RIPTIDE.minor(RIPTIDE.LICKS), { velocity: 108, gate: 0.85 });
+        phonk(d, 7);
+        beat(kit, d + 28, 1, { [KICK]: "X.X.X.X.X.X.X.X.", [SNARE]: "xxxxxxxxxxxxxxxx" });
+        for (let bar = 0; bar < 8; bar++) stutter(chops, chordAt(pD, d + bar * 4 + 3).symbol, d + bar * 4 + 3);
+        hey(crowd, Array.from({ length: 32 }, (_, i) => d + i), 114);
+        cheer(crowd, d + 28, 2, 110);
+        zaps(zap, d + 28, { count: 6, spread: 3.5, velocity: 104 });
     });
     songs.push(song);
 }

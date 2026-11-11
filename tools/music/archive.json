@@ -34,5 +34,12 @@
         "key": "A",
         "loopStart": 3960000,
         "loopLength": 3600000
+    },
+    "theme_energetic_v1": {
+        "title": "Riptide Rush (pop-rock version)",
+        "kind": "stage",
+        "key": "A",
+        "loopStart": 3565715,
+        "loopLength": 3291429
     }
 }

@@ -129,6 +129,56 @@
         "loopStartSample": 3544616,
         "loopLengthSample": 3249231
     },
+    "theme_energetic": {
+        "title": "Riptide Rush",
+        "kind": "stage",
+        "key": "A",
+        "tempo": 136,
+        "sampleRate": 48000,
+        "lengthSeconds": 204.695,
+        "loopStartSample": 5082353,
+        "loopLengthSample": 4743529
+    },
+    "theme_energetic_boss": {
+        "title": "Riptide Rampage",
+        "kind": "stage",
+        "key": "A",
+        "tempo": 144,
+        "sampleRate": 48000,
+        "lengthSeconds": 193.323,
+        "loopStartSample": 4800000,
+        "loopLengthSample": 4480000
+    },
+    "theme_preboss": {
+        "title": "Something Stirs Below",
+        "kind": "stage",
+        "key": "D",
+        "tempo": 112,
+        "sampleRate": 48000,
+        "lengthSeconds": 214.243,
+        "loopStartSample": 5348572,
+        "loopLengthSample": 4937143
+    },
+    "theme_neon": {
+        "title": "Neon Riptide",
+        "kind": "stage",
+        "key": "A",
+        "tempo": 152,
+        "sampleRate": 48000,
+        "lengthSeconds": 208.411,
+        "loopStartSample": 5153684,
+        "loopLengthSample": 4850526
+    },
+    "theme_neon_boss": {
+        "title": "Neon Headliner",
+        "kind": "stage",
+        "key": "A",
+        "tempo": 160,
+        "sampleRate": 48000,
+        "lengthSeconds": 173.983,
+        "loopStartSample": 4320000,
+        "loopLengthSample": 4032000
+    },
     "jingle_battle_start": {
         "title": "Battle Stations! (C)",
         "kind": "jingle",

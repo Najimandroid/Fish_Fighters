@@ -97,8 +97,6 @@ private:
     std::string next_stage_label() const;
     bool is_upgrade_available() const;
 
-    // The stage after stageUid in the current chapter (-1: none)
-    int next_stage_uid(int stageUid) const;
 
     // Darkens the bars around the 16:9 UI area while a modal window is open (screens that aren't 16:9)
     void dim_letterbox_bars(sf::RenderWindow& window, const sf::View& uiView) const;
@@ -129,4 +127,5 @@ private:
     std::function<void(bool)> m_fullscreenCallback;             // Callback to change the window mode
 
     bool m_wasFasterBeforePause = false;                        // "Continue" goes back to this speed
+    float m_battleIntroSeconds = 0.f;                           // The battle start jingle's length (UIBattleIntro), set by start_battle
 };

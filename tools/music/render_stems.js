@@ -131,6 +131,103 @@ function renderZaps(events) {
     return out;
 }
 
+// A crowd at a concert. "hey": every person shouts once - an aspirated "h", then a voiced "ei" glide through three
+// formant filters (a sawtooth glottis), each with their own pitch, timing and place in the stereo. "cheer": a roar
+// swelling and fading - noise through the voice band, wobbling as many people shout at once.
+// Each event draws from its own seed, so both body copies are identical.
+// events: [[seconds, velocity, kind ("hey" | "cheer"), seed, duration (seconds, cheers only)]]
+function renderChant(events) {
+    const end = Math.max(0, ...events.map(e => e[0] + (e[4] || 0.4))) + 1;
+    const out = new Float32Array(Math.ceil(end * RATE) * 2);
+    for (const [start, velocity, kind, seed, duration = 1.5] of events) {
+        let state = (seed >>> 0) || 1;
+        const random = () => { state ^= state << 13; state ^= state >>> 17; state ^= state << 5; return (state >>> 0) / 4294967296; };
+        const amplitude = Math.pow(velocity / 127, 1.5) * (kind === "cheer" ? 0.12 : 0.22);
+        const people = kind === "cheer" ? 8 : 12;
+        for (let person = 0; person < people; person++) {
+            const pan = random() * 1.6 - 0.8;
+            const left = Math.cos((pan + 1) * Math.PI / 4), right = Math.sin((pan + 1) * Math.PI / 4);
+            const first = Math.round((start + random() * (kind === "cheer" ? 0.2 : 0.035)) * RATE);
+            if (kind === "cheer") {
+                const length = duration * (0.8 + 0.3 * random()), frames = Math.round(length * RATE);
+                const centre = 700 + random() * 1800, f = 2 * Math.sin(Math.PI * centre / RATE), q = 0.6;
+                const wobbleHz = 3 + random() * 4, wobblePhase = random() * 6.283;
+                let low = 0, band = 0;
+                for (let i = 0; i < frames; i++) {
+                    const t = i / RATE, x = t / length;
+                    const envelope = Math.min(1, x / 0.15) * Math.min(1, (1 - x) / 0.45);
+                    const wobble = 0.65 + 0.35 * Math.sin(2 * Math.PI * wobbleHz * t + wobblePhase);
+                    low += f * band;
+                    band += f * ((random() * 2 - 1) - low - q * band);
+                    const s = amplitude * band * q * envelope * wobble;
+                    out[(first + i) * 2] += s * left;
+                    out[(first + i) * 2 + 1] += s * right;
+                }
+                continue;
+            }
+            const f0 = 230 + random() * 250;           // A crowd shouting: voices pushed high (men ~230 Hz, women and kids up to ~480)
+            const length = 0.24 + random() * 0.08, frames = Math.round(length * RATE), breath = 0.035;
+            const bands = [[0, 0], [0, 0], [0, 0]], gains = [1, 0.7, 0.4], q = 0.14;
+            let phase = 0;
+            for (let i = 0; i < frames; i++) {
+                const t = i / RATE, x = t / length;
+                const glide = Math.min(1, Math.max(0, (t - breath) / (length - breath)));   // "e" towards "i"
+                const formants = [680 - 280 * glide, 1950 + 550 * glide, 2750 + 350 * glide];   // Shouted: the mouth wide open, then "i"
+                phase += f0 * (1 + 0.1 * Math.sin(Math.PI * Math.min(1, x * 1.4))) / RATE;   // up then down: shouted
+                if (phase >= 1) phase -= 1;
+                const voiced = t < breath ? 0 : Math.min(1, (t - breath) / 0.008);
+                const source = voiced * (2 * phase - 1) + (random() * 2 - 1) * (t < breath ? 0.8 : 0.1);
+                let sample = 0;
+                for (let k = 0; k < 3; k++) {
+                    const f = 2 * Math.sin(Math.PI * formants[k] / RATE), st = bands[k];
+                    st[0] += f * st[1];
+                    st[1] += f * (source - st[0] - q * st[1]);
+                    sample += st[1] * q * gains[k];
+                }
+                const envelope = Math.min(1, t / 0.006) * Math.exp(-Math.max(0, t - breath) / (length * 0.6)) * (1 - Math.pow(x, 4));
+                const s = amplitude * Math.tanh(sample * 2) * envelope;
+                out[(first + i) * 2] += s * left;
+                out[(first + i) * 2 + 1] += s * right;
+            }
+        }
+    }
+    return out;
+}
+
+// The dubstep wobble: two detuned saws and a square an octave down through a resonant low-pass whose cutoff an LFO
+// opens and closes at the given rate (the "wub wub"), then driven into a growl.
+// events: [[seconds, frequency (Hz), duration (seconds), velocity, wobbles per second]]
+function renderWobble(events) {
+    const end = Math.max(0, ...events.map(e => e[0] + e[2])) + 0.5;
+    const out = new Float32Array(Math.ceil(end * RATE) * 2);
+    for (const [start, frequency, duration, velocity, rate] of events) {
+        const amplitude = Math.pow(velocity / 127, 1.5) * 0.4;
+        const frames = Math.round(duration * RATE), first = Math.round(start * RATE);
+        let p1 = 0, p2 = 0.37, p3 = 0, x1 = 0, x2 = 0, y1 = 0, y2 = 0, b0 = 0, b1 = 0, b2 = 0, a1 = 0, a2 = 0;
+        for (let i = 0; i < frames; i++) {
+            const t = i / RATE;
+            if (i % 32 === 0) {
+                // The LFO starts closed (a "wub" opens on each beat), squared so it snaps open
+                const lfo = 0.5 - 0.5 * Math.cos(2 * Math.PI * rate * t);
+                const cutoff = 110 + 2600 * lfo * lfo, q = 5;
+                const w = 2 * Math.PI * Math.min(cutoff, RATE * 0.45) / RATE, alpha = Math.sin(w) / (2 * q), cos = Math.cos(w), a0 = 1 + alpha;
+                b0 = (1 - cos) / 2 / a0; b1 = (1 - cos) / a0; b2 = b0; a1 = -2 * cos / a0; a2 = (1 - alpha) / a0;
+            }
+            p1 += frequency * 1.006 / RATE; if (p1 >= 1) p1 -= 1;
+            p2 += frequency * 0.994 / RATE; if (p2 >= 1) p2 -= 1;
+            p3 += frequency * 0.5 / RATE; if (p3 >= 1) p3 -= 1;
+            const x = (2 * p1 - 1) * 0.5 + (2 * p2 - 1) * 0.5 + (p3 < 0.5 ? 0.6 : -0.6);
+            const y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+            x2 = x1; x1 = x; y2 = y1; y1 = y;
+            const envelope = Math.min(1, t / 0.004) * Math.min(1, (duration - t) / 0.02);
+            const s = amplitude * Math.tanh(y * 2.2) * envelope;
+            out[(first + i) * 2] += s;
+            out[(first + i) * 2 + 1] += s;
+        }
+    }
+    return out;
+}
+
 // ===== Effects (all time-invariant or periodic over the loop, so the loop seam stays seamless) =====
 
 function lowpass(samples, cutoff, q = 0.707) {
@@ -208,6 +305,8 @@ for (const song of fs.readdirSync(STEMS_MIDI)) {
         const dry = stem.synth === "bubbles" ? renderBubbles(stem.events)
             : stem.synth === "ping" ? renderPings(stem.events)
             : stem.synth === "zaps" ? renderZaps(stem.events)
+            : stem.synth === "chant" ? renderChant(stem.events)
+            : stem.synth === "wobble" ? renderWobble(stem.events)
             : stem.synth === "theremin" ? renderTheremin(stem.events, stem.tempo)
             : render(font, stem, RATE);
         const wet = applyEffects(dry, stem);

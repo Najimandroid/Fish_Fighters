@@ -1,6 +1,7 @@
 #pragma once
 
 #include "UIUnitCard.h"
+#include "../../data/PlayerData.h"
 
 /*
  * UIUpgradeIcon
@@ -13,7 +14,7 @@ class UIUpgradeIcon : public UIUnitCard
 {
 public:
 
-    static constexpr int MAX_LEVEL = 30;
+    static constexpr int MAX_LEVEL = PlayerData::MAX_UNIT_LEVEL;
 
     UIUpgradeIcon(const std::string& iconTexturePath);
 

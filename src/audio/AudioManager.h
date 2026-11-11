@@ -70,6 +70,9 @@ public:
     // A theme's tonic from music.json ("D", "Eb"...), "" if unknown
     const std::string& get_music_key(const std::string& name) const;
 
+    // A jingle's length in seconds (until its last note ends; music.json "length"), 0 if unknown
+    float get_music_length(const std::string& name) const;
+
     // Semitones from one key to another, folded into -6..+5 (to shift a sound into a theme's key)
     static int key_distance(const std::string& from, const std::string& to);
 
@@ -164,8 +167,8 @@ private:
     std::mt19937 m_random;
 
     static constexpr float DUCKED_LEVEL = 0.4f;        // Music level while the game is paused
-    static constexpr float MUSIC_REFERENCE = 70.f;     // Music volume with the Music slider at 100%
-    static constexpr float BATTLE_MUSIC_LEVEL = 0.56f; // -5 dB in battle
+    static constexpr float MUSIC_REFERENCE = 90.f;     // Music volume with the Music slider at 100% (70 was too quiet)
+    static constexpr float BATTLE_MUSIC_LEVEL = 0.85f; // -1.4 dB in battle: still heard over the hits (0.56 drowned it)
     static constexpr float DUCK_RAMP_SECONDS = 0.2f;
     static constexpr int RESERVED_VOICES = 8;          // Kept for the important sounds (priority 80 and up)
     static constexpr float FOCUS_FADE_SECONDS = 0.15f;

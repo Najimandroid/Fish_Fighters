@@ -81,8 +81,14 @@ public:
     bool has_seen_enemy(int enemyUID) const;
 
     // ===== Levels =====
+    static constexpr int MAX_UNIT_LEVEL = 30;
+
     // Health and attack of a unit at this level, compared to level 1 (x1.15 per level)
     static float stat_multiplier(int level);
+
+    // Shells to go from level to level + 1 (level 0: unlocking it, the base cost): x1.5 per level, x0.7 after
+    // each evolution (levels 10 and 30). The Upgrade screen and FishEditor's cost estimate both use it.
+    static int upgrade_cost(int baseUpgradeCost, int level);
 
 public:
     // Currency

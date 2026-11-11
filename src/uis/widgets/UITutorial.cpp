@@ -25,6 +25,7 @@ namespace
     const float CASH_UP_SECONDS = 8.f;     // The upgrade hint goes after that even if it isn't bought
     const float CASH_UP_WAIT_MAX = 25.f;   // Never affordable that long: skip to the last hint
     const float BASE_SECONDS = 6.f;
+    const float INTRO_SECONDS = 2.4f;      // UIBattleIntro's length
     const sf::Color HIGHLIGHT{ 72, 224, 255 };
 }
 
@@ -45,6 +46,7 @@ UITutorial::UITutorial(std::shared_ptr<Stage> stage, std::shared_ptr<UICashUp> c
     m_text.setLineSpacing(1.1f);
     if (cashUp) m_cashUpLevel = cashUp->get_level();
     go_to(Step::WALLET);
+    m_stepTime = -INTRO_SECONDS;   // The first hint waits for the battle start (UIBattleIntro)
 }
 
 void UITutorial::go_to(Step step)
@@ -53,7 +55,7 @@ void UITutorial::go_to(Step step)
     m_stepTime = 0.f;
     const Hint hint = hint_of(step);
     m_text.setString(UISkin::wrap_text(hint.text, TEXT_SIZE, TEXT_WIDTH, UISkin::regular_font()));
-    if (step != Step::DONE && step != Step::CASH_UP) play_sound("ui_select");   // The cash up hint sounds when it shows
+    if (step == Step::DEPLOY || step == Step::BASE) play_sound("ui_select");   // The cash up hint sounds when it shows, the first one is silent
 }
 
 UITutorial::Hint UITutorial::hint_of(Step step) const
