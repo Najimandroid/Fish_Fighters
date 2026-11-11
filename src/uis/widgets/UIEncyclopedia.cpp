@@ -42,8 +42,8 @@ namespace
 UIEncyclopedia::UIEncyclopedia(std::shared_ptr<DataLoader> dataLoader, Book book) :
     UIElement({ 1920.f, 1080.f }, { 0.f, 0.f }),
     m_dataLoader(dataLoader),
-    m_fishTab({ 200.f, 84.f }, { 40.f, 128.f }, "FISH"),
-    m_enemiesTab({ 260.f, 84.f }, { 254.f, 128.f }, "ENEMIES"),
+    m_fishTab({ 200.f, 86.f }, { 40.f, 148.f }, "FISH"),          // Folder tabs on the grid panel (drawn by render_tab)
+    m_enemiesTab({ 260.f, 86.f }, { 250.f, 148.f }, "ENEMIES"),
     m_sortLabel(UISkin::heavy_font(), "SORT"),
     m_gridPanel(GRID_PANEL.size, GRID_PANEL.position, UISkin::PANEL_DARK, 1.2f),
     m_detailPanel(DETAIL_PANEL.size, DETAIL_PANEL.position, UISkin::PANEL_DARK, 1.2f),
@@ -250,6 +250,21 @@ void UIEncyclopedia::render_portrait(sf::RenderWindow& window, const Entry& entr
     }
 }
 
+void UIEncyclopedia::render_tab(sf::RenderWindow& window, const UIButtonElement& tab, const std::string& label, bool isOpen)
+{
+    const sf::FloatRect bounds = tab.get_bounds();
+    sf::FloatRect rect = bounds;
+    if (isOpen) rect.size.y = GRID_PANEL.position.y + 16.f - rect.position.y;   // Down over the panel's top edge
+    UISkin::draw_nine_slice(window, isOpen ? UISkin::PANEL_DARK : UISkin::BUTTON_STEEL, rect, 0.6f,
+        isOpen ? sf::Color::White : sf::Color(140, 140, 142));
+
+    UISkin::style_text(m_text, 40, isOpen ? UISkin::NUMBER : UISkin::TITLE);
+    m_text.setString(label);
+    UISkin::set_text_anchor(m_text, { 0.5f, 0.5f });
+    m_text.setPosition(bounds.position + bounds.size / 2.f);
+    window.draw(m_text);
+}
+
 void UIEncyclopedia::render_grid(sf::RenderWindow& window)
 {
     m_gridPanel.render(window);
@@ -376,12 +391,15 @@ void UIEncyclopedia::render(sf::RenderWindow& window)
 {
     if (!m_isVisible) return;
 
-    m_fishTab.render(window);
-    m_enemiesTab.render(window);
     window.draw(m_sortLabel);
     for (auto& button : m_sortButtons) button->render(window);
 
+    // The closed tab behind the panel, the open one over its top edge: it's part of it
+    if (m_book == Book::FISH) render_tab(window, m_enemiesTab, "ENEMIES", false);
+    else render_tab(window, m_fishTab, "FISH", false);
     render_grid(window);
+    if (m_book == Book::FISH) render_tab(window, m_fishTab, "FISH", true);
+    else render_tab(window, m_enemiesTab, "ENEMIES", true);
     render_details(window);
     m_abilities.render(window);   // Last: its bubble goes over everything
 }

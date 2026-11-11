@@ -10,7 +10,6 @@ namespace
 {
     const float FRAME_SCALE = 1.f;                       // Corners of the slot images on screen
     const unsigned int COST_SIZE = 32;
-    const sf::Vector2f COST_PADDING{ 12.f, 10.f };       // From the bottom right corner
     const std::uint8_t SHADE_ALPHA_DARKENED = 110;       // Not enough cash: the fish is dimmed, the price stays bright
     const sf::Color COOLDOWN_SHADE{ 16, 24, 34, 160 };   // Navy, drains from the top as the cooldown ends
     const sf::Color WATER{ 72, 224, 255, 70 };           // The cash "water level" rising in a slot not affordable yet
@@ -157,13 +156,19 @@ void UIBattleIcon::render(sf::RenderWindow& window)
         window.draw(flash);
     }
 
-    // Frame over the icon edges (hides its corners under the rounded border)
+    // Price on a navy strip along the bottom (like the Equip lineup), always readable and off the face
+    const float stripHeight = inner.size.y * 0.3f;
+    sf::RectangleShape strip({ inner.size.x, stripHeight });
+    strip.setPosition({ inner.position.x, inner.position.y + inner.size.y - stripHeight });
+    strip.setFillColor(sf::Color(16, 24, 34, 190));
+    window.draw(strip);
+
+    // Frame over the icon edges (hides its corners under the rounded border, and the strip's)
     UISkin::draw_nine_slice(window, UISkin::SLOT_FRAME, rect, FRAME_SCALE * scale);
 
-    // Price at the bottom right, always readable: it's the number the player needs
-    UISkin::set_text_anchor(m_text, { 1.f, 1.f });
-    m_text.setScale({ scale, scale });
-    m_text.setPosition(rect.position + rect.size - COST_PADDING * scale);
+    UISkin::set_text_anchor(m_text, { 0.5f, 0.5f });
+    m_text.setScale({ scale * 0.9f, scale * 0.9f });
+    m_text.setPosition({ inner.position.x + inner.size.x / 2.f, inner.position.y + inner.size.y - stripHeight / 2.f });
     window.draw(m_text);
 
     // Hotkey chip at the top left
