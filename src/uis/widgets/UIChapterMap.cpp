@@ -398,9 +398,7 @@ void UIChapterMap::render_stage_enemies(sf::RenderWindow& window, const PlayerDa
 
         UISkin::draw_nine_slice(window, UISkin::SLOT, slot, frameScale);
         const sf::FloatRect inner = UISkin::slot_inner(slot, frameScale);
-        const float padding = inner.size.x * 0.08f;
-        EntityPortraits::draw_enemy(window, *enemy,
-            { inner.position + sf::Vector2f{ padding, padding }, inner.size - sf::Vector2f{ padding, padding } * 2.f }, !isKnown);
+        EntityPortraits::draw_enemy(window, *enemy, m_dataLoader->get_enemy_icon_texture_path(enemy->UID), inner, !isKnown);
         UISkin::draw_nine_slice(window, UISkin::SLOT_FRAME, slot, frameScale);
     }
 }

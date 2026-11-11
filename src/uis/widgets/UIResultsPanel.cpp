@@ -69,10 +69,10 @@ namespace
 
     // An outlined text, faded with alpha
     void draw_text(sf::RenderWindow& window, const std::string& string, unsigned int size, sf::Color fill, sf::Vector2f position,
-        sf::Vector2f anchor, std::uint8_t alpha, float scale = 1.f, float rotation = 0.f)
+        sf::Vector2f anchor, std::uint8_t alpha, float scale = 1.f, float rotation = 0.f, const sf::Font& font = UISkin::heavy_font())
     {
-        sf::Text text(UISkin::heavy_font(), string);
-        UISkin::style_text(text, size, fill);
+        sf::Text text(font, string);
+        UISkin::style_text(text, size, fill, font);
         UISkin::set_text_anchor(text, anchor);
         text.setFillColor(with_alpha(fill, alpha));
         text.setOutlineColor(with_alpha(UISkin::OUTLINE, alpha));
@@ -247,7 +247,8 @@ void UIResultsPanel::render_defeat(sf::RenderWindow& window, const sf::FloatRect
     window.draw(fill);
 
     // A tip for next time
-    draw_text(window, UISkin::wrap_text(m_tip, 30, 720.f), 30, UISkin::TITLE, { SCREEN_SIZE.x / 2.f, panel.position.y + 420.f }, { 0.5f, 0.5f }, alpha);
+    draw_text(window, UISkin::wrap_text(m_tip, 30, 720.f, UISkin::regular_font()), 30, UISkin::TITLE, { SCREEN_SIZE.x / 2.f, panel.position.y + 420.f },
+        { 0.5f, 0.5f }, alpha, 1.f, 0.f, UISkin::regular_font());
 }
 
 void UIResultsPanel::handle_event(const sf::Event& event, const sf::RenderWindow& window)

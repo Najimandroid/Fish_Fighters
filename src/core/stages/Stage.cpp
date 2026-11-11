@@ -737,25 +737,23 @@ void Stage::render(sf::RenderWindow& window)
 		for (auto& unit : unitList)
 			draw_entity_shadow(window, *unit, true);
 
-	// Draw enemies (back to front)
+	// Draw enemies (back to front), each with its overlay (status icons), so what stands in front covers it
 	for (auto& [layer, enemyList] : std::ranges::reverse_view(m_enemies))
 	{
-
 		for (auto& enemy : enemyList)
 		{
 			window.draw(enemy->sprite);
-
+			if (m_entityOverlay) m_entityOverlay(window, *enemy, false);
 		}
 	}
 
 	// Draw units (back to front)
 	for (auto& [layer, unitList] : std::ranges::reverse_view(m_units))
 	{
-
 		for (auto& unit : unitList)
 		{
 			window.draw(unit->sprite);
-
+			if (m_entityOverlay) m_entityOverlay(window, *unit, true);
 		}
 	}
 }

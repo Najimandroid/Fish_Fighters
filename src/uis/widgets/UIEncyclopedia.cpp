@@ -123,6 +123,7 @@ void UIEncyclopedia::build_entries()
             entry.uid = uid;
             entry.data = data;
             entry.isKnown = player && player->has_seen_enemy(uid);
+            entry.iconPath = m_dataLoader->get_enemy_icon_texture_path(uid);
             m_entries.push_back(entry);
         }
     }
@@ -245,9 +246,7 @@ void UIEncyclopedia::render_portrait(sf::RenderWindow& window, const Entry& entr
     }
     else
     {
-        const float padding = area.size.y * 0.06f;
-        EntityPortraits::draw_enemy(window, *entry.data,
-            { area.position + sf::Vector2f{ padding, padding }, area.size - sf::Vector2f{ padding, padding } * 2.f }, !entry.isKnown);
+        EntityPortraits::draw_enemy(window, *entry.data, entry.iconPath, area, !entry.isKnown);
     }
 }
 
@@ -298,9 +297,10 @@ void UIEncyclopedia::render_details(sf::RenderWindow& window)
     render_portrait(window, entry, UISkin::slot_inner(PORTRAIT, 2.f));
     UISkin::draw_nine_slice(window, UISkin::SLOT_FRAME, PORTRAIT, 2.f);
 
-    auto drawText = [&](const std::string& text, sf::Vector2f position, unsigned int size, sf::Color color, sf::Vector2f anchor = { 0.f, 0.5f })
+    auto drawText = [&](const std::string& text, sf::Vector2f position, unsigned int size, sf::Color color, sf::Vector2f anchor = { 0.f, 0.5f },
+        const sf::Font& font = UISkin::heavy_font())
         {
-            UISkin::style_text(m_text, size, color);
+            UISkin::style_text(m_text, size, color, font);
             m_text.setString(text);
             UISkin::set_text_anchor(m_text, anchor);
             m_text.setPosition(position);
@@ -315,7 +315,8 @@ void UIEncyclopedia::render_details(sf::RenderWindow& window)
     if (!entry.isKnown)
     {
         const std::string hint = m_book == Book::FISH ? "Not unlocked yet." : "Not met yet: meet it in battle to learn about it.";
-        drawText(UISkin::wrap_text(hint, 28, TEXT_WIDTH), { TEXT_X, PORTRAIT.position.y + PORTRAIT.size.y + 40.f }, 28, UISkin::TEXT, { 0.f, 0.f });
+        drawText(UISkin::wrap_text(hint, 28, TEXT_WIDTH, UISkin::regular_font()), { TEXT_X, PORTRAIT.position.y + PORTRAIT.size.y + 40.f }, 28, UISkin::TEXT,
+            { 0.f, 0.f }, UISkin::regular_font());
         return;
     }
 
@@ -338,8 +339,8 @@ void UIEncyclopedia::render_details(sf::RenderWindow& window)
     }
 
     // Description
-    const sf::FloatRect description = drawText(UISkin::wrap_text(data.description, 28, TEXT_WIDTH),
-        { TEXT_X, PORTRAIT.position.y + PORTRAIT.size.y + 30.f }, 28, UISkin::TEXT, { 0.f, 0.f });
+    const sf::FloatRect description = drawText(UISkin::wrap_text(data.description, 28, TEXT_WIDTH, UISkin::regular_font()),
+        { TEXT_X, PORTRAIT.position.y + PORTRAIT.size.y + 30.f }, 28, UISkin::TEXT, { 0.f, 0.f }, UISkin::regular_font());
 
     // Stats in two columns
     std::vector<std::pair<std::string, std::string>> stats = {

@@ -520,6 +520,9 @@ namespace EditorWidgets
     const sf::Texture* enemy_texture(EditorContext& ctx, int uid, FrameUV& uv)
     {
         uv = {};
+        if (const sf::Texture* icon = ctx.textures.get(AssetLibrary::enemy_icon_path(uid))) return icon;
+
+        // No icon yet: the first frame of the sprite sheet
         const ordered_json* enemy = ctx.project.find_uid(DataFile::ENEMIES, uid);
         if (!enemy) return nullptr;
 

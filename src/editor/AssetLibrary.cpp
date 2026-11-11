@@ -48,6 +48,7 @@ const char* AssetLibrary::folder(ImageFolder folder)
     case ImageFolder::MAPS:         return "assets/images/textures/backgrounds/maps";
     case ImageFolder::MENU_BACKGROUNDS: return "assets/images/textures/backgrounds/menus";
     case ImageFolder::UNIT_ICONS:   return "assets/images/textures/icons/units";
+    case ImageFolder::ENEMY_ICONS:  return "assets/images/textures/icons/enemies";
     default:                        return "assets";
     }
 }
@@ -73,6 +74,7 @@ const char* AssetLibrary::display_name(ImageFolder folder)
     case ImageFolder::MAPS:         return "Chapter maps";
     case ImageFolder::MENU_BACKGROUNDS: return "Menu backgrounds";
     case ImageFolder::UNIT_ICONS:   return "Unit icons";
+    case ImageFolder::ENEMY_ICONS:  return "Enemy icons";
     default:                        return "Images";
     }
 }
@@ -80,6 +82,11 @@ const char* AssetLibrary::display_name(ImageFolder folder)
 std::string AssetLibrary::unit_icon_path(int uid, int form)
 {
     return std::string(folder(ImageFolder::UNIT_ICONS)) + "/icon_" + std::to_string(uid) + "_" + std::to_string(form) + ".png";
+}
+
+std::string AssetLibrary::enemy_icon_path(int uid)
+{
+    return std::string(folder(ImageFolder::ENEMY_ICONS)) + "/icon_" + std::to_string(uid) + ".png";
 }
 
 // ==================

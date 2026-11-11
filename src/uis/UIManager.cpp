@@ -537,6 +537,15 @@ void UIManager::generate_battle_uis()
 	auto cashUp = std::make_shared<UICashUp>(m_stage.lock());
 	auto baseHealthInfo = std::make_shared<UIBaseHealthInfo>(m_stage.lock());
 	auto statusIcons = std::make_shared<UIStatusIcons>(m_stage.lock(), m_dataLoader); // Status icons under every entity
+	if (auto stage = m_stage.lock())
+	{
+		// The stage draws them at each entity's layer (the widget may go first: weak)
+		std::weak_ptr<UIStatusIcons> weakIcons = statusIcons;
+		stage->set_entity_overlay([weakIcons](sf::RenderWindow& window, const BattleEntity& entity, bool isUnit)
+			{
+				if (auto icons = weakIcons.lock()) icons->draw_row(window, entity, isUnit);
+			});
+	}
 	auto cashPopups = std::make_shared<UICashPopups>(m_stage.lock());              // "+X$" where enemies drop cash
 
     // World-space widgets first, so the screen widgets are drawn over them

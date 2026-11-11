@@ -37,7 +37,7 @@ UIUpgradeSlider::UIUpgradeSlider(std::shared_ptr<DataLoader> dataLoader) :
 	m_nextButton(ARROW_SIZE, { 1920.f - 36.f - ARROW_SIZE, ARROW_Y }, "icon_play"),
 	m_descriptionPanel(DESCRIPTION_PANEL.size, DESCRIPTION_PANEL.position, UISkin::PANEL_DARK, 1.2f),
 	m_unitName(UISkin::heavy_font()),
-	m_description(UISkin::heavy_font())
+	m_description(UISkin::regular_font())
 {
 	m_upgradeButton.set_text_size(60);
 	m_upgradeButton.set_click_sound("");   // upgrade_selected plays "purchase" or "unlock"
@@ -50,7 +50,7 @@ UIUpgradeSlider::UIUpgradeSlider(std::shared_ptr<DataLoader> dataLoader) :
 	m_nextButton.set_callback([this]() { move_to_index(m_currentIndex + 1); });
 
 	UISkin::style_text(m_unitName, NAME_SIZE, UISkin::NUMBER);
-	UISkin::style_text(m_description, DESCRIPTION_SIZE);
+	UISkin::style_body_text(m_description, DESCRIPTION_SIZE);
 	m_description.setLineSpacing(1.1f);
 
 	init_icons();
@@ -239,7 +239,7 @@ void UIUpgradeSlider::update(float deltaTime)
 	{
 		auto unitData = m_dataLoader->get_unit_data(uid, player->get_unit_form(uid));
 		m_unitName.setString(unitData->name);
-		m_description.setString(UISkin::wrap_text(unitData->description, DESCRIPTION_SIZE, DESCRIPTION_WIDTH));
+		m_description.setString(UISkin::wrap_text(unitData->description, DESCRIPTION_SIZE, DESCRIPTION_WIDTH, UISkin::regular_font()));
 		m_abilities.set_abilities(unitData->abilities);
 		m_describedUid = uid;
 		m_describedLevel = -1;   // The numbers too

@@ -76,6 +76,8 @@ namespace
             ImGui::TextDisabled("Menu backgrounds are chosen in the game's code (UIManager), not in the data.");
         else if (folder == ImageFolder::UNIT_ICONS)
             ImGui::TextDisabled("Deploy icons are found by their name: icon_<unit UID>_<form>.png (form 0 is the first).");
+        else if (folder == ImageFolder::ENEMY_ICONS)
+            ImGui::TextDisabled("Enemy icons are found by their name: icon_<enemy UID>.png.");
         else if (uses.empty())
             ImGui::TextDisabled("Nothing uses it yet.");
 

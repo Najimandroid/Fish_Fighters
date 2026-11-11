@@ -14,6 +14,9 @@ namespace EntityFields
     void attack(EditorContext& ctx, DataFile file, ordered_json& entity);    // Type, range, damage zone, timings
     void sprite(EditorContext& ctx, DataFile file, ordered_json& entity, ImageFolder folder); // Sheet, frames, knockback frame
 
+    // The icon at iconPath (200 x 150): shown, imported, or made from the first frame of entity's sprite sheet
+    void icon(EditorContext& ctx, const std::string& iconPath, const char* label, const char* help, const ordered_json& entity);
+
     // Damage per second of one target, without abilities ("x" multiplies the attack: level or stage)
     float damage_per_second(const ordered_json& entity, float multiplier = 1.f);
 }

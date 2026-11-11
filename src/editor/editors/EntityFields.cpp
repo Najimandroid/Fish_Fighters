@@ -78,3 +78,46 @@ namespace EntityFields
         return static_cast<float>(read_int(entity, "attackPower")) * multiplier / frequency;
     }
 }
+
+/*
+ * The entity's icon (a file found by its name, not stored in the JSON): import one or make it from the first frame
+ */
+void EntityFields::icon(EditorContext& ctx, const std::string& iconPath, const char* label, const char* help, const ordered_json& entity)
+{
+    property_label(label, help);
+
+    const sf::Texture* texture = ctx.textures.get(iconPath);
+
+    image_in_box(texture, ImVec2(112.f, 84.f), {}, true);
+    ImGui::SameLine();
+    ImGui::BeginGroup();
+    if (texture) ImGui::TextDisabled("%u x %u", texture->getSize().x, texture->getSize().y);
+    else ImGui::TextColored(ImVec4(1.f, 0.45f, 0.4f, 1.f), "No icon yet");
+
+    const ImGuiID importId = ImGui::GetID("ImportIcon");
+    if (ImGui::Button("Import...")) ctx.request_png_dialog(importId, "Pick the icon (200 x 150)");
+
+    ImGui::SameLine();
+    const sf::Texture* sheet = ctx.textures.get(read_string(entity, "texture"));
+    ImGui::BeginDisabled(!sheet);
+    if (ImGui::Button("Make from first frame") && sheet)
+    {
+        std::string error;
+        const auto image = AssetLibrary::make_icon(*sheet, read_int(entity, "frameCount", 1));
+        if (image && ctx.assets.replace(iconPath, *image, error)) ctx.notify("Icon made from the first frame: " + iconPath);
+        else ctx.notify(error.empty() ? "Can't make the icon" : error, true);
+        ctx.textures.forget(iconPath);
+        ctx.mark_changed();
+    }
+    ImGui::EndDisabled();
+    ImGui::EndGroup();
+
+    if (auto picked = ctx.take_dialog_result(importId))
+    {
+        std::string error;
+        if (ctx.assets.replace(iconPath, *picked, error)) ctx.notify("Icon replaced: " + iconPath);
+        else ctx.notify(error, true);
+        ctx.textures.forget(iconPath);
+        ctx.mark_changed();
+    }
+}

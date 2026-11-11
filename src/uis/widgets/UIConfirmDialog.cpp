@@ -21,7 +21,7 @@ UIConfirmDialog::UIConfirmDialog(const std::string& question, const std::string&
     m_dim(SCREEN_SIZE),
     m_panel(PANEL_SIZE, PANEL_POSITION, UISkin::PANEL_DARK, 1.2f),
     m_question(UISkin::heavy_font(), question),
-    m_explanation(UISkin::heavy_font()),
+    m_explanation(UISkin::regular_font()),
     m_confirmButton(BUTTON_SIZE, { SCREEN_SIZE.x / 2.f - BUTTON_GAP / 2.f - BUTTON_SIZE.x, BUTTON_Y }, confirmLabel),
     m_cancelButton(BUTTON_SIZE, { SCREEN_SIZE.x / 2.f + BUTTON_GAP / 2.f, BUTTON_Y }, cancelLabel)
 {
@@ -31,8 +31,8 @@ UIConfirmDialog::UIConfirmDialog(const std::string& question, const std::string&
     UISkin::set_text_anchor(m_question, { 0.5f, 0.5f });
     m_question.setPosition({ SCREEN_SIZE.x / 2.f, PANEL_POSITION.y + 78.f });
 
-    UISkin::style_text(m_explanation, EXPLANATION_SIZE, UISkin::TITLE);
-    m_explanation.setString(UISkin::wrap_text(explanation, EXPLANATION_SIZE, EXPLANATION_WIDTH));
+    UISkin::style_body_text(m_explanation, EXPLANATION_SIZE, UISkin::TITLE);
+    m_explanation.setString(UISkin::wrap_text(explanation, EXPLANATION_SIZE, EXPLANATION_WIDTH, UISkin::regular_font()));
     UISkin::set_text_anchor(m_explanation, { 0.5f, 0.5f });
     m_explanation.setPosition({ SCREEN_SIZE.x / 2.f, PANEL_POSITION.y + 170.f });
 

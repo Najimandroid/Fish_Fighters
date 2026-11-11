@@ -12,6 +12,7 @@
 #include <SFML/Graphics.hpp>
 
 #include <vector>
+#include <functional>
 #include <map>
 #include <ranges>
 #include <memory>
@@ -69,6 +70,10 @@ public:
 
     // Render the stage (background, bases, units, enemies)
     void render(sf::RenderWindow& window);
+
+    // Drawn right after each unit's and enemy's sprite, at its layer (the status icons); nullptr: nothing
+    using EntityOverlay = std::function<void(sf::RenderWindow&, const BattleEntity&, bool isUnit)>;
+    void set_entity_overlay(EntityOverlay overlay) { m_entityOverlay = std::move(overlay); }
 
     // Spawn a new enemy in the stage
     void spawn_enemy(std::shared_ptr<EntityData> enemyData, sf::Vector2f magnification, int layer, bool isBoss, bool bypassLimit);
@@ -244,6 +249,7 @@ private:
 
     // ----- End of the battle -----
     BattleResult m_result;
+    EntityOverlay m_entityOverlay;
     float m_finishTime = -1.f;               // Seconds since a base fell (-1: the battle is on)
     bool m_isFinishJinglePlayed = false;
     bool m_isResultsScreenShown = false;

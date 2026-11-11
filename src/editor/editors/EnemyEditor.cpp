@@ -54,10 +54,13 @@ namespace
         abilities_field(ctx, ENEMIES_FILE, enemy, true);
     }
 
-    void appearance_tab(EditorContext& ctx, ordered_json& enemy)
+    void appearance_tab(EditorContext& ctx, int uid, ordered_json& enemy)
     {
         if (begin_properties("Appearance"))
         {
+            EntityFields::icon(ctx, AssetLibrary::enemy_icon_path(uid), "Icon",
+                "Shown in the encyclopedia and on the chapter map.\nFile: icon_<UID>.png in assets/images/textures/icons/enemies.\n"
+                "Replacing it keeps the previous file as icon_..(old).png.", enemy);
             EntityFields::sprite(ctx, ENEMIES_FILE, enemy, ImageFolder::ENEMY_SHEETS);
             end_properties();
         }
@@ -100,7 +103,7 @@ namespace EnemyEditor
                 };
             tab("General", [&]() { general_tab(ctx, uid, *enemy); });
             tab("Combat", [&]() { combat_tab(ctx, *enemy); });
-            tab("Appearance", [&]() { appearance_tab(ctx, *enemy); });
+            tab("Appearance", [&]() { appearance_tab(ctx, uid, *enemy); });
             ImGui::EndTabBar();
         }
     }
