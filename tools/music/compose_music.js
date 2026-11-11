@@ -23,7 +23,8 @@
 //   theme_jelly_boss "High Voltage Majesty" 138 BPM  dark electro: the eel crowned, 808/909, synth bass, a choir in the back
 //   theme_crab       "Crab Cove"      132 BPM  a sideways tiptoe in A minor: bassoon, flamenco strums, castanets and claves
 //   theme_crab_boss  "King Crab's Sideways Stomp" 120 BPM  heavy and jumpy: chugs, freezes, scuttles, taiko; the cove's pinches
-//   theme_energetic  "Riptide Rush"   168 BPM  energetic pop-rock in A: trumpet on the motif, power chords, slap bass, brass stabs
+//   theme_energetic  "Riptide Rush"   124 BPM  dance: nu-disco / electro-funk, fast funk bass, alto sax on the motif, 909, synths
+//   theme_energetic_boss "Riptide Rampage" 132 BPM  its boss version: A minor, choir, hard drums, taiko, synth brass
 //   theme_preboss    "Something Stirs Below" 112 BPM  before a boss: sonar, heartbeat, pizzicato ostinato, horns in D minor
 //   jingle_battle_start, jingle_victory, jingle_defeat
 
@@ -1959,96 +1960,209 @@ const CRAB = {
     songs.push(song);
 }
 
+// The dance theme and its boss version share their tune and their bass
+const RIPTIDE = {
+    A: "Am7 | D7 | Am7 | D7 | Fmaj7 | E7 | Am7 | E7 | Am7 | D7 | Am7 | D7 | Fmaj7 | G | E7 | E7",
+    B: "Fmaj7 | G | Em7 | Am7 | Dm7 | G | Fmaj7 | E7",
+    C: "Am7 | Am7 | D7 | D7 | Fmaj7 | Fmaj7 | E7 | E7",
+    // The motif (A D F E D A'), syncopated like the Fish Tank's, then answered
+    get TUNE() {
+        const head = "A4:.5 D5:.5 F5:.75 E5:.25 r:.5 D5:.5 A5:1 | r:.5 F#5:.5 A5:.5 F#5:.5 r:.5 E5:.25 D5:.75 r:.5 | " +
+                     "A4:.5 D5:.5 F5:.75 E5:.25 r:.5 D5:.5 C6:1 | r:.5 B5:.5 A5:.5 F#5:.5 r:.5 E5:.25 F#5:.75 r:.5 | ";
+        return head + "C6:.5 A5:.5 F5:.5 A5:.5 r:.5 G5:.5 E5:1 | G#5:.5 B5:.5 D6:.75 B5:.25 r:.5 G#5:.5 E5:1 | " +
+            "A5:.5 G5:.5 E5:.5 D5:.5 C5:.5 D5:.5 E5:.5 G5:.5 | A5:1.5 r:.5 G#5:.5 B5:.5 D6:1 | " +
+            head + "F5:.5 A5:.5 C6:.5 E6:.5 r:.5 D6:.5 C6:1 | B5:.5 D6:.5 G6:.75 F6:.25 r:.5 D6:.5 B5:1 | " +
+            "G#5:.5 B5:.5 E6:.5 D6:.5 B5:.5 G#5:.5 E5:.5 D5:.5 | E5:1 r:1 E5:.25 G#5:.25 B5:.25 D6:.25 E6:1";
+    },
+    LIFT: "A5:2 C6:2 | B5:1.5 A5:.5 G5:2 | G5:1 B5:1 E6:2 | C6:4 | A5:2 F5:2 | B5:1.5 D6:.5 G5:2 | A5:1 C6:1 F6:1 E6:1 | E6:2 G#5:2",
+    // The drop: sax licks answering the bass, then long notes over the build
+    LICKS: "A5:.25 C6:.25 A5:.25 G5:.25 E5:.5 r:1.5 G5:.5 A5:.5 | r:2 E5:.25 G5:.25 A5:.25 C6:.25 D6:.5 C6:.5 | " +
+           "F#5:.25 A5:.25 F#5:.25 E5:.25 D5:.5 r:1.5 E5:.5 F#5:.5 | r:2 D5:.25 F#5:.25 A5:.25 C6:.25 D6:1 | " +
+           "A5:4 | C6:4 | B5:4 | B5:2 G#5:2",
+    // The fast bass: sixteenths jumping octaves, ghost notes, a slide into the next chord (the Fish Tank's funk, faster)
+    BASS: [[0, 0.2, "R", 112], [0.25, 0.12, "R", 66], [0.5, 0.2, "8", 96], [0.75, 0.18, "R", 80],
+           [1, 0.2, "R", 104], [1.25, 0.12, "8", 72], [1.5, 0.2, "8", 92], [1.75, 0.18, "5", 84],
+           [2, 0.2, "R", 108], [2.25, 0.12, "R", 66], [2.5, 0.2, "8", 96], [2.75, 0.18, "R", 80],
+           [3, 0.2, "7", 96], [3.25, 0.12, "8", 74], [3.5, 0.2, "5", 90], [3.75, 0.2, "app", 88]],
+};
+
 // =====================================================================================================
-// 12c. "Riptide Rush" - an energetic battle theme. Bright pop-rock in A major at full speed: distorted power chords
-//     on every eighth, a slap bass driving octaves, a rock kit; the motif (A D F# E D A') on trumpet, brass stabs
-//     answering, an overdriven guitar lead in the middle; a breakdown of bass and claps that builds back.
-//     Intro 4 | A 16 (trumpet) | B 8 (the surge: guitar lead) | C 8 (breakdown and build) | A' 16
+// 12c. "Riptide Rush" - an energetic battle theme you could dance on: nu-disco / electro-funk at 124 BPM in A
+//     (dorian). Four on the floor on an 808/909, a fast funk bass in sixteenths (fingered, a synth sub under it),
+//     the motif on alto sax, Rhodes house stabs, a square arpeggio; a saw synth lead for the lift, vocal synth chops
+//     in the drop. Intro 4 | A 16 (the groove: sax) | B 8 (the lift) | A' 16 (sax and synth together) | C 8 (the drop)
 // =====================================================================================================
 {
-    const song = new Song("theme_energetic", "Fish Fighters - Riptide Rush", 168, { introBars: 4, bodyBars: 48, key: "A",
-        mix: { lead: 0, brass: -3, guitar: -5, bass: -3, drums: -1, fx: -10 } });
-    const trumpet = song.part("Trumpet", 56, { group: "lead", volume: 110, pan: 0.05, vibrato: { cents: 18, hz: 6, delay: 0.2, minBeats: 1 } });
-    const leadGuitar = song.part("Lead guitar", 29, { group: "lead", volume: 100, pan: -0.15, vibrato: { cents: 25, hz: 5.5, delay: 0.15, minBeats: 1 } });
-    const brass = song.part("Brass", 61, { group: "brass", volume: 108, pan: 0.25 });
-    const guitar = song.part("Rhythm guitar", 30, { group: "guitar", volume: 96, pan: -0.35 });
-    const guitar2 = song.part("Rhythm guitar 2", 30, { group: "guitar", volume: 90, pan: 0.35 });
-    const bass = song.part("Slap bass", 36, { group: "bass", volume: 110 });
-    const kit = song.drums("Kit", 16, { group: "drums", volume: 104 });
+    const song = new Song("theme_energetic", "Fish Fighters - Riptide Rush", 124, { introBars: 4, bodyBars: 48, key: "A",
+        mix: { lead: 0, keys: -6, arp: -9, bass: -1, drums: 0, pad: -10, fx: -12 } });
+    const sax = song.part("Alto sax", 65, { group: "lead", volume: 108, pan: 0.05, vibrato: { cents: 20, hz: 5.5, delay: 0.2, minBeats: 1 },
+        fx: { echo: { beats: 0.75, feedback: 0.2, mix: 0.12 } } });
+    const synthLead = song.part("Saw lead", 81, { group: "lead", volume: 96, pan: -0.1, fx: { lowpass: 4200, echo: { beats: 0.75, feedback: 0.3, mix: 0.2 } } });
+    const rhodes = song.part("Rhodes", 4, { group: "keys", volume: 96, pan: -0.25, fx: { chorus: { mix: 0.4 } } });
+    const poly = song.part("Polysynth", 90, { group: "keys", volume: 84, pan: 0.25 });
+    const arpSynth = song.part("Square arpeggio", 80, { group: "arp", volume: 80, pan: 0.35, fx: { lowpass: 2600, echo: { beats: 0.75, feedback: 0.3, mix: 0.25 } } });
+    const chops = song.part("Voice chops", 54, { group: "arp", volume: 92, pan: -0.3, fx: { echo: { beats: 0.5, feedback: 0.3, mix: 0.25 } } });
+    const bass = song.part("Funk bass", 33, { group: "bass", volume: 112 });
+    const sub = song.part("Synth sub", 38, { group: "bass", volume: 96, fx: { lowpass: 700 } });
+    const sweep = song.part("Sweep", 95, { group: "pad", volume: 88 });
+    const kit = song.drums("909", 25, { group: "drums", volume: 106 });
     const bub = song.synth("Bubbles", "bubbles", { group: "fx" });
 
-    const A = "A | E/G# | F#m | D | A | E | D E | A | A | C#m | D | E | F#m | D | B7 | E";
-    const B = "F#m | D | A | E | F#m | D | B | E";
-    const C = "A | A | D | D | E | E | E | E";
-    const TUNE = "A4:.5 D5:.5 F#5:.5 E5:.5 D5:.5 A5:1 r:.5 | G#5:.5 F#5:.5 E5:1 B4:1 r:1 | A4:.5 C#5:.5 F#5:.5 E5:.5 C#5:.5 A5:1 r:.5 | F#5:.75 E5:.25 D5:1 A4:1 r:1 | " +
-                 "A4:.5 D5:.5 F#5:.5 E5:.5 D5:.5 A5:1 C#6:.5 | B5:1.5 G#5:.5 E5:1 r:1 | F#5:.5 A5:.5 D6:1 E5:.5 G#5:.5 B5:1 | A5:3 r:1 | " +
-                 "E5:.5 E5:.5 A5:.5 E5:.5 C#6:1 B5:1 | G#5:.5 E5:.5 C#5:1 E5:1 r:1 | F#5:.5 F#5:.5 A5:.5 F#5:.5 D6:1 C#6:1 | B5:.5 G#5:.5 E5:1 B4:1 r:1 | " +
-                 "C#6:.5 B5:.5 A5:.5 G#5:.5 F#5:1 C#5:1 | D5:.5 F#5:.5 A5:.5 D6:.5 F#6:1 E6:1 | D#6:.5 C#6:.5 B5:.5 A5:.5 F#5:1 D#5:1 | E5:.5 G#5:.5 B5:.5 E6:.5 G#5:1 r:1";
-    const SURGE = "C#5:2 F#5:2 | F#5:1.5 E5:.5 D5:2 | C#5:2 E5:2 | B4:4 | C#5:2 F#5:2 | A5:1.5 G#5:.5 F#5:2 | D#5:2 F#5:2 | G#5:2 B5:2";
-    const OCTAVES = [[0, 0.4, "R", 108], [0.5, 0.4, "8", 88], [1, 0.4, "R", 100], [1.5, 0.4, "8", 88],
-                     [2, 0.4, "R", 104], [2.5, 0.4, "8", 88], [3, 0.4, "R", 100], [3.5, 0.4, "5", 92]];
-    const ROCK = { [KICK]: "X...x.x.X...x...", [SNARE]: "....X.......X...", [HAT]: "x.x.x.x.x.x.x.x." };
-    const ROCK_FULL = { [KICK]: "X...x.x.X...x.x.", [SNARE]: "....X.......X..g", [OPEN_HAT]: "x.x.x.x.x.x.x.x.", [CRASH]: "X..............." };
-    const stabs = (prog, start, bars, offsets, velocity = 104) => {
-        for (const bar of bars) for (const o of offsets) voice(chordAt(prog, start + bar * 4 + o).symbol, 64).forEach(n => brass.hit(start + bar * 4 + o, n, velocity, 0.3));
-    };
-    const chug = (prog, velocity) => {
-        powerChords(guitar, prog, { base: 40, velocity, gate: 0.7 });
-        powerChords(guitar2, prog, { base: 40, velocity: velocity - 8, gate: 0.7 });
+    const HOUSE = { [KICK]: "X...X...X...X...", [CLAP]: "....X.......X...", [OPEN_HAT]: "..o...o...o...o.", [HAT]: "g.g.g.g.g.g.g.g." };
+    const HOUSE_FULL = { [KICK]: "X...X...X...X...", [CLAP]: "....X.......X...", [OPEN_HAT]: "..x...x...x...x.", [HAT]: "gggggggggggggggg", [SHAKER]: "g.o.g.o.g.o.g.o." };
+    const STABS = [[0.5, 0.2, 72], [1.5, 0.2, 66], [2.5, 0.2, 72], [3.25, 0.2, 62], [3.5, 0.2, 70]];
+    const ARP = { pattern: [0, 2, 1, 3, 2, 1, 3, 2], rate: 0.25, center: 69, velocity: 62, accent: 10, gate: 0.6 };
+    const SUB = [[0, 0.9, "R", 100], [1, 0.9, "R", 96], [2, 0.9, "R", 100], [3, 0.9, "R", 96]];
+    const groove = (prog, full) => {
+        bassline(bass, prog, { pattern: RIPTIDE.BASS });
+        bassline(sub, prog, { pattern: SUB });
+        comp(rhodes, prog, { pattern: STABS, center: 62 });
+        beat(kit, prog[0].beat, prog.length > 8 ? 16 : 8, full ? HOUSE_FULL : HOUSE);
     };
 
-    // Intro: a drum fill, the guitars chug in, brass hits on the way to the tune
-    const pI = progression("A | A | D | E", 0);
-    tomFill(kit, 0, 2, 104);
-    kit.hit(2, CRASH, 112, 1);
-    chug(progression("A | D | E", 4), 84);
-    beat(kit, 4, 3, ROCK);
-    bassline(bass, progression("A | D | E", 4), { pattern: OCTAVES });
-    stabs(pI, 0, [1, 2, 3], [0, 1.5, 3]);
-    roll(kit, 14, 2, SNARE, 60, 116);
+    // Intro: the kick alone, the bass joins, a sweep up into the groove
+    const pI = progression("Am7 | D7 | Am7 | E7", 0);
+    beat(kit, 0, 2, { [KICK]: "X...X...X...X...", [HAT]: "g.g.g.g.g.g.g.g." });
+    beat(kit, 8, 2, { [KICK]: "X...X...X...X...", [CLAP]: "....X.......X...", [OPEN_HAT]: "..o...o...o...o." });
+    bassline(bass, progression("D7 | Am7 | E7", 4), { pattern: RIPTIDE.BASS });
+    sustain(sweep, progression("Am7 | E7", 8), { center: 64, velocity: 70 });
+    roll(kit, 14, 2, CLAP, 50, 112);
 
     song.body(s => {
-        const a = s, b = s + 64, c = s + 96, a2 = s + 128;
-        const pA = progression(A, a), pB = progression(B, b), pC = progression(C, c), pA2 = progression(A, a2);
+        const a = s, b = s + 64, a2 = s + 96, c = s + 160;
+        const pA = progression(RIPTIDE.A, a), pB = progression(RIPTIDE.B, b), pA2 = progression(RIPTIDE.A, a2), pC = progression(RIPTIDE.C, c);
 
-        // A: the trumpet on the tune, guitars and slap bass driving, brass answering in the rests
-        trumpet.at(a).play(TUNE, { velocity: 100, gate: 0.85 });
-        for (let p = 0; p < 4; p++) shape(trumpet, a + p * 16, a + p * 16 + 16, { peak: 10, ending: -6 });
-        chug(pA, 82);
-        bassline(bass, pA, { pattern: OCTAVES });
-        beat(kit, a, 16, ROCK);
-        kit.hit(a, CRASH, 110, 1).hit(a + 32, CRASH, 108, 1);
-        stabs(pA, a, [1, 3, 9, 11], [2.5, 3]);
+        // A: the groove - the sax on the tune, Rhodes stabs, the fast bass, four on the floor
+        sax.at(a).play(RIPTIDE.TUNE, { velocity: 100, gate: 0.8 });
+        for (let p = 0; p < 4; p++) shape(sax, a + p * 16, a + p * 16 + 16, { peak: 10, ending: -6 });
+        groove(pA, false);
+        kit.hit(a, CRASH, 106, 1);
         bubbles(bub, a + 30, { count: 6, spread: 2, low: 400, high: 1400 });
 
-        // B: the surge - the lead guitar sings, the brass holds the chords, half-time crash ride
-        leadGuitar.at(b).play(SURGE, { velocity: 104, gate: 0.95 });
-        sustain(brass, pB, { center: 62, velocity: 78 });
-        chug(pB, 80);
-        bassline(bass, pB, { pattern: OCTAVES });
-        beat(kit, b, 8, { [KICK]: "X.......X.......", [SNARE]: "........X.......", [RIDE]: "x.x.x.x.x.x.x.x." });
+        // B: the lift - the saw lead soars, the polysynth holds the chords, the arpeggio runs, claps build at the end
+        synthLead.at(b).play(RIPTIDE.LIFT, { velocity: 104, gate: 0.95 });
+        sustain(poly, pB, { center: 62, velocity: 74 });
+        arp(arpSynth, pB, ARP);
+        bassline(bass, pB, { pattern: RIPTIDE.BASS });
+        bassline(sub, pB, { pattern: SUB });
+        beat(kit, b, 6, HOUSE_FULL);
+        beat(kit, b + 24, 2, { [KICK]: "X...X...X...X...", [CLAP]: "x.x.x.x.xxxxxxxx" });
         kit.hit(b, CRASH, 108, 1);
 
-        // C: breakdown - slap bass and claps alone, brass hits, then the guitars and toms build back
-        bassline(bass, progression("A | A | D | D", c), { pattern: OCTAVES });
-        beat(kit, c, 4, { [KICK]: "X.......X.......", [CLAP]: "....X.......X..." });
-        stabs(pC, c, [0, 1, 2, 3], [0, 0.75, 2.5], 100);
-        chug(progression("E | E | E | E", c + 16), 86);
-        bassline(bass, progression("E | E | E | E", c + 16), { pattern: OCTAVES });
-        beat(kit, c + 16, 2, { [KICK]: "X...X...X...X...", [HAT]: "x.x.x.x.x.x.x.x." });
-        tomFill(kit, c + 24, 4, 108);
-        roll(kit, c + 28, 4, SNARE, 50, 120);
-        bubbles(bub, c + 20, { count: 10, spread: 6, low: 300, high: 1400 });
+        // A': sax and saw lead together (an octave apart), the arpeggio, the full kit
+        sax.at(a2).play(RIPTIDE.TUNE, { velocity: 104, gate: 0.8 });
+        synthLead.at(a2).play(RIPTIDE.TUNE, { velocity: 84, gate: 0.6, transpose: 12 });
+        for (let p = 0; p < 4; p++) shape(sax, a2 + p * 16, a2 + p * 16 + 16, { peak: 10, ending: -6 });
+        groove(pA2, true);
+        arp(arpSynth, pA2, { ...ARP, velocity: 56 });
+        kit.hit(a2, CRASH, 110, 1).hit(a2 + 32, CRASH, 106, 1);
 
-        // A': everyone - the trumpet with the lead guitar an octave down, brass stabs on every phrase, open hats
-        trumpet.at(a2).play(TUNE, { velocity: 104, gate: 0.85 });
-        leadGuitar.at(a2).play(TUNE, { velocity: 92, gate: 0.8, transpose: -12 });
-        for (let p = 0; p < 4; p++) shape(trumpet, a2 + p * 16, a2 + p * 16 + 16, { peak: 10, ending: -6 });
-        chug(pA2, 86);
-        bassline(bass, pA2, { pattern: OCTAVES });
-        beat(kit, a2, 16, ROCK_FULL);
-        stabs(pA2, a2, [1, 3, 5, 9, 11, 13], [2.5, 3]);
-        bubbles(bub, a2 + 62, { count: 8, spread: 2, low: 400, high: 1400 });
+        // C: the drop - bass and kick, vocal chops and sax licks answering; then the build (sweep, claps, roll)
+        sax.at(c).play(RIPTIDE.LICKS, { velocity: 104, gate: 0.85 });
+        bassline(bass, pC, { pattern: RIPTIDE.BASS });
+        beat(kit, c, 4, { [KICK]: "X...X...X...X...", [HAT]: "..x...x...x...x." });
+        comp(chops, progression("Am7 | Am7 | D7 | D7", c), { pattern: [[0.5, 0.3, 96], [1.75, 0.3, 84], [2.5, 0.3, 92], [3.5, 0.2, 84]], center: 69 });
+        bassline(sub, progression("Fmaj7 | Fmaj7 | E7 | E7", c + 16), { pattern: SUB });
+        sustain(sweep, progression("Fmaj7 | Fmaj7 | E7 | E7", c + 16), { center: 64, velocity: 80 });
+        arp(arpSynth, progression("Fmaj7 | Fmaj7 | E7 | E7", c + 16), { ...ARP, velocity: 66 });
+        beat(kit, c + 16, 2, { [KICK]: "X...X...X...X...", [CLAP]: "....X.......X..." });
+        beat(kit, c + 24, 1, { [KICK]: "X...X...X...X...", [CLAP]: "x.x.x.x.x.x.x.x." });
+        roll(kit, c + 28, 4, SNARE, 50, 120);
+        bubbles(bub, c + 18, { count: 10, spread: 6, low: 300, high: 1400 });
+    });
+    songs.push(song);
+}
+
+// =====================================================================================================
+// 12e. "Riptide Rampage" - Riptide Rush's boss version: the same tune and fast bass, darker (A minor) and harder at
+//     132 BPM. A concert choir holds the chords and sings the lift, hard drums (power kit with a kick on every beat,
+//     taiko, timpani), synth brass stabs, a gritty synth bass under the funk bass, the sax still on the tune.
+//     Intro 4 | A 16 (sax, choir) | B 8 (the choir sings) | A' 16 (everyone) | C 8 (taiko drop and build)
+// =====================================================================================================
+{
+    const song = new Song("theme_energetic_boss", "Fish Fighters - Riptide Rampage", 132, { introBars: 4, bodyBars: 48, key: "A",
+        mix: { lead: 0, choir: -3, brass: -4, bass: -2, drums: 0, arp: -10, fx: -12 } });
+    const sax = song.part("Alto sax", 65, { group: "lead", volume: 110, pan: 0.05, vibrato: { cents: 22, hz: 5.8, delay: 0.15, minBeats: 1 } });
+    const choir = song.part("Choir", 52, { group: "choir", volume: 104 });
+    const brass = song.part("Synth brass", 63, { group: "brass", volume: 106, pan: -0.2 });
+    const bass = song.part("Funk bass", 33, { group: "bass", volume: 112 });
+    const grit = song.part("Synth bass", 39, { group: "bass", volume: 100, fx: { lowpass: 1600 } });
+    const arpSynth = song.part("Square arpeggio", 80, { group: "arp", volume: 78, pan: 0.35, fx: { lowpass: 2400 } });
+    const kit = song.drums("Power kit", 16, { group: "drums", volume: 110 });
+    const taiko = song.part("Taiko", 116, { group: "drums", volume: 112 });
+    const timpani = song.part("Timpani", 47, { group: "drums", volume: 108 });
+    const bub = song.synth("Bubbles", "bubbles", { group: "fx" });
+
+    // Darker: the D7 bars become F, the dorian F# becomes F
+    const A = "Am | F | Am | F | Dm | E | Am | E | Am | F | Am | F | Dm | G | E | E";
+    const B = "F | G | Em | Am | Dm | G | F | E";
+    const C = "Am | Am | F | F | Dm | Dm | E | E";
+    const TUNE = RIPTIDE.TUNE.replace(/F#5/g, "F5").replace("C6:.5 A5:.5 F5:.5 A5:.5 r:.5 G5:.5 E5:1", "D6:.5 A5:.5 F5:.5 A5:.5 r:.5 G5:.5 E5:1")
+        .replace("F5:.5 A5:.5 C6:.5 E6:.5 r:.5 D6:.5 C6:1", "F5:.5 A5:.5 D6:.5 F6:.5 r:.5 E6:.5 D6:1");
+    const HARD = { [KICK]: "X...X...X...X.x.", [SNARE]: "....X.......X...", [HAT]: "x.x.x.x.x.x.x.x.", [CRASH]: "X..............." };
+    const HARD_FULL = { [KICK]: "X...X...X.x.X.x.", [SNARE]: "....X.......X..g", [OPEN_HAT]: "x.x.x.x.x.x.x.x.", [CHINA]: "X..............." };
+    const GRIT = [[0, 0.45, "R", 104], [0.5, 0.45, "R", 80], [1, 0.45, "R", 100], [1.5, 0.45, "8", 84],
+                  [2, 0.45, "R", 104], [2.5, 0.45, "R", 80], [3, 0.45, "5", 96], [3.5, 0.45, "R", 84]];
+    const taikoBars = (start, bars) => { for (let bar = 0; bar < bars; bar++) [[0, 122], [2.5, 108], [3, 114]].forEach(([o, v]) => taiko.hit(start + bar * 4 + o, pitch("D2"), v, 0.5)); };
+    const stabs = (prog, start, bars) => {
+        for (const bar of bars) [0, 0.75, 1.5].forEach(o => voice(chordAt(prog, start + bar * 4 + o).symbol, 60).forEach(n => brass.hit(start + bar * 4 + o, n, 106, 0.3)));
+    };
+    const timpaniRoot = (prog, t) => foldTimp(above(chord(chordAt(prog, t).symbol).root, 38));
+
+    // Intro: timpani rolling, taiko, the choir's chord, the bass kicks in
+    roll(timpani, 0, 8, pitch("A2") - 7, 40, 116);
+    sustain(choir, progression("Am | Am", 0), { center: 57, velocity: 84 });
+    taikoBars(8, 2);
+    bassline(bass, progression("Am | E", 8), { pattern: RIPTIDE.BASS });
+    bassline(grit, progression("Am | E", 8), { pattern: GRIT });
+    beat(kit, 8, 2, HARD);
+    stabs(progression("Am | E", 8), 8, [0, 1]);
+
+    song.body(s => {
+        const a = s, b = s + 64, a2 = s + 96, c = s + 160;
+        const pA = progression(A, a), pB = progression(B, b), pA2 = progression(A, a2), pC = progression(C, c);
+
+        // A: the sax on the tune, the choir holding the chords, the fast bass and the grit, hard drums, taiko
+        sax.at(a).play(TUNE, { velocity: 104, gate: 0.8 });
+        for (let p = 0; p < 4; p++) shape(sax, a + p * 16, a + p * 16 + 16, { peak: 10, ending: -6 });
+        sustain(choir, pA, { center: 57, velocity: 70 });
+        bassline(bass, pA, { pattern: RIPTIDE.BASS });
+        bassline(grit, pA, { pattern: GRIT });
+        beat(kit, a, 16, HARD);
+        taikoBars(a, 16);
+        stabs(pA, a, [5, 7, 13, 15]);
+        for (let bar = 0; bar < 16; bar += 2) timpani.hit(a + bar * 4, timpaniRoot(pA, a + bar * 4), 104, 1.2);
+
+        // B: the choir sings the lift (an octave down), brass on the chords, half time with taiko on 1 and 3
+        choir.at(b).play(RIPTIDE.LIFT, { velocity: 104, gate: 0.98, transpose: -12 });
+        sustain(brass, pB, { center: 60, velocity: 80 });
+        arp(arpSynth, pB, { pattern: [0, 2, 1, 3], rate: 0.25, center: 69, velocity: 58, accent: 10, gate: 0.6 });
+        bassline(bass, pB, { pattern: RIPTIDE.BASS });
+        bassline(grit, pB, { pattern: GRIT });
+        beat(kit, b, 8, { [KICK]: "X.......X.......", [SNARE]: "........X.......", [RIDE]: "x.x.x.x.x.x.x.x." });
+        for (let bar = 0; bar < 8; bar++) [0, 2].forEach(o => taiko.hit(b + bar * 4 + o, pitch("D2"), 118, 0.5));
+        roll(timpani, b + 28, 4, pitch("E2"), 50, 118);
+
+        // A': everyone - sax, choir an octave over it on the tune, brass stabs, the full hard kit
+        sax.at(a2).play(TUNE, { velocity: 108, gate: 0.8 });
+        choir.at(a2).play(TUNE, { velocity: 88, gate: 0.9 });
+        for (let p = 0; p < 4; p++) shape(sax, a2 + p * 16, a2 + p * 16 + 16, { peak: 10, ending: -6 });
+        bassline(bass, pA2, { pattern: RIPTIDE.BASS });
+        bassline(grit, pA2, { pattern: GRIT });
+        beat(kit, a2, 16, HARD_FULL);
+        taikoBars(a2, 16);
+        stabs(pA2, a2, [1, 3, 5, 7, 9, 11, 13, 15]);
+
+        // C: taiko drop - taiko, bass and the choir's held chords, sax licks; then timpani and snare build back
+        sax.at(c).play(RIPTIDE.LICKS.replace(/F#5/g, "F5"), { velocity: 106, gate: 0.85 });
+        bassline(bass, pC, { pattern: RIPTIDE.BASS });
+        sustain(choir, pC, { center: 57, velocity: 80 });
+        taikoBars(c, 8);
+        beat(kit, c + 16, 2, { [KICK]: "X...X...X...X..." });
+        beat(kit, c + 24, 1, { [KICK]: "X.X.X.X.X.X.X.X." });
+        roll(timpani, c + 24, 8, pitch("E2"), 40, 120);
+        roll(kit, c + 28, 4, SNARE, 50, 122);
+        bubbles(bub, c + 20, { count: 8, spread: 6, low: 300, high: 1200 });
     });
     songs.push(song);
 }

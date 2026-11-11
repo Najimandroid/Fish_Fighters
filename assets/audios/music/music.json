@@ -122,8 +122,17 @@
         "file": "assets/audios/music/theme_energetic.ogg",
         "sampleRate": 48000,
         "key": "A",
-        "loopStart": 3565715,
-        "loopLength": 3291429
+        "loopStart": 4830968,
+        "loopLength": 4459355
+    },
+    "theme_energetic_boss": {
+        "title": "Riptide Rampage",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_energetic_boss.ogg",
+        "sampleRate": 48000,
+        "key": "A",
+        "loopStart": 4538182,
+        "loopLength": 4189091
     },
     "theme_preboss": {
         "title": "Something Stirs Below",
@@ -250,5 +259,14 @@
         "key": "A",
         "loopStart": 3960000,
         "loopLength": 3600000
+    },
+    "theme_energetic_v1": {
+        "title": "Riptide Rush (pop-rock version)",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_energetic_v1.ogg",
+        "sampleRate": 48000,
+        "key": "A",
+        "loopStart": 3565715,
+        "loopLength": 3291429
     }
 }

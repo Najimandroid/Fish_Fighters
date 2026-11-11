@@ -133,11 +133,21 @@
         "title": "Riptide Rush",
         "kind": "stage",
         "key": "A",
-        "tempo": 168,
+        "tempo": 124,
         "sampleRate": 48000,
-        "lengthSeconds": 142.839,
-        "loopStartSample": 3565715,
-        "loopLengthSample": 3291429
+        "lengthSeconds": 193.524,
+        "loopStartSample": 4830968,
+        "loopLengthSample": 4459355
+    },
+    "theme_energetic_boss": {
+        "title": "Riptide Rampage",
+        "kind": "stage",
+        "key": "A",
+        "tempo": 132,
+        "sampleRate": 48000,
+        "lengthSeconds": 181.795,
+        "loopStartSample": 4538182,
+        "loopLengthSample": 4189091
     },
     "theme_preboss": {
         "title": "Something Stirs Below",
