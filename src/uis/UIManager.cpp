@@ -9,6 +9,7 @@
 #include "widgets/UIBaseHealthInfo.h"
 #include "widgets/UIFishTank.h"
 #include "widgets/UIFishParade.h"
+#include "widgets/UITutorial.h"
 #include "widgets/UIStatusIcons.h"
 #include "widgets/UIUpgradeSlider.h"
 #include "widgets/UIEquipSlider.h"
@@ -565,6 +566,8 @@ void UIManager::generate_battle_uis()
 	add_ui_element(deploymentIcons);
 	add_ui_element(stageCash);
 	add_ui_element(cashUp);
+    if (auto stage = m_stage.lock(); stage && UITutorial::is_wanted(*m_dataLoader, stage->get_current_uid()))
+        add_ui_element(std::make_shared<UITutorial>(stage, cashUp));   // The first battle's hints, over the HUD
     add_ui_element(pauseMenu); // On top, and the first to get the input
     add_ui_element(retreatDialog); // Over the pause menu while it asks
     add_ui_element(optionsMenu);   // Over the pause menu while open
