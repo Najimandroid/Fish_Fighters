@@ -536,6 +536,9 @@ void UIManager::generate_battle_uis()
         return m_getGameSpeedCallback && m_getGameSpeedCallback() == GameSpeedState::FASTER;
         });
     speedButton->set_hotkey(sf::Keyboard::Key::F);
+    speedButton->set_state_label([this]() {
+        return m_getGameSpeedCallback && m_getGameSpeedCallback() == GameSpeedState::FASTER ? std::string("x2") : std::string("x1");
+        });
 
 	auto deploymentIcons = std::make_shared<UIDeploymentIcons>(m_dataLoader, m_stage.lock());
 	auto stageCash = std::make_shared<UIStageCash>(m_stage.lock());

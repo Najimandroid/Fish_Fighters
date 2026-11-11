@@ -18,6 +18,9 @@ namespace
     const float MARKER_SIZE = 66.f;
     const float SELECTED_MARKER_SIZE = 84.f;
     const sf::Color CLEARED_TINT{ 150, 235, 150 };   // Turns the yellow marker green
+    const sf::Color LOCKED_TINT{ 150, 156, 166 };    // Grey disc: what comes next, not playable yet
+    const int LOCKED_SHOWN = 2;                      // How many locked stages ahead the map shows
+    const std::uint8_t LOCKED_PATH_ALPHA = 100;      // Their path is faint
 
     // Keeps the map covering the whole screen (no black past its edges)
     sf::Vector2f clamp_to_map(sf::Vector2f offset, sf::Vector2f mapSize)
@@ -114,6 +117,7 @@ void UIChapterMap::build_stage_icons()
 
     // layout: wrap after N columns (helps pour chapitres longs)
     const int columns = 10; // change si tu veux plus/moins par ligne
+    int lockedShown = 0;
 
     for (size_t i = 0; i < m_currentChapter->stages.size(); ++i)
     {
@@ -152,7 +156,12 @@ void UIChapterMap::build_stage_icons()
         icon.circle.setOrigin({ radius, radius });
         icon.circle.setPosition(stageMapData.position);
 
+        // The playable ones, and the next locked ones as a hint of what's ahead
         if (icon.unlocked || icon.completed) {
+            m_stageIcons.push_back(std::move(icon));
+        }
+        else if (lockedShown < LOCKED_SHOWN) {
+            lockedShown++;
             m_stageIcons.push_back(std::move(icon));
         }
     }
@@ -214,12 +223,18 @@ void UIChapterMap::build_stage_icons()
         const auto& a = m_stageIcons[i];
         const auto& b = m_stageIcons[i + 1];
 
-        // Only draw connection if stage i is completed
-        if (a.completed)
+        // A path from each stage to the next one (faint towards a locked one)
+        if (a.completed || !b.unlocked)
         {
             m_stageConnections.push_back(
                 make_dotted_line(a.circle.getPosition(), b.circle.getPosition(), 28.f, 6.f)
             );
+            if (!b.unlocked)
+                for (auto& dot : m_stageConnections.back())
+                {
+                    dot.setFillColor(sf::Color(255, 255, 255, LOCKED_PATH_ALPHA));
+                    dot.setOutlineColor(sf::Color(UISkin::OUTLINE.r, UISkin::OUTLINE.g, UISkin::OUTLINE.b, LOCKED_PATH_ALPHA));
+                }
         }
     }
 
@@ -245,7 +260,7 @@ void UIChapterMap::describe_selected_stage()
         if (reward->type == "shells") shells += reward->amount;
         else if (reward->type == "unit") hasNewFish = true;
     }
-    m_rewardText.setString(std::to_string(shells) + (hasNewFish ? "   + a new fish!" : ""));
+    m_rewardText.setString(std::to_string(shells) + " shells" + (hasNewFish ? "   + a new fish!" : ""));
 
     // Every enemy of the stage once, in the order of the waves
     m_stageEnemies.clear();
@@ -268,6 +283,58 @@ void UIChapterMap::describe_selected_stage()
     const sf::FloatRect nameBounds = m_stageName.getGlobalBounds();
     UISkin::set_text_anchor(m_clearedText, { 0.f, 0.5f });
     m_clearedText.setPosition({ nameBounds.position.x + nameBounds.size.x + 24.f, top + 50.f });
+}
+
+/*
+ * A navy padlock on a locked marker: the shackle (a ring, its lower half hidden by the body), the body, a keyhole
+ */
+void UIChapterMap::draw_padlock(sf::RenderWindow& window, const sf::RenderStates& states, sf::Vector2f center, float size) const
+{
+    const float unit = size / 66.f;
+    sf::CircleShape shackle(9.f * unit);
+    shackle.setOrigin({ 9.f * unit, 9.f * unit });
+    shackle.setPosition(center + sf::Vector2f{ 0.f, -6.f * unit });
+    shackle.setFillColor(sf::Color::Transparent);
+    shackle.setOutlineThickness(4.f * unit);
+    shackle.setOutlineColor(UISkin::OUTLINE);
+    window.draw(shackle, states);
+
+    sf::RectangleShape body({ 28.f * unit, 20.f * unit });
+    body.setOrigin({ 14.f * unit, 0.f });
+    body.setPosition(center + sf::Vector2f{ 0.f, -3.f * unit });
+    body.setFillColor(UISkin::OUTLINE);
+    window.draw(body, states);
+
+    sf::CircleShape keyhole(3.f * unit);
+    keyhole.setOrigin({ 3.f * unit, 3.f * unit });
+    keyhole.setPosition(center + sf::Vector2f{ 0.f, 6.f * unit });
+    keyhole.setFillColor(LOCKED_TINT);
+    window.draw(keyhole, states);
+}
+
+/*
+ * A white check on a navy disc, at the corner of a cleared marker
+ */
+void UIChapterMap::draw_check(sf::RenderWindow& window, const sf::RenderStates& states, sf::Vector2f center) const
+{
+    sf::CircleShape disc(15.f);
+    disc.setOrigin({ 15.f, 15.f });
+    disc.setPosition(center);
+    disc.setFillColor(UISkin::OUTLINE);
+    window.draw(disc, states);
+
+    auto stroke = [&](sf::Vector2f from, sf::Vector2f to)
+        {
+            const sf::Vector2f d = to - from;
+            sf::RectangleShape line({ std::sqrt(d.x * d.x + d.y * d.y) + 4.f, 5.f });
+            line.setOrigin({ 2.f, 2.5f });
+            line.setPosition(center + from);
+            line.setRotation(sf::radians(std::atan2(d.y, d.x)));
+            line.setFillColor(sf::Color::White);
+            window.draw(line, states);
+        };
+    stroke({ -7.f, 0.f }, { -2.f, 6.f });
+    stroke({ -2.f, 6.f }, { 8.f, -6.f });
 }
 
 std::vector<sf::CircleShape> UIChapterMap::make_dotted_line(sf::Vector2f from, sf::Vector2f to, float spacing, float radius)
@@ -342,8 +409,21 @@ void UIChapterMap::render(sf::RenderWindow& window)
 
         m_marker.setScale({ size / markerTexture.x, size / markerTexture.y });
         m_marker.setPosition(center);
+        if (!icon.unlocked && !icon.completed)
+        {
+            sf::CircleShape disc(size / 2.f - 4.f);
+            disc.setOrigin({ disc.getRadius(), disc.getRadius() });
+            disc.setPosition(center);
+            disc.setFillColor(LOCKED_TINT);
+            disc.setOutlineThickness(4.f);
+            disc.setOutlineColor(UISkin::OUTLINE);
+            window.draw(disc, states);
+            draw_padlock(window, states, center, size);
+            continue;
+        }
         m_marker.setColor(icon.completed ? CLEARED_TINT : sf::Color::White);
         window.draw(m_marker, states);
+        if (icon.completed) draw_check(window, states, center + sf::Vector2f{ size * 0.36f, -size * 0.36f });
 
         m_markerNumber.setString(std::to_string(icon.number));
         m_markerNumber.setScale({ size / SELECTED_MARKER_SIZE, size / SELECTED_MARKER_SIZE });
