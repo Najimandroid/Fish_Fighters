@@ -122,8 +122,8 @@
         "file": "assets/audios/music/theme_energetic.ogg",
         "sampleRate": 48000,
         "key": "A",
-        "loopStart": 4404706,
-        "loopLength": 4065882
+        "loopStart": 5082353,
+        "loopLength": 4743529
     },
     "theme_energetic_boss": {
         "title": "Riptide Rampage",
@@ -131,8 +131,8 @@
         "file": "assets/audios/music/theme_energetic_boss.ogg",
         "sampleRate": 48000,
         "key": "A",
-        "loopStart": 4160000,
-        "loopLength": 3840000
+        "loopStart": 4800000,
+        "loopLength": 4480000
     },
     "theme_preboss": {
         "title": "Something Stirs Below",
@@ -149,8 +149,8 @@
         "file": "assets/audios/music/theme_neon.ogg",
         "sampleRate": 48000,
         "key": "A",
-        "loopStart": 4547369,
-        "loopLength": 4244211
+        "loopStart": 5153684,
+        "loopLength": 4850526
     },
     "theme_neon_boss": {
         "title": "Neon Headliner",

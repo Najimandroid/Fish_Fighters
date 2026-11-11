@@ -12,7 +12,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { loudness } = require("./loudness");
+const { loudness, themeGainDb } = require("./loudness");
 
 const ROOT = path.join(__dirname, "..", "..");
 const STEMS = path.join(ROOT, "audio_sources", "stems");
@@ -165,9 +165,8 @@ for (const piece of Object.keys(loops)) {
     for (let i = 0; i < wet.length; i++) mix[i] += wet[i] * REVERB.wet;
 
     // Loudness target, then the limiter for the peaks
-    const target = loops[piece].kind === "jingle" ? TARGET_LUFS.jingle : TARGET_LUFS.other;
-    const measured = loudness(mix);
-    const gain = Math.pow(10, (target - measured) / 20);
+    // (the themes: -16 LUFS, or louder for a bass-heavy one so small speakers hear it as loud: themeGainDb)
+    const gain = Math.pow(10, (loops[piece].kind === "jingle" ? TARGET_LUFS.jingle - loudness(mix) : themeGainDb(mix)) / 20);
     for (let i = 0; i < mix.length; i++) mix[i] *= gain;
     const reduction = limit(mix);
 

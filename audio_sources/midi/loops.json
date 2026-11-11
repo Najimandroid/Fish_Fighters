@@ -135,9 +135,9 @@
         "key": "A",
         "tempo": 136,
         "sampleRate": 48000,
-        "lengthSeconds": 176.449,
-        "loopStartSample": 4404706,
-        "loopLengthSample": 4065882
+        "lengthSeconds": 204.695,
+        "loopStartSample": 5082353,
+        "loopLengthSample": 4743529
     },
     "theme_energetic_boss": {
         "title": "Riptide Rampage",
@@ -145,9 +145,9 @@
         "key": "A",
         "tempo": 144,
         "sampleRate": 48000,
-        "lengthSeconds": 166.646,
-        "loopStartSample": 4160000,
-        "loopLengthSample": 3840000
+        "lengthSeconds": 193.323,
+        "loopStartSample": 4800000,
+        "loopLengthSample": 4480000
     },
     "theme_preboss": {
         "title": "Something Stirs Below",
@@ -165,9 +165,9 @@
         "key": "A",
         "tempo": 152,
         "sampleRate": 48000,
-        "lengthSeconds": 183.138,
-        "loopStartSample": 4547369,
-        "loopLengthSample": 4244211
+        "lengthSeconds": 208.411,
+        "loopStartSample": 5153684,
+        "loopLengthSample": 4850526
     },
     "theme_neon_boss": {
         "title": "Neon Headliner",
@@ -175,7 +175,7 @@
         "key": "A",
         "tempo": 160,
         "sampleRate": 48000,
-        "lengthSeconds": 173.981,
+        "lengthSeconds": 173.983,
         "loopStartSample": 4320000,
         "loopLengthSample": 4032000
     },

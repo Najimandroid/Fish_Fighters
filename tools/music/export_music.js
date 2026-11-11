@@ -1,7 +1,8 @@
 // Turns the mixes (audio_sources/waveform/Fish Fighters Music/Exported/<piece>.wav, 48 kHz float, from mix_music.js) into the
 // game's files: assets/audios/music/<piece>.ogg and assets/audios/music/music.json (loop points in samples).
 //
-// - Loudness: the themes at -16 LUFS (measured over their loop), the jingles at -15 LUFS, peaks kept under -1 dBFS.
+// - Loudness: the themes at -16 LUFS (measured over their loop; a bass-heavy one louder, up to 3 dB, until it's as loud
+//   as the others above 300 Hz: loudness.js themeGainDb), the jingles at -15 LUFS, peaks kept under -1 dBFS.
 // - Seamless loop: the game plays the intro, then loops [loopStart, loopStart + loopLength). The last 100 ms of the loop
 //   are crossfaded into the audio just before loopStart, so the jump lands exactly where the waveform already is
 //   (the notes of both body copies are identical; this only evens out the reverb tails, which never repeat exactly).
@@ -17,7 +18,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { execFileSync } = require("child_process");
-const { loudness } = require("./loudness");
+const { loudness, themeGainDb } = require("./loudness");
 
 const ROOT = path.join(__dirname, "..", "..");
 const RENDERS = path.join(ROOT, "audio_sources", "waveform", "Fish Fighters Music", "Exported");
@@ -69,6 +70,7 @@ for (const [name, info] of Object.entries(loops)) {
     let samples = readWav(path.join(RENDERS, name + ".wav"));
     const looped = info.loopStartSample !== null;
     let measured;
+    let speakerGainDb = 0;
 
     if (looped) {
         const start = info.loopStartSample, end = start + info.loopLengthSample;
@@ -85,6 +87,7 @@ for (const [name, info] of Object.entries(loops)) {
         for (let i = 0; i < (RATE / 20) * 2; i++) samples[end * 2 + i] = samples[start * 2 + i];
         samples = samples.slice(0, (end + RATE / 20) * 2);
         measured = loudness(samples.subarray(start * 2, end * 2));
+        speakerGainDb = themeGainDb(samples.subarray(start * 2, end * 2));   // -16 LUFS, or more for a bass-heavy theme
     } else {
         let frames = samples.length / 2;
         while (frames > 0 && Math.abs(samples[frames * 2 - 1]) < 1e-4 && Math.abs(samples[frames * 2 - 2]) < 1e-4) frames--;
@@ -98,7 +101,7 @@ for (const [name, info] of Object.entries(loops)) {
     const target = looped ? -16 : -15;
     let peak = 0;
     for (const s of samples) peak = Math.max(peak, Math.abs(s));
-    const gain = Math.min(Math.pow(10, (target - measured) / 20), PEAK_LIMIT / peak);
+    const gain = Math.min(Math.pow(10, (looped ? speakerGainDb : target - measured) / 20), PEAK_LIMIT / peak);
     for (let i = 0; i < samples.length; i++) samples[i] *= gain;
 
     const temp = path.join(os.tmpdir(), "fish_fighters_" + name + ".wav");
