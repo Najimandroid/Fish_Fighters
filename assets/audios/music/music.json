@@ -81,13 +81,13 @@
         "loopLength": 4459355
     },
     "theme_jelly_boss": {
-        "title": "The Jellyfish King's Tango",
+        "title": "High Voltage Majesty",
         "kind": "stage",
         "file": "assets/audios/music/theme_jelly_boss.ogg",
         "sampleRate": 48000,
         "key": "E",
-        "loopStart": 4538182,
-        "loopLength": 4189091
+        "loopStart": 4340870,
+        "loopLength": 4006957
     },
     "theme_crab": {
         "title": "Crab Cove",
@@ -99,13 +99,13 @@
         "loopLength": 4189091
     },
     "theme_crab_boss": {
-        "title": "King Crab's Paso Doble",
+        "title": "King Crab's Sideways Stomp",
         "kind": "stage",
         "file": "assets/audios/music/theme_crab_boss.ogg",
         "sampleRate": 48000,
         "key": "A",
-        "loopStart": 3960000,
-        "loopLength": 3600000
+        "loopStart": 4992000,
+        "loopLength": 4608000
     },
     "theme_danger": {
         "title": "It Came From The Trench!",
@@ -187,5 +187,50 @@
         "sampleRate": 48000,
         "key": "F",
         "length": 5
+    },
+    "theme_boss_v1": {
+        "title": "Leviathan (first version)",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_boss_v1.ogg",
+        "sampleRate": 48000,
+        "key": "D",
+        "loopStart": 3744000,
+        "loopLength": 3456000
+    },
+    "theme_jelly_boss_v1": {
+        "title": "Jellyfish King (first version)",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_jelly_boss_v1.ogg",
+        "sampleRate": 48000,
+        "key": "E",
+        "loopStart": 3941053,
+        "loopLength": 3637895
+    },
+    "theme_crab_boss_v1": {
+        "title": "King Crab (first version)",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_crab_boss_v1.ogg",
+        "sampleRate": 48000,
+        "key": "A",
+        "loopStart": 3840000,
+        "loopLength": 3544615
+    },
+    "theme_jelly_boss_v2": {
+        "title": "The Jellyfish King's Tango",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_jelly_boss_v2.ogg",
+        "sampleRate": 48000,
+        "key": "E",
+        "loopStart": 4538182,
+        "loopLength": 4189091
+    },
+    "theme_crab_boss_v2": {
+        "title": "King Crab's Paso Doble",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_crab_boss_v2.ogg",
+        "sampleRate": 48000,
+        "key": "A",
+        "loopStart": 3960000,
+        "loopLength": 3600000
     }
 }

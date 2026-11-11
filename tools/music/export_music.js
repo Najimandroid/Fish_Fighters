@@ -7,7 +7,11 @@
 //   (the notes of both body copies are identical; this only evens out the reverb tails, which never repeat exactly).
 //   Everything after the loop end is cut, the game never plays it.
 //
-// Usage: node tools/music/export_music.js     (needs ffmpeg on the PATH)
+// - Older versions (tools/music/archive.json): their OGGs are kept as they are in assets/audios/music, and listed in
+//   music.json like the others, so a stage can still pick them (FishEditor's music lists).
+//
+// Usage: node tools/music/export_music.js [piece...]     (needs ffmpeg on the PATH)
+//        Without pieces, every piece is exported again; with some, only those (the others keep their files)
 
 const fs = require("fs");
 const os = require("os");
@@ -51,7 +55,17 @@ const loops = JSON.parse(fs.readFileSync(LOOPS, "utf8"));
 const manifest = {};
 fs.mkdirSync(OUT, { recursive: true });
 
+const only = process.argv.slice(2);
+const previousFile = path.join(OUT, "music.json");
+const previous = fs.existsSync(previousFile) ? JSON.parse(fs.readFileSync(previousFile, "utf8")) : {};
+for (const name of only) if (!loops[name]) throw new Error(name + ": no such piece in " + LOOPS);
+
 for (const [name, info] of Object.entries(loops)) {
+    if (only.length && !only.includes(name)) {
+        if (previous[name]) manifest[name] = previous[name];   // Not exported this time: its file stays
+        else console.warn(name + ": never exported, run without arguments");
+        continue;
+    }
     let samples = readWav(path.join(RENDERS, name + ".wav"));
     const looped = info.loopStartSample !== null;
     let measured;
@@ -101,5 +115,17 @@ for (const [name, info] of Object.entries(loops)) {
     console.log(name.padEnd(16), (samples.length / 2 / RATE).toFixed(2).padStart(7) + " s",
         "  " + (measured + 20 * Math.log10(gain)).toFixed(1) + " LUFS", "  peak " + (20 * Math.log10(peak * gain)).toFixed(1) + " dBFS",
         "  " + (fs.statSync(file).size / 1024 / 1024).toFixed(2) + " MB");
+}
+// Older versions: listed after the pieces, their files never touched
+const archive = JSON.parse(fs.readFileSync(path.join(__dirname, "archive.json"), "utf8"));
+for (const [name, info] of Object.entries(archive)) {
+    if (name.startsWith("//")) continue;
+    if (loops[name]) throw new Error(name + ": archived and still a piece");
+    const file = "assets/audios/music/" + name + ".ogg";
+    if (!fs.existsSync(path.join(ROOT, file))) { console.warn(name + ": archived but " + file + " is missing"); continue; }
+    manifest[name] = { title: info.title, kind: info.kind, file, sampleRate: RATE };
+    if (info.key) manifest[name].key = info.key;
+    if (info.loopStart !== undefined) Object.assign(manifest[name], { loopStart: info.loopStart, loopLength: info.loopLength });
+    else manifest[name].length = info.length;
 }
 fs.writeFileSync(path.join(OUT, "music.json"), JSON.stringify(manifest, null, 4) + "\n");

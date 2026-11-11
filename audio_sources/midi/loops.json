@@ -90,14 +90,14 @@
         "loopLengthSample": 4459355
     },
     "theme_jelly_boss": {
-        "title": "The Jellyfish King's Tango",
+        "title": "High Voltage Majesty",
         "kind": "stage",
         "key": "E",
-        "tempo": 132,
+        "tempo": 138,
         "sampleRate": 48000,
-        "lengthSeconds": 181.137,
-        "loopStartSample": 4538182,
-        "loopLengthSample": 4189091
+        "lengthSeconds": 173.891,
+        "loopStartSample": 4340870,
+        "loopLengthSample": 4006957
     },
     "theme_crab": {
         "title": "Crab Cove",
@@ -110,14 +110,14 @@
         "loopLengthSample": 4189091
     },
     "theme_crab_boss": {
-        "title": "King Crab's Paso Doble",
+        "title": "King Crab's Sideways Stomp",
         "kind": "stage",
         "key": "A",
-        "tempo": 128,
+        "tempo": 120,
         "sampleRate": 48000,
-        "lengthSeconds": 157.43,
-        "loopStartSample": 3960000,
-        "loopLengthSample": 3600000
+        "lengthSeconds": 199.975,
+        "loopStartSample": 4992000,
+        "loopLengthSample": 4608000
     },
     "theme_danger": {
         "title": "It Came From The Trench!",
