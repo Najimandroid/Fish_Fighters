@@ -129,6 +129,26 @@
         "loopStartSample": 3544616,
         "loopLengthSample": 3249231
     },
+    "theme_energetic": {
+        "title": "Riptide Rush",
+        "kind": "stage",
+        "key": "A",
+        "tempo": 168,
+        "sampleRate": 48000,
+        "lengthSeconds": 142.839,
+        "loopStartSample": 3565715,
+        "loopLengthSample": 3291429
+    },
+    "theme_preboss": {
+        "title": "Something Stirs Below",
+        "kind": "stage",
+        "key": "D",
+        "tempo": 112,
+        "sampleRate": 48000,
+        "lengthSeconds": 214.243,
+        "loopStartSample": 5348572,
+        "loopLengthSample": 4937143
+    },
     "jingle_battle_start": {
         "title": "Battle Stations! (C)",
         "kind": "jingle",
