@@ -75,5 +75,4 @@ private:
     // Visuals
     sf::Texture m_texture;    // Unit icon texture (drawn cropped into the slot)
     sf::Text m_keyText;       // The hotkey, in a navy chip
-    sf::Text m_secondsText;   // Cooldown seconds left
 };

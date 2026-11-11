@@ -86,7 +86,7 @@ void UIFishTank::update(float deltaTime)
 
         // Across the glass, turning around at its edge (the edge narrows near the top and the bottom)
         swimmer.position.x += swimmer.speed * deltaTime * (swimmer.isAttacking ? 0.3f : 1.f);
-        const float halfWidth = glass_half_width(swimmer.position.y, half.x * 0.8f);
+        const float halfWidth = glass_half_width(swimmer.position.y, half.x * 0.6f);   // The body is half the frame
         if (swimmer.position.x > GLASS_CENTER.x + halfWidth) { swimmer.position.x = GLASS_CENTER.x + halfWidth; swimmer.speed = -std::abs(swimmer.speed); }
         if (swimmer.position.x < GLASS_CENTER.x - halfWidth) { swimmer.position.x = GLASS_CENTER.x - halfWidth; swimmer.speed = std::abs(swimmer.speed); }
 
@@ -146,7 +146,7 @@ void UIFishTank::update(float deltaTime)
 void UIFishTank::release_bubbles(const Swimmer& swimmer, int count)
 {
     const float front = swimmer.speed > 0.f ? 1.f : -1.f;
-    const sf::Vector2f mouth = swimmer.position + sf::Vector2f{ front * swimmer.frameSize.x * swimmer.scale * 0.3f, -swimmer.frameSize.y * swimmer.scale * 0.1f };
+    const sf::Vector2f mouth = swimmer.position + sf::Vector2f{ front * swimmer.frameSize.x * swimmer.scale * 0.22f, -swimmer.frameSize.y * swimmer.scale * 0.1f };
     for (int i = 0; i < count; i++)
     {
         Bubble bubble;
@@ -161,7 +161,9 @@ void UIFishTank::release_bubbles(const Swimmer& swimmer, int count)
 sf::Sprite UIFishTank::sprite_of(const Swimmer& swimmer) const
 {
     sf::Sprite sprite(*swimmer.texture, sf::IntRect({ swimmer.frame * swimmer.frameSize.x, 0 }, swimmer.frameSize));
-    sprite.setOrigin(sf::Vector2f(swimmer.frameSize) / 2.f);
+    // The origin on the body (the right half of the frame, like BattleUnit's hitbox): turning around flips the
+    // frame around the body, so the fish doesn't jump half a frame sideways
+    sprite.setOrigin({ swimmer.frameSize.x * 0.75f, swimmer.frameSize.y / 2.f });
     // The fish face left; swimming right, they're flipped
     sprite.setScale({ swimmer.speed > 0.f ? -swimmer.scale : swimmer.scale, swimmer.scale });
     const float bob = std::sin((m_time / BOB_SECONDS) * 6.2831853f + swimmer.bobPhase) * BOB_PIXELS;
@@ -208,11 +210,11 @@ void UIFishTank::handle_event(const sf::Event& event, const sf::RenderWindow& wi
     const sf::Vector2f mouse = window.mapPixelToCoords(pressed->position);
     if (!get_bounds().contains(mouse)) return;
 
-    // The fish on top first; only the middle of the frame counts (the frames have room around the fish)
+    // The fish on top first; only its body counts (half the frame, around its position)
     for (auto it = m_swimmers.rbegin(); it != m_swimmers.rend(); ++it)
     {
-        const sf::FloatRect bounds = sprite_of(*it).getGlobalBounds();
-        const sf::FloatRect body{ bounds.position + bounds.size * 0.2f, bounds.size * 0.6f };
+        const sf::Vector2f bodySize{ it->frameSize.x * it->scale * 0.5f, it->frameSize.y * it->scale * 0.7f };
+        const sf::FloatRect body{ it->position - bodySize / 2.f, bodySize };
         if (!body.contains(mouse) || it->isAttacking) continue;
 
         it->isAttacking = true;

@@ -70,6 +70,9 @@ public:
     // A theme's tonic from music.json ("D", "Eb"...), "" if unknown
     const std::string& get_music_key(const std::string& name) const;
 
+    // A jingle's length in seconds (until its last note ends; music.json "length"), 0 if unknown
+    float get_music_length(const std::string& name) const;
+
     // Semitones from one key to another, folded into -6..+5 (to shift a sound into a theme's key)
     static int key_distance(const std::string& from, const std::string& to);
 

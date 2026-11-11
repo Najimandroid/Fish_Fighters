@@ -10,6 +10,7 @@
 #include "widgets/UIFishTank.h"
 #include "widgets/UIFishParade.h"
 #include "widgets/UITutorial.h"
+#include "widgets/UIBattleIntro.h"
 #include "widgets/UIStatusIcons.h"
 #include "widgets/UIUpgradeSlider.h"
 #include "widgets/UIEquipSlider.h"
@@ -568,6 +569,9 @@ void UIManager::generate_battle_uis()
 	add_ui_element(cashUp);
     if (auto stage = m_stage.lock(); stage && UITutorial::is_wanted(*m_dataLoader, stage->get_current_uid()))
         add_ui_element(std::make_shared<UITutorial>(stage, cashUp));   // The first battle's hints, over the HUD
+    if (m_battleIntroSeconds > 0.f)   // GET READY FOR BATTLE! while the jingle plays (once per battle start)
+        add_ui_element(std::make_shared<UIBattleIntro>(stageName, m_battleIntroSeconds));
+    m_battleIntroSeconds = 0.f;
     add_ui_element(pauseMenu); // On top, and the first to get the input
     add_ui_element(retreatDialog); // Over the pause menu while it asks
     add_ui_element(optionsMenu);   // Over the pause menu while open
@@ -632,7 +636,9 @@ void UIManager::start_battle(int stageUid)
     {
         // The version ending on the tonic of the theme that follows it
         const std::string keyed = "jingle_battle_start_" + m_audio->get_music_key(m_dataLoader->get_stage_data(stageUid)->music);
-        m_audio->play_jingle(m_audio->has_music(keyed) ? keyed : "jingle_battle_start");
+        const std::string jingle = m_audio->has_music(keyed) ? keyed : "jingle_battle_start";
+        m_audio->play_jingle(jingle);
+        m_battleIntroSeconds = m_audio->get_music_length(jingle);   // The battle start transition lasts as long
     }
     stage->load(stageUid);   // Unloads the previous battle if any
     generate_battle_uis();
@@ -648,22 +654,8 @@ void UIManager::begin_battle_end()
 }
 
 /*
- * The stage after this one in its chapter (-1 if it's the last one)
- */
-int UIManager::next_stage_uid(int stageUid) const
-{
-    auto player = m_dataLoader->get_player_data().lock();
-    if (!player) return -1;
-    auto chapter = m_dataLoader->get_chapter_data(player->currentChapter);
-    if (!chapter) return -1;
-    for (size_t i = 0; i + 1 < chapter->stages.size(); ++i)
-        if (chapter->stages[i].UID == stageUid) return chapter->stages[i + 1].UID;
-    return -1;
-}
-
-/*
  * Victory: the results panel over the frozen battlefield (shells counting up, first clear, new fish),
- * NEXT STAGE (or the map after a chapter's last stage), RETRY, and back to the Fish Tank
+ * RETURN TO MAP (it opens on the newest stage after a first clear), RETRY, and back to the Fish Tank
  */
 void UIManager::generate_victory_uis()
 {
@@ -675,18 +667,10 @@ void UIManager::generate_victory_uis()
     std::string stageName;
     if (auto stageData = m_dataLoader->get_stage_data(result.stageUID)) stageName = stageData->name;
 
-    const int nextStage = next_stage_uid(result.stageUID);
+    // Back to the map rather than straight into the next stage: the player sees the path move on, and can upgrade first
     UIResultsPanel::Actions actions;
-    if (nextStage >= 0)
-    {
-        actions.primaryLabel = "NEXT STAGE";
-        actions.primary = [this, nextStage]() { m_pendingAction = [this, nextStage]() { start_battle(nextStage); }; };
-    }
-    else
-    {
-        actions.primaryLabel = "MAP";
-        actions.primary = [this]() { m_pendingAction = [this]() { leave_battle(); generate_chapter_map_uis(); }; };
-    }
+    actions.primaryLabel = "RETURN TO MAP";
+    actions.primary = [this]() { m_pendingAction = [this]() { leave_battle(); generate_chapter_map_uis(); }; };
     actions.secondaryLabel = "RETRY";
     actions.secondary = [this, result]() { m_pendingAction = [this, result]() { start_battle(result.stageUID); }; };
     actions.retry = actions.secondary;

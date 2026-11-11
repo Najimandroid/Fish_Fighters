@@ -301,6 +301,12 @@ const std::string& AudioManager::get_music_key(const std::string& name) const
     return found != m_musicInfos.end() ? found->second.key : none;
 }
 
+float AudioManager::get_music_length(const std::string& name) const
+{
+    const auto found = m_musicInfos.find(name);
+    return found != m_musicInfos.end() ? found->second.length : 0.f;
+}
+
 int AudioManager::key_distance(const std::string& from, const std::string& to)
 {
     auto pitchClass = [](const std::string& key) -> int

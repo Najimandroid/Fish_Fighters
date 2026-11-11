@@ -45,11 +45,18 @@ private:
         bool isKnown = false;              // Owned fish, enemies met
         int level = 0;                     // Fish only
         std::string iconPath;              // Fish only
+        int form = 0;                      // Fish: the form shown (starts on the current one)
+        int currentForm = 0;               // Fish: the form reached
+        int formCount = 1;                 // Fish: how many forms it has
     };
 
     void build_entries();
     void sort_entries();
     void select(int index);
+
+    // Fish: shows another form of the selected one, and the buttons that switch between them
+    void show_form(int form);
+    void build_form_buttons();
     void refresh_buttons();
 
     sf::FloatRect slot_rect(int index) const;   // Screen rect of a grid slot (scroll applied)
@@ -77,6 +84,8 @@ private:
     UIButtonElement m_fishTab;
     UIButtonElement m_enemiesTab;
     std::vector<std::unique_ptr<UIButtonElement>> m_sortButtons;   // One per SortKey
+    std::vector<std::unique_ptr<UIButtonElement>> m_formButtons;   // FORM 1, FORM 2... of the selected fish
+    int m_pendingForm = -1;                                        // Clicked, shown at the next update
     sf::Text m_sortLabel;
 
     UIPanel m_gridPanel;

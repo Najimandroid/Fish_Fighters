@@ -30,6 +30,8 @@ namespace
 
 
     const char* SORT_NAMES[] = { "No.", "Name", "Health", "Attack", "Range", "Speed" };
+    const int FORM_LEVELS[] = { 1, 10, 30 };   // The level each form comes at (as on the Upgrade screen)
+    const sf::Vector2f FORM_BUTTON{ 150.f, 52.f };
 
     std::string format_number(float value, int decimals)
     {
@@ -112,6 +114,9 @@ void UIEncyclopedia::build_entries()
             entry.level = entry.isKnown ? player->get_unit_level(uid) : 0;
             entry.data = m_dataLoader->get_unit_data(uid, form);
             entry.iconPath = m_dataLoader->get_unit_icon_texture_path(uid, form);
+            entry.form = entry.currentForm = form;
+            entry.formCount = 0;
+            for (const auto& [key, data] : m_dataLoader->get_units_database()) if (key.first == uid) entry.formCount++;
             if (entry.data) m_entries.push_back(entry);
         }
     }
@@ -186,6 +191,7 @@ void UIEncyclopedia::select(int index)
         m_abilities.set_abilities(m_entries[index].data->abilities);
     else
         m_abilities.set_abilities({});
+    build_form_buttons();
 
     // Keep the selection in view
     if (index >= 0)
@@ -193,6 +199,40 @@ void UIEncyclopedia::select(int index)
         const int row = index / COLUMNS;
         if (row < m_scrollRow) m_scrollRow = row;
         if (row >= m_scrollRow + visible_rows()) m_scrollRow = row - visible_rows() + 1;
+    }
+}
+
+void UIEncyclopedia::show_form(int form)
+{
+    if (m_selected < 0 || m_selected >= static_cast<int>(m_entries.size())) return;
+    Entry& entry = m_entries[m_selected];
+    auto data = m_dataLoader->get_unit_data(entry.uid, form);
+    if (!data) return;
+    entry.form = form;
+    entry.data = data;
+    entry.iconPath = m_dataLoader->get_unit_icon_texture_path(entry.uid, form);
+    m_abilities.set_abilities(data->abilities);
+    build_form_buttons();
+}
+
+/*
+ * One button per form of the selected fish (known fish with more than one form), the shown one yellow
+ */
+void UIEncyclopedia::build_form_buttons()
+{
+    m_formButtons.clear();
+    if (m_book != Book::FISH || m_selected < 0 || m_selected >= static_cast<int>(m_entries.size())) return;
+    const Entry& entry = m_entries[m_selected];
+    if (!entry.isKnown || entry.formCount < 2) return;
+
+    for (int form = 0; form < entry.formCount; ++form)
+    {
+        auto button = std::make_unique<UIButtonElement>(FORM_BUTTON,
+            sf::Vector2f{ INFO_X + form * (FORM_BUTTON.x + 12.f), PORTRAIT.position.y + 178.f }, "FORM " + std::to_string(form + 1));
+        button->set_text_size(26);
+        button->set_style(form == entry.form ? UIButtonElement::Style::Primary : UIButtonElement::Style::Secondary);
+        button->set_callback([this, form]() { m_pendingForm = form; });
+        m_formButtons.push_back(std::move(button));
     }
 }
 
@@ -236,6 +276,8 @@ void UIEncyclopedia::update(float deltaTime)
     m_fishTab.update(deltaTime);
     m_enemiesTab.update(deltaTime);
     for (auto& button : m_sortButtons) button->update(deltaTime);
+    for (auto& button : m_formButtons) button->update(deltaTime);
+    if (m_pendingForm >= 0) { show_form(m_pendingForm); m_pendingForm = -1; }   // Not from inside a button's callback
 }
 
 void UIEncyclopedia::render_portrait(sf::RenderWindow& window, const Entry& entry, const sf::FloatRect& area)
@@ -339,6 +381,9 @@ void UIEncyclopedia::render_details(sf::RenderWindow& window)
     if (m_book == Book::FISH)
     {
         drawText("LEVEL " + std::to_string(entry.level), { INFO_X, top + 140.f }, 32, UISkin::NUMBER);
+        for (auto& button : m_formButtons) button->render(window);
+        if (entry.form > entry.currentForm && entry.form < static_cast<int>(std::size(FORM_LEVELS)) && entry.level < FORM_LEVELS[entry.form])
+            drawText("Comes at level " + std::to_string(FORM_LEVELS[entry.form]), { INFO_X + 200.f, top + 140.f }, 26, sf::Color(255, 128, 104));
     }
     else
     {
@@ -411,6 +456,7 @@ void UIEncyclopedia::handle_event(const sf::Event& event, const sf::RenderWindow
     m_fishTab.handle_event(event, window);
     m_enemiesTab.handle_event(event, window);
     for (auto& button : m_sortButtons) button->handle_event(event, window);
+    for (auto& button : m_formButtons) button->handle_event(event, window);
     m_abilities.handle_event(event, window);
 
     if (const auto* mousePressed = event.getIf<sf::Event::MouseButtonPressed>())

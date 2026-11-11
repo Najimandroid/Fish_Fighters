@@ -10,11 +10,12 @@ namespace
 {
     const float FRAME_SCALE = 1.f;                       // Corners of the slot images on screen
     const unsigned int COST_SIZE = 32;
-    const std::uint8_t SHADE_ALPHA_DARKENED = 110;       // Not enough cash: the fish is dimmed, the price stays bright
-    const sf::Color COOLDOWN_SHADE{ 16, 24, 34, 160 };   // Navy, drains from the top as the cooldown ends
+    const sf::Color GREY{ 96, 102, 112 };                // Not available: the fish greyed out
+    const std::uint8_t GREY_ALPHA = 170;
+    const float GREY_RECEDE = 0.55f;                     // Not enough cash: the grey thins out by that much at the price
+    const sf::Color BAR_TRACK{ 20, 30, 40, 230 };        // The cooldown bar, in the price strip
     const sf::Color WATER{ 72, 224, 255, 70 };           // The cash "water level" rising in a slot not affordable yet
     const sf::Color EMPTY_FRAME{ 255, 255, 255, 90 };    // An empty slot: its outline only
-    const unsigned int SECONDS_SIZE = 38;
     const unsigned int KEY_SIZE = 20;
     const sf::Vector2f KEY_CHIP{ 30.f, 30.f };
     const float READY_FLASH_SECONDS = 0.15f;             // White flash when it can be deployed again
@@ -27,8 +28,7 @@ namespace
  */
 UIBattleIcon::UIBattleIcon(sf::Vector2f position, const std::string& iconTexturePath) :
     UIButtonElement({ WIDTH, HEIGHT }, position, ""),
-    m_keyText(UISkin::heavy_font()),
-    m_secondsText(UISkin::heavy_font())
+    m_keyText(UISkin::heavy_font())
 {
     // Load icon texture
     set_texture(iconTexturePath);
@@ -38,7 +38,6 @@ UIBattleIcon::UIBattleIcon(sf::Vector2f position, const std::string& iconTexture
     // Price text: yellow outlined digits
     UISkin::style_text(m_text, COST_SIZE, UISkin::NUMBER);
     UISkin::style_text(m_keyText, KEY_SIZE, UISkin::TITLE);
-    UISkin::style_text(m_secondsText, SECONDS_SIZE);
     set_cost(m_cost);
 }
 
@@ -114,32 +113,18 @@ void UIBattleIcon::render(sf::RenderWindow& window)
     // Unit icon cropped to the shape of the slot, filling it
     UISkin::draw_cropped(window, m_texture, inner);
 
-    if (m_isOnCooldown)
+    if (m_isOnCooldown || m_isDarkened)
     {
-        // Navy shade draining from the top, the seconds left in the middle
-        const float progress = std::clamp(m_currentCooldown / m_maxCooldown, 0.f, 1.f);
-        sf::RectangleShape shade({ inner.size.x, inner.size.y * (1.f - progress) });
-        shade.setPosition({ inner.position.x, inner.position.y + inner.size.y * progress });
-        shade.setFillColor(COOLDOWN_SHADE);
-        window.draw(shade);
-
-        const float secondsLeft = std::max(0.f, m_maxCooldown - m_currentCooldown);
-        char seconds[16];
-        std::snprintf(seconds, sizeof(seconds), "%.1f", secondsLeft);
-        m_secondsText.setString(seconds);
-        UISkin::set_text_anchor(m_secondsText, { 0.5f, 0.5f });
-        m_secondsText.setScale({ scale, scale });
-        m_secondsText.setPosition({ inner.position.x + inner.size.x / 2.f, inner.position.y + inner.size.y * 0.42f });
-        window.draw(m_secondsText);
-    }
-    else if (m_isDarkened)
-    {
-        // Not enough cash: dimmed, with the cash "water level" rising toward the price
+        // Greyed out; while it can't be paid, the grey thins out as the cash rises toward the price
+        const float fade = m_isOnCooldown ? 1.f : 1.f - GREY_RECEDE * std::clamp(m_affordability, 0.f, 1.f);
         sf::RectangleShape shade(inner.size);
         shade.setPosition(inner.position);
-        shade.setFillColor(sf::Color(0, 0, 0, SHADE_ALPHA_DARKENED));
+        shade.setFillColor(sf::Color(GREY.r, GREY.g, GREY.b, static_cast<std::uint8_t>(GREY_ALPHA * fade)));
         window.draw(shade);
-
+    }
+    if (m_isDarkened && !m_isOnCooldown)
+    {
+        // The cash "water level" rising toward the price
         const float level = std::clamp(m_affordability, 0.f, 1.f);
         sf::RectangleShape water({ inner.size.x, inner.size.y * level });
         water.setPosition({ inner.position.x, inner.position.y + inner.size.y * (1.f - level) });
@@ -166,10 +151,30 @@ void UIBattleIcon::render(sf::RenderWindow& window)
     // Frame over the icon edges (hides its corners under the rounded border, and the strip's)
     UISkin::draw_nine_slice(window, UISkin::SLOT_FRAME, rect, FRAME_SCALE * scale);
 
-    UISkin::set_text_anchor(m_text, { 0.5f, 0.5f });
-    m_text.setScale({ scale * 0.9f, scale * 0.9f });
-    m_text.setPosition({ inner.position.x + inner.size.x / 2.f, inner.position.y + inner.size.y - stripHeight / 2.f });
-    window.draw(m_text);
+    if (m_isOnCooldown)
+    {
+        // The cooldown bar fills the strip's middle, where the price goes back once it's ready
+        const float progress = std::clamp(m_currentCooldown / m_maxCooldown, 0.f, 1.f);
+        const sf::Vector2f trackSize{ inner.size.x - 24.f * scale, stripHeight * 0.45f };
+        const sf::Vector2f trackPosition{ inner.position.x + 12.f * scale, inner.position.y + inner.size.y - stripHeight / 2.f - trackSize.y / 2.f };
+        sf::RectangleShape track(trackSize);
+        track.setPosition(trackPosition);
+        track.setFillColor(BAR_TRACK);
+        track.setOutlineThickness(2.f * scale);
+        track.setOutlineColor(UISkin::OUTLINE);
+        window.draw(track);
+        sf::RectangleShape fill({ trackSize.x * progress, trackSize.y });
+        fill.setPosition(trackPosition);
+        fill.setFillColor(UISkin::COOLDOWN);
+        window.draw(fill);
+    }
+    else
+    {
+        UISkin::set_text_anchor(m_text, { 0.5f, 0.5f });
+        m_text.setScale({ scale * 0.9f, scale * 0.9f });
+        m_text.setPosition({ inner.position.x + inner.size.x / 2.f, inner.position.y + inner.size.y - stripHeight / 2.f });
+        window.draw(m_text);
+    }
 
     // Hotkey chip at the top left
     if (!m_keyText.getString().isEmpty())
