@@ -173,26 +173,8 @@ int UIUpgradeSlider::calculate_upgrade_cost(int uid, int level)
 
 int UIUpgradeSlider::calculate_upgrade_cost(const DataLoader& dataLoader, int uid, int level)
 {
-	int baseCost = dataLoader.get_unit_data(uid, 0)->baseUpgradeCost;
-	if (level <= 0) return baseCost;
-
-	float factor = 1.5f;          // Level-up multiplier
-	float evolutionDiscount = 0.7f; // Discount after evolution
-	std::array<int, 2> evolutionLevels = { 10, 30 }; // Levels at which unit evolves
-
-	int evolutions = 0;
-	for (int eLevel : evolutionLevels)
-	{
-		if (level >= eLevel)
-			evolutions++;
-		else
-			break;
-	}
-
-	float normalCost = baseCost * std::pow(factor, level);
-	float upgradeCost = normalCost * std::pow(evolutionDiscount, evolutions);
-
-	return static_cast<int>(upgradeCost);
+	auto data = dataLoader.get_unit_data(uid, 0);
+	return data ? PlayerData::upgrade_cost(data->baseUpgradeCost, level) : 0;   // The formula is PlayerData's
 }
 
 /*

@@ -212,6 +212,20 @@ bool PlayerData::has_seen_enemy(int enemyUID) const
 /*
  * Health and attack of a unit at this level, compared to level 1: +15 % per level, compounded
  */
+int PlayerData::upgrade_cost(int baseUpgradeCost, int level)
+{
+    if (level <= 0) return baseUpgradeCost;
+
+    const float factor = 1.5f;              // Level-up multiplier
+    const float evolutionDiscount = 0.7f;   // Discount after each evolution
+    int evolutions = 0;
+    for (int evolutionLevel : { 10, 30 })
+        if (level >= evolutionLevel) evolutions++;
+
+    const float cost = baseUpgradeCost * std::pow(factor, static_cast<float>(level)) * std::pow(evolutionDiscount, static_cast<float>(evolutions));
+    return static_cast<int>(cost);
+}
+
 float PlayerData::stat_multiplier(int level)
 {
     const float growth = 0.15f;

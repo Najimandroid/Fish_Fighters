@@ -3,6 +3,7 @@
 #include "EntityFields.h"
 #include "../EditorWidgets.h"
 #include "../ProjectQueries.h"
+#include "../../data/PlayerData.h"
 
 #include <algorithm>
 #include <cmath>
@@ -15,6 +16,8 @@ namespace
     const DataFile UNITS_FILE = DataFile::UNITS;
 
     int s_previewLevel = 1;
+    int s_costLevel = 10;   // The upgrade cost estimate's level
+    void upgrade_costs(int baseCost);   // Below the level preview that calls it
 
     // ==================
     // Forms: one chip per form (its icon), "+" adds an evolution
@@ -148,6 +151,66 @@ namespace
             ImGui::TableSetColumnIndex(2); ImGui::Text("%.0f", read_int(form, "attackPower") * multiplier);
             ImGui::TableSetColumnIndex(3); ImGui::Text("%.1f", EntityFields::damage_per_second(form, multiplier));
             ImGui::EndTable();
+        }
+
+        upgrade_costs(read_int(unit, "baseUpgradeCost"));
+    }
+
+    // ==================
+    // Upgrade costs: what a level costs, and the total from unlocking to it (PlayerData::upgrade_cost, as in game)
+    // ==================
+    void upgrade_costs(int baseCost)
+    {
+        section("Upgrade costs");
+        const int maxLevel = PlayerData::MAX_UNIT_LEVEL;
+        s_costLevel = std::clamp(s_costLevel, 1, maxLevel);
+        ImGui::SetNextItemWidth(260.f);
+        ImGui::SliderInt("Up to level", &s_costLevel, 1, maxLevel);
+        ImGui::SameLine();
+        help_marker("Unlocking costs the base cost; each level then costs x1.5 more, x0.7 after each evolution (levels 10 and 30). "
+            "Same formula as the Upgrade screen (PlayerData::upgrade_cost).");
+
+        long long total = 0;   // Unlock (level 0 -> 1), then each level up to s_costLevel
+        for (int level = 0; level < s_costLevel; ++level) total += PlayerData::upgrade_cost(baseCost, level);
+        const int next = s_costLevel < maxLevel ? PlayerData::upgrade_cost(baseCost, s_costLevel) : 0;
+
+        if (ImGui::BeginTable("CostSummary", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_SizingStretchSame))
+        {
+            ImGui::TableSetupColumn("Unlock");
+            ImGui::TableSetupColumn(("Total to level " + std::to_string(s_costLevel)).c_str());
+            ImGui::TableSetupColumn(("Level " + std::to_string(s_costLevel) + " -> " + std::to_string(s_costLevel + 1)).c_str());
+            ImGui::TableHeadersRow();
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0); ImGui::Text("%d shells", PlayerData::upgrade_cost(baseCost, 0));
+            ImGui::TableSetColumnIndex(1); ImGui::Text("%lld shells", total);
+            ImGui::TableSetColumnIndex(2);
+            if (next > 0) ImGui::Text("%d shells", next); else ImGui::TextDisabled("Max level");
+            ImGui::EndTable();
+        }
+
+        if (ImGui::TreeNode("Every level"))
+        {
+            if (ImGui::BeginTable("CostLevels", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY,
+                ImVec2(0.f, 260.f)))
+            {
+                ImGui::TableSetupScrollFreeze(0, 1);
+                ImGui::TableSetupColumn("Level");
+                ImGui::TableSetupColumn("Cost of this level");
+                ImGui::TableSetupColumn("Total from unlocking");
+                ImGui::TableHeadersRow();
+                long long running = 0;
+                for (int level = 1; level <= maxLevel; ++level)
+                {
+                    const int cost = PlayerData::upgrade_cost(baseCost, level - 1);   // To reach it (level 1: the unlock)
+                    running += cost;
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0); ImGui::Text("%d%s", level, level == 10 || level == 30 ? "  (evolves)" : "");
+                    ImGui::TableSetColumnIndex(1); ImGui::Text("%d", cost);
+                    ImGui::TableSetColumnIndex(2); ImGui::Text("%lld", running);
+                }
+                ImGui::EndTable();
+            }
+            ImGui::TreePop();
         }
     }
 
