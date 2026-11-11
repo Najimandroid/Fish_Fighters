@@ -51,6 +51,7 @@ bool AudioManager::load_music_list(const std::string& path)
             info.loopStart = value.value("loopStart", std::uint64_t{ 0 });
             info.loopLength = value.value("loopLength", std::uint64_t{ 0 });
             info.length = value.value("length", 0.f);
+            info.key = value.value("key", std::string{});
             m_musicInfos[name] = info;
         }
     }
@@ -92,6 +93,7 @@ bool AudioManager::load_sound_list(const std::string& path)
             info.pitch = value.value("pitch", 0.f);
             info.cooldown = value.value("cooldown", 0.f);
             info.maxInstances = value.value("maxInstances", 4);
+            info.priority = value.value("priority", 50);
             if (!info.buffers.empty()) m_sounds[name] = std::move(info);
         }
     }
@@ -109,6 +111,11 @@ bool AudioManager::load_sound_list(const std::string& path)
 void AudioManager::update(float realDeltaTime)
 {
     m_clock += realDeltaTime;
+
+    // Pause ducking ramps instead of jumping
+    const float duckTarget = m_isDucked ? DUCKED_LEVEL : 1.f;
+    const float duckStep = (1.f - DUCKED_LEVEL) * realDeltaTime / DUCK_RAMP_SECONDS;
+    m_duckLevel = duckTarget < m_duckLevel ? std::max(duckTarget, m_duckLevel - duckStep) : std::min(duckTarget, m_duckLevel + duckStep);
 
     auto fade = [realDeltaTime](Track& track)
         {
@@ -131,7 +138,7 @@ void AudioManager::update(float realDeltaTime)
         {
             const std::string next = m_queuedMusic;
             m_current->target = 0.f;
-            m_current->fadeSpeed = 1.f / 1.5f;
+            m_current->fadeSpeed = 1.f / 0.35f;   // Only the crash and the room ring under the theme's first beat
             m_fadingOut.push_back(std::move(m_current));
             play_music(next, 0.f);
         }
@@ -151,6 +158,15 @@ void AudioManager::update(float realDeltaTime)
         });
 
     m_voices.remove_if([](const Voice& voice) { return voice.sound->getStatus() == sf::SoundSource::Status::Stopped; });
+
+    // Focus fade: everything (music and sounds) through the listener's global volume
+    const float focusTarget = (m_isUnfocused && m_muteInBackground) ? 0.f : 1.f;
+    if (m_focusLevel != focusTarget)
+    {
+        const float step = realDeltaTime / FOCUS_FADE_SECONDS;
+        m_focusLevel = focusTarget > m_focusLevel ? std::min(focusTarget, m_focusLevel + step) : std::max(focusTarget, m_focusLevel - step);
+        sf::Listener::setGlobalVolume(m_masterVolume * m_focusLevel);
+    }
 }
 
 // ==================
@@ -259,7 +275,12 @@ void AudioManager::stop_music(float fadeSeconds)
 
 void AudioManager::set_music_ducked(bool isDucked)
 {
-    m_isDucked = isDucked;
+    m_isDucked = isDucked;   // update() ramps the level
+}
+
+void AudioManager::set_battle_mix(bool isBattle)
+{
+    m_isBattleMix = isBattle;
     if (m_current) apply_volume(*m_current);
 }
 
@@ -273,17 +294,42 @@ bool AudioManager::has_music(const std::string& name) const
     return m_musicInfos.contains(name);
 }
 
+const std::string& AudioManager::get_music_key(const std::string& name) const
+{
+    static const std::string none;
+    const auto found = m_musicInfos.find(name);
+    return found != m_musicInfos.end() ? found->second.key : none;
+}
+
+int AudioManager::key_distance(const std::string& from, const std::string& to)
+{
+    auto pitchClass = [](const std::string& key) -> int
+        {
+            if (key.empty()) return -1;
+            static const int letters[] = { 9, 11, 0, 2, 4, 5, 7 };   // A B C D E F G
+            if (key[0] < 'A' || key[0] > 'G') return -1;
+            int pc = letters[key[0] - 'A'];
+            if (key.size() > 1) pc += key[1] == '#' ? 1 : key[1] == 'b' ? -1 : 0;
+            return (pc + 12) % 12;
+        };
+    const int a = pitchClass(from), b = pitchClass(to);
+    if (a < 0 || b < 0) return 0;
+    int distance = (b - a + 12) % 12;
+    if (distance > 5) distance -= 12;
+    return distance;
+}
+
 void AudioManager::apply_volume(Track& track) const
 {
-    const float ducking = m_isDucked ? DUCKED_LEVEL : 1.f;
-    track.music->setVolume(std::clamp(m_musicVolume * track.level * ducking, 0.f, 100.f));
+    const float battle = m_isBattleMix ? BATTLE_MUSIC_LEVEL : 1.f;
+    track.music->setVolume(std::clamp(m_musicVolume * track.level * m_duckLevel * battle, 0.f, 100.f));
 }
 
 // ==================
 // Sounds
 // ==================
 
-void AudioManager::play_sound(const std::string& name, float volumeScale)
+void AudioManager::play_sound(const std::string& name, float volumeScale, float pan, float pitch)
 {
     const auto found = m_sounds.find(name);
     if (found == m_sounds.end())
@@ -297,18 +343,38 @@ void AudioManager::play_sound(const std::string& name, float volumeScale)
     }
     SoundInfo& info = found->second;
 
-    // Too soon after the last one, or too many of them at once: skipped
+    // Too soon after the last one: skipped
     if (m_clock - info.lastPlayed < info.cooldown) return;
+
+    // Too many of it at once: the oldest one gives its place
     const auto playing = std::count_if(m_voices.begin(), m_voices.end(), [&name](const Voice& voice) { return voice.name == name; });
-    if (playing >= info.maxInstances) return;
-    if (m_voices.size() >= MAX_VOICES) return;
+    if (playing >= info.maxInstances)
+    {
+        auto oldest = std::find_if(m_voices.begin(), m_voices.end(), [&name](const Voice& voice) { return voice.name == name; });
+        if (oldest != m_voices.end()) m_voices.erase(oldest);
+    }
+
+    // All the voices are busy (the last few are kept for the important sounds): the oldest voice of
+    // a lower or equal priority gives its place, else this one is skipped
+    const size_t limit = info.priority >= 80 ? MAX_VOICES : MAX_VOICES - RESERVED_VOICES;
+    if (m_voices.size() >= limit)
+    {
+        auto victim = m_voices.end();
+        for (auto it = m_voices.begin(); it != m_voices.end(); ++it)
+            if (it->priority <= info.priority && (victim == m_voices.end() || it->priority < victim->priority
+                || (it->priority == victim->priority && it->started < victim->started)))
+                victim = it;
+        if (victim == m_voices.end()) return;
+        m_voices.erase(victim);
+    }
 
     std::uniform_int_distribution<size_t> pickVariant(0, info.buffers.size() - 1);
     std::uniform_real_distribution<float> pickPitch(-info.pitch, info.pitch);
 
-    Voice voice{ name, std::make_unique<sf::Sound>(*info.buffers[pickVariant(m_random)]) };
+    Voice voice{ name, std::make_unique<sf::Sound>(*info.buffers[pickVariant(m_random)]), info.priority, m_clock };
+    voice.sound->setPan(std::clamp(pan, -1.f, 1.f));
     voice.sound->setVolume(std::clamp(m_soundVolume * info.volume * volumeScale, 0.f, 100.f));
-    voice.sound->setPitch(1.f + (info.pitch > 0.f ? pickPitch(m_random) : 0.f));
+    voice.sound->setPitch(pitch * (1.f + (info.pitch > 0.f ? pickPitch(m_random) : 0.f)));
     voice.sound->play();
     m_voices.push_back(std::move(voice));
     info.lastPlayed = m_clock;
@@ -332,4 +398,20 @@ void AudioManager::set_music_volume(float volume)
 void AudioManager::set_sound_volume(float volume)
 {
     m_soundVolume = std::clamp(volume, 0.f, 100.f);
+}
+
+void AudioManager::apply_settings(const Settings& settings)
+{
+    auto curve = [](float slider) { slider = std::clamp(slider, 0.f, 1.f); return slider * slider; };
+
+    m_masterVolume = 100.f * curve(settings.masterVolume);
+    sf::Listener::setGlobalVolume(m_masterVolume * m_focusLevel);
+    set_music_volume(MUSIC_REFERENCE * curve(settings.musicVolume));
+    set_sound_volume(100.f * curve(settings.effectsVolume));
+    m_muteInBackground = settings.muteInBackground;
+}
+
+void AudioManager::set_focus_muted(bool isUnfocused)
+{
+    m_isUnfocused = isUnfocused;
 }

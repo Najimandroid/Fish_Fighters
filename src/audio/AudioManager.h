@@ -2,6 +2,8 @@
 
 #include <SFML/Audio.hpp>
 
+#include "../data/Settings.h"
+
 #include <cstdint>
 #include <list>
 #include <map>
@@ -59,17 +61,34 @@ public:
     // The pause menu: the music plays quieter while it's open
     void set_music_ducked(bool isDucked);
 
+    // During a battle the music sits lower (-5 dB), so the hits and the cues read over it
+    void set_battle_mix(bool isBattle);
+
     const std::string& get_current_music() const;
     bool has_music(const std::string& name) const;
 
+    // A theme's tonic from music.json ("D", "Eb"...), "" if unknown
+    const std::string& get_music_key(const std::string& name) const;
+
+    // Semitones from one key to another, folded into -6..+5 (to shift a sound into a theme's key)
+    static int key_distance(const std::string& from, const std::string& to);
+
     // ===== Sounds =====
-    // volumeScale multiplies the sound's own volume (sfx.json)
-    void play_sound(const std::string& name, float volumeScale = 1.f);
+    // volumeScale multiplies the sound's own volume (sfx.json); pan: -1 left to 1 right (where it happens);
+    // pitch: a factor on top of the sound's random variation
+    void play_sound(const std::string& name, float volumeScale = 1.f, float pan = 0.f, float pitch = 1.f);
     bool has_sound(const std::string& name) const;
 
     // ===== Volumes (0 to 100) =====
     void set_music_volume(float volume);
     void set_sound_volume(float volume);
+
+    // The Options sliders (0 to 1, the loudness follows their square) and "mute in background"
+    void apply_settings(const Settings& settings);
+
+    // The window lost (true) or got back (false) the focus: everything fades out over 150 ms,
+    // if the player's settings ask for it
+    void set_focus_muted(bool isUnfocused);
 
 private:
     struct MusicInfo
@@ -79,6 +98,7 @@ private:
         std::uint64_t loopStart = 0;      // In samples (per channel): where the loop starts
         std::uint64_t loopLength = 0;     // 0: plays once (jingles)
         float length = 0.f;               // Jingles: seconds until their last note ends (a queued theme starts there)
+        std::string key;                  // Its tonic ("D", "Eb"...), "" if unknown
     };
 
     struct SoundInfo
@@ -88,6 +108,7 @@ private:
         float pitch = 0.f;           // Random +- variation of the pitch (0.05 = 5%)
         float cooldown = 0.f;        // Seconds before it can play again
         int maxInstances = 4;        // At most this many at once
+        int priority = 50;           // 0 to 100: when the voices run out, a sound takes the place of a lower one
         float lastPlayed = -1000.f;  // Clock of the last time it played
     };
 
@@ -107,6 +128,8 @@ private:
     {
         std::string name;
         std::unique_ptr<sf::Sound> sound;
+        int priority = 50;
+        float started = 0.f;         // Clock when it started (the oldest goes first)
     };
 
     bool load_music_list(const std::string& path);
@@ -128,12 +151,23 @@ private:
     float m_clock = 0.f;               // Seconds since the start (cooldowns)
     float m_musicVolume = 70.f;
     float m_soundVolume = 100.f;
+    float m_masterVolume = 100.f;                      // The listener's global volume, before the focus fade
+    bool m_muteInBackground = true;
+    bool m_isUnfocused = false;
+    float m_focusLevel = 1.f;                          // 0 to 1: fades to 0 while unfocused (if muted then)
     bool m_isDucked = false;
+    float m_duckLevel = 1.f;                           // Ramps toward DUCKED_LEVEL / 1 (200 ms)
+    bool m_isBattleMix = false;
     std::string m_queuedMusic;                         // Starts when the jingle playing ends
     std::vector<std::string> m_reportedMissing;        // Unknown names already reported (once each)
 
     std::mt19937 m_random;
 
     static constexpr float DUCKED_LEVEL = 0.4f;        // Music level while the game is paused
+    static constexpr float MUSIC_REFERENCE = 70.f;     // Music volume with the Music slider at 100%
+    static constexpr float BATTLE_MUSIC_LEVEL = 0.56f; // -5 dB in battle
+    static constexpr float DUCK_RAMP_SECONDS = 0.2f;
+    static constexpr int RESERVED_VOICES = 8;          // Kept for the important sounds (priority 80 and up)
+    static constexpr float FOCUS_FADE_SECONDS = 0.15f;
     static constexpr size_t MAX_VOICES = 48;           // Sounds at once, all together
 };

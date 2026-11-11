@@ -8,7 +8,7 @@ namespace
     const float MARGIN = 24.f;                         // From the bottom left corner of the screen
     const float FRAME_SCALE = 1.25f;                   // Corners of the slot images on screen
     const float FRAME_THICKNESS = 6.f * FRAME_SCALE;   // Outline of slot.png (6 px in the image)
-    const unsigned int LEVEL_SIZE = 30;
+    const unsigned int LEVEL_SIZE = 26;
     const unsigned int COST_SIZE = 42;
     const float TEXT_PADDING = 16.f;
 }
@@ -22,6 +22,7 @@ UICashUp::UICashUp(std::shared_ptr<Stage> stage) :
     m_icon(m_texture), // Initialize sprite with texture
     m_levelText(UISkin::heavy_font())
 {
+    set_fires_on_press(true);   // Real-time play: works the moment it's pressed
     // Load both icon textures once (update() only switches between them)
     auto success = m_texture.loadFromFile("assets/images/textures/icons/uis/cash_up.png");
     success = m_disabledTexture.loadFromFile("assets/images/textures/icons/uis/cash_up_disabled.png");
@@ -70,7 +71,7 @@ void UICashUp::update(float deltaTime)
 
     m_icon.setTexture(m_isAffordable ? m_texture : m_disabledTexture);
 
-    m_levelText.setString("LEVEL " + std::to_string(m_level));
+    m_levelText.setString("WALLET Lv " + std::to_string(m_level));   // What it upgrades: the wallet (and its income)
 
     if (m_level >= m_maxLevel)
     {
@@ -105,10 +106,15 @@ void UICashUp::render(sf::RenderWindow& window)
 
     UISkin::draw_nine_slice(window, UISkin::SLOT_FRAME, rect, FRAME_SCALE * scale);
 
-    // Level at the top center
+    // Level at the top center, on a navy plate so it never crosses the drawing
     UISkin::set_text_anchor(m_levelText, { 0.5f, 0.f });
     m_levelText.setScale({ scale, scale });
     m_levelText.setPosition({ rect.position.x + rect.size.x / 2.f, rect.position.y + TEXT_PADDING * scale });
+    const sf::FloatRect label = m_levelText.getGlobalBounds();
+    sf::RectangleShape plate({ rect.size.x - 2.f * inset, label.size.y + 14.f * scale });
+    plate.setPosition({ rect.position.x + inset, label.position.y - 7.f * scale });
+    plate.setFillColor(sf::Color(16, 24, 34, 180));
+    window.draw(plate);
     window.draw(m_levelText);
 
     // Cost at the bottom right

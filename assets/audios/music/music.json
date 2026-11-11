@@ -4,6 +4,7 @@
         "kind": "stage",
         "file": "assets/audios/music/theme_default.ogg",
         "sampleRate": 48000,
+        "key": "F",
         "loopStart": 4092632,
         "loopLength": 3789474
     },
@@ -12,6 +13,7 @@
         "kind": "stage",
         "file": "assets/audios/music/theme_calm.ogg",
         "sampleRate": 48000,
+        "key": "Eb",
         "loopStart": 4838400,
         "loopLength": 4608000
     },
@@ -20,6 +22,7 @@
         "kind": "stage",
         "file": "assets/audios/music/theme_serious.ogg",
         "sampleRate": 48000,
+        "key": "D",
         "loopStart": 4340870,
         "loopLength": 4006957
     },
@@ -28,22 +31,25 @@
         "kind": "stage",
         "file": "assets/audios/music/theme_stressful.ogg",
         "sampleRate": 48000,
+        "key": "C",
         "loopStart": 3348837,
         "loopLength": 3214884
     },
     "theme_boss": {
-        "title": "Leviathan",
+        "title": "Leviathan's Waltz",
         "kind": "stage",
         "file": "assets/audios/music/theme_boss.ogg",
         "sampleRate": 48000,
-        "loopStart": 3744000,
-        "loopLength": 3456000
+        "key": "D",
+        "loopStart": 4266667,
+        "loopLength": 3840000
     },
     "theme_title": {
         "title": "Fish Fighters!",
         "kind": "menu",
         "file": "assets/audios/music/theme_title.ogg",
         "sampleRate": 48000,
+        "key": "F",
         "loopStart": 2605715,
         "loopLength": 2331429
     },
@@ -52,6 +58,7 @@
         "kind": "menu",
         "file": "assets/audios/music/theme_base.ogg",
         "sampleRate": 48000,
+        "key": "Bb",
         "loopStart": 4320000,
         "loopLength": 4114286
     },
@@ -60,6 +67,7 @@
         "kind": "stage",
         "file": "assets/audios/music/theme_shanty.ogg",
         "sampleRate": 48000,
+        "key": "D",
         "loopStart": 4571428,
         "loopLength": 4388571
     },
@@ -68,45 +76,108 @@
         "kind": "stage",
         "file": "assets/audios/music/theme_jelly.ogg",
         "sampleRate": 48000,
+        "key": "E",
         "loopStart": 4830968,
         "loopLength": 4459355
     },
     "theme_jelly_boss": {
-        "title": "Jellyfish King",
+        "title": "High Voltage Majesty",
         "kind": "stage",
         "file": "assets/audios/music/theme_jelly_boss.ogg",
         "sampleRate": 48000,
-        "loopStart": 3941053,
-        "loopLength": 3637895
+        "key": "E",
+        "loopStart": 4340870,
+        "loopLength": 4006957
     },
     "theme_crab": {
         "title": "Crab Cove",
         "kind": "stage",
         "file": "assets/audios/music/theme_crab.ogg",
         "sampleRate": 48000,
+        "key": "A",
         "loopStart": 4363636,
         "loopLength": 4189091
     },
     "theme_crab_boss": {
-        "title": "King Crab",
+        "title": "King Crab's Sideways Stomp",
         "kind": "stage",
         "file": "assets/audios/music/theme_crab_boss.ogg",
         "sampleRate": 48000,
-        "loopStart": 3840000,
-        "loopLength": 3544615
+        "key": "A",
+        "loopStart": 4992000,
+        "loopLength": 4608000
+    },
+    "theme_danger": {
+        "title": "It Came From The Trench!",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_danger.ogg",
+        "sampleRate": 48000,
+        "key": "G",
+        "loopStart": 3544616,
+        "loopLength": 3249231
     },
     "jingle_battle_start": {
-        "title": "Battle Start",
+        "title": "Battle Stations! (C)",
         "kind": "jingle",
         "file": "assets/audios/music/jingle_battle_start.ogg",
         "sampleRate": 48000,
-        "length": 2.786
+        "key": "C",
+        "length": 2.25
+    },
+    "jingle_battle_start_D": {
+        "title": "Battle Stations! (D)",
+        "kind": "jingle",
+        "file": "assets/audios/music/jingle_battle_start_D.ogg",
+        "sampleRate": 48000,
+        "key": "D",
+        "length": 2.25
+    },
+    "jingle_battle_start_Eb": {
+        "title": "Battle Stations! (Eb)",
+        "kind": "jingle",
+        "file": "assets/audios/music/jingle_battle_start_Eb.ogg",
+        "sampleRate": 48000,
+        "key": "Eb",
+        "length": 2.25
+    },
+    "jingle_battle_start_E": {
+        "title": "Battle Stations! (E)",
+        "kind": "jingle",
+        "file": "assets/audios/music/jingle_battle_start_E.ogg",
+        "sampleRate": 48000,
+        "key": "E",
+        "length": 2.25
+    },
+    "jingle_battle_start_F": {
+        "title": "Battle Stations! (F)",
+        "kind": "jingle",
+        "file": "assets/audios/music/jingle_battle_start_F.ogg",
+        "sampleRate": 48000,
+        "key": "F",
+        "length": 2.25
+    },
+    "jingle_battle_start_G": {
+        "title": "Battle Stations! (G)",
+        "kind": "jingle",
+        "file": "assets/audios/music/jingle_battle_start_G.ogg",
+        "sampleRate": 48000,
+        "key": "G",
+        "length": 2.25
+    },
+    "jingle_battle_start_A": {
+        "title": "Battle Stations! (A)",
+        "kind": "jingle",
+        "file": "assets/audios/music/jingle_battle_start_A.ogg",
+        "sampleRate": 48000,
+        "key": "A",
+        "length": 2.25
     },
     "jingle_victory": {
         "title": "Victory",
         "kind": "jingle",
         "file": "assets/audios/music/jingle_victory.ogg",
         "sampleRate": 48000,
+        "key": "F",
         "length": 2.4
     },
     "jingle_defeat": {
@@ -114,6 +185,52 @@
         "kind": "jingle",
         "file": "assets/audios/music/jingle_defeat.ogg",
         "sampleRate": 48000,
+        "key": "F",
         "length": 5
+    },
+    "theme_boss_v1": {
+        "title": "Leviathan (first version)",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_boss_v1.ogg",
+        "sampleRate": 48000,
+        "key": "D",
+        "loopStart": 3744000,
+        "loopLength": 3456000
+    },
+    "theme_jelly_boss_v1": {
+        "title": "Jellyfish King (first version)",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_jelly_boss_v1.ogg",
+        "sampleRate": 48000,
+        "key": "E",
+        "loopStart": 3941053,
+        "loopLength": 3637895
+    },
+    "theme_crab_boss_v1": {
+        "title": "King Crab (first version)",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_crab_boss_v1.ogg",
+        "sampleRate": 48000,
+        "key": "A",
+        "loopStart": 3840000,
+        "loopLength": 3544615
+    },
+    "theme_jelly_boss_v2": {
+        "title": "The Jellyfish King's Tango",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_jelly_boss_v2.ogg",
+        "sampleRate": 48000,
+        "key": "E",
+        "loopStart": 4538182,
+        "loopLength": 4189091
+    },
+    "theme_crab_boss_v2": {
+        "title": "King Crab's Paso Doble",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_crab_boss_v2.ogg",
+        "sampleRate": 48000,
+        "key": "A",
+        "loopStart": 3960000,
+        "loopLength": 3600000
     }
 }

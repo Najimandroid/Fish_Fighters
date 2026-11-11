@@ -17,10 +17,10 @@ namespace
 
 UIAbilityList::UIAbilityList() :
     m_text(UISkin::heavy_font()),
-    m_bubbleText(UISkin::heavy_font())
+    m_bubbleText(UISkin::regular_font())
 {
     UISkin::style_text(m_text, TEXT_SIZE);
-    UISkin::style_text(m_bubbleText, BUBBLE_TEXT_SIZE);
+    UISkin::style_body_text(m_bubbleText, BUBBLE_TEXT_SIZE);
     m_bubbleText.setLineSpacing(1.1f);
 }
 
@@ -122,7 +122,7 @@ float UIAbilityList::render_line(sf::RenderWindow& window, Line& line, sf::Vecto
 
 void UIAbilityList::render_bubble(sf::RenderWindow& window, const Line& line)
 {
-    m_bubbleText.setString(UISkin::wrap_text(line.explanation, BUBBLE_TEXT_SIZE, BUBBLE_MAX_WIDTH));
+    m_bubbleText.setString(UISkin::wrap_text(line.explanation, BUBBLE_TEXT_SIZE, BUBBLE_MAX_WIDTH, UISkin::regular_font()));
     UISkin::set_text_anchor(m_bubbleText, { 0.f, 0.f });
     const sf::FloatRect textBounds = m_bubbleText.getLocalBounds();
     const sf::Vector2f size{ textBounds.size.x + 2.f * BUBBLE_PADDING, textBounds.size.y + 2.f * BUBBLE_PADDING };

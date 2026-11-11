@@ -8,7 +8,7 @@ namespace
     const float PRESSED_SCALE = 0.94f;            // Size while pressed
     const float CORNER_SCALE = 0.7f;              // Corners of the yellow image on screen (outline about 5 px)
     const sf::Color PRESSED_TINT{ 215, 215, 215 };
-    const sf::Color DISABLED_TINT{ 140, 140, 140 };
+    const sf::Color DISABLED_TINT{ 165, 165, 170 };      // On the steel image: a flat grey
     const sf::Color DISABLED_TEXT{ 190, 190, 190 };
 }
 
@@ -72,6 +72,11 @@ void UIButtonElement::set_fill_color(const sf::Color& color)
     m_tint = color;
 }
 
+void UIButtonElement::set_style(Style style)
+{
+    m_style = style;
+}
+
 void UIButtonElement::set_enabled(bool isEnabled)
 {
     m_isEnabled = isEnabled;
@@ -109,11 +114,13 @@ void UIButtonElement::render(sf::RenderWindow& window)
 {
     if (!m_isVisible) return;
 
+    // Disabled: the steel image greyed (a yellow image tinted grey turns olive, which reads as "not selected")
     sf::Color tint = m_tint;
-    if (!m_isEnabled) tint = tint * DISABLED_TINT;
+    if (!m_isEnabled) tint = DISABLED_TINT;
     else if (m_isPressed) tint = tint * PRESSED_TINT;
+    const bool isSteel = !m_isEnabled || m_style == Style::Secondary;
 
-    UISkin::draw_nine_slice(window, UISkin::BUTTON_YELLOW, get_visual_rect(), CORNER_SCALE, tint);
+    UISkin::draw_nine_slice(window, isSteel ? UISkin::BUTTON_STEEL : UISkin::BUTTON_YELLOW, get_visual_rect(), CORNER_SCALE, tint);
 
     const float scale = get_visual_scale();
     const sf::Color textColor = m_text.getFillColor();
@@ -140,21 +147,49 @@ void UIButtonElement::handle_event(const sf::Event& event, const sf::RenderWindo
             && get_bounds().contains(window.mapPixelToCoords(mouseButtonPressed->position)))
         {
             m_isPressed = true;
-            if (!m_isEnabled)
-            {
-                play_sound("ui_error");
-            }
-            else if (m_callback)
-            {
-                play_sound(m_clickSound);
-                m_callback(); // execute callback if set
-            }
+            if (m_firesOnPress) activate();
         }
     }
     else if (const auto* mouseButtonReleased = event.getIf<sf::Event::MouseButtonReleased>())
     {
-        if (mouseButtonReleased->button == sf::Mouse::Button::Left) m_isPressed = false;
+        // A click counts when the button is released over the button it was pressed on:
+        // sliding off before letting go cancels it
+        if (mouseButtonReleased->button == sf::Mouse::Button::Left)
+        {
+            const bool isClick = m_isPressed && !m_firesOnPress
+                && get_bounds().contains(window.mapPixelToCoords(mouseButtonReleased->position));
+            m_isPressed = false;
+            if (isClick) activate();
+        }
     }
+    else if (const auto* keyPressed = event.getIf<sf::Event::KeyPressed>())
+    {
+        if (m_hotkey && keyPressed->code == *m_hotkey) activate();
+    }
+}
+
+// A click or the hotkey: the error sound if disabled, else the click sound and the callback
+void UIButtonElement::activate()
+{
+    if (!m_isEnabled)
+    {
+        play_sound("ui_error");
+    }
+    else if (m_callback)
+    {
+        play_sound(m_clickSound);
+        m_callback();
+    }
+}
+
+void UIButtonElement::set_fires_on_press(bool firesOnPress)
+{
+    m_firesOnPress = firesOnPress;
+}
+
+void UIButtonElement::set_hotkey(std::optional<sf::Keyboard::Key> key)
+{
+    m_hotkey = key;
 }
 
 // Return the button's bounding rectangle for collision or interaction checks

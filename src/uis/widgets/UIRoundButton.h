@@ -29,6 +29,9 @@ public:
     // The ring is shown while this returns true
     void set_active_callback(std::function<bool()> isActive);
 
+    // A short label under the button telling its state ("x2"), asked every frame
+    void set_state_label(std::function<std::string()> label);
+
     void update(float deltaTime) override;
     void render(sf::RenderWindow& window) override;
 
@@ -38,6 +41,8 @@ private:
     sf::Sprite m_icon;                   // White icon over it
     sf::CircleShape m_ring;              // Shown while the option is on
     std::function<bool()> m_isActive;
+    std::function<std::string()> m_stateLabel;
+    sf::Text m_label;
     bool m_isActiveNow = false;
     bool m_isIconFlipped = false;
 };

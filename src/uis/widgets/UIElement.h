@@ -49,8 +49,9 @@ public:
 
     // Sounds of the widgets (clicks, selections...): UIManager plugs the AudioManager in, so the widgets
     // don't depend on it. Without a player, play_sound does nothing.
-    static void set_sound_player(std::function<void(const std::string&)> player) { s_soundPlayer = std::move(player); }
-    static void play_sound(const std::string& name) { if (s_soundPlayer && !name.empty()) s_soundPlayer(name); }
+    // pitch: a factor (1 = as is); pan: -1 left to 1 right
+    static void set_sound_player(std::function<void(const std::string&, float, float)> player) { s_soundPlayer = std::move(player); }
+    static void play_sound(const std::string& name, float pitch = 1.f, float pan = 0.f) { if (s_soundPlayer && !name.empty()) s_soundPlayer(name, pitch, pan); }
 
 public:
 
@@ -65,5 +66,5 @@ protected:
 
 private:
 
-    static inline std::function<void(const std::string&)> s_soundPlayer;
+    static inline std::function<void(const std::string&, float, float)> s_soundPlayer;
 };

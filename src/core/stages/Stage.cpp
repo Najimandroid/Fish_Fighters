@@ -10,6 +10,9 @@
 #include "../../utils/ImageTools.h"
 #include "../../audio/AudioManager.h"
 
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
 #include <iostream>
 
 namespace
@@ -102,7 +105,17 @@ void Stage::load(int uid)
 	m_musicChange = stageJson->musicChange;
 	m_musicChangeBaseHealth = stageJson->musicChangeBaseHealth;
 	m_hasMusicChanged = false;
-	if (m_audio) m_audio->queue_music(stageJson->music);   // After the battle start jingle
+	m_lastBaseAlarm = -100.f;
+	m_musicChangeAt = -1.f;
+	m_isWalletFullArmed = true;
+	m_lastUnitBaseHealth = -1.f;
+	m_lastUnitBaseHit = -100.f;
+	m_hasAlarmed30 = m_hasAlarmed10 = false;
+	if (m_audio)
+	{
+		m_audio->set_battle_mix(true);                     // Music -5 dB under the battle
+		m_audio->queue_music(stageJson->music);            // After the battle start jingle
+	}
 
 	m_isLoaded = true;
 }
@@ -115,8 +128,17 @@ void Stage::update_music()
 	if (m_hasMusicChanged || m_musicChange.empty() || !m_audio || !m_enemyBase) return;
 	if (m_enemyBase->currentHealth > m_enemyBase->maxHealth * (m_musicChangeBaseHealth / 100.f)) return;
 
-	m_audio->play_music(m_musicChange, 1.5f);
+	// The boss arrives: the theme fades out quickly, the stinger hits, then the boss theme starts from its intro
+	// (a crossfade between two tempos smears the big moment)
 	m_hasMusicChanged = true;
+	if (m_audio->has_sound("boss_stinger"))
+	{
+		m_audio->stop_music(0.4f);
+		const int semitones = AudioManager::key_distance("D", m_audio->get_music_key(m_musicChange));
+		m_audio->play_sound("boss_stinger", 1.f, 0.f, std::pow(2.f, semitones / 12.f));
+		m_musicChangeAt = m_elapsedTime + 1.2f;
+	}
+	else m_audio->play_music(m_musicChange, 1.5f);
 }
 
 void Stage::reward_kill(const BattleEntity& enemy)
@@ -126,9 +148,20 @@ void Stage::reward_kill(const BattleEntity& enemy)
 
 	m_currentCash = std::min(m_maxCash, m_currentCash + amount);
 
+	// 40 px above the enemy; kills close together (60 px, 0.3 s) add up in one popup that pops again
 	const sf::FloatRect bounds = enemy.sprite.getGlobalBounds();
-	m_cashPopups.push_back({ { bounds.position.x + bounds.size.x / 2.f, bounds.position.y }, amount, 0.f });
-	play_sound("cash_drop");
+	const sf::Vector2f position{ bounds.position.x + bounds.size.x / 2.f, bounds.position.y - 40.f };
+	auto nearby = std::find_if(m_cashPopups.begin(), m_cashPopups.end(), [&position](const CashPopup& popup)
+		{
+			return popup.age < 0.3f && std::abs(popup.position.x - position.x) < 60.f;
+		});
+	if (nearby != m_cashPopups.end())
+	{
+		nearby->amount += amount;
+		nearby->age = 0.f;
+	}
+	else m_cashPopups.push_back({ position, amount, 0.f });
+	play_sound_at("cash_drop", position.x);
 }
 
 const std::vector<CashPopup>& Stage::get_cash_popups() const
@@ -149,8 +182,36 @@ void Stage::play_sound(const std::string& name, float volumeScale) const
 void Stage::on_attack_landed(const BattleEntity& attacker, bool hasHitBase) const
 {
 	const std::string& sound = attacker.data && !attacker.data->attackSound.empty() ? attacker.data->attackSound : DEFAULT_ATTACK_SOUND;
-	play_sound(sound);
-	if (hasHitBase) play_sound("base_hit");
+	const bool isEnemyAttacker = dynamic_cast<const BattleEnemy*>(&attacker) != nullptr;
+	play_sound_at(sound, attacker.position.x, 1.f, isEnemyAttacker ? 0.97f : 1.03f);
+	if (!hasHitBase) return;
+
+	// A fish hits the rock cave, an enemy hits the glass fish bowl (each base sounds like what it's made of)
+	const std::string baseSound = isEnemyAttacker ? "base_hit_bowl" : "base_hit_cave";
+	play_sound_at(m_audio && m_audio->has_sound(baseSound) ? baseSound : "base_hit", attacker.position.x);
+}
+
+void Stage::play_sound_at(const std::string& name, float worldX, float volumeScale, float pitch) const
+{
+	if (!m_audio) return;
+	float pan = 0.f;
+	if (m_stageCamera)
+	{
+		const float halfWidth = m_stageCamera->getSize().x / 2.f;
+		const float offset = (worldX - m_stageCamera->getCenter().x) / std::max(1.f, halfWidth);
+		pan = std::clamp(offset, -1.f, 1.f) * 0.6f;
+		if (std::abs(offset) > 1.f) volumeScale *= 0.7f;   // Off screen: -3 dB
+	}
+	m_audio->play_sound(name, volumeScale, pan, pitch);
+}
+
+/*
+ * name if sfx.json has it, else fallback (sounds that are on their way)
+ */
+void Stage::play_sound_or(const std::string& name, const std::string& fallback, float volumeScale) const
+{
+	if (!m_audio) return;
+	m_audio->play_sound(m_audio->has_sound(name) ? name : fallback, volumeScale);
 }
 
 /*
@@ -182,6 +243,9 @@ void Stage::unload()
 
 	m_isLoaded = false;
 	m_isOnEndScreen = false;
+	m_finishTime = -1.f;
+	m_musicChangeAt = -1.f;
+	if (m_audio) m_audio->set_battle_mix(false);
 }
 
 /*
@@ -196,6 +260,13 @@ void Stage::update(float deltaTime)
 	// The "+X$" popups rise and fade, then go
 	for (auto& popup : m_cashPopups) popup.age += deltaTime;
 	std::erase_if(m_cashPopups, [](const CashPopup& popup) { return popup.age >= CASH_POPUP_SECONDS; });
+
+	// A base fell: the battle stays frozen while the end plays
+	if (is_finishing())
+	{
+		update_finish(deltaTime);
+		return;
+	}
 
 	//std::cout << "[Base Health]: " << m_enemyBase->currentHealth << " / " << m_enemyBase->maxHealth << "\n";
 
@@ -244,51 +315,130 @@ void Stage::update(float deltaTime)
 	if (m_isOnEndScreen) return;
 
 	update_music();
+	if (m_musicChangeAt >= 0.f && m_elapsedTime >= m_musicChangeAt)
+	{
+		m_musicChangeAt = -1.f;
+		if (m_audio) m_audio->play_music(m_musicChange, 0.f);
+	}
+
+	// The fish bowl is in danger: a warning when it drops below 30%, then every 4 s at most while it's being hit,
+	// and once more, higher, at 10%
+	const float bowlHealth = m_unitBase->currentHealth;
+	if (m_lastUnitBaseHealth >= 0.f && bowlHealth < m_lastUnitBaseHealth) m_lastUnitBaseHit = m_elapsedTime;
+	m_lastUnitBaseHealth = bowlHealth;
+	if (bowlHealth > 0.f && m_audio)
+	{
+		if (!m_hasAlarmed10 && bowlHealth < m_unitBase->maxHealth * 0.1f)
+		{
+			m_hasAlarmed10 = m_hasAlarmed30 = true;
+			m_lastBaseAlarm = m_elapsedTime;
+			m_audio->play_sound("base_alarm", 1.f, 0.f, 1.06f);
+		}
+		else if (bowlHealth < m_unitBase->maxHealth * BASE_ALARM_HEALTH
+			&& (!m_hasAlarmed30 || (m_elapsedTime - m_lastBaseAlarm >= BASE_ALARM_SECONDS && m_elapsedTime - m_lastUnitBaseHit <= 1.f)))
+		{
+			m_hasAlarmed30 = true;
+			m_lastBaseAlarm = m_elapsedTime;
+			play_sound("base_alarm");
+		}
+	}
 
 	// Checks if the Player has won or lost
-	if (is_enemy_base_destroyed())
+	if (is_enemy_base_destroyed()) begin_finish(true);
+	else if (is_unit_base_destroyed()) begin_finish(false);
+}
+
+/*
+ * A base fell. The result is saved right away; then the battle freezes (nothing moves, nothing spawns),
+ * the losing base shakes and sinks, the jingle plays after the explosion and the results screen opens
+ */
+void Stage::begin_finish(bool isVictory)
+{
+	m_result = BattleResult{};
+	m_result.stageUID = m_uid;
+	m_result.isVictory = isVictory;
+	m_result.enemyBaseHealth = std::max(0.f, m_enemyBase->currentHealth);
+	m_result.enemyBaseMaxHealth = m_enemyBase->maxHealth;
+
+	auto player = m_dataLoader->get_player_data().lock();
+	auto stageData = m_dataLoader->get_stage_data(m_uid);
+	if (isVictory && player && stageData)
 	{
-		// Player has won
-		if (auto player = m_dataLoader->get_player_data().lock())
+		// What complete_stage grants: every reward the first time, then only the first shells reward
+		m_result.isFirstClear = !player->has_completed_stage(m_uid);
+		for (const auto& reward : stageData->rewards)
 		{
-			auto stageData = m_dataLoader->get_stage_data(m_uid);
-			if (stageData)
+			if (reward->type == "shells")
 			{
-				// A first win opens the map on the newest stage; a replay keeps it here (farming)
-				if (!player->has_completed_stage(m_uid))
-					player->lastStage = -1;
-				player->complete_stage(stageData);
+				m_result.shells += reward->amount;
+				if (!m_result.isFirstClear) break;
 			}
-
-			m_dataLoader->save_progress();
+			else if (reward->type == "unit" && m_result.isFirstClear && reward->unitUID > 0 && !player->is_unit_owned(reward->unitUID))
+				m_result.newUnitUID = reward->unitUID;
 		}
-		
-		m_enemies.clear();
 
-		// The enemy base blows up, the victory jingle plays
-		play_sound("base_destroyed");
-		if (m_audio) m_audio->play_jingle("jingle_victory");
-
-		m_isOnEndScreen = true;
-		m_uiManager.lock()->generate_victory_uis();
-		return;
+		// A first win opens the map on the newest stage; a replay keeps it here (farming)
+		if (m_result.isFirstClear) player->lastStage = -1;
+		player->complete_stage(stageData);
 	}
+	m_dataLoader->save_progress();   // On a defeat too: the enemies met stay met
 
-	if (is_unit_base_destroyed())
+	play_sound_or(isVictory ? "base_destroyed_cave" : "base_destroyed_bowl", "base_destroyed");
+	m_musicChangeAt = -1.f;
+	if (m_audio) m_audio->set_battle_mix(false);   // The jingle at full level
+	m_isOnEndScreen = true;
+	m_finishTime = 0.f;
+	m_isFinishJinglePlayed = false;
+	m_isResultsScreenShown = false;
+
+	// The battle HUD goes, the game speed goes back to normal
+	if (auto uiManager = m_uiManager.lock()) uiManager->begin_battle_end();
+}
+
+void Stage::update_finish(float deltaTime)
+{
+	m_finishTime += deltaTime;
+
+	if (!m_isFinishJinglePlayed && m_finishTime >= FINISH_JINGLE_DELAY)
 	{
-		// Player has lost (the enemies met are still saved)
-		m_dataLoader->save_progress();
-
-		m_units.clear();
-
-		// The fish base blows up, the defeat jingle plays
-		play_sound("base_destroyed");
-		if (m_audio) m_audio->play_jingle("jingle_defeat");
-
-		m_isOnEndScreen = true;
-		m_uiManager.lock()->generate_defeat_uis();
-		return;
+		m_isFinishJinglePlayed = true;
+		if (m_audio) m_audio->play_jingle(m_result.isVictory ? "jingle_victory" : "jingle_defeat");
 	}
+	if (!m_isResultsScreenShown && m_finishTime >= FINISH_RESULTS_DELAY)
+	{
+		m_isResultsScreenShown = true;
+		if (auto uiManager = m_uiManager.lock())
+		{
+			if (m_result.isVictory) uiManager->generate_victory_uis();
+			else uiManager->generate_defeat_uis();
+		}
+	}
+}
+
+const BattleResult& Stage::get_battle_result() const
+{
+	return m_result;
+}
+
+bool Stage::is_finishing() const
+{
+	return m_finishTime >= 0.f;
+}
+
+/*
+ * The losing base: shakes for half a second (8 px, fading), then sinks 40 px and fades out
+ */
+void Stage::draw_falling_base(sf::RenderWindow& window, const BattleBase& base) const
+{
+	const float t = m_finishTime;
+	const float shake = 8.f * std::sin(t * 70.f) * std::max(0.f, 1.f - t / 0.5f);
+	const float sinking = std::clamp((t - 0.3f) / 0.8f, 0.f, 1.f);
+
+	sf::Sprite sprite = base.sprite;
+	sprite.move({ shake, 40.f * sinking * sinking });
+	const sf::Color color = sprite.getColor();
+	sprite.setColor(sf::Color(color.r, color.g, color.b, static_cast<std::uint8_t>(color.a * (1.f - sinking))));
+	window.draw(sprite);
 }
 
 /*
@@ -297,6 +447,7 @@ void Stage::update(float deltaTime)
 void Stage::update_cash(float deltaTime)
 {
 	if (deltaTime <= 0.0f) return;
+	if (m_currentCash < m_maxCash * 0.9f) m_isWalletFullArmed = true;   // Spent: the next time it fills up chimes again
 	if (m_currentCash >= m_maxCash) return;
 
 	// Accumulate fractions of cash and only add whole units,
@@ -309,6 +460,12 @@ void Stage::update_cash(float deltaTime)
 
 	if(m_currentCash > m_maxCash)
 		m_currentCash = m_maxCash;
+
+	if (m_currentCash >= m_maxCash && m_isWalletFullArmed)
+	{
+		m_isWalletFullArmed = false;
+		play_sound("wallet_full");
+	}
 
 	//std::cout << "[CURRENT BANK]: " << m_currentCash << "$ / " << m_maxCash << "$\n";
 }
@@ -564,10 +721,13 @@ void Stage::render(sf::RenderWindow& window)
 	// Draw background and bases
 	for (auto& bgSprite : m_backgroundSprites)
 		window.draw(bgSprite);
-	draw_base_shadow(window, *m_enemyBase);
-	draw_base_shadow(window, *m_unitBase);
-	window.draw(m_enemyBase->sprite);
-	window.draw(m_unitBase->sprite);
+	// During the finish, the losing base shakes, sinks and fades (its shadow goes as it sinks)
+	const bool isEnemyBaseFalling = is_finishing() && m_result.isVictory;
+	const bool isUnitBaseFalling = is_finishing() && !m_result.isVictory;
+	if (!isEnemyBaseFalling || m_finishTime < 0.3f) draw_base_shadow(window, *m_enemyBase);
+	if (!isUnitBaseFalling || m_finishTime < 0.3f) draw_base_shadow(window, *m_unitBase);
+	if (isEnemyBaseFalling) draw_falling_base(window, *m_enemyBase); else window.draw(m_enemyBase->sprite);
+	if (isUnitBaseFalling) draw_falling_base(window, *m_unitBase); else window.draw(m_unitBase->sprite);
 
 	// Shadows on the ground, under every unit and enemy
 	for (auto& [layer, enemyList] : m_enemies)
@@ -577,25 +737,23 @@ void Stage::render(sf::RenderWindow& window)
 		for (auto& unit : unitList)
 			draw_entity_shadow(window, *unit, true);
 
-	// Draw enemies (back to front)
+	// Draw enemies (back to front), each with its overlay (status icons), so what stands in front covers it
 	for (auto& [layer, enemyList] : std::ranges::reverse_view(m_enemies))
 	{
-
 		for (auto& enemy : enemyList)
 		{
 			window.draw(enemy->sprite);
-
+			if (m_entityOverlay) m_entityOverlay(window, *enemy, false);
 		}
 	}
 
 	// Draw units (back to front)
 	for (auto& [layer, unitList] : std::ranges::reverse_view(m_units))
 	{
-
 		for (auto& unit : unitList)
 		{
 			window.draw(unit->sprite);
-
+			if (m_entityOverlay) m_entityOverlay(window, *unit, true);
 		}
 	}
 }
@@ -733,7 +891,7 @@ bool Stage::spawn_unit(std::shared_ptr<EntityData> unitData, bool ignoreCostAndL
 	if (!ignoreCostAndLimit) m_currentCash -= unitData->cost;
 	m_units[battleUnit->currentLayer].push_back(battleUnit);
 
-	play_sound("deploy");
+	play_sound_at("deploy", battleUnit->position.x);
 	return true;
 }
 

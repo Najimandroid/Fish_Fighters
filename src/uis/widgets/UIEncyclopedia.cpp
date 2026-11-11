@@ -28,7 +28,6 @@ namespace
     const float STAT_COLUMN_WIDTH = 420.f;
     const float STAT_ROW_HEIGHT = 42.f;
 
-    const sf::Color DIMMED_BUTTON{ 140, 150, 160 };
 
     const char* SORT_NAMES[] = { "No.", "Name", "Health", "Attack", "Range", "Speed" };
 
@@ -43,8 +42,8 @@ namespace
 UIEncyclopedia::UIEncyclopedia(std::shared_ptr<DataLoader> dataLoader, Book book) :
     UIElement({ 1920.f, 1080.f }, { 0.f, 0.f }),
     m_dataLoader(dataLoader),
-    m_fishTab({ 200.f, 84.f }, { 40.f, 128.f }, "FISH"),
-    m_enemiesTab({ 260.f, 84.f }, { 254.f, 128.f }, "ENEMIES"),
+    m_fishTab({ 200.f, 86.f }, { 40.f, 148.f }, "FISH"),          // Folder tabs on the grid panel (drawn by render_tab)
+    m_enemiesTab({ 260.f, 86.f }, { 250.f, 148.f }, "ENEMIES"),
     m_sortLabel(UISkin::heavy_font(), "SORT"),
     m_gridPanel(GRID_PANEL.size, GRID_PANEL.position, UISkin::PANEL_DARK, 1.2f),
     m_detailPanel(DETAIL_PANEL.size, DETAIL_PANEL.position, UISkin::PANEL_DARK, 1.2f),
@@ -124,6 +123,7 @@ void UIEncyclopedia::build_entries()
             entry.uid = uid;
             entry.data = data;
             entry.isKnown = player && player->has_seen_enemy(uid);
+            entry.iconPath = m_dataLoader->get_enemy_icon_texture_path(uid);
             m_entries.push_back(entry);
         }
     }
@@ -201,13 +201,13 @@ void UIEncyclopedia::select(int index)
  */
 void UIEncyclopedia::refresh_buttons()
 {
-    m_fishTab.set_fill_color(m_book == Book::FISH ? sf::Color::White : DIMMED_BUTTON);
-    m_enemiesTab.set_fill_color(m_book == Book::ENEMIES ? sf::Color::White : DIMMED_BUTTON);
+    m_fishTab.set_style(m_book == Book::FISH ? UIButtonElement::Style::Primary : UIButtonElement::Style::Secondary);
+    m_enemiesTab.set_style(m_book == Book::ENEMIES ? UIButtonElement::Style::Primary : UIButtonElement::Style::Secondary);
 
     for (int key = 0; key < static_cast<int>(m_sortButtons.size()); ++key)
     {
         const bool isActive = key == static_cast<int>(m_sortKey);
-        m_sortButtons[key]->set_fill_color(isActive ? sf::Color::White : DIMMED_BUTTON);
+        m_sortButtons[key]->set_style(isActive ? UIButtonElement::Style::Primary : UIButtonElement::Style::Secondary);
         sf::String label = SORT_NAMES[key];
         if (isActive) label += m_isDescending ? sf::String(U" \u25BC") : sf::String(U" \u25B2");
         m_sortButtons[key]->set_label(label);
@@ -246,10 +246,23 @@ void UIEncyclopedia::render_portrait(sf::RenderWindow& window, const Entry& entr
     }
     else
     {
-        const float padding = area.size.y * 0.06f;
-        EntityPortraits::draw_enemy(window, *entry.data,
-            { area.position + sf::Vector2f{ padding, padding }, area.size - sf::Vector2f{ padding, padding } * 2.f }, !entry.isKnown);
+        EntityPortraits::draw_enemy(window, *entry.data, entry.iconPath, area, !entry.isKnown);
     }
+}
+
+void UIEncyclopedia::render_tab(sf::RenderWindow& window, const UIButtonElement& tab, const std::string& label, bool isOpen)
+{
+    const sf::FloatRect bounds = tab.get_bounds();
+    sf::FloatRect rect = bounds;
+    if (isOpen) rect.size.y = GRID_PANEL.position.y + 16.f - rect.position.y;   // Down over the panel's top edge
+    UISkin::draw_nine_slice(window, isOpen ? UISkin::PANEL_DARK : UISkin::BUTTON_STEEL, rect, 0.6f,
+        isOpen ? sf::Color::White : sf::Color(140, 140, 142));
+
+    UISkin::style_text(m_text, 40, isOpen ? UISkin::NUMBER : UISkin::TITLE);
+    m_text.setString(label);
+    UISkin::set_text_anchor(m_text, { 0.5f, 0.5f });
+    m_text.setPosition(bounds.position + bounds.size / 2.f);
+    window.draw(m_text);
 }
 
 void UIEncyclopedia::render_grid(sf::RenderWindow& window)
@@ -299,9 +312,10 @@ void UIEncyclopedia::render_details(sf::RenderWindow& window)
     render_portrait(window, entry, UISkin::slot_inner(PORTRAIT, 2.f));
     UISkin::draw_nine_slice(window, UISkin::SLOT_FRAME, PORTRAIT, 2.f);
 
-    auto drawText = [&](const std::string& text, sf::Vector2f position, unsigned int size, sf::Color color, sf::Vector2f anchor = { 0.f, 0.5f })
+    auto drawText = [&](const std::string& text, sf::Vector2f position, unsigned int size, sf::Color color, sf::Vector2f anchor = { 0.f, 0.5f },
+        const sf::Font& font = UISkin::heavy_font())
         {
-            UISkin::style_text(m_text, size, color);
+            UISkin::style_text(m_text, size, color, font);
             m_text.setString(text);
             UISkin::set_text_anchor(m_text, anchor);
             m_text.setPosition(position);
@@ -316,7 +330,8 @@ void UIEncyclopedia::render_details(sf::RenderWindow& window)
     if (!entry.isKnown)
     {
         const std::string hint = m_book == Book::FISH ? "Not unlocked yet." : "Not met yet: meet it in battle to learn about it.";
-        drawText(UISkin::wrap_text(hint, 28, TEXT_WIDTH), { TEXT_X, PORTRAIT.position.y + PORTRAIT.size.y + 40.f }, 28, UISkin::TEXT, { 0.f, 0.f });
+        drawText(UISkin::wrap_text(hint, 28, TEXT_WIDTH, UISkin::regular_font()), { TEXT_X, PORTRAIT.position.y + PORTRAIT.size.y + 40.f }, 28, UISkin::TEXT,
+            { 0.f, 0.f }, UISkin::regular_font());
         return;
     }
 
@@ -339,8 +354,8 @@ void UIEncyclopedia::render_details(sf::RenderWindow& window)
     }
 
     // Description
-    const sf::FloatRect description = drawText(UISkin::wrap_text(data.description, 28, TEXT_WIDTH),
-        { TEXT_X, PORTRAIT.position.y + PORTRAIT.size.y + 30.f }, 28, UISkin::TEXT, { 0.f, 0.f });
+    const sf::FloatRect description = drawText(UISkin::wrap_text(data.description, 28, TEXT_WIDTH, UISkin::regular_font()),
+        { TEXT_X, PORTRAIT.position.y + PORTRAIT.size.y + 30.f }, 28, UISkin::TEXT, { 0.f, 0.f }, UISkin::regular_font());
 
     // Stats in two columns
     std::vector<std::pair<std::string, std::string>> stats = {
@@ -376,12 +391,15 @@ void UIEncyclopedia::render(sf::RenderWindow& window)
 {
     if (!m_isVisible) return;
 
-    m_fishTab.render(window);
-    m_enemiesTab.render(window);
     window.draw(m_sortLabel);
     for (auto& button : m_sortButtons) button->render(window);
 
+    // The closed tab behind the panel, the open one over its top edge: it's part of it
+    if (m_book == Book::FISH) render_tab(window, m_enemiesTab, "ENEMIES", false);
+    else render_tab(window, m_fishTab, "FISH", false);
     render_grid(window);
+    if (m_book == Book::FISH) render_tab(window, m_fishTab, "FISH", true);
+    else render_tab(window, m_enemiesTab, "ENEMIES", true);
     render_details(window);
     m_abilities.render(window);   // Last: its bubble goes over everything
 }

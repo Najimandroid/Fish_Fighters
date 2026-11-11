@@ -1,0 +1,38 @@
+{
+    "// About": "Older versions of the music, kept in assets/audios/music and listed in music.json by export_music.js (never re-encoded). To archive a piece before reworking it: copy its .ogg to <name>_v<n>.ogg and add its music.json entry here.",
+    "theme_boss_v1": {
+        "title": "Leviathan (first version)",
+        "kind": "stage",
+        "key": "D",
+        "loopStart": 3744000,
+        "loopLength": 3456000
+    },
+    "theme_jelly_boss_v1": {
+        "title": "Jellyfish King (first version)",
+        "kind": "stage",
+        "key": "E",
+        "loopStart": 3941053,
+        "loopLength": 3637895
+    },
+    "theme_crab_boss_v1": {
+        "title": "King Crab (first version)",
+        "kind": "stage",
+        "key": "A",
+        "loopStart": 3840000,
+        "loopLength": 3544615
+    },
+    "theme_jelly_boss_v2": {
+        "title": "The Jellyfish King's Tango",
+        "kind": "stage",
+        "key": "E",
+        "loopStart": 4538182,
+        "loopLength": 4189091
+    },
+    "theme_crab_boss_v2": {
+        "title": "King Crab's Paso Doble",
+        "kind": "stage",
+        "key": "A",
+        "loopStart": 3960000,
+        "loopLength": 3600000
+    }
+}

@@ -3,6 +3,7 @@
 #include "../data/EntityData.h"
 
 #include <algorithm>
+#include <filesystem>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -10,6 +11,15 @@
 namespace
 {
     const std::uint8_t SOLID_ALPHA = 32;   // Pixels at least this opaque are part of the drawing
+
+    // Whether an image file is there (asked once per path: the menus draw every frame)
+    bool has_file(const std::string& path)
+    {
+        static std::unordered_map<std::string, bool> known;
+        auto it = known.find(path);
+        if (it == known.end()) it = known.emplace(path, std::filesystem::exists(path)).first;
+        return it->second;
+    }
 
     /*
      * A solid black silhouette of a drawing, made once per image: the drawing and every hole it encloses
@@ -75,8 +85,15 @@ void EntityPortraits::draw_unit(sf::RenderTarget& target, const std::string& ico
     UISkin::draw_cropped(target, isSilhouette ? silhouette_of(iconPath) : UISkin::texture_file(iconPath), area);
 }
 
-void EntityPortraits::draw_enemy(sf::RenderTarget& target, const EntityData& enemy, const sf::FloatRect& area, bool isSilhouette)
+void EntityPortraits::draw_enemy(sf::RenderTarget& target, const EntityData& enemy, const std::string& iconPath, const sf::FloatRect& area,
+    bool isSilhouette)
 {
+    if (!iconPath.empty() && has_file(iconPath))
+    {
+        draw_unit(target, iconPath, area, isSilhouette);
+        return;
+    }
+
     const sf::Texture& sheet = isSilhouette ? silhouette_of(enemy.texture) : UISkin::texture_file(enemy.texture);
     const sf::Vector2i sheetSize(sheet.getSize());
     if (sheetSize.x <= 0 || sheetSize.y <= 0) return;

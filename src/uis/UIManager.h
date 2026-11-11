@@ -9,6 +9,9 @@
 
 class Stage;
 class UIRoundButton;
+class UIButtonElement;
+class UIConfirmDialog;
+class UIOptionsMenu;
 class AudioManager;
 enum class GameSpeedState;
 
@@ -66,6 +69,9 @@ public:
     void generate_victory_uis();
     void generate_defeat_uis();
 
+    // A base just fell (Stage): the battle HUD goes and the speed is back to normal while the end plays
+    void begin_battle_end();
+
     // Returns true if a given world position overlaps any UI element
     bool is_mouse_over_ui(const sf::Vector2i& worldPosition) const;
 
@@ -74,9 +80,36 @@ public:
     void set_get_game_speed_callback(std::function<GameSpeedState()> callback);
     void set_quit_game_callback(std::function<void()> callback);
 
+    // Switches between fullscreen (true) and a window (Options > Display); the Game applies it
+    void set_fullscreen_callback(std::function<void(bool)> callback);
+
 private:
     // The round back button of the menus (bottom left): runs onBack as a deferred action
     std::shared_ptr<UIRoundButton> make_back_button(std::function<void()> onBack);
+
+    // Starts a battle (the battle start jingle, the stage, the battle screen); run it as a deferred action
+    void start_battle(int stageUid);
+
+    // Unloads the battle before going back to a menu
+    void leave_battle();
+
+    // The hub: the stage the map opens on ("Stage 5 - Clam Leader"), and whether something can be upgraded
+    std::string next_stage_label() const;
+    bool is_upgrade_available() const;
+
+    // The stage after stageUid in the current chapter (-1: none)
+    int next_stage_uid(int stageUid) const;
+
+    // Darkens the bars around the 16:9 UI area while a modal window is open (screens that aren't 16:9)
+    void dim_letterbox_bars(sf::RenderWindow& window, const sf::View& uiView) const;
+
+    // "Quit Fish Fighters?" dialog that quitButton opens (add it last, so it's on top)
+    std::shared_ptr<UIConfirmDialog> make_quit_dialog(const std::shared_ptr<UIButtonElement>& quitButton);
+
+    // The Options window (add it after the screen's other elements) and a button that opens it
+    std::shared_ptr<UIOptionsMenu> make_options_menu();
+    std::shared_ptr<UIButtonElement> make_options_button(const std::shared_ptr<UIOptionsMenu>& optionsMenu,
+        sf::Vector2f size, sf::Vector2f position, unsigned int textSize);
 
     // Starts a Fish Tank menu screen: clears the UI, plays the Fish Tank theme (kept if it already plays)
     // and the transition sound
@@ -93,6 +126,7 @@ private:
 	std::function<void(GameSpeedState)> m_setGameSpeedCallback; // Callback to set game speed state
     std::function<GameSpeedState()> m_getGameSpeedCallback;     // Callback to get current game speed state
     std::function<void()> m_quitGameCallback;                   // Callback to quit game
+    std::function<void(bool)> m_fullscreenCallback;             // Callback to change the window mode
 
     bool m_wasFasterBeforePause = false;                        // "Continue" goes back to this speed
 };

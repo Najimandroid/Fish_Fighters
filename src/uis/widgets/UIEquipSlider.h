@@ -47,6 +47,9 @@ public:
     // Refresh all equipped slots after an unequip action
     void refresh_slots_after_unequip();
 
+    // Adds the selected card's fish to the first empty slot of the lineup (a click on it, or Enter)
+    void add_selected_to_lineup();
+
     // Standard UI loop methods
     void update(float deltaTime) override;
     void render(sf::RenderWindow& window) override;

@@ -11,7 +11,7 @@ UIStatusIcons::UIStatusIcons(std::shared_ptr<Stage> stage, std::shared_ptr<DataL
     m_stage(stage),
     m_dataLoader(std::move(dataLoader))
 {
-    isWorldSpaceUi = true; // Drawn with the stage camera, under the entities
+    isWorldSpaceUi = true; // Drawn by the Stage with its camera, at each entity's layer
 
     m_isTextureLoaded = m_iconsTexture.loadFromFile(STATUS_ICONS_TEXTURE);
     if (!m_isTextureLoaded) std::cerr << "UIStatusIcons: can't load " << STATUS_ICONS_TEXTURE << "\n";
@@ -23,22 +23,10 @@ void UIStatusIcons::update(float deltaTime)
     m_time += deltaTime;
 }
 
-void UIStatusIcons::render(sf::RenderWindow& window)
+void UIStatusIcons::draw_row(sf::RenderWindow& window, const BattleEntity& entity, bool isGrowingRight)
 {
     if (!m_isVisible || !m_isTextureLoaded) return;
 
-    auto stage = m_stage.lock();
-    if (!stage || !stage->is_loaded()) return;
-
-    for (const auto& [layer, units] : stage->get_units())
-        for (const auto& unit : units) draw_row(window, *unit, true);
-
-    for (const auto& [layer, enemies] : stage->get_enemies())
-        for (const auto& enemy : enemies) draw_row(window, *enemy, false);
-}
-
-void UIStatusIcons::draw_row(sf::RenderWindow& window, const BattleEntity& entity, bool isGrowingRight)
-{
     const auto& statuses = entity.get_statuses();
     if (statuses.empty() || entity.isDead) return;
 

@@ -7,6 +7,7 @@
 #include "../data/BackgroundData.h"
 #include "../data/BattlefieldLayout.h"
 #include "../data/ChapterData.h"
+#include "../data/Settings.h"
 #include "entities/status/StatusEffect.h"
 
 #include <unordered_map>
@@ -58,6 +59,11 @@ public:
 
     // Saves player progress right away (after victories, upgrades, equip changes)
     bool save_progress();
+
+    // The player's options (settings.json): loading never fails (defaults for anything missing)
+    void load_settings();
+    bool save_settings();
+    Settings& get_settings();
 
     // Accessors
     const std::shared_ptr<EntityData> get_unit_data(int uid, int form) const;
@@ -122,4 +128,7 @@ private:
 
     // ----- Player Data -----
     std::shared_ptr<PlayerData> m_playerData = nullptr;
+
+    // ----- Options -----
+    Settings m_settings;
 };

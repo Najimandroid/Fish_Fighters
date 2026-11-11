@@ -19,7 +19,7 @@ namespace
     const float INFO_SIZE = 30.f;
     const float BADGE_SIZE = 22.f;
 
-    const sf::Color BADGE_TINT{ 255, 90, 80 };     // Turns the yellow button image red
+    const sf::Color BADGE_TINT{ 72, 217, 230 };    // Turns the pale blue slot image teal: "in the lineup", not an alert
     const sf::Color LOCKED_TINT{ 0, 0, 0 };        // Silhouette
     const sf::Color SHADE{ 0, 0, 0, 120 };          // Over the cards that aren't selected
 
@@ -150,7 +150,7 @@ void UIUnitCard::render(sf::RenderWindow& window)
         const sf::FloatRect textBounds = m_badge.getGlobalBounds();
         const sf::Vector2f badgeSize{ textBounds.size.x + 24.f * scale, 38.f * scale };
         const sf::FloatRect badge{ { slot.position.x + slot.size.x - badgeSize.x - 10.f * scale, slot.position.y + 10.f * scale }, badgeSize };
-        UISkin::draw_nine_slice(window, UISkin::BUTTON_YELLOW, badge, 0.35f * scale, BADGE_TINT);
+        UISkin::draw_nine_slice(window, UISkin::SLOT, badge, 0.35f * scale, BADGE_TINT);
         UISkin::set_text_anchor(m_badge, { 0.5f, 0.5f });
         m_badge.setPosition(badge.position + badge.size / 2.f);
         window.draw(m_badge);
@@ -159,19 +159,27 @@ void UIUnitCard::render(sf::RenderWindow& window)
     // ----- Info lines: level on the left, value on the right -----
     const float lineY = (slot.position.y + slot.size.y + bottom) / 2.f;
 
+    // Both on one row: shrunk together when they would touch ("LEVEL 12" and a 4-digit price)
     m_level.setScale({ textScale, textScale });
+    m_value.setScale({ textScale, textScale });
+    const float iconRoom = m_showsShell ? 48.f * scale : 0.f;
+    const float room = (right - left) - 52.f * scale;
+    const float needed = m_level.getGlobalBounds().size.x + m_value.getGlobalBounds().size.x + iconRoom;
+    const float fit = needed > room ? room / needed : 1.f;
+
+    m_level.setScale({ textScale * fit, textScale * fit });
     UISkin::set_text_anchor(m_level, { 0.f, 0.5f });
     m_level.setPosition({ left + 18.f * scale, lineY });
     window.draw(m_level);
 
-    m_value.setScale({ textScale, textScale });
+    m_value.setScale({ textScale * fit, textScale * fit });
     UISkin::set_text_anchor(m_value, { 1.f, 0.5f });
     m_value.setPosition({ right - 18.f * scale, lineY });
     window.draw(m_value);
 
     if (m_showsShell)
     {
-        const float iconSize = 36.f * scale;
+        const float iconSize = 36.f * scale * fit;
         const float valueLeft = m_value.getGlobalBounds().position.x;
         UISkin::draw_fitted(window, UISkin::texture("icon_shell"),
             { { valueLeft - iconSize - 6.f * scale, lineY - iconSize / 2.f }, { iconSize, iconSize } });

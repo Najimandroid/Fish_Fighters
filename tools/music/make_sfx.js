@@ -3,7 +3,8 @@
 // Writes assets/audios/sfx/<name>[_<variant>].ogg and assets/audios/sfx/sfx.json, the game's list of sounds:
 //   volume (0-1), pitch (random +- variation), cooldown (seconds before it can play again), maxInstances.
 //
-// Usage: node tools/music/make_sfx.js     (needs ffmpeg on the PATH and the SoundFont, like render_stems.js)
+// Usage: node tools/music/make_sfx.js [sound...]     (needs ffmpeg on the PATH and the SoundFont, like render_stems.js)
+//        Without sounds, every sound is made again; with some, only those (the others keep their files)
 
 const fs = require("fs");
 const os = require("os");
@@ -205,19 +206,39 @@ function finish(s) {
     return out;
 }
 
+// A boom that reads on small speakers: a falling sine plus a triangle an octave up, saturated (harmonics 120-400 Hz)
+function boom(s, { at = 0, from, to, dur, amp, drive = 2.2 }) {
+    const b = new Sound(dur * 2 + 0.1);
+    const f = t => from * Math.pow(to / from, Math.min(1, t / dur));
+    tone(b, { dur: dur * 1.6, freq: f, amp, attack: 0.002, tau: dur * 0.45 });
+    tone(b, { dur: dur * 1.2, freq: t => 2 * f(t), wave: "triangle", amp: amp * 0.4, attack: 0.002, tau: dur * 0.3 });
+    softClip(b, drive);
+    const first = Math.round(at * RATE);
+    for (let i = 0; i < b.data.length / 2; i++) s.add(first + i, b.data[i * 2], b.data[i * 2 + 1]);
+}
+// A cartoon "mouth" sound: a saw through two vowel formants (no recording)
+const VOWELS = { uh: [640, 1190], oh: [450, 800], ah: [730, 1090], ee: [300, 2300], oo: [325, 700] };
+function mouth(s, { at = 0, dur, freq, vowel, amp, pan = 0 }) {
+    const [f1, f2] = VOWELS[vowel];
+    const common = { at, dur, freq, wave: "saw", attack: 0.015, release: 0.04, vibrato: 0.012, vibratoHz: 5.5, pan };
+    tone(s, { ...common, amp, filter: { type: "bandpass", freq: f1, q: 4 } });
+    tone(s, { ...common, amp: amp * 0.6, filter: { type: "bandpass", freq: f2, q: 5 } });
+}
+
 // ===== The sounds =====
-// Each: [name, settings for sfx.json, variants (functions building a Sound, given a pitch factor)]
+// Each: [name, settings for sfx.json, variants (functions building a Sound, given a pitch factor and the variant index)]
 const SOUNDS = [];
 const define = (name, settings, variants, build) => SOUNDS.push({ name, settings, variants, build });
 const PITCHES = [1, 0.92, 1.09];
 
 // ----- Menus -----
 // The sounds of what gets clicked all the time are short, soft and low: a muted tap, not a melody
-define("ui_click", { volume: 0.3, pitch: 0.03, cooldown: 0.04, maxInstances: 1 }, 1, p => {
+define("ui_click", { volume: 0.32, pitch: 0.03, cooldown: 0.04, maxInstances: 1, priority: 90 }, 1, p => {
     const s = new Sound(0.25);
     tone(s, { dur: 0.04, freq: t => 560 * p * Math.pow(0.8, t / 0.04), wave: "triangle", amp: 0.45, tau: 0.012 });   // a muted tap
     noise(s, { dur: 0.008, amp: 0.12, tau: 0.002, filter: { type: "bandpass", freq: 2200, q: 1.5 } });
-    filterAll(s, "lowpass", 3000);
+    noise(s, { dur: 0.005, amp: 0.12, attack: 0.0003, tau: 0.0015, filter: { type: "bandpass", freq: 3200, q: 1.5 } }); // a faint tick: reads on any speaker
+    filterAll(s, "lowpass", 6500);
     reverb(s, 0.06);
     return s;
 });
@@ -244,11 +265,15 @@ define("ui_transition", { volume: 0.18, pitch: 0.03, cooldown: 0.2, maxInstances
     reverb(s, 0.12);
     return s;
 });
-define("ui_error", { volume: 0.32, pitch: 0, cooldown: 0.25, maxInstances: 1 }, 1, () => {
-    const s = new Sound(0.35);
-    tone(s, { dur: 0.13, freq: t => 190 * Math.pow(0.85, t / 0.13), wave: "triangle", amp: 0.6, tau: 0.05,
-        filter: { type: "lowpass", freq: 900 } });                                                       // a dull "bonk"
-    reverb(s, 0.06);
+// "Nuh-uh": two short blips stepping down, in the mid band (reads over the battle music and on laptops)
+define("ui_error", { volume: 0.32, pitch: 0.02, cooldown: 0.18, maxInstances: 1, priority: 90 }, 1, () => {
+    const s = new Sound(0.2);
+    const blip = (at, f, extra = {}) => tone(s, { at, dur: 0.045, freq: t => f * Math.pow(0.94, t / 0.045), amp: 0.4,
+        attack: 0.002, tau: 0.018, release: 0.008, ...extra });
+    blip(0, 330, { wave: "square", filter: { type: "lowpass", freq: 2000, q: 0.9 } });
+    blip(0.105, 294, { wave: "square", filter: { type: "lowpass", freq: 2000, q: 0.9 } });
+    blip(0.105, 294, { wave: "saw", amp: 0.15, filter: { type: "bandpass", freq: 900, q: 2 } });
+    reverb(s, 0.02, 0.5);
     return s;
 });
 define("ui_pause", { volume: 0.5, pitch: 0, cooldown: 0.1, maxInstances: 1 }, 1, () => {
@@ -338,12 +363,20 @@ define("cash_up", { volume: 0.75, pitch: 0, cooldown: 0.1, maxInstances: 1 }, 1,
 });
 
 // Attacks: one sound per kind, chosen per fish / enemy in the editor ("attackSound"), 3 variants each
-define("attack_slap", { volume: 0.45, pitch: 0.06, cooldown: 0.04, maxInstances: 6 }, 3, p => {
-    const s = new Sound(0.5);
-    noise(s, { dur: 0.05, amp: 0.55, tau: 0.015, filter: { type: "highpass", freq: 1500 } });             // the slap
-    tone(s, { dur: 0.12, freq: t => 230 * p * Math.pow(0.6, t / 0.12), amp: 0.5, tau: 0.04 });          // thwack
-    noise(s, { at: 0.01, dur: 0.15, amp: 0.2, tau: 0.05, filter: { type: "lowpass", freq: 900 } });      // wet
-    reverb(s, 0.1);
+// The hit of every fish and every enemy (one sound for all, like a lane battler's): a smack, a mid-band body,
+// a short wet splat and a small thump, 250 ms at most. 4 real variants (body, smack and splat move), not only pitch
+const SLAP = { b0: [520, 470, 580, 545], b1: [300, 280, 330, 290], smack: [2200, 1800, 2600, 3000], s0: [1200, 1000, 1400, 1100], s1: [500, 450, 550, 480], p: [1, 0.97, 1.03, 1] };
+define("attack_slap", { volume: 0.5, pitch: 0.04, cooldown: 0.035, maxInstances: 6, priority: 40 }, 4, (_, v) => {
+    const s = new Sound(0.25), p = SLAP.p[v];
+    noise(s, { dur: 0.012, amp: 0.6, attack: 0.0005, tau: 0.004, release: 0.002, filter: { type: "bandpass", freq: SLAP.smack[v], q: 0.9 } });
+    noise(s, { dur: 0.005, amp: 0.22, attack: 0.0003, tau: 0.0015, release: 0.001, filter: { type: "highpass", freq: 4500 } });
+    tone(s, { dur: 0.09, freq: t => p * SLAP.b0[v] * Math.pow(SLAP.b1[v] / SLAP.b0[v], Math.min(1, t / 0.07)), wave: "triangle",
+        amp: 0.55, attack: 0.001, tau: 0.028, release: 0.01, filter: { type: "lowpass", freq: 2500 } });
+    noise(s, { at: 0.004, dur: 0.1, amp: 0.25, attack: 0.003, tau: 0.03, filter: { type: "bandpass", q: 1.4,
+        freq: t => SLAP.s0[v] * Math.pow(SLAP.s1[v] / SLAP.s0[v], Math.min(1, t / 0.08)) } });
+    tone(s, { dur: 0.07, freq: t => 150 * p * Math.pow(0.63, t / 0.06), amp: 0.22, attack: 0.001, tau: 0.025 });
+    softClip(s, 1.6);
+    reverb(s, 0.03, 0.6);
     return s;
 });
 define("attack_bite", { volume: 0.45, pitch: 0.06, cooldown: 0.04, maxInstances: 6 }, 3, p => {
@@ -388,13 +421,29 @@ define("attack_squirt", { volume: 0.45, pitch: 0.06, cooldown: 0.04, maxInstance
     return s;
 });
 
-define("base_hit", { volume: 0.55, pitch: 0.05, cooldown: 0.1, maxInstances: 2 }, 3, p => {
-    const s = new Sound(1.4);
-    bell(s, { freq: 180 * p, ratio: 2.76, index: 4, tau: 0.35, amp: 0.4 });                               // the hull clangs
-    bell(s, { freq: 520 * p, ratio: 1.47, index: 2, tau: 0.2, amp: 0.25 });
-    tone(s, { dur: 0.15, freq: t => 90 * Math.pow(0.55, t / 0.15), amp: 0.5, tau: 0.06 });
-    noise(s, { dur: 0.06, amp: 0.3, tau: 0.02, filter: { type: "lowpass", freq: 2500 } });
-    reverb(s, 0.2);
+// The fish bowl hit (by an enemy): thick glass, water sloshing inside - a danger cue
+define("base_hit_bowl", { volume: 0.6, pitch: 0.03, cooldown: 0.12, maxInstances: 2, priority: 80 }, 3, (p, v) => {
+    const s = new Sound(0.6), g = [1, 1.05, 0.96][v];
+    tone(s, { dur: 0.09, freq: t => 320 * p * Math.pow(0.66, t / 0.06), amp: 0.45, attack: 0.001, tau: 0.03 });
+    bell(s, { freq: 1180 * g, ratio: 2.32, index: 1.6, tau: 0.12, amp: 0.32 });
+    bell(s, { at: 0.004, freq: 1870 * g, ratio: 1.41, index: 1.0, tau: 0.08, amp: 0.16 });
+    noise(s, { at: 0.03, dur: 0.3, amp: 0.2, attack: 0.04, tau: 0.12, width: 0.6,
+        filter: { type: "bandpass", q: 1.2, freq: t => 900 * Math.pow(0.39, Math.min(1, t / 0.25)) } });
+    bubble(s, { at: 0.12, freq: 420, size: 0.06, amp: 0.14 });
+    bubble(s, { at: 0.17, freq: 560, size: 0.05, amp: 0.1 });
+    reverb(s, 0.08, 0.7);
+    return s;
+});
+// The rock cave hit (by a fish): a stone thock, a crack, grit and a trickle of pebbles - a progress cue
+define("base_hit_cave", { volume: 0.5, pitch: 0.05, cooldown: 0.1, maxInstances: 2, priority: 50 }, 3, (p) => {
+    const s = new Sound(0.45);
+    tone(s, { dur: 0.08, freq: t => 210 * p * Math.pow(0.67, t / 0.05), wave: "triangle", amp: 0.5, attack: 0.001, tau: 0.022,
+        filter: { type: "lowpass", freq: 1800 } });
+    noise(s, { dur: 0.025, amp: 0.5, attack: 0.0005, tau: 0.008, filter: { type: "bandpass", freq: 1100 * p, q: 1.2 } });
+    [0, 0.018, 0.041].forEach(at => noise(s, { at, dur: 0.006, amp: 0.25, attack: 0.0003, tau: 0.002, filter: { type: "highpass", freq: 2500 } }));
+    for (let i = 0; i < 5; i++) bell(s, { at: 0.06 + random() * 0.2, freq: 2200 + random() * 2000, ratio: 1.3 + random() * 0.8,
+        index: 1, tau: 0.015, amp: 0.08, pan: (random() - 0.5) * 0.8 });
+    reverb(s, 0.06, 0.6);
     return s;
 });
 define("knockback", { volume: 0.5, pitch: 0.06, cooldown: 0.05, maxInstances: 4 }, 1, p => {
@@ -422,26 +471,52 @@ define("death_enemy", { volume: 0.5, pitch: 0.06, cooldown: 0.03, maxInstances: 
     reverb(s, 0.15);
     return s;
 });
-define("boss_shockwave", { volume: 1, pitch: 0, cooldown: 1, maxInstances: 1 }, 1, () => {
-    const s = new Sound(3.5);
-    tone(s, { dur: 1.8, freq: t => 70 * Math.pow(0.4, t / 1.8), amp: 0.9, tau: 0.55 });                 // a deep boom
-    noise(s, { dur: 1.5, amp: 0.7, tau: 0.35, filter: { type: "lowpass", freq: t => 2000 * Math.pow(0.08, t / 1.5) } });
-    note(s, { program: 47, key: 33, velocity: 127, len: 1.2, amp: 0.6 });
-    noise(s, { at: 0.15, dur: 0.9, amp: 0.35, attack: 0.3, release: 0.4, filter: { type: "bandpass", q: 1, freq: t => 300 + 1300 * t } });   // the surge
-    bubbles(s, { at: 0.1, count: 28, spread: 1.4, low: 250, high: 1800, size: [0.04, 0.12], amp: 0.25 });
-    softClip(s, 1.4);
-    reverb(s, 0.25, 1);
+// A boss arrives: a boom you can hear on a laptop (50-90 Hz with harmonics, not a 30 Hz rumble), a crack,
+// the displaced water and the surge, bubbles
+define("boss_shockwave", { volume: 1, pitch: 0, cooldown: 1, maxInstances: 1, priority: 100 }, 1, () => {
+    const s = new Sound(2.6);
+    boom(s, { from: 92, to: 50, dur: 0.9, amp: 0.8 });
+    noise(s, { dur: 0.035, amp: 0.7, attack: 0.0005, tau: 0.009, filter: { type: "bandpass", freq: 1800, q: 0.7 } });
+    noise(s, { dur: 0.015, amp: 0.3, attack: 0.0003, tau: 0.004, filter: { type: "highpass", freq: 3500 } });
+    noise(s, { dur: 1.0, amp: 0.5, attack: 0.01, tau: 0.35, filter: { type: "lowpass", freq: t => 1500 * Math.pow(0.13, Math.min(1, t / 0.9)) } });
+    noise(s, { at: 0.12, dur: 0.9, amp: 0.3, attack: 0.3, release: 0.4, filter: { type: "bandpass", q: 1, freq: t => 300 + 1300 * t } });
+    note(s, { program: 47, key: 38, velocity: 127, len: 1.0, amp: 0.45 });
+    bubbles(s, { at: 0.1, count: 28, spread: 1.4, low: 250, high: 1800, size: [0.04, 0.12], amp: 0.22 });
+    filterAll(s, "highpass", 35);
+    reverb(s, 0.2, 1);
     return s;
 });
-define("base_destroyed", { volume: 1, pitch: 0, cooldown: 1, maxInstances: 1 }, 1, () => {
-    const s = new Sound(4);
-    noise(s, { dur: 2.2, amp: 0.85, tau: 0.5, filter: { type: "lowpass", freq: t => 4500 * Math.pow(0.05, t / 2.2) } });   // the blast
-    tone(s, { dur: 2, freq: t => 60 * Math.pow(0.4, t / 2), amp: 0.8, tau: 0.6 });
-    for (let i = 0; i < 10; i++) bell(s, { at: 0.15 + random() * 1.4, freq: 600 + random() * 2400, ratio: 1.3 + random() * 2, index: 2, tau: 0.08 + random() * 0.1, amp: 0.15, pan: random() * 1.6 - 0.8 });   // debris
-    zap(s, { at: 0.05, dur: 0.6, amp: 0.25 });
-    bubbles(s, { at: 0.2, count: 36, spread: 2, low: 200, high: 2000, size: [0.04, 0.14], amp: 0.25 });
-    softClip(s, 1.5);
-    reverb(s, 0.3, 1);
+// Victory: the enemy's rock cave crumbles (rock chunks, then one last pebble: "plink")
+define("base_destroyed_cave", { volume: 1, pitch: 0, cooldown: 1, maxInstances: 1, priority: 100 }, 1, () => {
+    const s = new Sound(2.6);
+    boom(s, { from: 85, to: 52, dur: 0.8, amp: 0.75 });
+    noise(s, { dur: 0.04, amp: 0.8, attack: 0.0005, tau: 0.01, filter: { type: "bandpass", freq: 1600, q: 0.8 } });
+    noise(s, { dur: 0.02, amp: 0.4, attack: 0.0003, tau: 0.005, filter: { type: "highpass", freq: 3000 } });
+    noise(s, { dur: 1.8, amp: 0.5, attack: 0.02, tau: 0.5, filter: { type: "lowpass", freq: t => 2500 * Math.pow(0.16, Math.min(1, t / 1.6)) } });
+    for (let i = 0; i < 14; i++) {
+        const at = 0.1 + Math.pow(random(), 1.6) * 1.3, pan = (random() - 0.5) * 1.2;
+        tone(s, { at, dur: 0.06, freq: 120 + random() * 140, amp: 0.2 + random() * 0.15, attack: 0.001, tau: 0.018, pan });
+        noise(s, { at, dur: 0.008, amp: 0.15, attack: 0.0003, tau: 0.003, filter: { type: "bandpass", freq: 1500, q: 1 }, pan });
+    }
+    bell(s, { at: 1.65, freq: 3200, ratio: 1.6, index: 1, tau: 0.04, amp: 0.15, pan: 0.3 });
+    bubbles(s, { at: 0.2, count: 20, spread: 1.2, low: 250, high: 1600, size: [0.04, 0.12], amp: 0.2 });
+    filterAll(s, "highpass", 35);
+    reverb(s, 0.2, 1);
+    return s;
+});
+// Defeat: the fish bowl shatters, the water gushes out, one sad "blub"
+define("base_destroyed_bowl", { volume: 0.95, pitch: 0, cooldown: 1, maxInstances: 1, priority: 100 }, 1, () => {
+    const s = new Sound(2.6);
+    boom(s, { from: 140, to: 80, dur: 0.3, amp: 0.5, drive: 1.6 });
+    noise(s, { dur: 0.06, amp: 0.7, attack: 0.0005, tau: 0.025, filter: { type: "highpass", freq: 2200 } });
+    for (let i = 0; i < 24; i++) bell(s, { at: 0.02 + Math.pow(random(), 2) * 0.9, freq: 2500 + random() * 4000, ratio: 1.8 + random() * 1.1,
+        index: 1.2, tau: 0.03 + random() * 0.06, amp: 0.06 + random() * 0.08, pan: (random() - 0.5) * 1.4 });
+    noise(s, { at: 0.05, dur: 1.3, amp: 0.45, attack: 0.06, tau: 0.6, width: 0.7,
+        filter: { type: "bandpass", q: 0.9, freq: t => 1800 * Math.pow(0.28, Math.min(1, t / 1.2)) } });
+    noise(s, { at: 0.05, dur: 1.0, amp: 0.2, attack: 0.08, tau: 0.5, filter: { type: "lowpass", freq: 600 } });
+    bubble(s, { at: 1.35, freq: 300, size: 0.15, amp: 0.4, rise: 0.6 });
+    filterAll(s, "highpass", 40);
+    reverb(s, 0.2, 1);
     return s;
 });
 
@@ -470,15 +545,108 @@ define("status_weaken", { volume: 0.5, pitch: 0.05, cooldown: 0.08, maxInstances
     return s;
 });
 
+// When the voices run out, a sound takes the place of a lower one (AudioManager)
+const PRIORITIES = {
+    ui_click: 90, ui_back: 90, ui_select: 85, ui_transition: 70, ui_error: 90, ui_pause: 90, ui_unpause: 90, ui_start: 90,
+    purchase: 85, unlock: 90, equip: 85, unequip: 85, deploy: 65, cash_drop: 30, cash_up: 70,
+    attack_slap: 40, attack_bite: 40, attack_pinch: 40, attack_zap: 40, attack_heavy: 40, attack_squirt: 40,
+    knockback: 45, death_unit: 60, death_enemy: 55, status_paralyze: 50, status_slow: 50, status_weaken: 50,
+};
+
+// ----- Boss, alarms, readiness, results -----
+// The boss music change: a brass cluster (the b9 is the menace), trombones falling, timpani, a china,
+// a boom and a gong shimmer, and a cartoon "uh-oh". Played at the new theme's key (AudioManager pitch)
+define("boss_stinger", { volume: 0.85, pitch: 0, cooldown: 3, maxInstances: 1, priority: 95 }, 1, () => {
+    const s = new Sound(2.4);
+    [38, 45, 50, 51].forEach(key => note(s, { program: 61, key, velocity: 122, len: 0.7, amp: 0.45 }));
+    [38, 45].forEach(key => note(s, { program: 57, key, velocity: 118, len: 0.9, amp: 0.4, bend: -1 }));
+    note(s, { program: 47, key: 38, velocity: 127, len: 1.0, amp: 0.6 });
+    note(s, { drums: true, program: 0, key: 52, velocity: 118, len: 1.5, amp: 0.4 });
+    boom(s, { from: 90, to: 55, dur: 0.8, amp: 0.5 });
+    bell(s, { freq: 146, ratio: 1.41, index: 5, tau: 0.8, amp: 0.18 });
+    noise(s, { dur: 1.4, amp: 0.14, attack: 0.12, tau: 0.5, release: 0.3, filter: { type: "bandpass", freq: 900, q: 0.8 } });
+    mouth(s, { at: 0.55, dur: 0.14, freq: 330, vowel: "uh", amp: 0.3 });
+    mouth(s, { at: 0.72, dur: 0.28, freq: t => 247 * Math.pow(0.95, t / 0.28), vowel: "oh", amp: 0.3 });
+    softClip(s, 1.3);
+    filterAll(s, "highpass", 35);
+    reverb(s, 0.18, 1);
+    return s;
+});
+// The fish bowl is in danger (below 30%): "bwee-bwoo" with a sonar edge, mid band so it cuts through
+define("base_alarm", { volume: 0.5, pitch: 0, cooldown: 4, maxInstances: 1, priority: 85 }, 1, () => {
+    const s = new Sound(0.8);
+    const sq = { wave: "square", amp: 0.3, attack: 0.005, vibrato: 0.006, vibratoHz: 7 };
+    tone(s, { ...sq, dur: 0.16, freq: 660, release: 0.03, filter: { type: "lowpass", freq: 2200 } });
+    tone(s, { ...sq, at: 0.2, dur: 0.22, freq: 523, release: 0.05, filter: { type: "lowpass", freq: 2000 } });
+    tone(s, { dur: 0.4, freq: 1450, amp: 0.12, attack: 0.002, tau: 0.25 });
+    bubble(s, { at: 0.45, freq: 700, size: 0.04, amp: 0.1 });
+    reverb(s, 0.12, 0.7);
+    return s;
+});
+// A slow fish is ready again: a soft rising "bip" and a tiny glass tick (felt more than heard)
+// A fish of the hub's tank was clicked: a round "blub" and a few bubbles
+define("fish_blub", { volume: 0.4, pitch: 0.06, cooldown: 0.08, maxInstances: 2, priority: 30 }, 3, p => {
+    const s = new Sound(0.5);
+    bubble(s, { freq: 380 * p, size: 0.08, amp: 0.45, rise: 1.7 });
+    bubble(s, { at: 0.08, freq: 560 * p, size: 0.06, amp: 0.32, rise: 1.6 });
+    bubbles(s, { at: 0.13, count: 4, spread: 0.2, low: 900 * p, high: 1800 * p, amp: 0.1 });
+    reverb(s, 0.1, 0.5);
+    return s;
+});
+define("unit_ready", { volume: 0.22, pitch: 0.03, cooldown: 0.25, maxInstances: 1, priority: 35 }, 1, () => {
+    const s = new Sound(0.25);
+    bubble(s, { freq: 900, size: 0.035, amp: 0.3, rise: 1.0 });
+    tone(s, { at: 0.03, dur: 0.05, freq: 1760, amp: 0.15, attack: 0.001, tau: 0.02 });
+    reverb(s, 0.05, 0.5);
+    return s;
+});
+// The wallet is full: three little clinks and a gulp
+define("wallet_full", { volume: 0.45, pitch: 0, cooldown: 2, maxInstances: 1, priority: 45 }, 1, () => {
+    const s = new Sound(0.7);
+    [2600, 3300, 3900].forEach((freq, i) => bell(s, { at: i * 0.06, freq, ratio: 1.41, index: 1.4, tau: 0.08, amp: 0.25, pan: -0.2 + i * 0.2 }));
+    bubble(s, { at: 0.22, freq: 260, size: 0.1, amp: 0.35, rise: 0.9 });
+    reverb(s, 0.1, 0.6);
+    return s;
+});
+// The results screen: a tick per step of the shells counting up (pitched up as it goes), and the landing
+define("reward_tick", { volume: 0.2, pitch: 0, cooldown: 0.045, maxInstances: 2, priority: 70 }, 1, () => {
+    const s = new Sound(0.1);
+    bell(s, { freq: 3200, ratio: 1.41, index: 0.8, tau: 0.025, amp: 0.35 });
+    noise(s, { dur: 0.003, amp: 0.1, attack: 0.0003, tau: 0.001, filter: { type: "highpass", freq: 5000 } });
+    return s;
+});
+define("shell_collect", { volume: 0.6, pitch: 0, cooldown: 0.5, maxInstances: 1, priority: 75 }, 1, () => {
+    const s = new Sound(1.0);
+    [2200, 2800, 3500].forEach((freq, i) => bell(s, { at: i * 0.05, freq, ratio: 1.41, index: 2, tau: 0.12, amp: 0.3, pan: -0.3 + i * 0.3 }));
+    [89, 93, 96].forEach((key, i) => note(s, { at: 0.12 + i * 0.05, program: 9, key, velocity: 92, len: 0.25, amp: 0.5 }));
+    bubbles(s, { at: 0.1, count: 6, spread: 0.3, low: 800, high: 2000, amp: 0.14 });
+    reverb(s, 0.15, 0.7);
+    return s;
+});
+
 // ===== Write =====
+const only = process.argv.slice(2);
+for (const name of only) if (!SOUNDS.some(sound => sound.name === name)) throw new Error(name + ": no such sound");
+const previousFile = path.join(OUT, "sfx.json");
+const previous = fs.existsSync(previousFile) ? JSON.parse(fs.readFileSync(previousFile, "utf8")) : {};
+const isMade = name => !only.length || only.includes(name);
+
 fs.mkdirSync(OUT, { recursive: true });
-for (const old of fs.readdirSync(OUT)) if (old.endsWith(".ogg")) fs.rmSync(path.join(OUT, old));
+for (const old of fs.readdirSync(OUT)) {
+    const owner = old.replace(/(_\d+)?\.ogg$/, "");
+    if (old.endsWith(".ogg") && (!only.length || (isMade(owner) && SOUNDS.some(sound => sound.name === owner)))) fs.rmSync(path.join(OUT, old));
+}
 const manifest = {};
 SOUNDS.forEach(({ name, settings, variants, build }, index) => {
+    if (!isMade(name)) {
+        if (previous[name]) manifest[name] = previous[name];   // Not made this time: its files stay
+        else console.warn(name + ": never made, run without arguments");
+        return;
+    }
     const files = [];
     for (let v = 0; v < variants; v++) {
-        seed(1000 * (index + 1) + v);
-        const samples = finish(build(PITCHES[v % PITCHES.length]));
+        seed([...name].reduce((h, c) => Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0, 2166136261) + v);
+        const samples = finish(build(PITCHES[v % PITCHES.length], v));
         const file = name + (variants > 1 ? "_" + (v + 1) : "") + ".ogg";
         const temp = path.join(os.tmpdir(), "fish_fighters_sfx.f32");
         fs.writeFileSync(temp, Buffer.from(samples.buffer, samples.byteOffset, samples.byteLength));
@@ -487,7 +655,7 @@ SOUNDS.forEach(({ name, settings, variants, build }, index) => {
         fs.rmSync(temp);
         files.push("assets/audios/sfx/" + file);
     }
-    manifest[name] = { files, ...settings };
+    manifest[name] = { files, ...settings, priority: settings.priority ?? PRIORITIES[name] ?? 50 };
     console.log(name.padEnd(16), files.length, "file(s)");
 });
 fs.writeFileSync(path.join(OUT, "sfx.json"), JSON.stringify(manifest, null, 4) + "\n");

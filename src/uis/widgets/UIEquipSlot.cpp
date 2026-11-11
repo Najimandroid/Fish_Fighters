@@ -67,10 +67,18 @@ void UIEquipSlot::render(sf::RenderWindow& window)
     UISkin::draw_cropped(window, m_texture, UISkin::slot_inner(rect, scale));
     UISkin::draw_nine_slice(window, UISkin::SLOT_FRAME, rect, scale);
 
-    UISkin::set_text_anchor(m_costText, { 1.f, 1.f });
-    m_costText.setScale({ scale, scale });
-    m_costText.setPosition(rect.position + rect.size - COST_PADDING * scale);
+    // The price on a navy strip along the bottom, so it never covers the face
+    const sf::FloatRect inner = UISkin::slot_inner(rect, scale);
+    const float stripHeight = 34.f * scale;
+    sf::RectangleShape strip({ inner.size.x, stripHeight });
+    strip.setPosition({ inner.position.x, inner.position.y + inner.size.y - stripHeight });
+    strip.setFillColor(sf::Color(16, 24, 34, 200));
+    window.draw(strip);
+    UISkin::set_text_anchor(m_costText, { 0.5f, 0.5f });
+    m_costText.setScale({ scale * 0.85f, scale * 0.85f });
+    m_costText.setPosition({ inner.position.x + inner.size.x / 2.f, inner.position.y + inner.size.y - stripHeight / 2.f });
     window.draw(m_costText);
+    UISkin::draw_nine_slice(window, UISkin::SLOT_FRAME, rect, scale);   // The frame's corners over the strip
 }
 
 /*

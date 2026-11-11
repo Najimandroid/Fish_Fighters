@@ -17,51 +17,6 @@ namespace
     int s_previewLevel = 1;
 
     // ==================
-    // Deploy icon (icon_<UID>_<form>.png, not stored in the JSON)
-    // ==================
-    void icon_field(EditorContext& ctx, int uid, int form, const ordered_json& formData)
-    {
-        property_label("Deploy icon", "Shown in the deploy bar and the equip menu.\nFile: icon_<UID>_<form>.png in assets/images/textures/icons/units.\n"
-            "Replacing it keeps the previous file as icon_..(old).png.");
-
-        const std::string iconPath = AssetLibrary::unit_icon_path(uid, form);
-        const sf::Texture* icon = ctx.textures.get(iconPath);
-
-        image_in_box(icon, ImVec2(112.f, 84.f), {}, true);
-        ImGui::SameLine();
-        ImGui::BeginGroup();
-        if (icon) ImGui::TextDisabled("%u x %u", icon->getSize().x, icon->getSize().y);
-        else ImGui::TextColored(ImVec4(1.f, 0.45f, 0.4f, 1.f), "No icon yet");
-
-        const ImGuiID importId = ImGui::GetID("ImportIcon");
-        if (ImGui::Button("Import...")) ctx.request_png_dialog(importId, "Pick the deploy icon (200 x 150)");
-
-        ImGui::SameLine();
-        const sf::Texture* sheet = ctx.textures.get(read_string(formData, "texture"));
-        ImGui::BeginDisabled(!sheet);
-        if (ImGui::Button("Make from first frame") && sheet)
-        {
-            std::string error;
-            const auto image = AssetLibrary::make_icon(*sheet, read_int(formData, "frameCount", 1));
-            if (image && ctx.assets.replace(iconPath, *image, error)) ctx.notify("Icon made from the first frame: " + iconPath);
-            else ctx.notify(error.empty() ? "Can't make the icon" : error, true);
-            ctx.textures.forget(iconPath);
-            ctx.mark_changed();
-        }
-        ImGui::EndDisabled();
-        ImGui::EndGroup();
-
-        if (auto picked = ctx.take_dialog_result(importId))
-        {
-            std::string error;
-            if (ctx.assets.replace(iconPath, *picked, error)) ctx.notify("Icon replaced: " + iconPath);
-            else ctx.notify(error, true);
-            ctx.textures.forget(iconPath);
-            ctx.mark_changed();
-        }
-    }
-
-    // ==================
     // Forms: one chip per form (its icon), "+" adds an evolution
     // ==================
     void form_chips(EditorContext& ctx, int uid, ordered_json& forms, int& removedForm)
@@ -200,7 +155,9 @@ namespace
     {
         if (begin_properties("Appearance"))
         {
-            icon_field(ctx, uid, formIndex, form);
+            EntityFields::icon(ctx, AssetLibrary::unit_icon_path(uid, formIndex), "Deploy icon",
+                "Shown in the deploy bar and the equip menu.\nFile: icon_<UID>_<form>.png in assets/images/textures/icons/units.\n"
+                "Replacing it keeps the previous file as icon_..(old).png.", form);
             EntityFields::sprite(ctx, UNITS_FILE, form, ImageFolder::UNIT_SHEETS);
             end_properties();
         }

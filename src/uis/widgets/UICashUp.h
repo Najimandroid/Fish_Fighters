@@ -35,6 +35,10 @@ public:
     // Draws the button, icon, and text to the given window.
     void render(sf::RenderWindow& window) override;
 
+    // The tutorial's questions: its level, and whether the next one can be bought now
+    int get_level() const { return m_level; }
+    bool can_upgrade() const { return m_level < m_maxLevel && m_isAffordable; }
+
 private:
 
     int m_level = 1;      // Current upgrade level

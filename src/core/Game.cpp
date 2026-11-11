@@ -1,6 +1,12 @@
 #include "Game.h"
 
+#include <algorithm>
 #include <iostream>
+
+namespace
+{
+    const sf::Color LETTERBOX_COLOR{ 16, 24, 34 };   // The bars around the UI on screens that aren't 16:9 (UI navy)
+}
 
 /*
  * Constructor
@@ -16,15 +22,9 @@ Game::Game():
 	m_uiManager(std::make_shared<UIManager>()),
     m_audio(std::make_shared<AudioManager>())
 {
-    // Create fullscreen window without borders
-    m_window.create(sf::VideoMode::getDesktopMode(), "Fish Fighters", sf::Style::None); //sf::Style::None
-    m_window.setFramerateLimit(m_frameRate);
-
-    // Window icon (the exe's own icon comes from resources/game.rc)
-    sf::Image icon;
-    if (icon.loadFromFile("assets/images/app/game_icon.png"))
-        m_window.setIcon(icon);
-    center_window();
+    // The player's options first: they choose the window mode
+    m_dataLoader->load_settings();
+    create_window(m_dataLoader->get_settings().fullscreen);
 
     // Load all game data (units, enemies, stages, player)
     // If anything is missing or broken, the reason is in error_log.txt and the game closes
@@ -36,6 +36,7 @@ Game::Game():
 
     // Music and sounds (without them the game still runs, silent; the reason is in the console)
     m_audio->load();
+    m_audio->apply_settings(m_dataLoader->get_settings());
 
     // Initialize UIManager and Stage with references to DataLoader
     m_uiManager->init(m_dataLoader, m_stage, m_audio);
@@ -48,6 +49,8 @@ Game::Game():
         return m_speedState;
     });
     m_uiManager->set_quit_game_callback([this]() {m_window.close();});
+    // Options > Display: applied between two frames (not while the window's events are being read)
+    m_uiManager->set_fullscreen_callback([this](bool fullscreen) { m_requestedFullscreen = fullscreen; });
 
     m_stage->init(m_dataLoader, m_uiManager, m_audio, &m_stageCamera);
 
@@ -80,10 +83,31 @@ void Game::init_cameras()
     m_stageCamera.setSize(static_cast<sf::Vector2f>(m_logicalResolution));
     m_stageCamera.setCenter(m_stageCamera.getSize() / 2.f);
 
-    m_uiCamera.setViewport(sf::FloatRect{ {0.f, 0.f}, {1.f, 1.f} });
     m_stageCamera.setViewport(sf::FloatRect{ {0.f, 0.f}, {1.f, 1.f} });
-
     m_stageCamera.zoom(0.9f); // initial zoom-out for better stage visibility
+
+    update_viewports();
+}
+
+/*
+ * Fits the views to the window's shape:
+ *  - the UI keeps its 1920x1080 proportions, scaled uniformly and centered (bars on the sides on wider
+ *    screens, above and below on taller ones), never stretched
+ *  - the battlefield fills the whole window: a wider screen shows more of the lane, at the same zoom
+ */
+void Game::update_viewports()
+{
+    const sf::Vector2f window = static_cast<sf::Vector2f>(m_window.getSize());
+    if (window.x <= 0.f || window.y <= 0.f) return;
+
+    const sf::Vector2f logical = static_cast<sf::Vector2f>(m_logicalResolution);
+    const float scale = std::min(window.x / logical.x, window.y / logical.y);
+    const sf::Vector2f fraction{ logical.x * scale / window.x, logical.y * scale / window.y };
+    m_uiCamera.setViewport(sf::FloatRect{ (sf::Vector2f{ 1.f, 1.f } - fraction) / 2.f, fraction });
+
+    // The stage camera's height carries its zoom; its width follows the window
+    const float height = m_stageCamera.getSize().y;
+    m_stageCamera.setSize({ height * window.x / window.y, height });
 }
 
 void Game::calculate_delta_time()
@@ -124,6 +148,12 @@ void Game::run_game_loop()
 
         poll_events();
 
+        if (m_requestedFullscreen)
+        {
+            create_window(*m_requestedFullscreen);
+            m_requestedFullscreen.reset();
+        }
+
         m_stage->update(m_deltaTime);
         m_uiManager->update_uis(m_deltaTime);
 
@@ -131,7 +161,7 @@ void Game::run_game_loop()
         m_audio->set_music_ducked(m_stage->is_loaded() && m_speedState == GameSpeedState::PAUSED);
         m_audio->update(m_realDeltaTime);
 
-        m_window.clear();
+        m_window.clear(LETTERBOX_COLOR);
 
         // Render stage (world)
         m_window.setView(m_stageCamera);
@@ -184,24 +214,22 @@ void Game::poll_events()
         // Forward event to UIManager for UI interaction
         m_uiManager->handle_ui_events(*event, m_window);
 
-        // Keyboard input handling
+#ifdef DEBUG_MODE
+        // Developer shortcuts (the player's pause and speed keys are on the battle UI: P / Space / Escape, F)
         if (const auto* e_keycode = event->getIf<sf::Event::KeyPressed>())
         {
             // Window size shortcuts
             if (e_keycode->code == sf::Keyboard::Key::Numpad1) m_window.setSize({ 1920, 1080 });
             else if (e_keycode->code == sf::Keyboard::Key::Numpad2) m_window.setSize({ 1280, 720 });
             else if (e_keycode->code == sf::Keyboard::Key::Numpad3) m_window.setSize({ 640, 360 });
-#ifdef DEBUG_MODE
             // Show or hide the developer tools window
             else if (e_keycode->code == sf::Keyboard::Key::F1) m_debugTools->toggle_window();
-#endif
-            // Close game (removed)
-            //else if (e_keycode->code == sf::Keyboard::Key::Escape) m_window.close();
-            // Pause and speed control
-            else if (e_keycode->code == sf::Keyboard::Key::P) { m_speedState = GameSpeedState::PAUSED; }
-            else if (e_keycode->code == sf::Keyboard::Key::LShift) { m_speedState = GameSpeedState::FASTER; }
-            else if (e_keycode->code == sf::Keyboard::Key::R) { m_speedState = GameSpeedState::NORMAL; }
+            // Pause and speed without the pause menu
+            else if (e_keycode->code == sf::Keyboard::Key::F2) { m_speedState = GameSpeedState::PAUSED; }
+            else if (e_keycode->code == sf::Keyboard::Key::F3) { m_speedState = GameSpeedState::NORMAL; }
+            else if (e_keycode->code == sf::Keyboard::Key::F4) { m_speedState = GameSpeedState::FASTER; }
         }
+#endif
 
         // Mouse wheel event for camera zoom
         if (const auto* e_wheel = event->getIf<sf::Event::MouseWheelScrolled>())
@@ -314,36 +342,47 @@ void Game::poll_events()
         }
 
         // Window resize event
-        if (const auto* e_window = event->getIf<sf::Event::Resized>())
+        if (event->is<sf::Event::Resized>())
         {
-            auto newSize = e_window->size; // actual new window size
-
-            // 1. Adjust UI camera (always fixed)
-            m_uiCamera.setSize(static_cast<sf::Vector2f>(m_logicalResolution));
-            m_uiCamera.setCenter({ m_logicalResolution.x / 2.f, m_logicalResolution.y / 2.f });
-
-            // 2. Adjust stage camera while maintaining aspect ratio
-            float windowRatio = static_cast<float>(newSize.x) / newSize.y;
-            float logicalRatio = static_cast<float>(m_logicalResolution.x) / m_logicalResolution.y;
-
-            if (windowRatio > logicalRatio) // window too wide => vertical bars
-            {
-                float width = m_logicalResolution.y * windowRatio;
-                m_stageCamera.setSize({ width, static_cast<float>(m_logicalResolution.y) });
-            }
-            else // window too tall => horizontal bars
-            {
-                float height = m_logicalResolution.x / windowRatio;
-                m_stageCamera.setSize({ static_cast<float>(m_logicalResolution.x), height });
-            }
-
-            // 3. Reapply UI view and center window
+            update_viewports();
             m_window.setView(m_uiCamera);
-            center_window();
         }
+
+        // Focus: the game goes quiet in the background (Options > Audio)
+        if (event->is<sf::Event::FocusLost>()) m_audio->set_focus_muted(true);
+        if (event->is<sf::Event::FocusGained>()) m_audio->set_focus_muted(false);
     }
 }
 
+
+/*
+ * Creates (or re-creates) the window:
+ *  - fullscreen: borderless at the desktop size
+ *  - windowed: a resizable 16:9 window, 80% of the desktop, with a title bar
+ * The views are fitted to it right away (the UI keeps its 16:9 shape in any window)
+ */
+void Game::create_window(bool fullscreen)
+{
+    const sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
+    if (fullscreen)
+    {
+        m_window.create(desktop, "Fish Fighters", sf::Style::None);
+    }
+    else
+    {
+        sf::Vector2f size{ desktop.size.x * 0.8f, desktop.size.x * 0.8f * 9.f / 16.f };
+        if (size.y > desktop.size.y * 0.8f) size = { desktop.size.y * 0.8f * 16.f / 9.f, desktop.size.y * 0.8f };
+        m_window.create(sf::VideoMode(static_cast<sf::Vector2u>(size)), "Fish Fighters", sf::Style::Default);
+    }
+    m_window.setFramerateLimit(m_frameRate);
+
+    // Window icon (the exe's own icon comes from resources/game.rc)
+    sf::Image icon;
+    if (icon.loadFromFile("assets/images/app/game_icon.png"))
+        m_window.setIcon(icon);
+    center_window();
+    update_viewports();
+}
 
 /*
  * Change window size programmatically

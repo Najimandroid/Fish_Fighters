@@ -17,12 +17,12 @@
 //   theme_calm       "Kelp Garden"    100 BPM  underwater bossa: vibraphone, harp, kalimba (easy stages)
 //   theme_serious    "Deep Current"   138 BPM  horns over a pizzicato ostinato, a clarinet that plans ahead
 //   theme_stressful  "Pressure Alarm" 172 BPM  driving strings and bass, brass, frantic steel drums, sonar alarm
-//   theme_boss       "Leviathan"      160 BPM  brass, choir, trombone riff, timpani, the leviathan's voice
+//   theme_boss       "Leviathan's Waltz" 3/4  a doom waltz: brass, choir, trombone riff, timpani, a music-box lullaby
 //   theme_shanty     "Sunken Galleon" 126 BPM  12/8 sea-shanty jig: fiddle, accordion, tuba, stomps; a music box in the wreck
 //   theme_jelly      "Jellyfish Lair" 124 BPM  dark, phrygian: an electric-eel lead, bowed glass, pulses, electric zaps
-//   theme_jelly_boss "Jellyfish King" 152 BPM  the lair's tune for its king: church organ, choir, brass, bigger zaps
+//   theme_jelly_boss "High Voltage Majesty" 138 BPM  dark electro: the eel crowned, 808/909, synth bass, a choir in the back
 //   theme_crab       "Crab Cove"      132 BPM  a sideways tiptoe in A minor: bassoon, flamenco strums, castanets and claves
-//   theme_crab_boss  "King Crab"      156 BPM  the cove's tune armoured: brass, power chords, taiko, castanets at full speed
+//   theme_crab_boss  "King Crab's Sideways Stomp" 120 BPM  heavy and jumpy: chugs, freezes, scuttles, taiko; the cove's pinches
 //   jingle_battle_start, jingle_victory, jingle_defeat
 
 const fs = require("fs");
@@ -47,11 +47,15 @@ function length(text) {
     return b === undefined ? Number(a) : Number(a) / Number(b);
 }
 
-// "C5:.5 F5:.5 r:1 [F3,A3,C4]:4 | ..." -> [{ notes, beats }] (r = rest, | = bar line, checked to be 4 beats)
+// Beats in a bar of the song being written (3 for a waltz); set by each Song
+let BAR = 4;
+
+// "C5:.5 F5:.5 r:1 [F3,A3,C4]:4 | ..." -> [{ notes, beats }] (r = rest, | = bar line, checked to be BAR beats;
+// lines without bar lines aren't checked, so a hemiola can cross them)
 function parse(text, transpose = 0) {
     for (const bar of text.split("|")) {
         const beats = bar.trim().split(/\s+/).filter(Boolean).reduce((sum, t) => sum + length(t.split(":")[1]), 0);
-        if (text.includes("|") && Math.abs(beats - 4) > 0.01) throw new Error("Bar of " + beats + " beats: " + bar);
+        if (text.includes("|") && Math.abs(beats - BAR) > 0.01) throw new Error("Bar of " + beats + " beats: " + bar);
     }
     return text.trim().split(/\s+/).filter(t => t !== "|").map(token => {
         const [what, beats] = token.split(":");
@@ -71,8 +75,9 @@ function hash(...values) {
 let ORIGIN = 0; // start of the body copy being written (the two copies must be identical for a seamless loop)
 
 class Part {
-    constructor(name, program, { channel = 1, volume = 100, group = "main", pan = 0, gainDb = 0, fx = {} } = {}) {
-        Object.assign(this, { name, program, channel, volume, group, pan, gainDb, fx, events: [], cursor: 0 });
+    // vibrato: { cents, hz, delay (seconds), minBeats } on the held notes of a solo line (rendered by sf2_render.js)
+    constructor(name, program, { channel = 1, volume = 100, group = "main", pan = 0, gainDb = 0, fx = {}, vibrato = null } = {}) {
+        Object.assign(this, { name, program, channel, volume, group, pan, gainDb, fx, vibrato, events: [], cursor: 0 });
     }
     // Plays a line from the cursor. gate: part of each note actually held (staccato < 1)
     play(text, { velocity = 90, gate = 0.95, transpose = 0 } = {}) {
@@ -100,8 +105,10 @@ class Synth {
 class Song {
     // mix: each group's loudness in dB relative to the lead group (0), applied by render_stems.js
     // kind: "menu", "stage" or "jingle" (the editor lists the menu and stage themes for the stages)
-    constructor(name, title, tempo, { introBars = 0, bodyBars = 0, mix = {}, kind = "stage" } = {}) {
-        Object.assign(this, { name, title, tempo, intro: introBars * 4, length: bodyBars * 4, mix, kind, parts: [] });
+    // barBeats: beats per bar (3 for a waltz); key: its tonic (the battle start jingle and the boss stinger match it)
+    constructor(name, title, tempo, { introBars = 0, bodyBars = 0, mix = {}, kind = "stage", barBeats = 4, key = null } = {}) {
+        Object.assign(this, { name, title, tempo, barBeats, key, intro: introBars * barBeats, length: bodyBars * barBeats, mix, kind, parts: [] });
+        BAR = barBeats;
     }
     part(name, program, options) { const p = new Part(name, program, options); this.parts.push(p); return p; }
     drums(name, kit, options) { return this.part(name, kit, { ...options, channel: 10 }); }
@@ -156,7 +163,7 @@ function progression(text, start) {
     let beat = start;
     for (const bar of text.split("|").map(b => b.trim()).filter(Boolean)) {
         const names = bar.split(/\s+/);
-        for (const name of names) { out.push({ symbol: name, beat, length: 4 / names.length }); beat += 4 / names.length; }
+        for (const name of names) { out.push({ symbol: name, beat, length: BAR / names.length }); beat += BAR / names.length; }
     }
     return out;
 }
@@ -289,6 +296,7 @@ function gliss(part, start, from, to, beats, scale, velocity = 70, length = 2) {
 const KICK = 36, SIDE_STICK = 37, SNARE = 38, CLAP = 39, BRUSH_SWIRL = 40, HAT = 42, LOW_TOM = 45, OPEN_HAT = 46, CRASH = 49, RIDE = 51, TAMBOURINE = 54;
 const CLAVES = 75, WOOD_HIGH = 76, WOOD_LOW = 77, GUIRO = 74, CASTANETS = 85;
 const BONGO_HIGH = 60, BONGO_LOW = 61, CONGA_MUTE = 62, CONGA_OPEN = 63, CONGA_LOW = 64, SHAKER = 82;
+const CHINA = 52, CRASH2 = 57, HIGH_TOM = 50, HI_MID_TOM = 48, LOW_MID_TOM = 47;
 
 // One character per step (16 per bar, or 12 in 12/8): X x m o g = accent to ghost, . = rest.
 // Patterns longer than a bar span several bars.
@@ -298,7 +306,7 @@ function beat(part, start, barsCount, grid, stepsPerBar = 16) {
         const steps = text.replace(/[\s|]/g, "");
         for (let s = 0; s < barsCount * stepsPerBar; s++) {
             const velocity = LEVELS[steps[s % steps.length]];
-            if (velocity) part.hit(start + s * 4 / stepsPerBar, Number(note), velocity, 0.2);
+            if (velocity) part.hit(start + s * BAR / stepsPerBar, Number(note), velocity, 0.2);
         }
     }
 }
@@ -309,6 +317,52 @@ function roll(part, start, beats, note = SNARE, from = 50, to = 110, step = 0.25
     const count = Math.round(beats / step);
     for (let i = 0; i < count; i++) part.hit(start + i * step, note, from + (to - from) * i / Math.max(1, count - 1), 0.1);
 }
+// Repeats each written note as 16ths (tremolo picking), the first one accented
+function tremolo(part, text, { velocity = 90, gate = 0.45, rate = 0.25, accent = 10, transpose = 0 } = {}) {
+    for (const { notes, beats } of parse(text, transpose)) {
+        for (let t = 0, i = 0; t < beats - 1e-6; t += rate, i++)
+            for (const n of notes)
+                part.hit(part.cursor + t, n, velocity + (i === 0 ? accent : -4 + Math.round((hash(part.name, (part.cursor + t - ORIGIN).toFixed(3), n) - 0.5) * 12)), rate * gate);
+        part.cursor += beats;
+    }
+    return part;
+}
+// Tango "arrastre": a chromatic 16th-note drag up into a target note on a downbeat
+function drag(part, beat, target, { count = 4, step = 0.25, from = 70, to = 100 } = {}) {
+    for (let i = 0; i < count; i++) part.hit(beat - (count - i) * step, target - (count - i), from + (to - from) * i / (count - 1), step * 0.9);
+}
+// Phrase shaping: the highest note of [start, end) gets +peak, the last note +ending
+function shape(part, start, end, { peak = 10, ending = -8 } = {}) {
+    const events = part.events.filter(e => e.time >= start - 1e-6 && e.time < end - 1e-6);
+    if (!events.length) return;
+    const top = events.reduce((a, b) => (b.note > a.note ? b : a));
+    top.velocity = Math.min(127, top.velocity + peak);
+    const last = events.reduce((a, b) => (b.time > a.time ? b : a));
+    last.velocity = Math.max(1, last.velocity + ending);
+}
+// Stop-time gag: silences the parts in [from, to) (notes crossing into it are cut at from)
+function stopTime(parts, from, to) {
+    for (const p of parts) {
+        if (p instanceof Synth) { p.events = p.events.filter(e => e[0] < from - 1e-6 || e[0] >= to - 1e-6); continue; }
+        p.events = p.events.filter(e => e.time < from - 1e-6 || e.time >= to - 1e-6);
+        for (const e of p.events) if (e.time < from && e.time + e.length > from) e.length = from - e.time;
+    }
+}
+// Bend an already-written note (droops, slides): the notes starting at that beat
+const bendAt = (part, beat, semitones) => part.events.filter(e => Math.abs(e.time - beat) < 1e-6).forEach(e => (e.bend = semitones));
+// Timpani notes kept in their range (D2 to D3)
+const foldTimp = n => { while (n > 50) n -= 12; while (n < 38) n += 12; return n; };
+// The theremin (a render_stems.js synth): a line in the note format, gliding between legato notes;
+// swoopFirst: the phrase's first note swoops up from that many semitones below
+function theremin(synth, start, text, { velocity = 96, glide = 0.07, swoopFirst = 0 } = {}) {
+    let t = start, first = true;
+    for (const { notes, beats } of parse(text)) {
+        for (const n of notes) synth.add(t, +(440 * Math.pow(2, (n - 69) / 12)).toFixed(3), beats, velocity, glide, first ? swoopFirst : 0);
+        if (notes.length) first = false;
+        t += beats;
+    }
+}
+
 function tomFill(part, start, beats = 2, velocity = 100) {
     const toms = [50, 48, 47, 45, 43, 41];
     const count = beats * 4;
@@ -367,7 +421,7 @@ function writeMidi(song, parts, file) {
     const conductor = [
         { tick: 0, order: 0, bytes: textEvent(0x03, song.title) },
         { tick: 0, order: 0, bytes: [0xff, 0x51, 0x03, ...[16, 8, 0].map(s => (Math.round(60000000 / song.tempo) >> s) & 0xff)] },
-        { tick: 0, order: 0, bytes: [0xff, 0x58, 0x04, 4, 2, 24, 8] },
+        { tick: 0, order: 0, bytes: [0xff, 0x58, 0x04, song.barBeats, 2, 24, 8] },
     ];
     if (song.length) {
         conductor.push({ tick: tick(song.intro + song.length), order: 0, bytes: textEvent(0x06, "loopStart") });
@@ -416,6 +470,7 @@ function writeSong(song) {
     song.parts.forEach((part, index) => {
         const name = String(index + 1).padStart(2, "0") + "_" + part.name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
         const common = { name: part.name, group: part.group, pan: part.pan, gainDb: part.gainDb, fx: part.fx, tempo: song.tempo, loopSeconds };
+        if (part.vibrato) common.vibrato = part.vibrato;
         if (part instanceof Synth) {
             const events = part.events.map(([t, ...values]) => [+seconds(t).toFixed(7), ...values]);
             fs.writeFileSync(path.join(folder, name + ".json"), JSON.stringify({ ...common, synth: part.kind, events }));
@@ -444,7 +499,7 @@ const F_MAJOR = [5, 7, 9, 10, 0, 2, 4], EB_MAJOR = [3, 5, 7, 8, 10, 0, 2], EB_LY
 //    C 8 (breakdown: marimba alone with the bubbles) | A' 16 (everyone, flute on top) | turnaround 2
 // =====================================================================================================
 {
-    const song = new Song("theme_default", "Fish Fighters - Reef Rumble", 152, { introBars: 4, bodyBars: 50, mix: { lead: 0, brass: -2, keys: -6, bass: -4, drums: -3, percussion: -7, bubbles: -9 } });
+    const song = new Song("theme_default", "Fish Fighters - Reef Rumble", 152, { key: "F", introBars: 4, bodyBars: 50, mix: { lead: 0, brass: -2, keys: -6, bass: -4, drums: -3, percussion: -7, bubbles: -9 } });
     const steel = song.part("Steel drums", 114, { group: "lead", volume: 112, pan: 0.1, fx: { echo: { beats: 0.75, feedback: 0.28, mix: 0.2 } } });
     const flute = song.part("Flute", 73, { group: "lead", volume: 80, pan: 0.3, fx: { echo: { beats: 0.75, feedback: 0.2, mix: 0.12 } } });
     const kalimba = song.part("Kalimba", 108, { group: "lead", volume: 88, pan: -0.25, fx: { echo: { beats: 0.75, feedback: 0.35, mix: 0.3 } } });
@@ -571,7 +626,7 @@ const F_MAJOR = [5, 7, 9, 10, 0, 2, 4], EB_MAJOR = [3, 5, 7, 8, 10, 0, 2], EB_LY
 //    Intro 2 | A 16 (vibraphone) | B 8 (deeper: falling chords, flute, harp) | A' 16 (flute, vibraphone counter-melody)
 // =====================================================================================================
 {
-    const song = new Song("theme_calm", "Fish Fighters - Kelp Garden", 100, { introBars: 2, bodyBars: 40, mix: { lead: 0, kalimba: -5, harp: -5, keys: -5, pad: -9, bass: -4, drums: -7, bubbles: -9 } });
+    const song = new Song("theme_calm", "Fish Fighters - Kelp Garden", 100, { key: "Eb", introBars: 2, bodyBars: 40, mix: { lead: 0, kalimba: -5, harp: -5, keys: -5, pad: -9, bass: -4, drums: -7, bubbles: -9 } });
     const vibes = song.part("Vibraphone", 11, { group: "lead", volume: 104, pan: -0.1, fx: { chorus: { mix: 0.35 }, echo: { beats: 0.75, feedback: 0.3, mix: 0.18 } } });
     const flute = song.part("Flute", 73, { group: "lead", volume: 90, pan: 0.15, fx: { echo: { beats: 0.75, feedback: 0.25, mix: 0.15 } } });
     const kalimba = song.part("Kalimba", 108, { group: "kalimba", volume: 92, pan: 0.4, fx: { echo: { beats: 0.75, feedback: 0.4, mix: 0.3 } } });
@@ -661,7 +716,7 @@ const F_MAJOR = [5, 7, 9, 10, 0, 2, 4], EB_MAJOR = [3, 5, 7, 8, 10, 0, 2], EB_LY
 //    Intro 4 | A 16 (horns) | B 8 (clarinet, brighter) | C 8 (tension: sonar, timpani) | A' 16 (horns and strings)
 // =====================================================================================================
 {
-    const song = new Song("theme_serious", "Fish Fighters - Deep Current", 138, { introBars: 4, bodyBars: 48, mix: { horns: 0, strings: -2, woodwind: 0, ostinato: -4, bass: -4, drums: -3, pad: -9, fx: -7 } });
+    const song = new Song("theme_serious", "Fish Fighters - Deep Current", 138, { key: "D", introBars: 4, bodyBars: 48, mix: { horns: 0, strings: -2, woodwind: 0, ostinato: -4, bass: -4, drums: -3, pad: -9, fx: -7 } });
     const horns = song.part("French horns", 60, { group: "horns", volume: 112, pan: -0.2 });
     const strings = song.part("Strings", 48, { group: "strings", volume: 98, pan: 0.2 });
     const clarinet = song.part("Clarinet", 71, { group: "woodwind", volume: 98, pan: 0.3, fx: { echo: { beats: 0.75, feedback: 0.25, mix: 0.15 } } });
@@ -768,7 +823,7 @@ const F_MAJOR = [5, 7, 9, 10, 0, 2, 4], EB_MAJOR = [3, 5, 7, 8, 10, 0, 2], EB_LY
 //    Intro 2 | A 16 (brass) | B 8 (steel drums, half time) | C 8 (alarm, rising) | A' 16 (brass, steel drums, xylophone)
 // =====================================================================================================
 {
-    const song = new Song("theme_stressful", "Fish Fighters - Pressure Alarm", 172, { introBars: 2, bodyBars: 48, mix: { brass: 0, lead: -1, strings: -4, bass: -4, drums: -3, fx: -7 } });
+    const song = new Song("theme_stressful", "Fish Fighters - Pressure Alarm", 172, { key: "C", introBars: 2, bodyBars: 48, mix: { brass: 0, lead: -1, strings: -4, bass: -4, drums: -3, fx: -7 } });
     const brass = song.part("Brass", 61, { group: "brass", volume: 110, pan: -0.1 });
     const steel = song.part("Steel drums", 114, { group: "lead", volume: 108, pan: 0.2, fx: { echo: { beats: 0.5, feedback: 0.25, mix: 0.16 } } });
     const xylo = song.part("Xylophone", 13, { group: "lead", volume: 88, pan: 0.3 });
@@ -852,118 +907,162 @@ const F_MAJOR = [5, 7, 9, 10, 0, 2, 4], EB_MAJOR = [3, 5, 7, 8, 10, 0, 2], EB_LY
 }
 
 // =====================================================================================================
-// 5. "Leviathan" - boss stages. The motif in D minor on brass, a 3-3-2 trombone and tuba riff, string
-//    sixteenths, choir, timpani and taiko, the leviathan's sliding voice and the sonar in the dark.
-//    Intro 4 | A 16 (brass) | B 8 (half time, choir) | C 8 (the leviathan lurks) | A' 16 (everyone)
+// 5. "Leviathan's Waltz" - boss stages. The sea monster has to dance a waltz: a heavy one-in-a-bar 3/4 in D minor
+//    (tuba, low piano, concert bass drum, timpani on every downbeat), the motif as a bassoon riff with a hiccup,
+//    a hemiola "fight" where the waltz breaks into big two-beat strides, and a music-box lullaby in D major
+//    sung to the monster, cut by silence, a hiccup and the slam.
+//    Intro 8 | A 24 | B 16 (hemiola fight) | C 8 (lullaby) | A' 24  (3/4 bars)
 // =====================================================================================================
 {
-    const song = new Song("theme_boss", "Fish Fighters - Leviathan", 160, { introBars: 4, bodyBars: 48, mix: { brass: 0, lowbrass: -3, choir: -4, strings: -5, bells: -6, bass: -4, drums: -2, fx: -7 } });
-    const brass = song.part("Brass", 61, { group: "brass", volume: 112, pan: -0.1 });
-    const trombone = song.part("Trombones", 57, { group: "lowbrass", volume: 104, pan: 0.15 });
-    const tuba = song.part("Tuba", 58, { group: "lowbrass", volume: 100 });
-    const choir = song.part("Choir", 52, { group: "choir", volume: 96 });
-    const whale = song.part("Leviathan voice", 91, { group: "choir", volume: 104, fx: { lowpass: 1400, echo: { beats: 1.5, feedback: 0.4, mix: 0.35 } } });
-    const strings = song.part("Strings", 48, { group: "strings", volume: 94, pan: 0.3 });
-    const bells = song.part("Tubular bells", 14, { group: "bells", volume: 90, pan: -0.25 });
-    const bass = song.part("Synth bass", 38, { group: "bass", volume: 98 });
-    const kit = song.drums("Kit", 16, { group: "drums", volume: 96 });
-    const timpani = song.part("Timpani", 47, { group: "drums", volume: 104 });
-    const taiko = song.part("Taiko", 116, { group: "drums", volume: 98 });
+    const song = new Song("theme_boss", "Fish Fighters - Leviathan's Waltz", 162, { barBeats: 3, introBars: 8, bodyBars: 72, key: "D",
+        mix: { lead: 0, brass: -1, bass: -2, strings: -7, keys: -6, drums: -2, fx: -8 } });
+    const bassoon = song.part("Bassoon", 70, { group: "lead", volume: 110, pan: -0.15 });
+    const trumpet = song.part("Trumpet", 56, { group: "lead", volume: 104, pan: 0.1, vibrato: { cents: 18, hz: 5.5, delay: 0.25, minBeats: 1 } });
+    const glock = song.part("Glockenspiel", 9, { group: "lead", volume: 80, pan: 0.35 });
+    const brass = song.part("Brass", 61, { group: "brass", volume: 110, pan: -0.1 });
+    const trombones = song.part("Trombones", 57, { group: "brass", volume: 106, pan: 0.2 });
+    const horns = song.part("Horns", 60, { group: "brass", volume: 100, pan: -0.3 });
+    const tuba = song.part("Tuba", 58, { group: "bass", volume: 106 });
+    const piano = song.part("Low piano", 0, { group: "bass", volume: 100 });
+    const pizz = song.part("Pizzicato", 45, { group: "strings", volume: 92, pan: 0.4 });
+    const trem = song.part("Tremolo strings", 44, { group: "strings", volume: 92, pan: -0.35 });
+    const musicBox = song.part("Music box", 10, { group: "keys", volume: 96, fx: { echo: { beats: 1, feedback: 0.4, mix: 0.3 } } });
+    const kit = song.drums("Orchestral kit", 48, { group: "drums", volume: 100 });
+    const timpani = song.part("Timpani", 47, { group: "drums", volume: 106 });
+    const taiko = song.part("Taiko", 116, { group: "drums", volume: 100 });
+    const whale = song.part("Leviathan voice", 91, { group: "fx", volume: 104, fx: { lowpass: 1400, echo: { beats: 1.5, feedback: 0.4, mix: 0.35 } } });
     const ping = song.synth("Sonar", "ping", { group: "fx", fx: { echo: { beats: 1.5, feedback: 0.45, mix: 0.4 } } });
     const bub = song.synth("Bubbles", "bubbles", { group: "fx" });
 
-    const A1 = "Dm | Dm | Bb | C | Dm | Dm | Eb | A7";
-    const A2 = "Dm | Dm | Bb | C | Gm | Bb | Eb | A7";
-    const B = "Bb | C | Dm | Dm | Bb | C | Eb | A7";
-    const C = "Dm | Eb/D | Dm | Eb/D | Dm | Eb/D | Gm/D | A7";
-    const MOTIF = "A4:.5 D5:.5 F5:1 E5:.5 D5:.5 A5:1";
-    const MEL_A = MOTIF + " | Bb5:1 A5:1 F5:1 D5:1 | D5:.5 F5:.5 Bb5:1 A5:.5 G5:.5 F5:1 | E5:1.5 F5:.5 G5:1 C5:1 | " +
-        MOTIF + " | D6:1.5 C6:.5 A5:1 F5:1 | G5:.5 Bb5:.5 Eb6:1 D6:.5 Bb5:.5 G5:1 | A5:1 C#6:1 E6:1 A5:1 | " +
-        MOTIF + " | Bb5:1 A5:1 F5:1 D5:1 | F5:.5 Bb5:.5 D6:1 C6:.5 Bb5:.5 F5:1 | G5:.5 C6:.5 E6:1 D6:.5 C6:.5 G5:1 | " +
-        "Bb5:1.5 A5:.5 G5:1 D5:1 | F5:1 D5:1 Bb4:1 D5:1 | Eb5:.5 G5:.5 Bb5:1 Eb6:2 | E6:1 C#6:1 A5:1 E5:1";
-    const MEL_B = "F5:2 D5:1 F5:1 | G5:2 E5:1 G5:1 | A5:3 F5:.5 A5:.5 | D6:2 C6:1 A5:1 | Bb5:2 F5:1 Bb5:1 | C6:2 G5:1 C6:1 | Bb5:2 G5:1 Eb5:1 | C#6:2 E6:1 A5:1";
-    const C_LOW = "A2:1 D3:1 F3:2 | r:4 | A2:1 D3:1 F3:1 Eb3:1 | r:4 | A2:1 D3:1 F3:2 | r:4 | G2:1 Bb2:1 D3:2 | C#3:1 E3:1 A3:2";
-    const RIFF = [[0, 1.2, 104], [1.5, 1.2, 100], [3, 0.8, 104]];   // 3 + 3 + 2 eighths
-    const DRIVE8 = [[0, 0.45, "R", 100], [0.5, 0.45, "R", 80], [1, 0.45, "8", 86], [1.5, 0.45, "R", 96], [2, 0.45, "R", 80], [2.5, 0.45, "8", 86], [3, 0.45, "R", 96], [3.5, 0.45, "8", 84]];
-    const KIT_A = { [KICK]: "x...x...x...x...", [SNARE]: "....x.......x...", [HAT]: "m.o.m.o.m.o.m.o." };
-    const KIT_A_FULL = { [KICK]: "x...x...x...x.x.", [SNARE]: "....x.......x..g", [HAT]: "m.o.m.o.m.o.m.o.", [OPEN_HAT]: "..............o." };
-    const KIT_HALF = { [KICK]: "x.....x.........", [SNARE]: "........x.......", [RIDE]: "o.o.o.o.o.o.o.o." };
-    const timpaniOn = (prog, start, bars, every = 2) => {
-        for (let bar = 0; bar < bars; bar += every) timpani.hit(start + bar * 4, above(chord(chordAt(prog, start + bar * 4).symbol).root, 33), 108, 1.5);
-    };
-    const riff = (prog, velocityShift = 0) => {
-        comp(trombone, prog, { pattern: RIFF.map(([o, l, v]) => [o, l, v + velocityShift]), center: 50 });
-        bassline(tuba, prog, { pattern: RIFF.map(([o, l, v]) => [o, l, "R", v - 6 + velocityShift]), base: 31 });
+    const A = "Dm | Dm | Bb7 | A7 | Dm | Dm | Bb7 | A7 | Dm | Dm | Gm | C7 | F | A7 | Eb | Dm | Dm | Dm | C7 | F | A7 | Dm | Gm | A7";
+    const B = "Bb | F/A | Gm | Gm | Eb | Eb | A7sus4 | A7 | Bb | F/A | Gm | Eb | Edim | Edim | A7sus4 | A7";
+    const C = "D | D | G | D | A7 | D | Em A7 | D";
+    const bars = (text, from, to) => text.split("|").slice(from, to).join("|");
+
+    const RIFF = "A2:1 D3:1 F3:1 | E3:.5 D3:.5 A3:2 | Bb3:1 A3:1 Ab3:1 | G3:1 r:.5 C#3:.5 D3:1";
+    const TUNE_A1 = "A4:1 D5:1 F5:1 | E5:1.5 D5:.5 A5:1 | Bb5:2 A5:1 | G5:1 F5:1 E5:1 | " +
+                    "F5:1 D5:1 A4:1 | C#5:1.5 D5:.5 E5:1 | F5:1 G5:1 Eb5:1 | D5:3";
+    const TUNE_A2 = "A4:1 D5:1 F5:1 | E5:.5 D5:.5 A5:2 | C6:2 Bb5:1 | A5:1 G5:1 F5:1 | " +
+                    "G5:1 E5:1 C#5:1 | D5:1 F5:1 A5:1 | Bb5:1 A5:1 G5:1 | A5:3";
+    // Hemiola half notes: no bar lines, they cross the 3/4 bars
+    const B_MEL = "F5:2 D5:2 C5:2 Bb4:2 D5:2 G5:2 G5:2 Bb5:2 G5:2 A5:2 G5:1 E5:3 " +
+                  "F5:2 D5:2 C5:2 D5:2 G5:2 Bb5:2 Bb5:2 G5:2 E5:2 D5:2 E5:1 C#5:3";
+    const LULLABY = "A5:1 D6:1 F#6:1 | E6:.5 D6:.5 A6:2 | B6:2 A6:1 | F#6:3 | " +
+                    "G6:1 F#6:1 E6:1 | D6:1 F#6:1 A5:1 | B5:1.5 C#6:.5 E6:1 | D6:3";
+
+    const OOM = [[0, 0.9, "R", 104], [3, 0.9, "-5", 96]];          // tuba, every 2 bars: the root, then the fifth below
+    const LOWP = [[0, 2.5, "R", 96], [0, 2.5, "8", 88]];           // piano octaves, every 2 bars
+    const PAH = [[0.93, 0.35, 80], [2.04, 0.35, 74]];              // Viennese: beat 2 early, beat 3 late
+    const PIZZ = [[0.93, 0.25, 70], [2.04, 0.25, 66]];
+    const DOOM = { [KICK]: "X...........", [SNARE]: "....m...o...", [RIDE]: "o...g...g..." };
+    const DOOM_FULL = { [KICK]: "X.......o...", [SNARE]: "....x...m..g", [RIDE]: "m.g.o.g.o.g." };
+    const HEMIOLA = { [KICK]: "X.......x.......x.......", [SNARE]: "....m.......m.......m...", [RIDE]: "m.o.m.o.m.o.m.o.m.o.m.o." };
+    const timpaniRoot = (prog, beat) => foldTimp(above(chord(chordAt(prog, beat).symbol).root, 38));
+
+    // The riff with its expression: the third bar swells, the C# is a short loud hiccup
+    const playRiff = (part, start, { velocity, gate = 0.8, transpose = 0, times = 1 }) => {
+        for (let k = 0; k < times; k++) {
+            const from = start + k * 12;
+            part.at(from).play(RIFF, { velocity, gate, transpose });
+            part.events.filter(e => e.time >= from + 6 - 1e-6 && e.time < from + 9 - 1e-6)
+                .forEach(e => { e.velocity = Math.min(127, e.velocity + Math.round((e.time - from - 6) * 4)); });
+            part.events.filter(e => Math.abs(e.time - (from + 10.5)) < 1e-6)
+                .forEach(e => { e.velocity = Math.min(127, e.velocity + 14); e.length = 0.15; });
+        }
     };
 
-    // Intro: the sonar in the dark, the leviathan's voice, timpani and taiko, the trombones state the motif
-    const pI = progression("Dm | Eb/D | Dm | A7", 0);
+    // Intro: the sonar in the dark, the leviathan's voice, a ghost of the motif on the music box, then the riff
     ping.add(0, 980, 110);
-    whale.hit(0, pitch("A3"), 100, 6, -5).hit(8, pitch("D4"), 94, 6, -7);
-    sustain(choir, pI, { center: 55, velocity: 56 });
-    bassline(bass, pI, { pattern: [[0, 3.9, "R", 88]], base: 26 });
-    roll(timpani, 4, 4, 38, 40, 100);
-    [0, 4, 8, 10, 12, 13.5].forEach(t => taiko.hit(t, 45, 110, 1));
-    trombone.at(8).play("A2:.5 D3:.5 F3:1 E3:.5 D3:.5 A3:1 | C#3:1 E3:1 A3:1 r:1", { velocity: 104 });
-    tuba.at(8).play("D2:2 r:2 | A1:2 r:2", { velocity: 100 });
-    beat(kit, 12, 1, { [KICK]: "x.x.x.x.x.x.x.x." });
-    tomFill(kit, 14, 2);
-    bubbles(bub, 1, { count: 14, spread: 6, low: 200, high: 900, size: [0.06, 0.16] });
+    whale.hit(0, pitch("A3"), 100, 9, -5).hit(12, pitch("D4"), 94, 9, -7);
+    for (let bar = 0; bar < 4; bar++) tuba.hit(bar * 3, pitch("D2"), 80, 0.9);
+    timpani.hit(0, pitch("D2"), 100, 1.5).hit(6, pitch("D2"), 96, 1.5);
+    musicBox.at(6).play("A5:1 D6:1 F6:1 | E6:.5 D6:.5 A6:2", { velocity: 58, gate: 1 });
+    playRiff(bassoon, 12, { velocity: 92 });
+    bassoon.events.filter(e => e.time >= 12).forEach(e => { e.velocity = Math.min(127, e.velocity + Math.round((e.time - 12))); });
+    playRiff(piano, 12, { velocity: 88, transpose: -12 });
+    beat(kit, 12, 4, DOOM, 12);
+    comp(trombones, progression("Bb7 | A7", 18), { pattern: PAH, cycle: 3, center: 53 });
+    roll(kit, 21, 3, SNARE, 40, 112);
+    bubbles(bub, 1, { count: 14, spread: 8, low: 200, high: 900, size: [0.06, 0.16] });
 
     song.body(s => {
-        const a = s, b = s + 64, c = s + 96, a2 = s + 128;
-        const pA = progression(A1 + " | " + A2, a), pB = progression(B, b), pC = progression(C, c), pA2 = progression(A1 + " | " + A2, a2);
+        const a = s, b = s + 72, c = s + 120, a2 = s + 144;
+        const pA = progression(A, a), pB = progression(B, b), pC = progression(C, c), pA2 = progression(A, a2);
 
-        // A: brass over the riff and the string sixteenths
-        brass.at(a).play(MEL_A, { velocity: 106, gate: 0.85, transpose: -12 });
-        riff(pA);
-        bassline(bass, pA, { pattern: DRIVE8, base: 26 });
-        figure(strings, pA, { pattern: ["R", "5", "8", "5"], rate: 0.25, base: 62, velocity: 62, gate: 0.7 });
-        sustain(choir, progression(A2, a + 32), { center: 62, velocity: 54 });
-        beat(kit, a, 16, KIT_A);
-        for (let bar = 0; bar < 16; bar += 4) kit.hit(a + bar * 4, CRASH, 104, 1);
-        timpaniOn(pA, a, 16);
-        tomFill(kit, a + 62, 2);
+        // A: the riff twice, then the trumpet's tune, then the brass; oom-pah-pah all along
+        playRiff(bassoon, a, { velocity: 100, times: 2 });
+        playRiff(piano, a, { velocity: 92, transpose: -12, times: 2 });
+        bassline(piano, progression(bars(A, 8, 24), a + 24), { pattern: LOWP, cycle: 6, base: 26 });
+        bassline(tuba, pA, { pattern: OOM, cycle: 6, base: 31 });
+        comp(pizz, pA, { pattern: PIZZ, cycle: 3, center: 60 });
+        comp(trombones, progression(bars(A, 4, 24), a + 12), { pattern: PAH, cycle: 3, center: 53 });
+        stab(brass, pA, a + 18, [0], { velocity: 108, length: 0.35, center: 60 });
+        stab(brass, pA, a + 21, [0], { velocity: 108, length: 0.35, center: 60 });
+        trombones.hit(a + 21, 45, 96, 2, -2);                                          // wah
+        trumpet.at(a + 24).play(TUNE_A1, { velocity: 96, gate: 0.9 });
+        horns.at(a + 24).play(TUNE_A1, { velocity: 72, gate: 0.95, transpose: -12 });
+        glock.at(a + 36).play(bars(TUNE_A1, 4, 8), { velocity: 52, gate: 0.6, transpose: 24 });
+        brass.at(a + 48).play(TUNE_A2, { velocity: 100, gate: 0.85 });
+        trumpet.at(a + 48).play(TUNE_A2, { velocity: 92, gate: 0.9 });
+        trombones.hit(a + 69, 45, 100, 2, -2);                                         // wah
+        for (const start of [a + 24, a + 36, a + 48, a + 60]) shape(trumpet, start, start + 12, { peak: 12, ending: -10 });
+        for (const start of [a + 48, a + 60]) shape(brass, start, start + 12, { peak: 12, ending: -10 });
+        beat(kit, a, 24, DOOM, 12);
+        [0, 24, 48].forEach(t => kit.hit(a + t, CRASH, 104, 1));
+        [0, 4, 8, 12, 16, 20].forEach(bar => taiko.hit(a + bar * 3, 45, 110, 1));
+        for (let bar = 0; bar < 24; bar += 2) timpani.hit(a + bar * 3, timpaniRoot(pA, a + bar * 3), 100, 1.2);
 
-        // B: half time, the choir sings, bells on the downbeats
-        choir.at(b).play(MEL_B, { velocity: 96, transpose: -12, gate: 1 });
-        strings.at(b).play(MEL_B, { velocity: 86, gate: 1 });
-        sustain(brass, pB, { center: 60, velocity: 72 });
-        for (let bar = 0; bar < 8; bar++) bells.hit(b + bar * 4, above(chord(chordAt(pB, b + bar * 4).symbol).root, 62), 92, 3);
-        comp(trombone, pB, { pattern: [[0, 3.8, 84]], center: 50 });
-        bassline(tuba, pB, { pattern: [[0, 3.8, "R", 90]], base: 31 });
-        bassline(bass, pB, { pattern: [[0, 1.9, "R", 100], [2, 0.45, "R", 80], [2.5, 0.45, "8", 80], [3, 0.45, "R", 84], [3.5, 0.45, "8", 84]], base: 26 });
-        beat(kit, b, 8, KIT_HALF);
-        kit.hit(b, CRASH, 100, 1);
-        tomFill(kit, b + 30, 2);
+        // B: the fight - the waltz breaks into two-beat strides under the trumpet and horns
+        trumpet.at(b).play(B_MEL, { velocity: 100, gate: 0.95 });
+        horns.at(b).play(B_MEL, { velocity: 88, gate: 1, transpose: -12 });
+        pB.forEach((entry, bar) => voice(entry.symbol, 64).forEach(n => trem.hit(entry.beat, n, 64 + 2 * bar, entry.length * 0.98)));
+        bassline(tuba, pB, { pattern: [[0, 1.8, "R", 104], [2, 1.8, "R", 96], [4, 1.8, "-5", 100]], cycle: 6, base: 31 });
+        comp(brass, pB, { pattern: [[0, 0.4, 110], [2, 0.4, 100], [4, 0.4, 104]], cycle: 6, center: 60 });
+        beat(kit, b, 16, HEMIOLA, 12);
+        for (let group = 0; group < 8; group++) [[0, 116], [2, 100], [4, 106]].forEach(([t, v]) => taiko.hit(b + group * 6 + t, 45, v, 1));
+        roll(timpani, b + 42, 3, foldTimp(pitch("A2")), 50, 118);
+        stab(brass, pB, b + 45, [0], { velocity: 120, length: 2.5, center: 60 });
+        trombones.hit(b + 45, pitch("A2"), 116, 2.5);
+        tuba.hit(b + 45, pitch("A1"), 116, 2.5);
+        kit.hit(b + 45, CRASH, 118, 2);
+        timpani.hit(b + 45, foldTimp(pitch("A2")), 120, 2);
 
-        // C: the leviathan lurks - its voice, the sonar, a D pedal, taiko, then everything builds
-        whale.hit(c, pitch("A3"), 100, 6, -5).hit(c + 16, pitch("D4"), 94, 6, -7);
-        [0, 8, 16, 24].forEach(t => ping.add(c + t, 980, 96));
-        trombone.at(c).play(C_LOW, { velocity: 100 });
-        tuba.at(c).play(C_LOW, { velocity: 92, transpose: -12 });
-        bassline(bass, pC, { pattern: [[0, 3.9, "R", 90]], base: 26 });
-        sustain(choir, pC, { center: 57, velocity: 62 });
-        strings.at(c + 16).play("D5:4 | Eb5:4 | D5:4 | C#5:4", { velocity: 80, gate: 1 });
-        for (let bar = 0; bar < 8; bar++) [0, 1.5, 3].forEach(t => taiko.hit(c + bar * 4 + t, 45, 96 + bar * 3, 1));
-        roll(timpani, c + 24, 8, 38, 40, 118);
-        beat(kit, c + 16, 3, { [KICK]: "x.....x.....x..." });
-        roll(kit, c + 28, 4, SNARE, 40, 118);
-        bubbles(bub, c + 2, { count: 12, spread: 6, low: 180, high: 800, size: [0.08, 0.18] });
-        bubbles(bub, c + 26, { count: 14, spread: 5, low: 250, high: 1400 });
+        // C: a lullaby for the monster (the motif in D major), its voice, a timpani heartbeat; silence, a hiccup...
+        musicBox.at(c).play(LULLABY, { velocity: 84, gate: 1 });
+        tuba.hit(c, pitch("D2"), 52, 20);
+        whale.hit(c, pitch("A3"), 100, 9, -5).hit(c + 12, pitch("D4"), 94, 9, -7);
+        ping.add(c, 980, 100).add(c + 12, 980, 92);
+        for (let bar = 0; bar < 7; bar++) timpani.hit(c + bar * 3, pitch("D2"), 66, 1);
+        bubbles(bub, c + 1, { count: 10, spread: 18, low: 180, high: 700, size: [0.1, 0.2] });
+        bassoon.hit(c + 22.5, pitch("C#3"), 104, 0.12);
 
-        // A': everyone - brass and strings on the tune, choir, bells, the riff, full drums
-        brass.at(a2).play(MEL_A, { velocity: 110, gate: 0.85, transpose: -12 });
-        strings.at(a2).play(MEL_A, { velocity: 90, gate: 0.9 });
-        riff(pA2, 6);
-        bassline(bass, pA2, { pattern: DRIVE8, base: 26 });
-        sustain(choir, pA2, { center: 62, velocity: 60 });
-        for (let bar = 0; bar < 16; bar += 2) bells.hit(a2 + bar * 4, above(chord(chordAt(pA2, a2 + bar * 4).symbol).root, 62), 86, 3);
-        beat(kit, a2, 16, KIT_A_FULL);
-        for (let bar = 0; bar < 16; bar += 4) kit.hit(a2 + bar * 4, CRASH, 112, 1);
-        for (let bar = 0; bar < 16; bar++) RIFF.forEach(([t]) => taiko.hit(a2 + bar * 4 + t, 45, bar % 4 === 0 ? 112 : 92, 1));
-        timpaniOn(pA2, a2, 16, 1);
-        tomFill(kit, a2 + 62, 2);
+        // A': ...the slam. Everyone on the riff, then the tunes; the last bar stops dead and hiccups into the loop
+        kit.hit(a2, CRASH, 124, 2).hit(a2, CHINA, 116, 2).hit(a2, KICK, 124);
+        timpani.hit(a2, pitch("D2"), 124, 2);
+        taiko.hit(a2, 45, 124, 1);
+        playRiff(bassoon, a2, { velocity: 104, times: 2 });
+        playRiff(trombones, a2, { velocity: 104, times: 2 });
+        playRiff(tuba, a2, { velocity: 100, gate: 0.85, transpose: -12, times: 2 });
+        playRiff(piano, a2, { velocity: 96, transpose: -12, times: 2 });
+        [2, 3, 6, 7].forEach(bar => stab(brass, pA2, a2 + bar * 3, [0], { velocity: 108, length: 0.35, center: 60 }));
+        brass.at(a2 + 24).play(TUNE_A1, { velocity: 108, gate: 0.85 });
+        trumpet.at(a2 + 24).play(TUNE_A1, { velocity: 100, gate: 0.9 });
+        glock.at(a2 + 24).play(TUNE_A1, { velocity: 52, gate: 0.6, transpose: 24 });
+        sustain(trem, progression(bars(A, 8, 16), a2 + 24), { center: 64, velocity: 76 });
+        brass.at(a2 + 48).play(TUNE_A2, { velocity: 108, gate: 0.85 });
+        trumpet.at(a2 + 48).play(TUNE_A2, { velocity: 100, gate: 0.9 });
+        for (const start of [a2 + 24, a2 + 36, a2 + 48, a2 + 60]) { shape(trumpet, start, start + 12, { peak: 12, ending: -10 }); shape(brass, start, start + 12, { peak: 12, ending: -10 }); }
+        const pLate = progression(bars(A, 8, 24), a2 + 24);
+        bassline(tuba, pLate, { pattern: OOM, cycle: 6, base: 31 });
+        bassline(piano, pLate, { pattern: LOWP, cycle: 6, base: 26 });
+        comp(trombones, pLate, { pattern: PAH, cycle: 3, center: 53 });
+        comp(pizz, pLate, { pattern: PIZZ, cycle: 3, center: 60 });
+        beat(kit, a2, 24, DOOM_FULL, 12);
+        [0, 24, 48].forEach(t => kit.hit(a2 + t, CRASH, 112, 1));
+        for (let bar = 16; bar < 23; bar++) { taiko.hit(a2 + bar * 3, 45, 112, 1); timpani.hit(a2 + bar * 3, timpaniRoot(pA2, a2 + bar * 3), 104, 1.2); }
+        stab(brass, pA2, a2 + 69, [0], { velocity: 120, length: 0.5, center: 60 });
+        stopTime([bassoon, trumpet, glock, brass, trombones, horns, tuba, piano, pizz, trem, musicBox, kit, timpani, taiko], a2 + 70, a2 + 72);
+        bassoon.at(a2 + 70.5).play("C#3:.25 D3:.25", { velocity: 110, gate: 0.6 });
     });
     songs.push(song);
 }
@@ -974,7 +1073,7 @@ const F_MAJOR = [5, 7, 9, 10, 0, 2, 4], EB_MAJOR = [3, 5, 7, 8, 10, 0, 2], EB_LY
 //    Intro 4 | A 16 | B 8 (the build) | A' 8 (the big finish) | turnaround 2
 // =====================================================================================================
 {
-    const song = new Song("theme_title", "Fish Fighters - Fish Fighters!", 168, { kind: "menu", introBars: 4, bodyBars: 34,
+    const song = new Song("theme_title", "Fish Fighters - Fish Fighters!", 168, { key: "F", kind: "menu", introBars: 4, bodyBars: 34,
         mix: { brass: 0, lead: -1, guitar: -6, keys: -8, bass: -4, drums: -2, fx: -9 } });
     const brass = song.part("Brass", 61, { group: "brass", volume: 112, pan: -0.1 });
     const steel = song.part("Steel drums", 114, { group: "lead", volume: 108, pan: 0.15, fx: { echo: { beats: 0.75, feedback: 0.2, mix: 0.12 } } });
@@ -1070,7 +1169,7 @@ const F_MAJOR = [5, 7, 9, 10, 0, 2, 4], EB_MAJOR = [3, 5, 7, 8, 10, 0, 2], EB_LY
 //    Intro 2 | A 16 (vibraphone) | B 8 (whistle) | A' 16 (vibraphone and kalimba, the whistle above)
 // =====================================================================================================
 {
-    const song = new Song("theme_base", "Fish Fighters - Fish Tank", 112, { kind: "menu", introBars: 2, bodyBars: 40,
+    const song = new Song("theme_base", "Fish Fighters - Fish Tank", 112, { key: "Bb", kind: "menu", introBars: 2, bodyBars: 40,
         mix: { lead: 0, kalimba: -5, keys: -5, guitar: -8, bass: -4, drums: -6, bubbles: -9 } });
     const vibes = song.part("Vibraphone", 11, { group: "lead", volume: 104, pan: -0.1, fx: { chorus: { mix: 0.3 }, echo: { beats: 0.75, feedback: 0.25, mix: 0.15 } } });
     const whistle = song.part("Whistle", 78, { group: "lead", volume: 86, pan: 0.15, fx: { echo: { beats: 0.75, feedback: 0.25, mix: 0.18 } } });
@@ -1154,7 +1253,7 @@ const F_MAJOR = [5, 7, 9, 10, 0, 2, 4], EB_MAJOR = [3, 5, 7, 8, 10, 0, 2], EB_LY
 //    Intro 2 | A 16 (fiddle) | B 8 (heave-ho: whistle, stomps and claps) | C 8 (the wreck) | A' 16 (fiddle and flute)
 // =====================================================================================================
 {
-    const song = new Song("theme_shanty", "Fish Fighters - Sunken Galleon", 126, { introBars: 2, bodyBars: 48,
+    const song = new Song("theme_shanty", "Fish Fighters - Sunken Galleon", 126, { key: "D", introBars: 2, bodyBars: 48,
         mix: { lead: 0, keys: -1, accordion: -5, guitar: -7, bass: -4, drums: -4, fx: -8 } });
     const fiddle = song.part("Fiddle", 40, { group: "lead", volume: 104, pan: -0.1, fx: { echo: { beats: 1, feedback: 0.2, mix: 0.1 } } });
     const flute = song.part("Flute", 73, { group: "lead", volume: 86, pan: 0.2 });
@@ -1253,7 +1352,7 @@ const JELLY = {
 //    Intro 4 | A 16 (the eel) | B 8 (the lair's heart: a choir) | C 8 (electric storm) | A' 16
 // =====================================================================================================
 {
-    const song = new Song("theme_jelly", "Fish Fighters - Jellyfish Lair", 124, { introBars: 4, bodyBars: 48,
+    const song = new Song("theme_jelly", "Fish Fighters - Jellyfish Lair", 124, { key: "E", introBars: 4, bodyBars: 48,
         mix: { lead: 0, choir: -4, pad: -7, arp: -8, bass: -3, drums: -4, fx: -6 } });
     const eel = song.part("Eel lead", 81, { group: "lead", volume: 100, pan: -0.1, fx: { lowpass: 2600, echo: { beats: 0.75, feedback: 0.3, mix: 0.2 } } });
     const celesta = song.part("Celesta", 8, { group: "lead", volume: 84, pan: 0.3, fx: { echo: { beats: 0.75, feedback: 0.35, mix: 0.25 } } });
@@ -1337,111 +1436,137 @@ const JELLY = {
 }
 
 // =====================================================================================================
-// 10. "Jellyfish King" - the jellyfish king's boss stages: the lair's tune, crowned. A church organ for the king,
-//     a choir, brass stabs on a 3-3-2, the eel lead, a driving synth bass, timpani, power drums, bigger zaps.
-//     Intro 4 | A 16 | B 8 (the king's chant) | C 8 (electric storm) | A' 16
+// 10. "High Voltage Majesty" - the jellyfish king's boss stages. Dark electro, nothing of a band: the lair's eel
+//     (a saw lead) crowned, over a pumping synth bass, an 808/909 kit and 16th arpeggios; a concert choir always
+//     in the back, holding the dark chords like a court in a cathedral, and singing the king's anthem in B.
+//     Synth brass for the royal weight, electric zaps everywhere, one blackout gag (the power cuts, a giant zap).
+//     E phrygian (the F a half step over the tonic), a tritone in the cadences.
+//     Intro 4 | A 16 (the eel's anthem) | B 8 (the court: the choir sings) | C 8 (blackout and power surge) | A' 16
 // =====================================================================================================
 {
-    const song = new Song("theme_jelly_boss", "Fish Fighters - Jellyfish King", 152, { introBars: 4, bodyBars: 48,
-        mix: { brass: 0, lead: -1, organ: -3, choir: -4, bass: -4, drums: -2, fx: -6 } });
-    const brass = song.part("Brass", 61, { group: "brass", volume: 110, pan: -0.15 });
-    const eel = song.part("Eel lead", 81, { group: "lead", volume: 100, pan: 0.15, fx: { lowpass: 3000, echo: { beats: 0.5, feedback: 0.25, mix: 0.15 } } });
-    const celesta = song.part("Celesta", 8, { group: "lead", volume: 84, pan: 0.3 });
-    const organ = song.part("Church organ", 19, { group: "organ", volume: 96 });
-    const choir = song.part("Choir", 52, { group: "choir", volume: 98 });
-    const bass = song.part("Synth bass", 38, { group: "bass", volume: 100 });
-    const kit = song.drums("Kit", 16, { group: "drums", volume: 96 });
-    const timpani = song.part("Timpani", 47, { group: "drums", volume: 104 });
-    const zap = song.synth("Zaps", "zaps", { group: "fx", fx: { echo: { beats: 0.5, feedback: 0.3, mix: 0.2 } } });
+    const song = new Song("theme_jelly_boss", "Fish Fighters - High Voltage Majesty", 138, { introBars: 4, bodyBars: 48, key: "E",
+        mix: { lead: 0, choir: -3, arp: -9, pad: -10, brass: -5, bass: -2, drums: -2, fx: -6 } });
+    const eel = song.part("Eel lead", 81, { group: "lead", volume: 104, pan: -0.05, fx: { lowpass: 3400, echo: { beats: 0.75, feedback: 0.25, mix: 0.18 } },
+        vibrato: { cents: 18, hz: 5.5, delay: 0.25, minBeats: 1 } });
+    const square = song.part("Square lead", 80, { group: "lead", volume: 82, pan: 0.25, fx: { lowpass: 2600 } });
+    const choir = song.part("Concert choir", 52, { group: "choir", volume: 100 });
+    const voices = song.part("Space voices", 91, { group: "choir", volume: 86, pan: -0.25, fx: { lowpass: 2400, echo: { beats: 1.5, feedback: 0.35, mix: 0.3 } } });
+    const arpSynth = song.part("Arpeggio", 90, { group: "arp", volume: 84, pan: 0.35, fx: { lowpass: 2800, echo: { beats: 0.75, feedback: 0.35, mix: 0.25 } } });
+    const sweep = song.part("Sweep pad", 95, { group: "pad", volume: 84 });
+    const brass = song.part("Synth brass", 62, { group: "brass", volume: 104, pan: -0.15 });
+    const bass = song.part("Synth bass", 39, { group: "bass", volume: 110 });
+    const kit = song.drums("808/909", 25, { group: "drums", volume: 100 });
+    const zap = song.synth("Zaps", "zaps", { group: "fx", fx: { echo: { beats: 0.75, feedback: 0.3, mix: 0.22 } } });
     const bub = song.synth("Bubbles", "bubbles", { group: "fx" });
 
-    const STABS = [[0, 0.3, 102], [1.5, 0.3, 94], [3, 0.3, 98]];
-    const DRIVE8 = [[0, 0.45, "R", 100], [0.5, 0.45, "R", 80], [1, 0.45, "8", 86], [1.5, 0.45, "R", 96], [2, 0.45, "R", 80], [2.5, 0.45, "8", 86], [3, 0.45, "R", 96], [3.5, 0.45, "8", 84]];
-    const KING = { [KICK]: "x...x...x...x.x.", [SNARE]: "....x.......x...", [HAT]: "m.o.m.o.m.o.m.o." };
-    const KING_FULL = { [KICK]: "x...x...x...x.x.", [SNARE]: "....x.......x..g", [HAT]: "m.o.m.o.m.o.m.o.", [OPEN_HAT]: "..............o." };
-    const HALF = { [KICK]: "x.....x.........", [SNARE]: "........x.......", [RIDE]: "o.o.o.o.o.o.o.o." };
-    const organChords = (prog, velocity) => {
-        sustain(organ, prog, { center: 57, velocity });
-        bassline(organ, prog, { pattern: [[0, 3.9, "R", velocity + 10]] });   // the pedal
-    };
-    const timpaniOn = (prog, start, bars, every = 2) => {
-        for (let bar = 0; bar < bars; bar += every) timpani.hit(start + bar * 4, above(chord(chordAt(prog, start + bar * 4).symbol).root, 33), 108, 1.5);
+    const A = "Em | Fmaj7/E | Em | Dm/F | Em | Am | B7sus4 B7 | Em | Em | Fmaj7/E | Em | C | Am | Dm/F B7 | Em B7 | Em";
+    const B = "Cmaj7 | B7 | Em | Em/D | Cmaj7 | Am | B7sus4 | B7";
+    const C = "Em | Em | F/E | F/E | Em | Em | B7 | B7";
+
+    // The eel's anthem: the lair's "B E G F# E" made royal, phrygian F, a tritone (A#) before each cadence
+    const ANTHEM = "E5:.75 E5:.25 G5:.5 F5:1 E5:.5 B4:1 | C5:.5 B4:.5 A4:.5 B4:.5 E4:2 | E5:.75 E5:.25 G5:.5 A5:1 G5:.5 F5:1 | G5:.5 F5:.5 E5:.5 D5:.5 F5:2 | " +
+                   "E5:.75 E5:.25 G5:.5 F5:1 E5:.5 B5:1 | C6:1.5 B5:.5 A5:.5 G5:.5 F5:1 | E5:.5 F5:.5 G5:.5 B5:.5 A#5:1 B5:1 | E5:3 r:1 | " +
+                   "B5:.75 B5:.25 D6:.5 C6:1 B5:.5 F5:1 | G5:.5 F5:.5 E5:.5 F5:.5 B4:2 | E5:.75 E5:.25 G5:.5 B5:1 C6:.5 D6:1 | E6:1.5 D6:.5 C6:1 B5:1 | " +
+                   "C6:.5 B5:.5 A5:.5 G5:.5 F5:1 E5:1 | F5:1 G5:.5 F5:.5 E5:1 D#5:1 | E5:.5 G5:.5 B5:.5 E6:.5 F6:1 D#6:1 | E6:2 r:2";
+    // The court: the choir sings it slow, the low voices of a cathedral
+    const COURT = "E5:2 G5:2 | F#5:2 D#5:2 | E5:3 B4:1 | D5:4 | E5:2 G5:2 | A5:2 C6:2 | B5:4 | B5:2 A#5:2";
+    const FRAGMENTS = "E5:.75 E5:.25 G5:.5 F5:.5 r:2 | r:4 | F5:.75 F5:.25 A5:.5 G5:.5 r:2 | r:4 | " +
+                      "E5:.75 E5:.25 G5:.5 F5:1 E5:.5 B4:1 | r:4 | B4:.5 D#5:.5 F#5:.5 A5:.5 A#5:1 B5:1 | r:4";
+
+    // A galloping 16th bass (the octave pumps), the 808 kick under its accents
+    const PUMP = [[0, 0.2, "R", 112], [0.25, 0.2, "R", 70], [0.5, 0.2, "8", 92], [0.75, 0.2, "R", 74],
+                  [1, 0.2, "R", 104], [1.25, 0.2, "R", 70], [1.5, 0.2, "8", 90], [1.75, 0.2, "5", 78],
+                  [2, 0.2, "R", 110], [2.25, 0.2, "R", 70], [2.5, 0.2, "8", 92], [2.75, 0.2, "R", 74],
+                  [3, 0.2, "R", 102], [3.25, 0.2, "8", 84], [3.5, 0.2, "5", 88], [3.75, 0.2, "R", 80]];
+    const HALF = [[0, 1.9, "R", 104], [2, 0.45, "R", 80], [2.5, 0.45, "8", 84], [3, 0.9, "R", 92]];
+    const ELECTRO = { [KICK]: "X..x..X...x..x..", [CLAP]: "....X.......X...", [HAT]: "g.o.g.o.g.o.g.og" };
+    const FOUR = { [KICK]: "X...X...X...X...", [CLAP]: "....X.......X...", [HAT]: "g.g.g.g.g.g.g.g.", [OPEN_HAT]: "..o...o...o...o." };
+    const COURT_BEAT = { [KICK]: "X.........x.....", [SNARE]: "........X.......", [HAT]: "g...g...g...g..." };
+    const ARP16 = { pattern: [0, 1, 2, 1, 3, 2, 1, 2], rate: 0.25, center: 64, velocity: 60, accent: 10, gate: 0.7 };
+
+    const royalStabs = (prog, start, bars, offsets, velocity = 100) => {
+        for (const bar of bars) for (const o of offsets) {
+            const t = start + bar * 4 + o;
+            voice(chordAt(prog, t).symbol, 60).forEach(n => brass.hit(t, n, velocity, 0.35));
+        }
     };
 
-    // Intro: the king's organ chord, a timpani roll and big zaps, then the brass announces the motif
-    const pI = progression("Em | Em | Em | B7", 0);
-    organChords(progression("Em", 0), 84);
-    roll(timpani, 0, 8, 40, 40, 110);
-    zaps(zap, 0, { count: 3, spread: 1, velocity: 110 });
-    zaps(zap, 6, { count: 2, spread: 1, velocity: 100 });
-    sustain(choir, progression("Em | Em", 0), { center: 55, velocity: 70 });
-    brass.at(8).play("B4:.5 E5:.5 G5:1 F#5:.5 E5:.5 B5:1 | D#5:1 F#5:1 B5:2", { velocity: 108, gate: 0.85, transpose: -12 });
-    organChords(progression("Em | B7", 8), 84);
-    bassline(bass, progression("Em | B7", 8), { pattern: DRIVE8 });
-    beat(kit, 8, 1, { [KICK]: "x...x...x...x..." });
-    tomFill(kit, 14, 2);
-    bubbles(bub, 1, { count: 12, spread: 6, low: 200, high: 900, size: [0.06, 0.16] });
+    // Intro: the choir rises out of the dark, the bass wakes up in 8ths, zaps crackle, the brass crowns the king
+    const pI = progression("Em | Fmaj7/E | Em | B7", 0);
+    sustain(choir, pI, { center: 52, velocity: 70 });
+    sustain(sweep, pI, { center: 60, velocity: 56 });
+    bassline(bass, progression("Fmaj7/E | Em | B7", 4), { pattern: [[0, 0.4, "R", 96], [0.5, 0.4, "R", 72], [1, 0.4, "R", 90], [1.5, 0.4, "R", 72],
+                                                                    [2, 0.4, "R", 94], [2.5, 0.4, "R", 72], [3, 0.4, "8", 90], [3.5, 0.4, "R", 76]] });
+    zaps(zap, 1, { count: 2, spread: 1.5, velocity: 100 });
+    zaps(zap, 6, { count: 3, spread: 2, velocity: 104 });
+    bubbles(bub, 0, { count: 10, spread: 6, low: 200, high: 900, size: [0.06, 0.14] });
+    brass.at(8).play("E4:.75 E4:.25 F4:1 E4:2 | r:4", { velocity: 104, gate: 0.85 });
+    [12, 13, 14].forEach(t => voice("B7", 60).forEach(n => brass.hit(t, n, 100, 0.3)));
+    beat(kit, 8, 1, { [KICK]: "X.......X.......", [HAT]: "g.g.g.g.g.g.g.g." });
+    beat(kit, 12, 1, { [KICK]: "X...X...X...X.X.", [CLAP]: "............XXXX", [HAT]: "gggggggggggggggg" });
 
     song.body(s => {
         const a = s, b = s + 64, c = s + 96, a2 = s + 128;
-        const pA = progression(JELLY.A1 + " | " + JELLY.A2, a), pB = progression(JELLY.B, b), pC = progression(JELLY.C, c);
-        const pA2 = progression(JELLY.A1 + " | " + JELLY.A2, a2);
+        const pA = progression(A, a), pB = progression(B, b), pC = progression(C, c), pA2 = progression(A, a2);
 
-        // A: the eel sings the lair's tune, brass stabs, the king's organ, driving bass
-        eel.at(a).play(JELLY.MEL_A, { velocity: 104, gate: 0.85, transpose: -12 });
-        comp(brass, pA, { pattern: STABS, center: 60 });
-        organChords(pA, 70);
-        sustain(choir, progression(JELLY.A2, a + 32), { center: 60, velocity: 56 });
-        bassline(bass, pA, { pattern: DRIVE8 });
-        beat(kit, a, 16, KING);
-        for (let bar = 0; bar < 16; bar += 4) kit.hit(a + bar * 4, CRASH, 106, 1);
-        timpaniOn(pA, a, 16);
-        for (const bar of [3, 7, 11, 15]) zaps(zap, a + bar * 4 + 2, { count: 3, spread: 1.5, velocity: 104 });
-        tomFill(kit, a + 62, 2);
+        // A: the eel's anthem over the pump and the electro beat; the choir in the back, synth brass on the cadences
+        eel.at(a).play(ANTHEM, { velocity: 100, gate: 0.88, transpose: -12 });
+        for (let p = 0; p < 4; p++) shape(eel, a + p * 16, a + p * 16 + 16, { peak: 10, ending: -6 });
+        sustain(choir, pA, { center: 55, velocity: 60 });
+        bassline(bass, pA, { pattern: PUMP });
+        arp(arpSynth, pA, ARP16);
+        beat(kit, a, 16, ELECTRO);
+        kit.hit(a, CRASH, 104, 1).hit(a + 32, CRASH, 100, 1);
+        royalStabs(pA, a, [6, 14], [0, 0.75, 1.5]);
+        royalStabs(pA, a, [7, 15], [0]);
+        for (const bar of [3, 7, 11, 15]) zaps(zap, a + bar * 4 + 2.5, { count: 2, spread: 1, velocity: 100 });
 
-        // B: the king's chant - the choir over the full organ, brass on every bar, half time, timpani
-        choir.at(b).play(JELLY.MEL_B, { velocity: 100, gate: 1 });
-        organChords(pB, 80);
-        comp(brass, pB, { pattern: [[0, 1.8, 92]], center: 58 });
-        bassline(bass, pB, { pattern: [[0, 1.9, "R", 100], [2, 0.45, "R", 80], [2.5, 0.45, "8", 80], [3, 0.45, "R", 84], [3.5, 0.45, "8", 84]] });
-        beat(kit, b, 8, HALF);
+        // B: the court - half time, the choir sings the anthem slowly, synth brass marches, voices echo far away
+        choir.at(b).play(COURT, { velocity: 100, gate: 0.98, transpose: -12 });
+        sustain(voices, pB, { center: 64, velocity: 66 });
+        sustain(sweep, pB, { center: 57, velocity: 54 });
+        comp(brass, pB, { pattern: [[0, 0.5, 96], [1.5, 0.3, 84], [2, 0.5, 92], [3.5, 0.3, 84]], center: 60 });
+        bassline(bass, pB, { pattern: HALF });
+        arp(arpSynth, pB, { ...ARP16, rate: 0.5, velocity: 54 });
+        beat(kit, b, 8, COURT_BEAT);
         kit.hit(b, CRASH, 100, 1);
-        for (let bar = 0; bar < 8; bar++) [0, 2].forEach(t => timpani.hit(b + bar * 4 + t, above(chord(chordAt(pB, b + bar * 4).symbol).root, 33), 96, 1.5));
-        zaps(zap, b + 14, { count: 3, spread: 1.5 });
-        zaps(zap, b + 30, { count: 4, spread: 2 });
-        tomFill(kit, b + 30, 2);
+        zaps(zap, b + 14, { count: 2, spread: 1, velocity: 96 });
+        zaps(zap, b + 30, { count: 3, spread: 1.5, velocity: 100 });
 
-        // C: electric storm - the organ's pedal, zaps on every bar, the eel's fragments, the drums build
-        eel.at(c).play(JELLY.FRAGMENTS, { velocity: 106, gate: 0.9 });
-        bassline(organ, pC, { pattern: [[0, 3.9, "R", 90]] });
-        bassline(bass, pC, { pattern: DRIVE8 });
-        sustain(choir, pC, { center: 52, velocity: 58 });
-        for (let bar = 0; bar < 8; bar++) zaps(zap, c + bar * 4 + (bar % 2 ? 2 : 0), { count: bar < 4 ? 3 : 5, spread: 2, velocity: 96 + bar * 3 });
-        beat(kit, c, 4, { [KICK]: "x.......x.......", [HAT]: "o.o.o.o.o.o.o.o." });
-        beat(kit, c + 16, 2, { [KICK]: "x...x...x...x...", [SNARE]: "....x.......x..." });
-        beat(kit, c + 24, 2, { [KICK]: "x.x.x.x.x.x.x.x." });
-        roll(kit, c + 28, 4, SNARE, 40, 120);
-        roll(timpani, c + 24, 8, 40, 40, 118);
-        bubbles(bub, c + 4, { count: 12, spread: 6, low: 200, high: 1200, size: [0.06, 0.16] });
+        // C: blackout and power surge - the bass alone with the kick, the eel's fragments, zaps growing;
+        // the power cuts (a beat of silence and one giant zap), then everything charges back up
+        eel.at(c).play(FRAGMENTS, { velocity: 104, gate: 0.85, transpose: -12 });
+        bassline(bass, pC, { pattern: PUMP });
+        sustain(voices, pC, { center: 57, velocity: 58 });
+        beat(kit, c, 4, { [KICK]: "X...X...X...X..." });
+        beat(kit, c + 16, 2, { [KICK]: "X...X...X...X...", [HAT]: "g.g.g.g.g.g.g.g." });
+        beat(kit, c + 24, 2, { [KICK]: "X.X.X.X.X.X.X.X.", [HAT]: "gggggggggggggggg" });
+        roll(kit, c + 28, 4, CLAP, 40, 118);
+        for (let bar = 0; bar < 8; bar++) zaps(zap, c + bar * 4 + (bar % 2 ? 2.5 : 0.5), { count: bar < 4 ? 2 : 4, spread: 1.5, velocity: 92 + 3 * bar });
+        arp(arpSynth, progression("Em | Em | B7 | B7", c + 16), { ...ARP16, velocity: 50 });
+        bubbles(bub, c + 4, { count: 10, spread: 6, low: 200, high: 1100 });
+        stopTime([eel, bass, kit, arpSynth, voices], c + 12, c + 13);
+        zaps(zap, c + 12, { count: 1, velocity: 120, duration: [0.6, 0.7] });
 
-        // A': the crowned tune - brass and eel together, celesta on top, choir, organ, full drums
-        brass.at(a2).play(JELLY.MEL_A, { velocity: 110, gate: 0.85, transpose: -12 });
-        eel.at(a2).play(JELLY.MEL_A, { velocity: 100, gate: 0.85, transpose: -12 });
-        celesta.at(a2).play(JELLY.MEL_A, { velocity: 70 });
-        organChords(pA2, 74);
-        sustain(choir, pA2, { center: 60, velocity: 62 });
-        bassline(bass, pA2, { pattern: DRIVE8 });
-        beat(kit, a2, 16, KING_FULL);
-        for (let bar = 0; bar < 16; bar += 4) kit.hit(a2 + bar * 4, CRASH, 112, 1);
-        timpaniOn(pA2, a2, 16, 1);
-        for (const bar of [3, 7, 11, 15]) zaps(zap, a2 + bar * 4 + 2, { count: 4, spread: 1.5, velocity: 110 });
-        tomFill(kit, a2 + 62, 2);
+        // A': everyone - the square lead doubles the eel an octave up, the choir and the voices hold the chords,
+        // four on the floor, the brass on every cadence
+        eel.at(a2).play(ANTHEM, { velocity: 104, gate: 0.88, transpose: -12 });
+        square.at(a2).play(ANTHEM, { velocity: 80, gate: 0.6 });
+        for (let p = 0; p < 4; p++) shape(eel, a2 + p * 16, a2 + p * 16 + 16, { peak: 10, ending: -6 });
+        sustain(choir, pA2, { center: 55, velocity: 68 });
+        sustain(voices, pA2, { center: 67, velocity: 54 });
+        bassline(bass, pA2, { pattern: PUMP });
+        arp(arpSynth, pA2, ARP16);
+        beat(kit, a2, 16, FOUR);
+        kit.hit(a2, CRASH, 108, 1).hit(a2 + 32, CRASH, 104, 1);
+        royalStabs(pA2, a2, [2, 6, 10, 14], [0, 0.75, 1.5], 104);
+        royalStabs(pA2, a2, [3, 7, 11, 15], [0]);
+        for (const bar of [3, 7, 11, 15]) zaps(zap, a2 + bar * 4 + 2.5, { count: 3, spread: 1.2, velocity: 104 });
+        bubbles(bub, a2 + 62, { count: 8, spread: 2, low: 250, high: 1200 });
     });
     songs.push(song);
 }
 
-// The crab coves and their king share their tune: A minor with the Spanish (Andalusian) cadence Am G F E,
-// the motif tiptoeing sideways in staccato like a crab, castanets and claves clicking like claws
 const CRAB = {
     A1: "Am | G | F | E | Am | G | F E | Am",
     A2: "Am | G | F | E | Dm | Am | F E | Am",
@@ -1470,7 +1595,7 @@ const CRAB = {
 //     Intro 2 | A 16 (bassoon) | B 8 (muted trumpet, palmas) | C 8 (the claws: castanets, strums, fragments) | A' 16
 // =====================================================================================================
 {
-    const song = new Song("theme_crab", "Fish Fighters - Crab Cove", 132, { introBars: 2, bodyBars: 48,
+    const song = new Song("theme_crab", "Fish Fighters - Crab Cove", 132, { key: "A", introBars: 2, bodyBars: 48,
         mix: { lead: 0, guitar: -4, strings: -6, bass: -4, percussion: -3, fx: -9 } });
     const bassoon = song.part("Bassoon", 70, { group: "lead", volume: 106, pan: -0.1, fx: { echo: { beats: 0.75, feedback: 0.2, mix: 0.1 } } });
     const xylo = song.part("Xylophone", 13, { group: "lead", volume: 86, pan: 0.3 });
@@ -1533,140 +1658,351 @@ const CRAB = {
 }
 
 // =====================================================================================================
-// 12. "King Crab" - the crustaceans' boss stages: the cove's tune, armoured. Brass on the tune over power chords
-//     and fast flamenco strums, a driving bass, taiko and timpani, castanets at full speed, a choir in the middle.
-//     Intro 4 | A 16 (brass) | B 8 (the king's march: trumpet and choir) | C 8 (claws and drums) | A' 16
+// 12. "King Crab's Sideways Stomp" - the crustaceans' boss stages. Heavy and jumpy, like a crab walks: never
+//     smooth. Distorted power-chord chugs in 3+3+2, then a freeze (everything stops), then a chromatic scuttle
+//     sideways into the next chord; taiko stomps, a heavy kit that holds its breath with the riff, low brass on
+//     the cove's tune. The cove's pinchy instruments are all there in the gaps: castanets and claves clicking,
+//     staccato bassoon, xylophone and pizzicato "snip-snip-snap"s.
+//     A minor. Intro 4 | A 16 (the stomp) | B 8 (the claw-off, half time) | C 8 (scuttle and freeze) | A' 16
 // =====================================================================================================
 {
-    const song = new Song("theme_crab_boss", "Fish Fighters - King Crab", 156, { introBars: 4, bodyBars: 48,
-        mix: { brass: 0, lead: -1, guitar: -5, choir: -5, bass: -4, drums: -2, fx: -9 } });
-    const brass = song.part("Brass", 61, { group: "brass", volume: 112, pan: -0.1 });
-    const xylo = song.part("Xylophone", 13, { group: "lead", volume: 88, pan: 0.3 });
-    const trumpet = song.part("Trumpet", 56, { group: "lead", volume: 100, pan: 0.15 });
-    const power = song.part("Power chords", 29, { group: "guitar", volume: 92, pan: -0.35 });
-    const nylon = song.part("Nylon guitar", 24, { group: "guitar", volume: 90, pan: 0.4 });
-    const choir = song.part("Choir", 52, { group: "choir", volume: 96 });
-    const bass = song.part("Synth bass", 38, { group: "bass", volume: 98 });
-    const kit = song.drums("Kit", 16, { group: "drums", volume: 96 });
-    const timpani = song.part("Timpani", 47, { group: "drums", volume: 104 });
-    const taiko = song.part("Taiko", 116, { group: "drums", volume: 98 });
+    const song = new Song("theme_crab_boss", "Fish Fighters - King Crab's Sideways Stomp", 120, { introBars: 4, bodyBars: 48, key: "A",
+        mix: { lead: 0, guitar: -3, bass: -4, pinch: -5, drums: -1, percussion: -6, fx: -10 } });
+    const brass = song.part("Brass", 61, { group: "lead", volume: 110, pan: -0.1 });
+    const trombones = song.part("Trombones", 57, { group: "lead", volume: 106, pan: 0.2 });
+    const guitar = song.part("Distortion guitar", 30, { group: "guitar", volume: 100, pan: -0.3 });
+    const guitar2 = song.part("Overdrive guitar", 29, { group: "guitar", volume: 92, pan: 0.3 });
+    const tuba = song.part("Tuba", 58, { group: "bass", volume: 108 });
+    const bassoon = song.part("Bassoon", 70, { group: "pinch", volume: 104, pan: -0.25 });
+    const xylo = song.part("Xylophone", 13, { group: "pinch", volume: 96, pan: 0.4 });
+    const pizz = song.part("Pizzicato", 45, { group: "pinch", volume: 96, pan: -0.4 });
+    const kit = song.drums("Power kit", 16, { group: "drums", volume: 104 });
+    const taiko = song.part("Taiko", 116, { group: "drums", volume: 110 });
+    const claws = song.drums("Claws", 0, { group: "percussion", volume: 96, pan: 0.25 });
     const bub = song.synth("Bubbles", "bubbles", { group: "fx" });
-    const DRIVE8 = [[0, 0.45, "R", 100], [0.5, 0.45, "R", 80], [1, 0.45, "8", 86], [1.5, 0.45, "R", 96], [2, 0.45, "R", 80], [2.5, 0.45, "8", 86], [3, 0.45, "R", 96], [3.5, 0.45, "8", 84]];
-    const KING = { [KICK]: "x...x...x...x.x.", [SNARE]: "....x.......x...", [HAT]: "m.o.m.o.m.o.m.o.", [CASTANETS]: "xmxmxmxmxmxmxmxm" };
-    const HALF = { [KICK]: "x.....x.........", [SNARE]: "........x.......", [CASTANETS]: "x.mxm.x.x.mxm.x.", [CLAP]: "..o...x...o...x." };
-    const timpaniOn = (prog, start, bars, every = 2) => {
-        for (let bar = 0; bar < bars; bar += every) timpani.hit(start + bar * 4, above(chord(chordAt(prog, start + bar * 4).symbol).root, 33), 108, 1.5);
+
+    const A = "Am | Am | Dm | E | Am | F | Dm E | Am | Am | E | Dm | Am | F | E | Am E | Am";
+    const B = CRAB.B;
+    const C = CRAB.C;
+
+    // The stomp: [offset, length, semitones from the bar's root]; "next" = from the next bar's root (the scuttle into it)
+    const STOMP = [[0, 0.75, 0], [0.75, 0.75, 0], [1.5, 0.5, 0], [2.5, 0.25, 3], [2.75, 0.25, 2], [3, 0.5, 0]];
+    const STOMP_TURN = [[0, 0.75, 0], [0.75, 0.75, 0], [1.5, 0.5, 1], [3, 0.25, "next-4"], [3.25, 0.25, "next-3"], [3.5, 0.25, "next-2"], [3.75, 0.25, "next-1"]];
+    const rootOf = (prog, t) => chord(chordAt(prog, t).symbol).root;
+    // A bar of the riff: power chords on the guitars (root, fifth, octave), the tuba on the roots an octave down
+    const riffBar = (prog, t, pattern, velocity = 104) => {
+        const root = rootOf(prog, t), next = rootOf(prog, t + 4);
+        for (const [o, l, step] of pattern) {
+            const isScuttle = typeof step === "string";
+            const n = isScuttle ? above(next, 40) - Number(step.slice(5)) : above(root, 40) + step;
+            const v = velocity - (isScuttle ? 14 : o === 0 ? 0 : 8);
+            [0, 7, 12].forEach(i => { guitar.hit(t + o, n + i, v, l * 0.7); guitar2.hit(t + o, n + i, v - 8, l * 0.7); });
+            tuba.hit(t + o, n - 12, v, l * 0.8);
+        }
+    };
+    const riff = (prog, start, bars, velocity) => {
+        for (let bar = 0; bar < bars; bar++) riffBar(prog, start + bar * 4, bar % 2 ? STOMP_TURN : STOMP, velocity);
+    };
+    // A pinch in a gap: snip-snip-snap on the chord (xylophone, pizzicato, a castanet click)
+    const pinch = (prog, t, velocity = 96) => {
+        const entry = chordAt(prog, t);
+        [[0, "8"], [0.5, "8"], [1, "12"]].forEach(([o, token]) => {
+            xylo.hit(t + o, tone(entry, token, 69), velocity, 0.15);
+            pizz.hit(t + o, tone(entry, token, 57), velocity - 8, 0.2);
+        });
+        claws.hit(t + 1.5, CASTANETS, 112, 0.1).hit(t + 1.75, CASTANETS, 96, 0.1);
     };
 
-    // Intro: a timpani roll and the castanets, strums, then the brass announces the tune
-    roll(timpani, 0, 8, 33, 40, 112);
-    beat(kit, 0, 2, { [CASTANETS]: "x.mxm.x.x.mxmxmx" });
-    comp(nylon, progression("Am | E", 0), { pattern: [[0, 1.5, 100], [2, 1.5, 92]], center: 57, strum: 0.03 });
-    [0, 4, 8, 10, 12, 13.5].forEach(t => taiko.hit(t, 45, 110, 1));
-    brass.at(8).play(CRAB.MOTIF + " | E5:.5 D5:.5 C5:.5 B4:.5 G#4:1 E4:1", { velocity: 108, gate: 0.6, transpose: -12 });
-    powerChords(power, progression("Am | E", 8), { velocity: 86 });
-    bassline(bass, progression("Am | E", 8), { pattern: DRIVE8, base: 26 });
-    beat(kit, 8, 1, { [KICK]: "x...x...x...x...", [CASTANETS]: "xmxmxmxmxmxmxmxm" });
-    tomFill(kit, 14, 2);
-    bubbles(bub, 1, { count: 10, spread: 5, low: 200, high: 900, size: [0.06, 0.14] });
+    // The heavy kit holds its breath with the riff (steps 7-11: the freeze); taiko on the stomps
+    const HEAVY = { [KICK]: "X..X..X.....X.X.", [SNARE]: "....X.......X...", [HAT]: "x.x.x.x.....x.x." };
+    const HEAVY_FULL = { [KICK]: "X..X..X.....X.XX", [SNARE]: "....X.......X..g", [CRASH]: "X...............", [HAT]: "x.x.x.x.....x.x." };
+    const TAIKO = [[0, 120], [0.75, 100], [1.5, 110]];
+    const PINCHY = { [CASTANETS]: "x.mxm.x.....xmx.", [CLAVES]: "x..x..x.........", [WOOD_LOW]: "............o..." };
+    const CLAW_OFF = { [KICK]: "X.......X.......", [SNARE]: "........X.......", [RIDE]: "o...o...o...o..." };
+    const taikoBars = (start, bars) => { for (let bar = 0; bar < bars; bar++) for (const [o, v] of TAIKO) taiko.hit(start + bar * 4 + o, pitch("D2"), v, 0.5); };
+
+    // The king's tune: the cove's motif in heavy brass, every phrase stopping dead (the pinches answer in the gaps)
+    const KING = "E4:.5 A4:.5 C5:.5 r:.5 B4:.5 A4:.5 E5:.5 r:.5 | E5:.75 D5:.75 C5:.5 r:2 | D5:.5 F5:.5 A5:.5 r:.5 G5:.5 F5:.5 D5:.5 r:.5 | E5:.75 F5:.75 E5:.5 r:2 | " +
+                 "E4:.5 A4:.5 C5:.5 r:.5 B4:.5 A4:.5 E5:.5 r:.5 | A5:.75 G5:.75 F5:.5 r:1 E5:.5 r:.5 | F5:.5 E5:.5 D5:.5 C5:.5 B4:.75 G#4:.75 E4:.5 | A4:1.5 r:2.5 | " +
+                 "C5:.5 E5:.5 A5:.5 r:.5 G5:.5 E5:.5 C6:.5 r:.5 | B5:.75 A5:.75 G#5:.5 r:2 | A5:.5 F5:.5 D5:.5 r:.5 F5:.5 A5:.5 D6:.5 r:.5 | C6:.75 B5:.75 A5:.5 r:2 | " +
+                 "F5:.75 F5:.75 E5:.5 r:.5 D5:.25 E5:.25 F5:.5 r:.5 | G#5:.75 G#5:.75 A5:.5 r:.5 B5:.25 C6:.25 B5:.5 r:.5 | A5:.5 E5:.5 C5:.5 A4:.5 G#4:.5 B4:.5 E5:.5 G#5:.5 | A5:1 r:3";
+    const GAP_BARS = [1, 3, 7, 9, 11, 15];   // Bars of KING that stop at beat 2: a pinch there
+    const CLAW_LINE = "D3:2 F3:2 | E3:2 C3:2 | B2:2 G#2:2 | A2:3 r:1 | D3:2 F3:2 | A3:2 E3:2 | D#3:2 F#3:2 | G#3:2 E3:1 r:1";
+
+    // Intro: the cove's castanets sneak in alone... then the king lands: STOMP, freeze, scuttle
+    beat(claws, 0, 2, { [CASTANETS]: "....x.mxm.x.mxmx", [CLAVES]: "x..x..x...x.x..." });
+    bubbles(bub, 1, { count: 8, spread: 3, low: 300, high: 1100 });
+    const pI = progression("Am | E", 8);
+    riffBar(pI, 8, STOMP, 112);
+    riffBar(pI, 12, STOMP_TURN, 112);
+    taikoBars(8, 2);
+    beat(kit, 8, 2, HEAVY);
+    kit.hit(8, CRASH, 116, 1);
+    voice("Am", 60).forEach(n => brass.hit(8, n, 110, 1.4));
+    voice("E", 59).forEach(n => brass.hit(12, n, 106, 1.4));
 
     song.body(s => {
         const a = s, b = s + 64, c = s + 96, a2 = s + 128;
-        const pA = progression(CRAB.A1 + " | " + CRAB.A2, a), pB = progression(CRAB.B, b), pC = progression(CRAB.C, c);
-        const pA2 = progression(CRAB.A1 + " | " + CRAB.A2, a2);
+        const pA = progression(A, a), pB = progression(B, b), pC = progression(C, c), pA2 = progression(A, a2);
 
-        // A: the brass on the tune, power chords and fast strums, the driving bass, castanets in sixteenths
-        brass.at(a).play(CRAB.MEL_A, { velocity: 106, gate: 0.6 });
-        powerChords(power, pA, { velocity: 82 });
-        comp(nylon, pA, { pattern: CRAB.RASGUEADO, center: 57, strum: 0.015 });
-        bassline(bass, pA, { pattern: DRIVE8, base: 26 });
-        beat(kit, a, 16, KING);
-        for (let bar = 0; bar < 16; bar += 4) kit.hit(a + bar * 4, CRASH, 104, 1);
-        timpaniOn(pA, a, 16);
-        tomFill(kit, a + 62, 2);
+        // A: the stomp riff, the brass on the king's tune, pinches in every gap, the claws clicking
+        brass.at(a).play(KING, { velocity: 104, gate: 0.7 });
+        for (let p = 0; p < 4; p++) shape(brass, a + p * 16, a + p * 16 + 16, { peak: 10, ending: -4 });
+        riff(pA, a, 16, 102);
+        GAP_BARS.forEach(bar => pinch(pA, a + bar * 4 + 2));
+        bassoon.at(a + 20).play("r:2 E4:.25 r:.25 A4:.25 r:.25 C5:.25 r:.75", { velocity: 92, gate: 0.6 });
+        taikoBars(a, 16);
+        beat(kit, a, 16, HEAVY);
+        kit.hit(a, CRASH, 112, 1).hit(a + 32, CRASH, 110, 1);
+        beat(claws, a, 16, PINCHY);
+        bubbles(bub, a + 30, { count: 5, spread: 1.5 });
 
-        // B: the king's march - trumpet and choir, power chords held, half time
-        trumpet.at(b).play(CRAB.MEL_B, { velocity: 104, gate: 0.85 });
-        choir.at(b).play(CRAB.MEL_B, { velocity: 88, gate: 1, transpose: -12 });
-        powerChords(power, pB, { rate: 4, gate: 0.95, velocity: 90 });
-        comp(nylon, pB, { pattern: CRAB.RASGUEADO, center: 57, strum: 0.015 });
-        bassline(bass, pB, { pattern: [[0, 1.9, "R", 100], [2, 0.45, "R", 80], [2.5, 0.45, "8", 80], [3, 0.45, "R", 84], [3.5, 0.45, "8", 84]], base: 26 });
-        beat(kit, b, 8, HALF);
-        kit.hit(b, CRASH, 100, 1);
-        timpaniOn(pB, b, 8, 1);
-        tomFill(kit, b + 30, 2);
+        // B: the claw-off - half time and heavy: trombones low, the cove's pinchy tune on bassoon and xylophone,
+        // power chords held, taiko on 1 and 3
+        trombones.at(b).play(CLAW_LINE, { velocity: 104, gate: 0.85 });
+        bassoon.at(b).play(CRAB.MEL_B, { velocity: 100, gate: 0.45 });
+        xylo.at(b).play(CRAB.MEL_B, { velocity: 84, gate: 0.3, transpose: 12 });
+        for (let bar = 0; bar < 8; bar++) {
+            const t = b + bar * 4, root = above(rootOf(pB, t), 40);
+            [0, 2].forEach(o => [0, 7, 12].forEach(i => { guitar.hit(t + o, root + i, 100 - o * 4, 1.6); guitar2.hit(t + o, root + i, 90, 1.6); }));
+            tuba.hit(t, root - 12, 104, 1.8).hit(t + 2, root - 12, 96, 1.8);
+            taiko.hit(t, pitch("D2"), 118, 0.5).hit(t + 2, pitch("D2"), 108, 0.5);
+        }
+        figure(pizz, pB, { pattern: ["R", "8", "5", "8"], rate: 0.5, base: 57, velocity: 74, gate: 0.4 });
+        beat(kit, b, 8, CLAW_OFF);
+        beat(claws, b, 8, { [CASTANETS]: "x.mxm.x.x.mxm.x.", [CLAP]: "....x.......x..." });
+        kit.hit(b, CRASH, 108, 1);
 
-        // C: the claws and the drums - castanets, palmas, taiko, the brass fragments, building back
-        brass.at(c).play(CRAB.FRAGMENTS, { velocity: 104, gate: 0.6 });
-        comp(nylon, pC, { pattern: [[0, 0.3, 100], [0.25, 0.3, 84], [0.5, 0.3, 88], [0.75, 0.3, 80], [2, 1.5, 92]], center: 57, strum: 0.015 });
-        bassline(bass, pC, { pattern: [[0, 1.9, "R", 92], [2, 1.9, "R", 84]], base: 26 });
-        beat(kit, c, 6, { [CASTANETS]: "x.mxm.x.x.mxmxmx", [CLAP]: "..o...x...o...x." });
-        for (let bar = 0; bar < 8; bar++) [0, 1.5, 3].forEach(t => taiko.hit(c + bar * 4 + t, 45, 96 + bar * 3, 1));
-        beat(kit, c + 24, 2, { [CASTANETS]: "xmxmxmxmxmxmxmxm", [KICK]: "x.x.x.x.x.x.x.x." });
-        roll(kit, c + 28, 4, SNARE, 40, 120);
-        roll(timpani, c + 24, 8, 33, 40, 118);
-        bubbles(bub, c + 4, { count: 10, spread: 6, low: 220, high: 1100 });
+        // C: scuttle and freeze - the riff alone with long freezes, the bassoon's fragments, castanets in the holes;
+        // then the crabs scuttle up (16ths on pizzicato and xylophone) into a double stomp
+        bassoon.at(c).play(CRAB.FRAGMENTS, { velocity: 102, gate: 0.5 });
+        for (let bar = 0; bar < 6; bar++) {
+            const t = c + bar * 4;
+            riffBar(pC, t, bar % 2 ? [[0, 0.75, 0], [0.75, 0.75, 0], [1.5, 0.5, 1]] : [[0, 0.75, 0], [0.75, 0.75, 0], [1.5, 0.5, 0]], 100);
+            taiko.hit(t, pitch("D2"), 116, 0.5);
+            beat(claws, t, 1, { [CASTANETS]: "........xmxm.x.x", [CLAVES]: "........x..x...." });
+        }
+        for (let i = 0; i < 32; i++) {
+            const n = pitch("E4") + i, t = c + 24 + i * 0.25;
+            pizz.hit(t, n, 70 + i, 0.2);
+            if (i % 2 === 0) xylo.hit(t, n + 12, 70 + i, 0.15);
+        }
+        beat(kit, c + 24, 2, { [KICK]: "X...X...X...X...", [SNARE]: "..............xx" });
+        roll(kit, c + 28, 4, SNARE, 50, 118);
+        [c + 30, c + 31].forEach(t => [0, 7, 12].forEach(i => guitar.hit(t, pitch("E2") + i, 116, 0.5)));
+        taiko.hit(c + 30, pitch("D2"), 124, 0.5).hit(c + 31, pitch("D2"), 124, 0.5);
+        bubbles(bub, c + 6, { count: 8, spread: 4, low: 250, high: 900 });
 
-        // A': everyone - brass and xylophone on the tune, the choir holds the chords
-        brass.at(a2).play(CRAB.MEL_A, { velocity: 110, gate: 0.6 });
-        xylo.at(a2).play(CRAB.MEL_A, { velocity: 84, gate: 0.5, transpose: 12 });
-        sustain(choir, pA2, { center: 60, velocity: 58 });
-        powerChords(power, pA2, { velocity: 88 });
-        comp(nylon, pA2, { pattern: CRAB.RASGUEADO, center: 57, strum: 0.015 });
-        bassline(bass, pA2, { pattern: DRIVE8, base: 26 });
-        beat(kit, a2, 16, KING);
-        for (let bar = 0; bar < 16; bar += 4) kit.hit(a2 + bar * 4, CRASH, 112, 1);
-        timpaniOn(pA2, a2, 16, 1);
-        tomFill(kit, a2 + 62, 2);
+        // A': everyone - brass and trombones (an octave down) on the tune, the xylophone on its first notes,
+        // the full heavy kit, pinches and claws
+        brass.at(a2).play(KING, { velocity: 108, gate: 0.7 });
+        trombones.at(a2).play(KING, { velocity: 100, gate: 0.7, transpose: -12 });
+        for (let p = 0; p < 4; p++) shape(brass, a2 + p * 16, a2 + p * 16 + 16, { peak: 10, ending: -4 });
+        xylo.at(a2).play(KING.split("|").slice(0, 2).join("|"), { velocity: 80, gate: 0.4, transpose: 12 });
+        riff(pA2, a2, 16, 106);
+        GAP_BARS.forEach(bar => pinch(pA2, a2 + bar * 4 + 2, 100));
+        taikoBars(a2, 16);
+        beat(kit, a2, 16, HEAVY_FULL);
+        beat(claws, a2, 16, { ...PINCHY, [CLAP]: "....x.......x..." });
+        bubbles(bub, a2 + 62, { count: 8, spread: 2 });
     });
     songs.push(song);
 }
 
 // =====================================================================================================
-// 13. Battle start: general quarters on the submarine. No tune (that's the victory jingle's): a sonar ping, war
-//     drums speeding up under a swelling timpani roll and tremolo strings, the brass hammering a C power chord
-//     twice, then a C7sus4 left hanging - unresolved, the stage's theme answers it (a victory lands home on F)
+// 12b. "It Came From The Trench!" - the most stressful and dangerous stages (swarms, something huge down there):
+//     a 1960s B-movie creature feature played by a surf-noir band. Tremolo-picked surf guitar, a cheesy combo
+//     organ, a theremin, picked bass and surf drums in G minor; a chromatic riff, D7 stabs, a "lights out"
+//     heartbeat, the creature's lunge; an anglerfish lure blinking in the wrong key, "gulp" stop-times.
+//     Intro 4 | A 16 | B 8 (the chase, half time) | C 8 (lights out) | A' 12
 // =====================================================================================================
 {
-    const song = new Song("jingle_battle_start", "Fish Fighters - Battle Start", 140, { kind: "jingle",
-        mix: { brass: 0, strings: -6, bass: -4, drums: -2, bubbles: -9 } });
+    const song = new Song("theme_danger", "Fish Fighters - It Came From The Trench!", 156, { introBars: 4, bodyBars: 44, key: "G",
+        mix: { lead: 0, guitar: -2, keys: -5, bass: -3, brass: -4, drums: -2, fx: -9 } });
+    const ther = song.synth("Theremin", "theremin", { group: "lead", fx: { echo: { beats: 0.75, feedback: 0.3, mix: 0.25 } } });
+    const guitar = song.part("Surf guitar", 27, { group: "guitar", volume: 104, pan: -0.3, fx: { echo: { beats: 0.25, feedback: 0.2, mix: 0.2 } } });
+    const muted = song.part("Muted guitar", 28, { group: "guitar", volume: 92, pan: 0.35 });
+    const organ = song.part("Combo organ", 17, { group: "keys", volume: 96, pan: 0.25 });
+    const celeste = song.part("Lure", 8, { group: "keys", volume: 90, pan: -0.45, fx: { echo: { beats: 0.75, feedback: 0.4, mix: 0.3 } } });
+    const bass = song.part("Pick bass", 34, { group: "bass", volume: 106 });
+    const brass = song.part("Brass", 61, { group: "brass", volume: 108, pan: 0.1 });
+    const kit = song.drums("Room kit", 8, { group: "drums", volume: 100 });
+    const ping = song.synth("Sonar", "ping", { group: "fx", fx: { echo: { beats: 1.5, feedback: 0.45, mix: 0.4 } } });
+    const bub = song.synth("Bubbles", "bubbles", { group: "fx" });
+
+    const A = "Gm | Gm | Gm | Gm | Eb | Eb | D7 | D7 | Gm | Gm | Gm | Gm | Cm | Eb | D7 | D7sus4";
+    const B = "Cm | Cm | Ab | Ab | F | F | D7 | D7";
+    const C = "Gm | Gm | Gm | Gm | Gm | Gm | Gm | D7";
+    const A2 = "Gm | Gm | Gm | Gm | Eb | Eb | D7 | D7 | Cm | Eb | D7 | D7sus4";
+    const bars = (text, from, to) => text.split("|").slice(from, to).join("|");
+
+    const BASS8 = [[0, 0.45, "R", 104], [0.5, 0.45, "R", 80], [1, 0.45, "8", 88], [1.5, 0.45, "R", 80],
+                   [2, 0.45, "R", 100], [2.5, 0.45, "R", 80], [3, 0.45, "5", 88], [3.5, 0.45, "app", 86]];
+    const CHOP = [[0.5, 0.2, 72], [1.5, 0.2, 66], [2.5, 0.2, 72], [3.5, 0.2, 66]];
+    const SURF_A = { [KICK]: "x.....x...x.....", [SNARE]: "....x.......x..g", [HAT]: "m.o.m.o.m.o.m.o.", [LOW_TOM]: "...........o...." };
+    const SURF_FULL = { [KICK]: "x.....x.x.x.....", [SNARE]: "....x..g....x..g", [HAT]: "m.o.m.o.m.o.m.o.", [OPEN_HAT]: "..............o.", [LOW_TOM]: "..........o.o..." };
+    const HALF = { [KICK]: "x.........x.....", [SNARE]: "........x.......", [RIDE]: "m.o.m.o.m.o.m.o." };
+    const HEART = { [KICK]: "x..x............" };
+    const HEART_FAST = { [KICK]: "x..x....x..x...." };
+    const GULP = { [KICK]: "x.....x.........", [SNARE]: "....x...........", [HAT]: "m.o.m.o.m.o....." };
+
+    const RIFF = "D3:.5 G3:.5 Bb3:.5 A3:.5 G3:.5 D4:.5 C#4:.5 D4:.5 | Eb4:.5 D4:.5 Bb3:.5 G3:.5 A3:.5 F#3:.5 G3:1";
+    const TUNE_A = "D5:2 G5:2 | Bb5:3 A5:1 | G5:2 D6:2 | C#6:1 D6:1 Eb6:1 D6:1 | Bb5:2 G5:2 | Eb5:3 F5:1 | F#5:2 A5:2 | C6:4 | " +
+                   "D5:2 G5:2 | Bb5:3 C6:1 | D6:2 F6:2 | Eb6:1.5 D6:.5 C6:1 Bb5:1 | C6:2 Eb6:2 | D6:2 Bb5:1 G5:1 | A5:2 C6:1 F#5:1 | G5:4";
+    const TUNE_B = "G5:.5 G5:.5 r:.5 G5:.5 Ab5:.5 G5:.5 F5:.5 Eb5:.5 | C5:3 r:1 | " +
+                   "Ab5:.5 Ab5:.5 r:.5 Ab5:.5 Bb5:.5 Ab5:.5 G5:.5 Eb5:.5 | C5:3 r:1 | " +
+                   "A5:.5 A5:.5 r:.5 A5:.5 Bb5:.5 A5:.5 G5:.5 F5:.5 | C6:3 r:1 | " +
+                   "F#5:.5 A5:.5 C6:.5 Eb6:.5 D6:.5 C6:.5 A5:.5 F#5:.5 | D5:1 r:1 D5:.5 D5:.5 D5:1";
+    const TUNE_C = "G4:4 | D5:4 | Eb5:4 | D5:2 C#5:2 | G5:4 | F#5:4 | r:4 | r:4";
+    const LURE = "F#5:.25 A#5:.25 C#6:.25 F#6:.25";   // F# major, a half step above the key: the fake light
+    const phrases = text => text.split("|").reduce((list, bar, i) => { if (i % 4 === 0) list.push([]); list[list.length - 1].push(bar); return list; }, []).map(p => p.join("|"));
+
+    const chug = (prog, velocity = 72) => figure(muted, prog, { pattern: ["R"], rate: 0.5, base: 43, velocity, accent: 12, gate: 0.45 });
+    const gulp = (beat, parts) => {
+        stopTime(parts, beat, beat + 1);
+        bubbles(bub, beat, { count: 1, spread: 0.01, low: 240, high: 241, size: [0.14, 0.14], velocity: 110 });
+    };
+    const band = [guitar, muted, organ, celeste, bass, brass];
+    const surfRiff = (start, { withOrgan = false } = {}) => {
+        tremolo(guitar.at(start), RIFF + " | " + RIFF, { velocity: 92 });
+        bass.at(start).play(RIFF + " | " + RIFF, { velocity: 100, gate: 0.6, transpose: -12 });
+        if (withOrgan) organ.at(start).play(RIFF + " | " + RIFF, { velocity: 80, gate: 0.4, transpose: 12 });
+    };
+    const tremChords = prog => figure(guitar, prog, { pattern: ["R", "5", "8", "5"], rate: 0.25, base: 55, velocity: 84, accent: 8, gate: 0.45 });
+    const theremA = (start, text) => phrases(text).forEach((p, i) => theremin(ther, start + i * 16, p, { velocity: 96, glide: 0.07, swoopFirst: 7 }));
+
+    // Intro: the sonar, a heartbeat in the dark, the lure blinking; the chug creeps up; the guitar dives
+    ping.add(0, 880, 100);
+    beat(kit, 0, 2, HEART);
+    [0, 0.75, 4, 4.75].forEach(t => bass.hit(t, pitch("G1"), 100, 0.4));
+    celeste.at(2).play(LURE, { velocity: 50 });
+    celeste.at(6).play(LURE, { velocity: 50 });
+    chug(progression("Gm | D7", 8));
+    muted.events.filter(e => e.time >= 8 && e.time < 16).forEach(e => { e.velocity = Math.min(127, e.velocity + Math.floor(e.time - 8) * 4); });
+    roll(kit, 12, 4, SNARE, 40, 112);
+    guitar.hit(15, 55, 104, 1, -12);
+
+    song.body(s => {
+        const a = s, b = s + 64, c = s + 96, a2 = s + 128;
+        const pA = progression(A, a), pB = progression(B, b), pC = progression(C, c), pA2 = progression(A2, a2);
+
+        // A: the riff in tremolo, the theremin's tune (the motif, slowed down and wobbling), stabs, two gulps
+        surfRiff(a);
+        surfRiff(a + 32);
+        tremChords(progression(bars(A, 4, 8), a + 16));
+        tremChords(progression(bars(A, 12, 16), a + 48));
+        bassline(bass, progression(bars(A, 4, 8), a + 16), { pattern: BASS8, base: 31 });
+        bassline(bass, progression(bars(A, 12, 16), a + 48), { pattern: BASS8, base: 31 });
+        chug(pA);
+        comp(organ, pA, { pattern: CHOP, center: 67 });
+        theremA(a, TUNE_A);
+        [[a + 16], [a + 24], [a + 48], [a + 56], [a + 57.5]].forEach(([t]) => stab(brass, pA, t, [0], { velocity: 106, length: 0.3, center: 60 }));
+        beat(kit, a, 7, SURF_A);
+        beat(kit, a + 28, 1, GULP);
+        beat(kit, a + 32, 7, SURF_A);
+        beat(kit, a + 60, 1, GULP);
+        kit.hit(a, CRASH, 108, 1).hit(a + 32, CRASH, 104, 1);
+        gulp(a + 31, band);
+        gulp(a + 63, band);
+
+        // B: the chase - half time, the combo organ in octaves, the guitar under it, brass, "stab stab STAB"
+        organ.at(b).play(TUNE_B, { velocity: 96, gate: 0.6 });
+        organ.at(b).play(TUNE_B, { velocity: 88, gate: 0.6, transpose: -12 });
+        tremolo(guitar.at(b), TUNE_B, { velocity: 84, transpose: -12 });
+        bassline(bass, pB, { pattern: [[0, 0.9, "R", 104], [1, 0.45, "R", 80], [2.5, 0.45, "8", 88], [3, 0.9, "app", 90]], base: 31 });
+        beat(kit, b, 7, HALF);
+        kit.hit(b, CRASH, 106, 1);
+        [b, b + 8, b + 16].forEach(t => stab(brass, pB, t, [0], { velocity: 110, length: 0.3, center: 60 }));
+        brass.at(b + 24).play("F#4:.5 A4:.5 C5:.5 Eb5:.5 D5:.5 C5:.5 A4:.5 F#4:.5", { velocity: 100, gate: 0.7 });
+        for (const t of [b + 28, b + 30, b + 30.5, b + 31]) {
+            [pitch("D3"), pitch("A3"), pitch("D4")].forEach(n => { brass.hit(t, n, 112, 0.35); organ.hit(t, n + 12, 104, 0.3); guitar.hit(t, n, 108, 0.3); });
+            kit.hit(t, KICK, 116);
+        }
+
+        // C: lights out - a heartbeat, the sonar, the lure blinking, the theremin moaning; then the lunge
+        beat(kit, c, 4, HEART);
+        beat(kit, c + 16, 2, HEART_FAST);
+        for (let bar = 0; bar < 6; bar++) (bar < 4 ? [0, 0.75] : [0, 0.75, 2, 2.75]).forEach(t => bass.hit(c + bar * 4 + t, pitch("G1"), 98, 0.4));
+        [0, 8, 16].forEach(t => ping.add(c + t, 880, 96));
+        [6, 14, 22].forEach(t => celeste.at(c + t).play(LURE, { velocity: 50 }));
+        theremin(ther, c, TUNE_C, { velocity: 88, glide: 0.4 });
+        bubbles(bub, c + 2, { count: 12, spread: 20, low: 160, high: 600, size: [0.1, 0.2] });
+        roll(kit, c + 24, 4, LOW_TOM, 40, 104);
+        chug(progression("Gm", c + 24));
+        muted.events.filter(e => e.time >= c + 24 - 1e-6 && e.time < c + 28 - 1e-6).forEach(e => { e.velocity = Math.min(127, 60 + Math.round((e.time - c - 24) * 12)); });
+        [50, 51, 57, 62].forEach(n => brass.hit(c + 28, n, 120, 2, -2));                   // the lunge: a cluster falling
+        guitar.hit(c + 28, 55, 110, 2, -12);                                              // the dive
+        kit.hit(c + 28, CRASH, 120, 2);
+        tomFill(kit, c + 30, 2);
+
+        // A': the riff with the organ on top, the theremin's tune shortened, brass on every change, one last gulp
+        surfRiff(a2, { withOrgan: true });
+        surfRiff(a2 + 32);
+        tremChords(progression(bars(A2, 4, 8), a2 + 16));
+        bassline(bass, progression(bars(A2, 4, 8), a2 + 16), { pattern: BASS8, base: 31 });
+        chug(pA2);
+        comp(organ, progression(bars(A2, 4, 12), a2 + 16), { pattern: CHOP, center: 67 });
+        const tune2 = bars(TUNE_A, 0, 8) + "|" + bars(TUNE_A, 12, 16);
+        theremA(a2, tune2);
+        organ.at(a2).play(tune2, { velocity: 74, gate: 0.9, transpose: -12 });
+        for (const entry of pA2) if (entry.beat === a2 || entry.symbol !== chordAt(pA2, entry.beat - 0.01).symbol)
+            stab(brass, pA2, entry.beat, [0], { velocity: 104, length: 0.3, center: 60 });
+        beat(kit, a2, 7, SURF_FULL);
+        tomFill(kit, a2 + 30, 2);
+        beat(kit, a2 + 32, 3, SURF_FULL);
+        beat(kit, a2 + 44, 1, GULP);
+        kit.hit(a2, CRASH, 112, 1).hit(a2 + 32, CRASH, 108, 1);
+        gulp(a2 + 47, band);
+    });
+    songs.push(song);
+}
+
+// =====================================================================================================
+// 13. "Battle Stations!" - battle start: the submarine's crew drums to battle stations. A fast drum fill, a low
+//     brass call "da-dada-dada" on the motif's frame (sol, do, then a chromatic climb to sol'), one big held power
+//     chord: no third, no tune, no steel drums (that's the victory's). Rendered in the 7 keys of the stage themes,
+//     so the hit is always on the tonic of the theme that follows it (jingle_battle_start = C, the fallback).
+// =====================================================================================================
+for (const [keyName, T] of [["C", 0], ["D", 2], ["Eb", 3], ["E", 4], ["F", 5], ["G", -5], ["A", -3]]) {
+    const name = keyName === "C" ? "jingle_battle_start" : "jingle_battle_start_" + keyName;
+    const song = new Song(name, "Fish Fighters - Battle Stations! (" + keyName + ")", 160, { kind: "jingle", key: keyName,
+        mix: { brass: 0, bass: -4, drums: -1, fx: -10 } });
+    song.endBeat = 6;   // The theme starts here (the crash rings under it)
     const brass = song.part("Brass", 61, { group: "brass", volume: 112, pan: -0.1 });
-    const trombones = song.part("Trombones", 57, { group: "brass", volume: 108, pan: 0.15 });
-    const strings = song.part("Tremolo strings", 44, { group: "strings", volume: 100 });
+    const trumpet = song.part("Trumpet", 56, { group: "brass", volume: 106, pan: 0.25 });
+    const trombones = song.part("Trombones", 57, { group: "brass", volume: 110, pan: 0.1 });
     const tuba = song.part("Tuba", 58, { group: "bass", volume: 108 });
     const kit = song.drums("Kit", 0, { group: "drums", volume: 100 });
     const taiko = song.part("Taiko", 116, { group: "drums", volume: 104 });
     const timpani = song.part("Timpani", 47, { group: "drums", volume: 106 });
-    const ping = song.synth("Sonar", "ping", { group: "bubbles", fx: { echo: { beats: 1, feedback: 0.35, mix: 0.35 } } });
-    const bub = song.synth("Bubbles", "bubbles", { group: "bubbles" });
+    const ping = song.synth("Sonar", "ping", { group: "fx", fx: { echo: { beats: 1, feedback: 0.35, mix: 0.35 } } });
+    const bub = song.synth("Bubbles", "bubbles", { group: "fx" });
 
-    // Bar 1: the ping, the war drums speeding up, the rolls swelling, the submarine diving
+    // 0-2: the sonar and a 32nd-note snare roll, then the toms run down, the timpani swelling underneath
     ping.add(0, 1180, 104);
-    [[0, 112], [1, 100], [2, 106], [2.5, 98], [3, 108], [3.25, 96], [3.5, 110], [3.75, 116]].forEach(([t, v]) => taiko.hit(t, 45, v, 0.8));
-    roll(timpani, 0, 4, pitch("C2"), 36, 112);
-    roll(kit, 2, 2, SNARE, 40, 118);
-    ["C3", "G3", "C4"].forEach(n => strings.hit(0, pitch(n), 80, 4));
-    bubbles(bub, 0, { count: 16, spread: 4, low: 200, high: 1600, velocity: 90 });
+    bubbles(bub, 0, { count: 12, spread: 1.6, low: 300, high: 1500, velocity: 84 });
+    taiko.hit(0, 45, 116, 0.8).hit(1, 45, 104, 0.8);
+    roll(kit, 0, 1, SNARE, 46, 100, 0.125);
+    tomFill(kit, 1, 1, 110);
+    roll(timpani, 0, 2, foldTimp(pitch("C2") + T), 40, 96, 0.125);
 
-    // Bar 2: DUM - DUM - and the C7sus4 held, without its third
-    const POWER = ["C3", "G3", "C4", "G4"].map(pitch);
-    const HANG = ["C3", "F3", "G3", "Bb3", "C4", "F4", "G4"].map(pitch);
-    for (const [t, velocity] of [[4, 112], [4.5, 106]]) {
-        POWER.forEach(n => brass.hit(t, n, velocity, 0.3));
-        POWER.slice(0, 2).forEach(n => trombones.hit(t, n - 12, velocity - 4, 0.3));
-        tuba.hit(t, pitch("C2"), velocity, 0.3);
-        taiko.hit(t, 45, velocity + 4, 0.8);
-        kit.hit(t, KICK, velocity + 4);
-    }
-    kit.hit(4, CRASH, 114, 1);
-    HANG.forEach(n => brass.hit(5, n, 114, 1.5));
-    HANG.slice(0, 4).forEach(n => trombones.hit(5, n - 12, 108, 1.5));
-    voice("C7sus4", 67).forEach(n => strings.hit(5, n, 100, 1.5));
-    tuba.hit(5, pitch("C2"), 116, 1.5);
-    timpani.hit(5, pitch("C2"), 120, 1.5);
-    taiko.hit(5, 45, 124, 1);
-    kit.hit(5, CRASH, 124, 1.5).hit(5, KICK, 124);
-    bubbles(bub, 5, { count: 14, spread: 1.5, low: 500, high: 2200, velocity: 88 });
+    // 2-4.5: the call "Da-dada-dada-da-da" (sol, do, then a chromatic climb to sol'), doubled by toms and kick
+    trombones.at(2).play("G3:.25 r:.25 G3:.25 C4:.25 r:.25 G3:.25 C4:.25 r:.25 F4:.25 F#4:.25", { velocity: 110, gate: 0.7, transpose: T });
+    brass.at(4).play("F4:.25 F#4:.25", { velocity: 104, gate: 0.8, transpose: T });
+    [[2, 45], [2.5, 45], [2.75, 48], [3.25, 45], [3.5, 48], [4, 50], [4.25, 50]].forEach(([b, n]) => { kit.hit(b, n, 108, 0.2); kit.hit(b, KICK, 96); });
+    roll(kit, 2, 2.5, SNARE, 44, 72, 0.25);
+    timpani.hit(2, foldTimp(pitch("G2") + T), 100, 0.3).hit(2.75, foldTimp(pitch("C3") + T), 104, 0.3).hit(3.5, foldTimp(pitch("C3") + T), 108, 0.3);
+
+    // 4.5-6: THE HIT - a power chord on the key's tonic, held
+    ["C3", "G3", "C4", "G4"].forEach(n => brass.hit(4.5, pitch(n) + T, 118, 1.5));
+    trumpet.hit(4.5, pitch("C5") + T, 112, 1.5);
+    trombones.hit(4.5, pitch("C3") + T, 114, 1.5).hit(4.5, pitch("G3") + T, 110, 1.5);
+    tuba.hit(4.5, pitch("C2") + T, 118, 1.5);
+    timpani.hit(4.5, foldTimp(pitch("C2") + T), 124, 1.5);
+    taiko.hit(4.5, 45, 124, 1);
+    kit.hit(4.5, KICK, 124).hit(4.5, CRASH, 124, 2).hit(4.5, CRASH2, 100, 2);
+    bubbles(bub, 4.5, { count: 14, spread: 1.2, low: 500, high: 2200, velocity: 86 });
+    bubbles(bub, 6.2, { count: 1, spread: 0.01, low: 260, high: 261, size: [0.12, 0.12], velocity: 100 });   // one low "bloop" after the shout
     songs.push(song);
 }
 
@@ -1674,7 +2010,7 @@ const CRAB = {
 // 14. Victory: the motif as a fanfare on steel drums and brass, a big F major, bubbles fizzing up
 // =====================================================================================================
 {
-    const song = new Song("jingle_victory", "Fish Fighters - Victory", 150, { kind: "jingle", mix: { lead: 0, brass: -1, strings: -5, bass: -4, drums: -4, bubbles: -7 } });
+    const song = new Song("jingle_victory", "Fish Fighters - Victory", 150, { key: "F", kind: "jingle", mix: { lead: 0, brass: -1, strings: -5, bass: -4, drums: -4, bubbles: -7 } });
     const steel = song.part("Steel drums", 114, { group: "lead", volume: 112, fx: { echo: { beats: 0.5, feedback: 0.25, mix: 0.15 } } });
     const bells = song.part("Glockenspiel", 9, { group: "lead", volume: 84, pan: 0.3 });
     const brass = song.part("Brass", 61, { group: "brass", volume: 108, pan: -0.15 });
@@ -1703,7 +2039,7 @@ const CRAB = {
 //    big bubbles go "blub" as we sink, a soft F minor on the vibraphone
 // =====================================================================================================
 {
-    const song = new Song("jingle_defeat", "Fish Fighters - Defeat", 96, { kind: "jingle", mix: { lead: 0, bass: -3, strings: -6, keys: -5, bubbles: -4 } });
+    const song = new Song("jingle_defeat", "Fish Fighters - Defeat", 96, { key: "F", kind: "jingle", mix: { lead: 0, bass: -3, strings: -6, keys: -5, bubbles: -4 } });
     const trumpet = song.part("Muted trumpet", 59, { group: "lead", volume: 104 });
     const tuba = song.part("Tuba", 58, { group: "bass", volume: 100 });
     const strings = song.part("Strings", 49, { group: "strings", volume: 84 });
@@ -1731,12 +2067,13 @@ const loops = {};
 for (const song of songs) {
     writeSong(song);
     const spb = 60 / song.tempo;
-    const end = Math.max(...song.parts.flatMap(p => p instanceof Part ? p.events.map(e => e.time + e.length) : p.events.map(e => e[0])));
+    const end = song.endBeat ?? Math.max(...song.parts.flatMap(p => p instanceof Part ? p.events.map(e => e.time + e.length) : p.events.map(e => e[0])));
     // The game loops the second body copy: [loopStartSample, loopStartSample + loopLengthSample) at 48 kHz
     const introSamples = Math.round(song.intro * spb * RATE), lengthSamples = Math.round(song.length * spb * RATE);
     loops[song.name] = {
         title: song.title.replace("Fish Fighters - ", ""),
         kind: song.kind,
+        key: song.key,
         tempo: song.tempo,
         sampleRate: RATE,
         lengthSeconds: +(end * spb).toFixed(3),

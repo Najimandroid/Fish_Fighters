@@ -69,7 +69,10 @@ private:
         bool unlocked = false;
     };
 
-    std::vector<StageIcon> m_stageIcons;
+    std::vector<StageIcon> m_stageIcons;   // Playable stages, then the next locked ones (not clickable)
+
+    void draw_padlock(sf::RenderWindow& window, const sf::RenderStates& states, sf::Vector2f center, float size) const;
+    void draw_check(sf::RenderWindow& window, const sf::RenderStates& states, sf::Vector2f center) const;
     int m_selectedStage = -1; // Stage UID
 
     std::vector<std::vector<sf::CircleShape>> m_stageConnections;

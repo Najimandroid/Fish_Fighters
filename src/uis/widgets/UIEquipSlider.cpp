@@ -45,7 +45,7 @@ UIEquipSlider::UIEquipSlider(std::shared_ptr<DataLoader> dataLoader)
     m_nextButton(ARROW_SIZE, { 1920.f - 36.f - ARROW_SIZE, ARROW_Y }, "icon_play"),
     m_lineupPanel(lineup_panel_rect().size, lineup_panel_rect().position, UISkin::PANEL_DARK, 1.2f),
     m_lineupTitle(UISkin::heavy_font(), "LINEUP"),
-    m_hint(UISkin::heavy_font(), "Drag a fish into the lineup  -  drag within the lineup to reorder  -  right click to remove"),
+    m_hint(UISkin::regular_font(), "Click or drag a fish to add it   -   Drag in the lineup to reorder   -   Right click to remove"),
     m_ghostCost(UISkin::heavy_font())
 {
     if (!m_placeholderTexture.loadFromFile("assets/images/textures/icons/placeholder.png")) {
@@ -66,7 +66,7 @@ UIEquipSlider::UIEquipSlider(std::shared_ptr<DataLoader> dataLoader)
     UISkin::set_text_anchor(m_lineupTitle, { 0.5f, 0.5f });
     m_lineupTitle.setPosition({ 960.f, panel.position.y + PANEL_TITLE_BAND / 2.f + 6.f });
 
-    UISkin::style_text(m_hint, 26);
+    UISkin::style_body_text(m_hint, 28);
     UISkin::set_text_anchor(m_hint, { 0.5f, 0.5f });
     m_hint.setPosition({ 960.f, HINT_Y });
 
@@ -240,6 +240,12 @@ void UIEquipSlider::init_icons()
  */
 void UIEquipSlider::update(float deltaTime)
 {
+    if (auto player = m_dataLoader->get_player_data().lock())
+    {
+        const auto count = std::count_if(player->equippedUnits.begin(), player->equippedUnits.end(), [](int uid) { return uid >= 0; });
+        m_lineupTitle.setString("LINEUP " + std::to_string(count) + "/" + std::to_string(m_slots.size()));
+        UISkin::set_text_anchor(m_lineupTitle, { 0.5f, 0.5f });
+    }
     // Cards: tweens, and "IN USE" on the units already in the lineup
     auto player = m_dataLoader->get_player_data().lock();
     for (auto& icon : m_equipIcons)
@@ -376,6 +382,7 @@ void UIEquipSlider::handle_event(const sf::Event& event, const sf::RenderWindow&
 
         if (newIndex != m_currentIndex && newIndex >= 0 && newIndex < static_cast<int>(m_equipIcons.size()))
             move_to_index(newIndex);
+        if (keyPressed->code == sf::Keyboard::Key::Enter) add_selected_to_lineup();
     }
 
     // Mouse press: start hold/drag detection or select another icon
@@ -439,10 +446,15 @@ void UIEquipSlider::handle_event(const sf::Event& event, const sf::RenderWindow&
     {
         if (mouseReleased->button == sf::Mouse::Button::Left)
         {
+            const sf::Vector2f mousePos = window.mapPixelToCoords(mouseReleased->position);
             if (m_dragging && m_tempGhost && m_tempGhost->active)
             {
-                sf::Vector2f mousePos = window.mapPixelToCoords(mouseReleased->position);
                 end_drag(mousePos);
+            }
+            else if (m_mouseDown && !m_dragging && m_dragFromSlot < 0
+                && !m_equipIcons.empty() && m_equipIcons[m_currentIndex]->get_bounds().contains(mousePos))
+            {
+                add_selected_to_lineup();   // A click, not a drag
             }
             m_mouseDown = false;
             m_dragging = false;
@@ -744,6 +756,25 @@ void UIEquipSlider::end_drag(const sf::Vector2f& pos)
 
     // If dropped in empty space -> shrink out animations
     m_tempGhost->scaleTween = tweeny::from(m_tempGhost->currentScale).to(0.f).during(12).via(tweeny::easing::quadraticIn);
+}
+
+void UIEquipSlider::add_selected_to_lineup()
+{
+    auto player = m_dataLoader->get_player_data().lock();
+    if (!player || m_equipIcons.empty()) return;
+
+    const int uid = m_equipIcons[m_currentIndex]->get_uid();
+    auto& lineup = player->equippedUnits;
+    const auto empty = std::find(lineup.begin(), lineup.end(), -1);
+    const int slot = static_cast<int>(empty - lineup.begin());
+    if (std::find(lineup.begin(), lineup.end(), uid) != lineup.end() || empty == lineup.end() || slot >= static_cast<int>(m_slots.size()))
+    {
+        play_sound("ui_error");   // Already in it, or no room
+        return;
+    }
+    player->equip_unit(uid, slot);
+    play_sound("equip");
+    refresh_slots_after_unequip();   // Rebuilds the slots from the save
 }
 
 /*

@@ -1,8 +1,10 @@
 // A small SoundFont 2 sample player: reads an .sf2 file and renders notes to a stereo buffer.
 // Enough of the SF2 spec for General MIDI banks: presets and instruments with their zones (key / velocity
-// ranges, global zones), sample loops, tuning, volume envelope, attenuation, pan, a static low-pass filter
-// and exclusive classes (open / closed hi-hat). No modulators beyond the default velocity curve, no effects:
-// the reverb and the mix happen in Waveform.
+// ranges, global zones), sample loops, tuning, volume envelope, attenuation, pan, exclusive classes (open /
+// closed hi-hat), and what makes the instruments breathe: modulators (velocity and key sources, the curve
+// shapes, FluidSynth's defaults), the modulation envelope and the vibrato and modulation LFOs moving the
+// pitch and a resonant low-pass filter. Without them, many GeneralUser GS instruments (vibraphone, Rhodes,
+// basses, horns, trumpets) stayed behind a closed filter. No effects: the reverb and the mix happen in Waveform.
 
 const fs = require("fs");
 
@@ -33,15 +35,57 @@ function records(buffer, chunk, size, read) {
 
 const GEN = {
     startAddrsOffset: 0, endAddrsOffset: 1, startloopAddrsOffset: 2, endloopAddrsOffset: 3, startAddrsCoarseOffset: 4,
-    initialFilterFc: 8, initialFilterQ: 9, endAddrsCoarseOffset: 12, pan: 17, delayVolEnv: 33, attackVolEnv: 34, holdVolEnv: 35,
-    decayVolEnv: 36, sustainVolEnv: 37, releaseVolEnv: 38, instrument: 41, keyRange: 43, velRange: 44,
+    modLfoToPitch: 5, vibLfoToPitch: 6, modEnvToPitch: 7, initialFilterFc: 8, initialFilterQ: 9, modLfoToFilterFc: 10,
+    modEnvToFilterFc: 11, endAddrsCoarseOffset: 12, modLfoToVolume: 13, pan: 17,
+    delayModLFO: 21, freqModLFO: 22, delayVibLFO: 23, freqVibLFO: 24,
+    delayModEnv: 25, attackModEnv: 26, holdModEnv: 27, decayModEnv: 28, sustainModEnv: 29, releaseModEnv: 30,
+    keynumToModEnvHold: 31, keynumToModEnvDecay: 32,
+    delayVolEnv: 33, attackVolEnv: 34, holdVolEnv: 35, decayVolEnv: 36, sustainVolEnv: 37, releaseVolEnv: 38,
+    keynumToVolEnvHold: 39, keynumToVolEnvDecay: 40, instrument: 41, keyRange: 43, velRange: 44,
     startloopAddrsCoarseOffset: 45, initialAttenuation: 48, endloopAddrsCoarseOffset: 50, coarseTune: 51, fineTune: 52,
     sampleID: 53, sampleModes: 54, scaleTuning: 56, exclusiveClass: 57, overridingRootKey: 58,
 };
 const DEFAULTS = {
-    [GEN.initialFilterFc]: 13500, [GEN.delayVolEnv]: -12000, [GEN.attackVolEnv]: -12000, [GEN.holdVolEnv]: -12000,
+    [GEN.initialFilterFc]: 13500, [GEN.delayModLFO]: -12000, [GEN.delayVibLFO]: -12000,
+    [GEN.delayModEnv]: -12000, [GEN.attackModEnv]: -12000, [GEN.holdModEnv]: -12000, [GEN.decayModEnv]: -12000, [GEN.releaseModEnv]: -12000,
+    [GEN.delayVolEnv]: -12000, [GEN.attackVolEnv]: -12000, [GEN.holdVolEnv]: -12000,
     [GEN.decayVolEnv]: -12000, [GEN.releaseVolEnv]: -12000, [GEN.scaleTuning]: 100, [GEN.overridingRootKey]: -1,
 };
+
+// ===== Modulators (SF2 8.2) =====
+// A modulator adds amount x source x amountSource to a generator, per note. Only note-on sources change between
+// notes here (velocity, key); MIDI controllers sit at their power-on values (no CC messages are rendered).
+const CC_DEFAULTS = { 1: 0, 7: 100, 10: 64, 11: 127, 91: 40, 93: 0 };
+// The curves as FluidSynth computes them (the reference player GeneralUser GS was tuned on)
+const concave = x => Math.min(1, Math.max(0, x >= 1 ? 1 : -(5 / 6) * Math.log10(1 - x)));
+const convex = x => Math.min(1, Math.max(0, x <= 0 ? 0 : 1 + (5 / 6) * Math.log10(x)));
+function sourceValue(oper, key, velocity) {
+    const index = oper & 0x7f, isCC = (oper >> 7) & 1, isNegative = (oper >> 8) & 1, isBipolar = (oper >> 9) & 1, type = (oper >> 10) & 0x3f;
+    let raw;
+    if (!isCC) {
+        if (index === 0) return 1;                 // No controller: full amount
+        if (index === 127) return null;            // Linked modulators: not supported
+        raw = index === 2 ? velocity : index === 3 ? key : index === 14 ? 64 : index === 16 ? 2 : 0;   // Wheel centred, 2 semitones range
+    } else raw = CC_DEFAULTS[index] ?? 0;
+    let u = raw / 127;
+    if (isNegative) u = 1 - u;
+    const shape = x => type === 1 ? concave(x) : type === 2 ? convex(x) : type === 3 ? (x >= 0.5 ? 1 : 0) : x;
+    if (!isBipolar) return shape(u);
+    return u > 0.5 ? shape(2 * u - 1) : -shape(1 - 2 * u);
+}
+// FluidSynth's default "velocity to filter cutoff" (the only default modulator that isn't constant here, besides
+// velocity to attenuation, which the velocity curve in renderVoice does)
+const DEFAULT_MODULATORS = [{ src: 0x0102, dest: GEN.initialFilterFc, amount: -2400, amtSrc: 0x0C02, trans: 0 }];
+const sameModulator = (a, b) => a.src === b.src && a.dest === b.dest && a.amtSrc === b.amtSrc && a.trans === b.trans;
+// Later lists override identical modulators of the earlier ones (defaults < global zone < zone)
+function mergeModulators(...lists) {
+    const merged = [];
+    for (const list of lists) for (const mod of list) {
+        const i = merged.findIndex(m => sameModulator(m, mod));
+        if (i >= 0) merged[i] = mod; else merged.push(mod);
+    }
+    return merged;
+}
 
 class SoundFont {
     constructor(file) {
@@ -57,32 +101,40 @@ class SoundFont {
 
         const name = p => buffer.toString("ascii", p, p + 20).replace(/\0.*$/, "");
         const presets = records(buffer, pdta.phdr, 38, p => ({ name: name(p), program: buffer.readUInt16LE(p + 20), bank: buffer.readUInt16LE(p + 22), bag: buffer.readUInt16LE(p + 24) }));
-        const pbag = records(buffer, pdta.pbag, 4, p => buffer.readUInt16LE(p));
-        const pgen = records(buffer, pdta.pgen, 4, p => ({ op: buffer.readUInt16LE(p), amount: buffer.readInt16LE(p + 2), lo: buffer[p + 2], hi: buffer[p + 3] }));
+        const bag = p => ({ gen: buffer.readUInt16LE(p), mod: buffer.readUInt16LE(p + 2) });
+        const gen = p => ({ op: buffer.readUInt16LE(p), amount: buffer.readInt16LE(p + 2), lo: buffer[p + 2], hi: buffer[p + 3] });
+        const mod = p => ({ src: buffer.readUInt16LE(p), dest: buffer.readUInt16LE(p + 2), amount: buffer.readInt16LE(p + 4),
+            amtSrc: buffer.readUInt16LE(p + 6), trans: buffer.readUInt16LE(p + 8) });
+        const pbag = records(buffer, pdta.pbag, 4, bag);
+        const pgen = records(buffer, pdta.pgen, 4, gen);
+        const pmod = records(buffer, pdta.pmod, 10, mod);
         const insts = records(buffer, pdta.inst, 22, p => ({ name: name(p), bag: buffer.readUInt16LE(p + 20) }));
-        const ibag = records(buffer, pdta.ibag, 4, p => buffer.readUInt16LE(p));
-        const igen = records(buffer, pdta.igen, 4, p => ({ op: buffer.readUInt16LE(p), amount: buffer.readInt16LE(p + 2), lo: buffer[p + 2], hi: buffer[p + 3] }));
+        const ibag = records(buffer, pdta.ibag, 4, bag);
+        const igen = records(buffer, pdta.igen, 4, gen);
+        const imod = records(buffer, pdta.imod, 10, mod);
         this.samples = records(buffer, pdta.shdr, 46, p => ({
             name: name(p), start: buffer.readUInt32LE(p + 20), end: buffer.readUInt32LE(p + 24),
             loopStart: buffer.readUInt32LE(p + 28), loopEnd: buffer.readUInt32LE(p + 32), rate: buffer.readUInt32LE(p + 36),
             pitch: buffer[p + 40], correction: buffer.readInt8(p + 41),
         }));
 
-        // Zones: a list of generator maps; the first one is global if it lacks the terminal generator
-        const zones = (bags, gens, from, to, terminal) => {
+        // Zones: a list of generator maps (with their modulators in .mods); the first one is global if it lacks
+        // the terminal generator
+        const zones = (bags, gens, mods, from, to, terminal) => {
             const list = [];
             for (let b = from; b < to; b++) {
                 const zone = {};
-                for (let g = bags[b]; g < bags[b + 1]; g++) zone[gens[g].op] = gens[g];
+                for (let g = bags[b].gen; g < bags[b + 1].gen; g++) zone[gens[g].op] = gens[g];
+                Object.defineProperty(zone, "mods", { value: mods.slice(bags[b].mod, bags[b + 1].mod), enumerable: false });
                 list.push(zone);
             }
-            const global = list.length && list[0][terminal] === undefined ? list.shift() : {};
+            const global = list.length && list[0][terminal] === undefined ? list.shift() : Object.defineProperty({}, "mods", { value: [] });
             return { global, zones: list.filter(z => z[terminal] !== undefined) };
         };
-        this.instruments = insts.slice(0, -1).map((inst, i) => zones(ibag, igen, inst.bag, insts[i + 1].bag, GEN.sampleID));
+        this.instruments = insts.slice(0, -1).map((inst, i) => zones(ibag, igen, imod, inst.bag, insts[i + 1].bag, GEN.sampleID));
         this.presets = new Map();
         presets.slice(0, -1).forEach((preset, i) => {
-            this.presets.set(preset.bank * 1000 + preset.program, { name: preset.name, ...zones(pbag, pgen, preset.bag, presets[i + 1].bag, GEN.instrument) });
+            this.presets.set(preset.bank * 1000 + preset.program, { name: preset.name, ...zones(pbag, pgen, pmod, preset.bag, presets[i + 1].bag, GEN.instrument) });
         });
     }
 
@@ -103,11 +155,26 @@ class SoundFont {
             const instrument = this.instruments[pzone[GEN.instrument].amount];
             for (const izone of instrument.zones) {
                 if (!inRange(izone, instrument.global, GEN.keyRange, key) || !inRange(izone, instrument.global, GEN.velRange, velocity)) continue;
-                // Instrument values (zone over global), plus the preset's offsets (zone over global)
+                // Modulators: the instrument's (defaults < global zone < zone) plus the preset's (global < zone),
+                // summed per destination for this key and velocity. Attenuation ones are left out: the velocity
+                // curve does the default one, and the controller ones are constant here
+                const modulation = {};
+                const modulators = [...mergeModulators(DEFAULT_MODULATORS, instrument.global.mods, izone.mods),
+                    ...mergeModulators(preset.global.mods, pzone.mods)];
+                for (const m of modulators) {
+                    if (m.dest & 0x8000 || m.dest === GEN.initialAttenuation) continue;
+                    const a = sourceValue(m.src, key, velocity), b = sourceValue(m.amtSrc, key, velocity);
+                    if (a === null || b === null) continue;
+                    let amount = m.amount * a * b;
+                    if (m.trans === 2) amount = Math.abs(amount);
+                    modulation[m.dest] = (modulation[m.dest] || 0) + amount;
+                }
+                // Instrument values (zone over global), plus the preset's offsets (zone over global), plus modulation
                 const value = op => {
                     const base = izone[op] ? izone[op].amount : instrument.global[op] ? instrument.global[op].amount : (DEFAULTS[op] ?? 0);
                     const offset = pzone[op] ? pzone[op].amount : preset.global[op] ? preset.global[op].amount : 0;
-                    return op === GEN.sampleID || op === GEN.sampleModes || op === GEN.overridingRootKey || op === GEN.exclusiveClass ? base : base + offset;
+                    return op === GEN.sampleID || op === GEN.sampleModes || op === GEN.overridingRootKey || op === GEN.exclusiveClass ? base
+                        : base + offset + (modulation[op] || 0);
                 };
                 result.push({ value, sample: this.samples[izone[GEN.sampleID].amount] });
             }
@@ -121,7 +188,8 @@ const timecents = tc => Math.pow(2, tc / 1200);
 const centibels = cb => Math.pow(10, -cb / 200);
 
 // bend: semitones the pitch slides by over the held part of the note (0 = none)
-function renderVoice(font, region, key, velocity, start, length, out, rate, gain, bend = 0) {
+// vibrato: { cents, hz, delay } added on top of the instrument's own (a player's vibrato on long notes), or null
+function renderVoice(font, region, key, velocity, start, length, out, rate, gain, bend = 0, vibrato = null) {
     const v = region.value, sample = region.sample;
     const data = font.data;
 
@@ -132,10 +200,10 @@ function renderVoice(font, region, key, velocity, start, length, out, rate, gain
     const mode = v(GEN.sampleModes) & 3;
     const isLooping = (mode === 1 || mode === 3) && loopEnd > loopStart + 2;
 
-    // Pitch
+    // Pitch (cents from the sample's root), moved by the modulation envelope and the LFOs below
     const rootKey = v(GEN.overridingRootKey) >= 0 ? v(GEN.overridingRootKey) : sample.pitch;
     const cents = (key - rootKey) * v(GEN.scaleTuning) + v(GEN.coarseTune) * 100 + v(GEN.fineTune) + sample.correction;
-    const step = Math.pow(2, cents / 1200) * sample.rate / rate;
+    const baseStep = Math.pow(2, cents / 1200) * sample.rate / rate;
 
     // Level: attenuation, the default velocity curve (concave), pan
     const velocityGain = Math.pow(velocity / 127, 2);
@@ -143,9 +211,11 @@ function renderVoice(font, region, key, velocity, start, length, out, rate, gain
     const pan = Math.max(-500, Math.min(500, v(GEN.pan))) / 500;
     const left = Math.cos((pan + 1) * Math.PI / 4) * amplitude, right = Math.sin((pan + 1) * Math.PI / 4) * amplitude;
 
-    // Volume envelope
-    const delay = timecents(v(GEN.delayVolEnv)), attack = timecents(v(GEN.attackVolEnv)), hold = timecents(v(GEN.holdVolEnv));
-    const decay = timecents(v(GEN.decayVolEnv)), release = Math.min(3, timecents(v(GEN.releaseVolEnv)));
+    // Volume envelope (hold and decay scaled by the key, 60 = unchanged)
+    const delay = timecents(v(GEN.delayVolEnv)), attack = timecents(v(GEN.attackVolEnv));
+    const hold = timecents(v(GEN.holdVolEnv) + v(GEN.keynumToVolEnvHold) * (60 - key));
+    const decay = timecents(v(GEN.decayVolEnv) + v(GEN.keynumToVolEnvDecay) * (60 - key));
+    const release = Math.min(3, timecents(v(GEN.releaseVolEnv)));
     const sustain = centibels(Math.max(0, Math.min(1440, v(GEN.sustainVolEnv))));
     const envelopeAt = t => {
         if (t < delay) return 0;
@@ -158,33 +228,78 @@ function renderVoice(font, region, key, velocity, start, length, out, rate, gain
         return t < decay ? Math.pow(sustain, t / decay) : sustain;
     };
 
-    // Low-pass (biquad), cutoff from initialFilterFc, lowered at low velocities like the default modulator
-    const cutoffCents = v(GEN.initialFilterFc) - (velocity < 64 ? 2400 * (1 - velocity / 64) * 0.25 : 0);
-    const cutoff = Math.min(rate * 0.45, 8.176 * Math.pow(2, cutoffCents / 1200));
-    const q = Math.max(0.707, Math.pow(10, Math.max(0, v(GEN.initialFilterQ)) / 200));
-    const useFilter = cutoff < 18000;
+    // Modulation envelope (0 to 1, linear segments): opens the filter and bends the pitch of many instruments
+    const modDelay = timecents(v(GEN.delayModEnv)), modAttack = timecents(v(GEN.attackModEnv));
+    const modHold = timecents(v(GEN.holdModEnv) + v(GEN.keynumToModEnvHold) * (60 - key));
+    const modDecay = timecents(v(GEN.decayModEnv) + v(GEN.keynumToModEnvDecay) * (60 - key));
+    const modSustain = 1 - Math.max(0, Math.min(1000, v(GEN.sustainModEnv))) / 1000;
+    const modRelease = Math.min(3, timecents(v(GEN.releaseModEnv)));
+    const modEnvAt = t => {
+        if (t < modDelay) return 0;
+        t -= modDelay;
+        if (t < modAttack) return t / modAttack;
+        t -= modAttack;
+        if (t < modHold) return 1;
+        t -= modHold;
+        return t < modDecay ? 1 - (1 - modSustain) * t / modDecay : modSustain;
+    };
+    const modEnvToPitch = v(GEN.modEnvToPitch), modEnvToFilter = v(GEN.modEnvToFilterFc);
+
+    // LFOs: triangles from 0 after their delay. Vibrato: pitch; modulation: pitch, filter, volume
+    const triangle = phase => 1 - 4 * Math.abs(((phase + 0.25) % 1) - 0.5);
+    const vibDelay = timecents(v(GEN.delayVibLFO)), vibFreq = 8.176 * Math.pow(2, v(GEN.freqVibLFO) / 1200), vibToPitch = v(GEN.vibLfoToPitch);
+    const modLfoDelay = timecents(v(GEN.delayModLFO)), modLfoFreq = 8.176 * Math.pow(2, v(GEN.freqModLFO) / 1200);
+    const modLfoToPitch = v(GEN.modLfoToPitch), modLfoToFilter = v(GEN.modLfoToFilterFc), modLfoToVolume = v(GEN.modLfoToVolume);
+    const isPitchModulated = modEnvToPitch !== 0 || vibToPitch !== 0 || modLfoToPitch !== 0 || vibrato !== null;
+
+    // Low-pass (biquad) from initialFilterFc (with its modulators), the modulation envelope and LFO; like FluidSynth:
+    // off above 13500 cents when nothing moves it, at least 1500 cents, Q in cB (0 = 0.707), level compensated
+    const filterFc = v(GEN.initialFilterFc);
+    const qLinear = Math.pow(10, (Math.max(0, v(GEN.initialFilterQ)) / 10 - 3.01) / 20);
+    const filterGain = 1 / Math.sqrt(Math.max(1, qLinear));
+    const useFilter = filterFc < 13500 || modEnvToFilter !== 0 || modLfoToFilter !== 0;
     let b0 = 1, b1 = 0, b2 = 0, a1 = 0, a2 = 0;
-    if (useFilter) {
-        const w = 2 * Math.PI * cutoff / rate, alpha = Math.sin(w) / (2 * q), cos = Math.cos(w), a0 = 1 + alpha;
-        b0 = (1 - cos) / 2 / a0; b1 = (1 - cos) / a0; b2 = b0; a1 = -2 * cos / a0; a2 = (1 - alpha) / a0;
-    }
+    const setFilter = fcCents => {
+        const cutoff = Math.min(rate * 0.45, 8.176 * Math.pow(2, Math.max(1500, Math.min(13500, fcCents)) / 1200));
+        const w = 2 * Math.PI * cutoff / rate, alpha = Math.sin(w) / (2 * qLinear), cos = Math.cos(w), a0 = 1 + alpha;
+        b0 = (1 - cos) / 2 / a0 * filterGain; b1 = (1 - cos) / a0 * filterGain; b2 = b0; a1 = -2 * cos / a0; a2 = (1 - alpha) / a0;
+    };
     let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
 
+    const BLOCK = 32;   // Pitch, filter and LFO volume are updated every 32 samples
     const first = Math.round(start * rate);
     const heldFrames = Math.round(length * rate);
-    const totalFrames = heldFrames + Math.round(release * rate);
+    const totalFrames = heldFrames + Math.round(Math.max(release, modRelease) * rate);
     let position = sampleStart;
-    let releaseFrom = 0;
+    let releaseFrom = 0, modReleaseFrom = 0;
+    let step = baseStep, lfoVolume = 1;
 
     for (let f = 0; f < totalFrames; f++) {
         const index = first + f;
         if (index * 2 + 1 >= out.length) break;
+        const t = f / rate;
 
         // Envelope (release from the level reached when the key went up)
         let level;
-        if (f < heldFrames) { level = envelopeAt(f / rate); releaseFrom = level; }
+        if (f < heldFrames) { level = envelopeAt(t); releaseFrom = level; }
         else level = releaseFrom * Math.pow(0.001, (f - heldFrames) / (release * rate));   // -60 dB over the release
         if (level < 1e-5 && f > heldFrames) break;
+
+        if (f % BLOCK === 0) {
+            let modEnv;
+            if (f < heldFrames) { modEnv = modEnvAt(t); modReleaseFrom = modEnv; }
+            else modEnv = Math.max(0, modReleaseFrom * (1 - (f - heldFrames) / (modRelease * rate)));
+            const vib = t > vibDelay ? triangle((t - vibDelay) * vibFreq) : 0;
+            const modLfo = t > modLfoDelay ? triangle((t - modLfoDelay) * modLfoFreq) : 0;
+            const bendCents = bend ? bend * 100 * Math.min(1, f / Math.max(1, heldFrames)) : 0;
+            // The player's vibrato fades in after its delay (over 0.2 s)
+            const playerCents = vibrato ? vibrato.cents * Math.min(1, Math.max(0, (t - vibrato.delay) / 0.2)) * Math.sin(2 * Math.PI * vibrato.hz * t) : 0;
+            step = isPitchModulated || bend
+                ? baseStep * Math.pow(2, (modEnv * modEnvToPitch + vib * vibToPitch + modLfo * modLfoToPitch + bendCents + playerCents) / 1200)
+                : baseStep;
+            if (useFilter) setFilter(filterFc + modEnv * modEnvToFilter + modLfo * modLfoToFilter);
+            lfoVolume = modLfoToVolume ? centibels(-modLfo * modLfoToVolume) : 1;
+        }
 
         // Sample (linear interpolation), looping while the key is held (mode 3) or always (mode 1)
         if (isLooping && (mode === 1 || f < heldFrames)) {
@@ -192,20 +307,22 @@ function renderVoice(font, region, key, velocity, start, length, out, rate, gain
         } else if (position >= sampleEnd - 1) break;
         const i = Math.floor(position), frac = position - i;
         let s = data[i] + (data[i + 1] - data[i]) * frac;
-        position += bend ? step * Math.pow(2, bend * Math.min(1, f / Math.max(1, heldFrames)) / 12) : step;
+        position += step;
 
         if (useFilter) {
             const y = b0 * s + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
             x2 = x1; x1 = s; y2 = y1; y1 = y; s = y;
         }
-        out[index * 2] += s * level * left;
-        out[index * 2 + 1] += s * level * right;
+        out[index * 2] += s * level * lfoVolume * left;
+        out[index * 2 + 1] += s * level * lfoVolume * right;
     }
 }
 
 // notes: [[startSeconds, lengthSeconds, key, velocity, bend?], ...]. Returns interleaved stereo Float32Array.
 // Channel 10 plays the drum kit numbered program (bank 128: 0 Standard, 8 Room, 16 Power, 40 Brush...)
-function render(font, { notes, channel, program, volume = 100 }, rate = 48000, tail = 3) {
+// vibrato: { cents, hz, delay (seconds), minBeats } on notes held at least minBeats (tempo: the song's, for beats)
+function render(font, { notes, channel, program, volume = 100, vibrato = null, tempo = 120 }, rate = 48000, tail = 3) {
+    const minVibratoSeconds = vibrato ? (vibrato.minBeats || 0) * 60 / tempo : Infinity;
     const isDrums = channel === 10;
     const bank = isDrums ? 128 : 0;
     const end = Math.max(0, ...notes.map(n => n[0] + n[1])) + tail;
@@ -229,7 +346,7 @@ function render(font, { notes, channel, program, volume = 100 }, rate = 48000, t
         for (const region of font.regions(bank, program, key, velocity)) {
             // Drums play their whole sample (one-shots), unless cut by their exclusive class
             const held = isDrums ? Math.min(cuts[i], 4) : length;
-            renderVoice(font, region, key, velocity, start, held, out, rate, gain, bend);
+            renderVoice(font, region, key, velocity, start, held, out, rate, gain, bend, vibrato && length >= minVibratoSeconds ? vibrato : null);
         }
     });
     return out;

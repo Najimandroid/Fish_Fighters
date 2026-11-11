@@ -54,7 +54,8 @@ namespace UISkin
     };
 
     // Submarine look: riveted steel panels and bars, yellow buttons, light blue screens (slots)
-    inline constexpr NineSlice BUTTON_YELLOW{ "button_yellow", 40.f };
+    inline constexpr NineSlice BUTTON_YELLOW{ "button_yellow", 40.f };   // The screen's main action
+    inline constexpr NineSlice BUTTON_STEEL{ "button_steel", 40.f };     // Secondary actions, choices not selected
     inline constexpr NineSlice PANEL_DARK{ "panel_dark", 40.f, false, true };
     inline constexpr NineSlice PANEL_LIGHT{ "panel_light", 40.f, false, true };
     inline constexpr NineSlice BAR_METAL{ "bar_metal", 48.f, true, true };
@@ -70,17 +71,21 @@ namespace UISkin
     void draw_grime(sf::RenderTarget& target, const sf::FloatRect& rect, float inset, sf::Color tint = sf::Color::White);
 
     // ----- Text -----
-    // Heavy font, fill color and a dark outline that grows with the size
-    void style_text(sf::Text& text, unsigned int size, sf::Color fill = TEXT);
+    // Heavy font (or font), fill color and a dark outline that grows with the size (thinner for the regular font)
+    void style_text(sf::Text& text, unsigned int size, sf::Color fill = TEXT, const sf::Font& font = heavy_font());
+
+    // Body text: the regular font (descriptions, explanations, tips)
+    inline void style_body_text(sf::Text& text, unsigned int size, sf::Color fill = TEXT) { style_text(text, size, fill, regular_font()); }
 
     // Changes the fill color and keeps the outline as transparent as the fill
     void set_text_color(sf::Text& text, sf::Color fill);
 
     // Puts the origin of the text on one of its points: (0.5, 0.5) is the center, (1, 0) the top right...
+    // Vertically, the text is the font's lines (top of the capitals to the last baseline): descenders hang below
     void set_text_anchor(sf::Text& text, sf::Vector2f anchor);
 
-    // Breaks the text into lines no wider than maxWidth (heavy font at that size); existing line breaks are kept
-    std::string wrap_text(const std::string& text, unsigned int size, float maxWidth);
+    // Breaks the text into lines no wider than maxWidth (in font at that size); existing line breaks are kept
+    std::string wrap_text(const std::string& text, unsigned int size, float maxWidth, const sf::Font& font = heavy_font());
 
     // ----- Images -----
     // The texture cropped to the shape of area and stretched to fill it (unit icons in slots and cards)

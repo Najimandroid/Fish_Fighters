@@ -151,11 +151,13 @@ void UISkin::draw_nine_slice(sf::RenderTarget& target, const NineSlice& slice, c
         draw_grime(target, rect, std::max(cornerX, cornerY) * 0.45f, tint);
 }
 
-void UISkin::style_text(sf::Text& text, unsigned int size, sf::Color fill)
+void UISkin::style_text(sf::Text& text, unsigned int size, sf::Color fill, const sf::Font& font)
 {
-    text.setFont(heavy_font());
+    text.setFont(font);
     text.setCharacterSize(size);
-    text.setOutlineThickness(std::max(2.f, static_cast<float>(size) * 0.12f));
+    // The thin strokes of the regular font would drown in the heavy outline
+    const float outline = &font == &heavy_font() ? 0.12f : 0.08f;
+    text.setOutlineThickness(std::max(2.f, static_cast<float>(size) * outline));
     set_text_color(text, fill);
 }
 
@@ -170,15 +172,28 @@ void UISkin::set_text_color(sf::Text& text, sf::Color fill)
 void UISkin::set_text_anchor(sf::Text& text, sf::Vector2f anchor)
 {
     const sf::FloatRect bounds = text.getLocalBounds();
+
+    // Vertically by the font's lines, not by the letters: from the top of the capitals to the last baseline.
+    // "Range" and "Attack" line up (a "g" or a "k" doesn't move the text), and a centered label sits in the
+    // middle of its button. (SFML puts the first baseline at the character size, glyphs are placed from it.)
+    const sf::Font& font = text.getFont();
+    const unsigned int size = text.getCharacterSize();
+    const float outline = text.getOutlineThickness();
+    const sf::String& string = text.getString();
+    const auto lineCount = 1 + std::count(string.begin(), string.end(), U'\n');
+    const float lineHeight = font.getLineSpacing(size) * text.getLineSpacing();
+    const float top = static_cast<float>(size) + font.getGlyph(U'H', size, false, outline).bounds.position.y;
+    const float bottom = static_cast<float>(size) + static_cast<float>(lineCount - 1) * lineHeight + outline;
+
     text.setOrigin({
         bounds.position.x + bounds.size.x * anchor.x,
-        bounds.position.y + bounds.size.y * anchor.y
+        top + (bottom - top) * anchor.y
         });
 }
 
-std::string UISkin::wrap_text(const std::string& text, unsigned int size, float maxWidth)
+std::string UISkin::wrap_text(const std::string& text, unsigned int size, float maxWidth, const sf::Font& font)
 {
-    sf::Text measure(heavy_font(), "", size);
+    sf::Text measure(font, "", size);
     auto width = [&](const std::string& line) { measure.setString(line); return measure.getLocalBounds().size.x; };
 
     std::string result;

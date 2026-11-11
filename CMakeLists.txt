@@ -65,6 +65,14 @@ set(PROJECT_SOURCES
     src/uis/widgets/UITextureElement.cpp
     src/uis/widgets/UIDeploymentIcons.cpp
     src/uis/widgets/UICashPopups.cpp
+    src/uis/widgets/UIConfirmDialog.cpp
+    src/uis/widgets/UIOptionsMenu.cpp
+    src/uis/widgets/UISlider.cpp
+    src/uis/widgets/UIResultsPanel.cpp
+    src/uis/widgets/UIBadge.cpp
+    src/uis/widgets/UIFishTank.cpp
+    src/uis/widgets/UIFishParade.cpp
+    src/uis/widgets/UITutorial.cpp
     src/uis/widgets/UIStageCash.cpp
     src/uis/widgets/UICashUp.cpp
     src/uis/widgets/UIBaseHealthInfo.cpp

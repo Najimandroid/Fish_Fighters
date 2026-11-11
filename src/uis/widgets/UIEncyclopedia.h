@@ -57,6 +57,8 @@ private:
     int row_count() const;
 
     void render_grid(sf::RenderWindow& window);
+    // A folder tab of the grid panel: the open one is part of the panel (yellow label), the other darker steel
+    void render_tab(sf::RenderWindow& window, const UIButtonElement& tab, const std::string& label, bool isOpen);
     void render_details(sf::RenderWindow& window);
     void render_portrait(sf::RenderWindow& window, const Entry& entry, const sf::FloatRect& area);
 

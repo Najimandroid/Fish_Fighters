@@ -5,14 +5,17 @@ namespace
 {
     const float ICON_RATIO = 0.62f;      // Icon size compared to the button
     const float RING_THICKNESS = 7.f;
-    const sf::Color RING_COLOR = sf::Color::White;   // Shows on blue water and on sand
+    const sf::Color RING_COLOR{ 72, 224, 255 };      // Cyan: "on", seen on blue water and on sand
+    const unsigned int LABEL_SIZE = 30;
 }
 
 UIRoundButton::UIRoundButton(float diameter, sf::Vector2f position, const std::string& iconName) :
     UIButtonElement({ diameter, diameter }, position, ""),
     m_button(UISkin::texture("button_round")),
-    m_icon(UISkin::texture(iconName))
+    m_icon(UISkin::texture(iconName)),
+    m_label(UISkin::heavy_font())
 {
+    UISkin::style_text(m_label, LABEL_SIZE);
     m_ring.setRadius(diameter / 2.f + 2.f); // Just around the button
     m_ring.setOrigin({ m_ring.getRadius(), m_ring.getRadius() });
     m_ring.setFillColor(sf::Color::Transparent);
@@ -37,6 +40,11 @@ void UIRoundButton::set_icon_flipped(bool isFlipped)
 void UIRoundButton::set_active_callback(std::function<bool()> isActive)
 {
     m_isActive = isActive;
+}
+
+void UIRoundButton::set_state_label(std::function<std::string()> label)
+{
+    m_stateLabel = std::move(label);
 }
 
 void UIRoundButton::update(float deltaTime)
@@ -68,4 +76,13 @@ void UIRoundButton::render(sf::RenderWindow& window)
     m_icon.setScale({ m_isIconFlipped ? -iconScale : iconScale, iconScale });
     m_icon.setPosition(center);
     window.draw(m_icon);
+
+    if (m_stateLabel)
+    {
+        m_label.setString(m_stateLabel());
+        UISkin::set_text_color(m_label, m_isActiveNow ? RING_COLOR : UISkin::TEXT);
+        UISkin::set_text_anchor(m_label, { 0.5f, 0.f });
+        m_label.setPosition({ center.x, rect.position.y + rect.size.y + 8.f });
+        window.draw(m_label);
+    }
 }
