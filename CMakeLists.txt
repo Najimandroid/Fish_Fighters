@@ -70,6 +70,8 @@ set(PROJECT_SOURCES
     src/uis/widgets/UISlider.cpp
     src/uis/widgets/UIResultsPanel.cpp
     src/uis/widgets/UIBadge.cpp
+    src/uis/widgets/UIFishTank.cpp
+    src/uis/widgets/UIFishParade.cpp
     src/uis/widgets/UIStageCash.cpp
     src/uis/widgets/UICashUp.cpp
     src/uis/widgets/UIBaseHealthInfo.cpp

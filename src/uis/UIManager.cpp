@@ -7,6 +7,8 @@
 #include "widgets/UIStageCash.h"
 #include "widgets/UICashUp.h"
 #include "widgets/UIBaseHealthInfo.h"
+#include "widgets/UIFishTank.h"
+#include "widgets/UIFishParade.h"
 #include "widgets/UIStatusIcons.h"
 #include "widgets/UIUpgradeSlider.h"
 #include "widgets/UIEquipSlider.h"
@@ -79,7 +81,7 @@ void UIManager::generate_title_uis()
     auto bg = std::make_shared<UITextureElement>(
         sf::Vector2f{ 1920.f, 1080.f },
         sf::Vector2f{ 0.f, 0.f },
-        "assets/images/textures/backgrounds/menus/fish_tank.png"
+        "assets/images/textures/backgrounds/menus/title.png"   // The Fish Tank room, calm (no porthole: the logo stands on it)
     );
     auto title = std::make_shared<UITitleScreen>(TITLE_MUSIC_TEMPO);
 
@@ -114,8 +116,10 @@ void UIManager::generate_title_uis()
 
     auto optionsMenu = make_options_menu();
     auto optionsButton = make_options_button(optionsMenu, { 280.f, 90.f }, { 290.f, 1080.f - 30.f - 90.f }, 38);
+    optionsButton->set_style(UIButtonElement::Style::Secondary);   // START is the only yellow one
 
     add_ui_element(bg);
+    add_ui_element(std::make_shared<UIFishParade>(m_dataLoader));   // The cast marches along the floor
     add_ui_element(title);
     add_ui_element(startButton);
     add_ui_element(quitButton);
@@ -344,6 +348,7 @@ void UIManager::generate_fish_tank_uis()
     auto quitDialog = make_quit_dialog(quitButton);
 
     add_ui_element(bg);
+    add_ui_element(std::make_shared<UIFishTank>(m_dataLoader));   // The lineup swims in the porthole
     add_ui_element(titleBar);
     add_ui_element(shellsInfo);
     add_ui_element(battleButton);

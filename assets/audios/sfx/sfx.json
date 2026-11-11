@@ -357,6 +357,18 @@
         "maxInstances": 1,
         "priority": 85
     },
+    "fish_blub": {
+        "files": [
+            "assets/audios/sfx/fish_blub_1.ogg",
+            "assets/audios/sfx/fish_blub_2.ogg",
+            "assets/audios/sfx/fish_blub_3.ogg"
+        ],
+        "volume": 0.4,
+        "pitch": 0.06,
+        "cooldown": 0.08,
+        "maxInstances": 2,
+        "priority": 30
+    },
     "unit_ready": {
         "files": [
             "assets/audios/sfx/unit_ready.ogg"

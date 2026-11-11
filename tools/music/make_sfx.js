@@ -3,7 +3,8 @@
 // Writes assets/audios/sfx/<name>[_<variant>].ogg and assets/audios/sfx/sfx.json, the game's list of sounds:
 //   volume (0-1), pitch (random +- variation), cooldown (seconds before it can play again), maxInstances.
 //
-// Usage: node tools/music/make_sfx.js     (needs ffmpeg on the PATH and the SoundFont, like render_stems.js)
+// Usage: node tools/music/make_sfx.js [sound...]     (needs ffmpeg on the PATH and the SoundFont, like render_stems.js)
+//        Without sounds, every sound is made again; with some, only those (the others keep their files)
 
 const fs = require("fs");
 const os = require("os");
@@ -583,6 +584,15 @@ define("base_alarm", { volume: 0.5, pitch: 0, cooldown: 4, maxInstances: 1, prio
     return s;
 });
 // A slow fish is ready again: a soft rising "bip" and a tiny glass tick (felt more than heard)
+// A fish of the hub's tank was clicked: a round "blub" and a few bubbles
+define("fish_blub", { volume: 0.4, pitch: 0.06, cooldown: 0.08, maxInstances: 2, priority: 30 }, 3, p => {
+    const s = new Sound(0.5);
+    bubble(s, { freq: 380 * p, size: 0.08, amp: 0.45, rise: 1.7 });
+    bubble(s, { at: 0.08, freq: 560 * p, size: 0.06, amp: 0.32, rise: 1.6 });
+    bubbles(s, { at: 0.13, count: 4, spread: 0.2, low: 900 * p, high: 1800 * p, amp: 0.1 });
+    reverb(s, 0.1, 0.5);
+    return s;
+});
 define("unit_ready", { volume: 0.22, pitch: 0.03, cooldown: 0.25, maxInstances: 1, priority: 35 }, 1, () => {
     const s = new Sound(0.25);
     bubble(s, { freq: 900, size: 0.035, amp: 0.3, rise: 1.0 });
@@ -615,10 +625,24 @@ define("shell_collect", { volume: 0.6, pitch: 0, cooldown: 0.5, maxInstances: 1,
 });
 
 // ===== Write =====
+const only = process.argv.slice(2);
+for (const name of only) if (!SOUNDS.some(sound => sound.name === name)) throw new Error(name + ": no such sound");
+const previousFile = path.join(OUT, "sfx.json");
+const previous = fs.existsSync(previousFile) ? JSON.parse(fs.readFileSync(previousFile, "utf8")) : {};
+const isMade = name => !only.length || only.includes(name);
+
 fs.mkdirSync(OUT, { recursive: true });
-for (const old of fs.readdirSync(OUT)) if (old.endsWith(".ogg")) fs.rmSync(path.join(OUT, old));
+for (const old of fs.readdirSync(OUT)) {
+    const owner = old.replace(/(_\d+)?\.ogg$/, "");
+    if (old.endsWith(".ogg") && (!only.length || (isMade(owner) && SOUNDS.some(sound => sound.name === owner)))) fs.rmSync(path.join(OUT, old));
+}
 const manifest = {};
 SOUNDS.forEach(({ name, settings, variants, build }, index) => {
+    if (!isMade(name)) {
+        if (previous[name]) manifest[name] = previous[name];   // Not made this time: its files stay
+        else console.warn(name + ": never made, run without arguments");
+        return;
+    }
     const files = [];
     for (let v = 0; v < variants; v++) {
         seed([...name].reduce((h, c) => Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0, 2166136261) + v);
