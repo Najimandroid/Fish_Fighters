@@ -33,26 +33,26 @@
                 "form": 1,
                 "minLevel": 10,
                 "maxLevel": 30,
-                "name": "Better Fish",
-                "description": "Just a better fish.",
+                "name": "Frogfish",
+                "description": "He really looks like a frog.\nI don't know why though.",
                 "cost": 50,
                 "cooldown": 1.5,
-                "health": 20,
-                "attackPower": 10,
-                "attackRange": 15,
+                "health": 15,
+                "attackPower": 8,
+                "attackRange": 40,
                 "attackType": 1,
-                "attackFrequency": 1.5,
+                "attackFrequency": 1,
                 "foreswing": 0.3,
-                "backswing": 0.1,
+                "backswing": 0.3,
                 "damageZone": [
                     0,
-                    15
+                    45
                 ],
                 "movementSpeed": 10,
                 "knockbackCount": 2,
-                "texture": "assets/images/textures/units/test_sheet_evo.png",
-                "frameCount": 6,
-                "knockbackFrameIndex": 2,
+                "texture": "assets/images/textures/units/fishEvo_sheet.png",
+                "frameCount": 11,
+                "knockbackFrameIndex": 4,
                 "abilities": []
             }
         ]
@@ -85,7 +85,8 @@
                 "texture": "assets/images/textures/units/chomper_sheet.png",
                 "frameCount": 10,
                 "knockbackFrameIndex": 4,
-                "abilities": []
+                "abilities": [],
+                "attackSound": "attack_bite"
             },
             {
                 "form": 1,
@@ -117,7 +118,7 @@
     },
     "UID_3": {
         "UID": 3,
-        "baseUpgradeCost": 350,
+        "baseUpgradeCost": 300,
         "forms": [
             {
                 "form": 0,
@@ -175,7 +176,7 @@
     },
     "UID_4": {
         "UID": 4,
-        "baseUpgradeCost": 700,
+        "baseUpgradeCost": 600,
         "forms": [
             {
                 "form": 0,
@@ -183,21 +184,21 @@
                 "maxLevel": 9,
                 "name": "Big Teeth",
                 "description": "His big teeth are perfect to break hard shells",
-                "cost": 400,
-                "cooldown": 6.5,
-                "health": 20,
-                "attackPower": 18,
+                "cost": 800,
+                "cooldown": 15,
+                "health": 60,
+                "attackPower": 30,
                 "attackRange": 25,
                 "attackType": 1,
-                "attackFrequency": 3,
+                "attackFrequency": 6,
                 "foreswing": 0.3,
                 "backswing": 0,
                 "damageZone": [
                     0,
                     35
                 ],
-                "movementSpeed": 12,
-                "knockbackCount": 3,
+                "movementSpeed": 4,
+                "knockbackCount": 1,
                 "texture": "assets/images/textures/units/tiggerfishSheet.png",
                 "frameCount": 13,
                 "knockbackFrameIndex": 8,
@@ -208,7 +209,120 @@
                             0
                         ]
                     }
-                ]
+                ],
+                "attackSound": "attack_bite"
+            }
+        ]
+    },
+    "UID_5": {
+        "UID": 5,
+        "baseUpgradeCost": 600,
+        "forms": [
+            {
+                "form": 0,
+                "minLevel": 0,
+                "maxLevel": 9,
+                "name": "Gunfish",
+                "description": "He spits water bubbles out! \nArea long range damage!",
+                "cost": 400,
+                "cooldown": 10,
+                "health": 8,
+                "attackPower": 20,
+                "attackRange": 150,
+                "attackType": 2,
+                "attackFrequency": 7,
+                "foreswing": 0.6,
+                "backswing": 0.1,
+                "damageZone": [
+                    110,
+                    50
+                ],
+                "movementSpeed": 2,
+                "knockbackCount": 0,
+                "texture": "assets/images/textures/units/gunfish.png",
+                "frameCount": 14,
+                "knockbackFrameIndex": 6,
+                "abilities": [],
+                "attackSound": "attack_squirt"
+            },
+            {
+                "form": 1,
+                "minLevel": 10,
+                "maxLevel": 29,
+                "name": "Canonfish",
+                "description": "He was initially developped as a war weapon.\nBut he escaped and now lives in the ocean\nusing his canon to hunt jellyfish.\nLong range area attack.",
+                "cost": 400,
+                "cooldown": 10,
+                "health": 15,
+                "attackPower": 40,
+                "attackRange": 170,
+                "attackType": 2,
+                "attackFrequency": 6,
+                "foreswing": 0.5,
+                "backswing": 0.1,
+                "damageZone": [
+                    90,
+                    90
+                ],
+                "movementSpeed": 3,
+                "knockbackCount": 0,
+                "texture": "assets/images/textures/units/gunfishEvo.png",
+                "frameCount": 11,
+                "knockbackFrameIndex": 4,
+                "abilities": [
+                    {
+                        "type": "STRONG_AGAINST",
+                        "targetTypes": [
+                            3
+                        ]
+                    }
+                ],
+                "attackSound": "attack_heavy"
+            }
+        ]
+    },
+    "UID_6": {
+        "UID": 6,
+        "baseUpgradeCost": 1000,
+        "forms": [
+            {
+                "form": 0,
+                "minLevel": 0,
+                "maxLevel": 9,
+                "name": "Clownfish",
+                "description": "Always wanted to be a comedian.\nBut his jokes were so lame he had to give up.\nNow telling bad jokes to enemies to weaken them...",
+                "cost": 500,
+                "cooldown": 15,
+                "health": 13,
+                "attackPower": 3,
+                "attackRange": 100,
+                "attackType": 2,
+                "attackFrequency": 8,
+                "foreswing": 0.3,
+                "backswing": 1.2,
+                "damageZone": [
+                    0,
+                    160
+                ],
+                "movementSpeed": 7,
+                "knockbackCount": 1,
+                "texture": "assets/images/textures/units/clownfishSheet.png",
+                "frameCount": 20,
+                "knockbackFrameIndex": 4,
+                "abilities": [
+                    {
+                        "type": "WEAKEN_ATTACK",
+                        "targetTypes": [
+                            0,
+                            1,
+                            3
+                        ],
+                        "chance": 100,
+                        "duration": 5,
+                        "value": 0.5
+                    }
+                ],
+                "attackSound": "attack_zap"
             }
         ]
     }

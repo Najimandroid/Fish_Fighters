@@ -1,6 +1,7 @@
 {
     "assets/images/textures/backgrounds/stages/CoralSeabed.png": {
-        "groundRow": 803
+        "groundRow": 803,
+        "seamlessOverlap": 32
     },
     "assets/images/textures/backgrounds/stages/RockField.png": {
         "groundRow": 827,
