@@ -1540,5 +1540,143 @@
             }
         ],
         "music": "theme_danger"
+    },
+    "UID_20": {
+        "UID": 20,
+        "stageName": "The Submerged Roots",
+        "enemiesLimit": 40,
+        "unitsLimit": 20,
+        "baseHealth": 1500,
+        "length": 2200,
+        "baseTexture": "assets/images/textures/bases/ShipwreckBase.png",
+        "backgroundTexture": "assets/images/textures/backgrounds/stages/KelpForest.png",
+        "numberOfDifferentEnemies": 5,
+        "enemies": [
+            {
+                "UID": 4,
+                "amount": 20,
+                "respawnTime": 5,
+                "spawnStart": 5,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 4,
+                "amount": 12,
+                "respawnTime": 2,
+                "spawnStart": 0,
+                "layer": -1,
+                "baseHealth": 25,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 8,
+                "amount": 10,
+                "respawnTime": 4,
+                "spawnStart": 0,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 5,
+                "amount": 6,
+                "respawnTime": 8,
+                "spawnStart": 2,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 5,
+                "amount": 8,
+                "respawnTime": 3,
+                "spawnStart": 0,
+                "layer": -1,
+                "baseHealth": 25,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            }
+        ],
+        "rewards": [
+            {
+                "type": "shells",
+                "amount": 800
+            }
+        ],
+        "music": "theme_danger"
+    },
+    "UID_21": {
+        "UID": 21,
+        "stageName": "Deadly Depths",
+        "enemiesLimit": 20,
+        "unitsLimit": 20,
+        "baseHealth": 1500,
+        "length": 1500,
+        "baseTexture": "assets/images/textures/bases/SharkBase.png",
+        "backgroundTexture": "assets/images/textures/backgrounds/stages/RockField.png",
+        "numberOfDifferentEnemies": 2,
+        "enemies": [
+            {
+                "UID": 3,
+                "amount": 2,
+                "respawnTime": 15,
+                "spawnStart": 3,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 1,
+                "amount": -1,
+                "respawnTime": 3,
+                "spawnStart": 6,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            }
+        ],
+        "rewards": [
+            {
+                "type": "shells",
+                "amount": 800
+            }
+        ],
+        "music": "theme_boss_v1"
     }
 }
