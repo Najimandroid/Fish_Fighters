@@ -34,9 +34,17 @@ namespace
     const float SHELLS_DELAY = 0.55f, SHELLS_GAP = 0.07f, SHELL_FLIGHT = 0.65f, SHELL_SIZE = 50.f;
     const sf::Vector2f SHELL_COUNTER{ 1645.f, 55.f };     // Where they fly to without the pill
 
-    // The clam's shadow on the ground (like the fish and enemies): as wide as the closed shell, under its base
-    const float CLAM_SHADOW_WIDTH = 250.f * 2.2f;
-    const float CLAM_SHADOW_Y = 822.f;
+    // The clam's shadow on the ground (like the fish and enemies): a bit wider than the closed shell, centered on its
+    // bottom edge so half of it shows under it, drawn twice (the room is dark: one would hardly show)
+    const float CLAM_SHADOW_WIDTH = 620.f;
+    const float CLAM_SHADOW_HEIGHT = 175.f;
+    const float CLAM_SHADOW_Y = 856.f;
+
+    // A poke tips the clam on the side clicked: that side is pressed down, the other side lifts; its bottom is round,
+    // so it rocks almost in place (it rises by TAP_ROCK of a sharp edge's pivot); the middle makes it hop straight up
+    const float CLAM_HALF_WIDTH = 130.f * 2.2f;   // The closed shell, from its middle
+    const float TAP_TIP = 8.f;                    // Degrees at the edge
+    const float TAP_ROCK = 0.3f;
 
     const sf::Color GLOW{ 190, 130, 255 };
     const sf::Color RAYS{ 255, 240, 200 };
@@ -319,7 +327,7 @@ void UIClamRoom::update(float deltaTime)
         if (!m_hasTapLanded && TAP_SHAKE - m_tapTime >= TAP_LIFT + TAP_DROP)
         {
             m_hasTapLanded = true;
-            play_sound("clam_tap");
+            play_sound("clam_tap", 1.f, m_tapSide * 0.4f);   // Heard on the side it was poked
         }
     }
     else
@@ -514,6 +522,7 @@ void UIClamRoom::render_clam(sf::RenderWindow& window)
 
     // A hard shell: it never squashes, it jumps, tilts, rattles and jolts as one rigid piece
     float jump = 0.f, angle = 0.f, shiftX = 0.f;
+    float pivot = 0.f;   // The part of the jump that only keeps a tipped clam's low edge on the ground (its shadow stays)
     switch (m_phase)
     {
     case Phase::IDLE:
@@ -521,24 +530,26 @@ void UIClamRoom::render_clam(sf::RenderWindow& window)
         angle = 1.2f * std::sin(m_time * 1.3f);   // Rocking slightly where it sits
         if (m_tapTime > 0.f)
         {
-            // Poked: it heaves up on one side (slow, it's heavy), drops back fast, then rattles to a stop
+            // Poked where it was clicked (m_tapSide: -1 its left edge, 0 its middle, 1 its right edge): pressed down on
+            // that side, it rocks on its round bottom and the other side heaves up (slow, it's heavy); in the middle
+            // it hops straight up. It drops back fast, then rocks back the other way and rattles to a stop
             const float t = TAP_SHAKE - m_tapTime, landing = TAP_LIFT + TAP_DROP;
-            if (t < TAP_LIFT)
+            float lift = 0.f;   // 0 on the ground, 1 at the top
+            if (t < TAP_LIFT) lift = std::sin(t / TAP_LIFT * PI * 0.5f);
+            else if (t < landing) { const float u = (t - TAP_LIFT) / TAP_DROP; lift = 1.f - u * u; }   // Falling: faster and faster
+
+            if (t < landing)
             {
-                const float u = t / TAP_LIFT;
-                jump = TAP_HEIGHT * std::sin(u * PI * 0.5f);
-                angle -= 5.f * std::sin(u * PI * 0.5f);
-            }
-            else if (t < landing)
-            {
-                const float u = (t - TAP_LIFT) / TAP_DROP, fall = 1.f - u * u;   // Falling: faster and faster
-                jump = TAP_HEIGHT * fall;
-                angle -= 5.f * fall;
+                const float tip = m_tapSide * TAP_TIP * lift;
+                angle += tip;
+                pivot = TAP_ROCK * CLAM_HALF_WIDTH * std::sin(std::abs(tip) * PI / 180.f);   // Its round bottom stays on the ground
+                jump = pivot + TAP_HEIGHT * (1.f - std::abs(m_tapSide)) * lift;
             }
             else
             {
                 const float s = t - landing, decay = std::max(0.f, 1.f - s / (TAP_SHAKE - landing));
-                angle += std::sin(s * 30.f) * 2.5f * decay * decay;
+                const float side = std::abs(m_tapSide) > 0.15f ? m_tapSide : 1.f;
+                angle -= side * std::sin(s * 30.f) * 2.5f * decay * decay;
                 shiftX = std::sin(s * 26.f) * 3.f * decay * decay;
             }
         }
@@ -585,18 +596,19 @@ void UIClamRoom::render_clam(sf::RenderWindow& window)
     }
 
     // Its shadow on the ground, like the fish and enemies have: it stays down, smaller and fainter while the clam
-    // is in the air
+    // is in the air (not while it's only tipped on an edge)
     const sf::Texture& shadowTexture = UISkin::texture_file(SHADOW_TEXTURE);
     const sf::Vector2f shadowSize(shadowTexture.getSize());
     if (shadowSize.x > 0.f && shadowSize.y > 0.f)
     {
-        const float air = std::clamp(jump / 100.f, 0.f, 0.6f);
-        const float width = CLAM_SHADOW_WIDTH * (1.f - 0.5f * air);
+        const float air = std::clamp((jump - pivot) / 100.f, 0.f, 0.6f);
+        const float shrink = 1.f - 0.5f * air;
         sf::Sprite shadow(shadowTexture);
         shadow.setOrigin(shadowSize / 2.f);
-        shadow.setScale({ width / shadowSize.x, width * SHADOW_HEIGHT_RATIO / shadowSize.y });
+        shadow.setScale({ CLAM_SHADOW_WIDTH * shrink / shadowSize.x, CLAM_SHADOW_HEIGHT * shrink / shadowSize.y });
         shadow.setPosition({ CLAM_BASE.x + shiftX, CLAM_SHADOW_Y });
         shadow.setColor(sf::Color(255, 255, 255, static_cast<std::uint8_t>(255.f * (1.f - air))));
+        window.draw(shadow);
         window.draw(shadow);
     }
 
@@ -762,6 +774,7 @@ void UIClamRoom::handle_event(const sf::Event& event, const sf::RenderWindow& wi
                 m_tapTime = TAP_SHAKE;
                 m_tapCooldown = TAP_COOLDOWN;
                 m_hasTapLanded = false;
+                m_tapSide = std::clamp((mouse.x - CLAM_BASE.x) / CLAM_HALF_WIDTH, -1.f, 1.f);   // Which side was poked
             }
         }
         return;

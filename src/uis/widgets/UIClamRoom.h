@@ -23,7 +23,9 @@ class UIPlayerShellsInfo;
  *      are maxed (PlayerData::MAX_EXTRA_LEVELS): its shells fly out of the bubble into the shells pill, which
  *      counts them as they land
  *   5. a click and it closes again
- * A click on the idle clam makes it heave and drop back with a thud (clam_tap), once a second at most: it's heavy.
+ * A click on the idle clam pokes it where it was clicked: pressed down on that side, it rocks on its round bottom (the
+ * other side heaves up; in the middle it hops), drops back with a thud (clam_tap, heard on that side) and rocks back,
+ * once a second at most: it's heavy.
  * OPEN costs 1 Shiny Scale, OPEN x10 ten (ten fish in a 5 x 2 grid). A click skips ahead. The rewards are given
  * (and saved) the moment the scales are spent: the show only presents them.
  *
@@ -115,6 +117,7 @@ private:
     bool m_isShaking = false;
     float m_tapTime = 0.f;        // A click on the idle clam: seconds of its heave, thud and rattle left
     float m_tapCooldown = 0.f;    // Seconds before it can be poked again
+    float m_tapSide = 0.f;        // Where it was poked: -1 its left edge, 0 its middle, 1 its right edge
     bool m_hasTapLanded = true;   // Its thud played
     std::vector<Reveal> m_reveals;
     std::vector<Bubble> m_bubbles;
