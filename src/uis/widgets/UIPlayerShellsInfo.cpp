@@ -3,9 +3,11 @@
 #include "../../core/DataLoader.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace
 {
+    const float ROLL_RATE = 7.f;          // How fast the digits roll to a new amount
     const unsigned int DIGITS_SIZE = 52;
     const float ICON_SIZE = 62.f;
     const float PADDING = 18.f;
@@ -33,9 +35,23 @@ void UIPlayerShellsInfo::update(float deltaTime)
     {
         const int amount = m_currency == Currency::SHELLS ? player->shells
             : m_currency == Currency::SHINY_SCALES ? player->shinyScales : player->fishScales;
-        m_text.setString(std::to_string(amount - m_heldBack));
+        const float target = static_cast<float>(amount - m_heldBack);
+
+        // The digits roll to a new amount instead of jumping (spent: they flash red on the way down)
+        if (m_shown < 0.f) m_shown = target;
+        else if (m_shown != target)
+        {
+            if (target < m_shown && m_spent <= 0.f) m_spent = 1.f;
+            m_shown += (target - m_shown) * std::min(1.f, deltaTime * ROLL_RATE);
+            if (std::abs(target - m_shown) < 0.5f) m_shown = target;
+        }
+        m_text.setString(std::to_string(static_cast<int>(std::lround(m_shown))));
     }
     m_pop = std::max(0.f, m_pop - deltaTime * 5.f);
+    m_spent = std::max(0.f, m_spent - deltaTime * 2.5f);
+    const sf::Color red{ 255, 120, 110 };
+    const auto mix = [this](std::uint8_t a, std::uint8_t b) { return static_cast<std::uint8_t>(a + (b - a) * m_spent); };
+    UISkin::set_text_color(m_text, { mix(UISkin::NUMBER.r, red.r), mix(UISkin::NUMBER.g, red.g), mix(UISkin::NUMBER.b, red.b) });
 
     const float textWidth = m_text.getLocalBounds().size.x;
     m_size = { std::max(MIN_PILL_WIDTH, textWidth + ICON_SIZE + 3.f * PADDING + m_trailingRoom), PILL_HEIGHT };

@@ -79,6 +79,8 @@ set(PROJECT_SOURCES
     src/uis/widgets/UIFlyingIcons.cpp
     src/uis/widgets/UISchoolRank.cpp
     src/uis/widgets/UIToast.cpp
+    src/uis/widgets/UIAmbience.cpp
+    src/uis/widgets/UIHubMascot.cpp
     src/uis/widgets/UIStageCash.cpp
     src/uis/widgets/UICashUp.cpp
     src/uis/widgets/UIBaseHealthInfo.cpp

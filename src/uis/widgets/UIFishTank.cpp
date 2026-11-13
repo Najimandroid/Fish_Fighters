@@ -26,6 +26,7 @@ namespace
     const float BUBBLE_RISE = 70.f;         // px/s
     const float BUBBLE_LIFE = 2.2f;         // Seconds
     const sf::Color BUBBLE_COLOR{ 235, 250, 255, 210 };
+    const float TAG_SECONDS = 2.2f;         // A tapped fish's name tag
 }
 
 UIFishTank::UIFishTank(std::shared_ptr<DataLoader> dataLoader) :
@@ -40,6 +41,10 @@ UIFishTank::UIFishTank(std::shared_ptr<DataLoader> dataLoader) :
         Swimmer swimmer;
         swimmer.data = m_dataLoader->get_unit_data(uid, player->get_unit_form(uid));
         if (!swimmer.data) continue;
+        if (auto owned = player->ownedUnits.find(uid); owned != player->ownedUnits.end())
+            swimmer.tag = swimmer.data->name + "  Lv." + std::to_string(owned->second.level)
+                + (owned->second.extraLevels > 0 ? " +" + std::to_string(owned->second.extraLevels) : "");
+        else swimmer.tag = swimmer.data->name;
         swimmer.texture = &UISkin::texture_file(swimmer.data->texture);
         const sf::Vector2u size = swimmer.texture->getSize();
         if (size.x == 0 || size.y == 0) continue;
@@ -83,6 +88,7 @@ void UIFishTank::update(float deltaTime)
     for (Swimmer& swimmer : m_swimmers)
     {
         const sf::Vector2f half = sf::Vector2f(swimmer.frameSize) * swimmer.scale / 2.f;
+        if (swimmer.tagTime >= 0.f && (swimmer.tagTime += deltaTime) > TAG_SECONDS) swimmer.tagTime = -1.f;
 
         // Across the glass, turning around at its edge (the edge narrows near the top and the bottom)
         swimmer.position.x += swimmer.speed * deltaTime * (swimmer.isAttacking ? 0.3f : 1.f);
@@ -199,6 +205,26 @@ void UIFishTank::render(sf::RenderWindow& window)
     sf::Sprite ring(UISkin::texture_file(RING_TEXTURE));
     ring.setPosition(RING_POSITION);
     window.draw(ring);
+
+    // The tapped fish's name and level over it (over the ring: it's a label), popping in, then fading
+    for (const Swimmer& swimmer : m_swimmers)
+    {
+        if (swimmer.tagTime < 0.f || swimmer.tag.empty()) continue;
+        const float alpha = std::clamp((TAG_SECONDS - swimmer.tagTime) / 0.3f, 0.f, 1.f);
+        const float pop = swimmer.tagTime < 0.15f ? 0.7f + 2.f * swimmer.tagTime : 1.f;
+        sf::Text text(UISkin::heavy_font(), swimmer.tag, 28);
+        UISkin::style_text(text, 28, sf::Color(255, 255, 255, static_cast<std::uint8_t>(255 * alpha)));
+        text.setOutlineColor(sf::Color(UISkin::OUTLINE.r, UISkin::OUTLINE.g, UISkin::OUTLINE.b, static_cast<std::uint8_t>(255 * alpha)));
+        UISkin::set_text_anchor(text, { 0.5f, 0.5f });
+        const float above = swimmer.frameSize.y * swimmer.scale * 0.42f + 26.f + 14.f * std::min(1.f, swimmer.tagTime * 4.f);
+        const sf::Vector2f center = swimmer.position - sf::Vector2f{ 0.f, above };
+        const sf::Vector2f size{ text.getLocalBounds().size.x + 40.f, 52.f };
+        UISkin::draw_nine_slice(window, UISkin::PANEL_DARK, { center - size * pop / 2.f, size * pop }, 0.5f,
+            sf::Color(255, 255, 255, static_cast<std::uint8_t>(235 * alpha)));
+        text.setScale({ pop, pop });
+        text.setPosition(center);
+        window.draw(text);
+    }
 }
 
 void UIFishTank::handle_event(const sf::Event& event, const sf::RenderWindow& window)
@@ -223,6 +249,8 @@ void UIFishTank::handle_event(const sf::Event& event, const sf::RenderWindow& wi
         if (it->frame >= it->data->frameCount) it->frame = 0;
         release_bubbles(*it, 4);
         play_sound("fish_blub", random(0.9f, 1.15f));
+        for (Swimmer& other : m_swimmers) other.tagTime = -1.f;   // One tag at a time
+        it->tagTime = 0.f;
         return;
     }
 }

@@ -100,6 +100,9 @@ private:
     std::string next_stage_label() const;
     bool is_upgrade_available() const;
 
+    // What the Fish (UIHubMascot) says in the Fish Tank: what's worth doing now first, then general tips
+    std::vector<std::string> hub_tips() const;
+
 
     // Darkens the bars around the 16:9 UI area while a modal window is open (screens that aren't 16:9)
     void dim_letterbox_bars(sf::RenderWindow& window, const sf::View& uiView) const;
@@ -132,6 +135,15 @@ private:
     std::vector<std::shared_ptr<UIElement>> m_uiElements;       // All active UI elements
 
     std::function<void()> m_pendingAction;                      // Deferred action triggered by UI
+
+    // A new menu screen opens under a wall of bubbles rising away (REVEAL seconds), its buttons popping in one
+    // after the other (set on the first update after it's built)
+    struct RevealBubble { sf::Vector2f position; float radius = 100.f; float speed = 2000.f; float delay = 0.f; };
+    std::vector<RevealBubble> m_revealBubbles;
+    float m_revealTime = -1.f;                                  // -1: no reveal
+    bool m_needsEntrance = false;
+    void start_screen_reveal();
+    void render_screen_reveal(sf::RenderWindow& window);
 
 	std::function<void(GameSpeedState)> m_setGameSpeedCallback; // Callback to set game speed state
     std::function<GameSpeedState()> m_getGameSpeedCallback;     // Callback to get current game speed state

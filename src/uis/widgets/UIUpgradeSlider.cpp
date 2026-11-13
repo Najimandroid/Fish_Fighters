@@ -41,6 +41,7 @@ UIUpgradeSlider::UIUpgradeSlider(std::shared_ptr<DataLoader> dataLoader) :
 	m_description(UISkin::regular_font())
 {
 	m_upgradeButton.set_text_size(60);
+	m_upgradeButton.set_attention(true);   // Breathes while there are enough shells (greyed: still)
 	m_upgradeButton.set_click_sound("");   // upgrade_selected plays "purchase" or "unlock"
 	m_upgradeButton.set_callback([this]() { upgrade_selected(); });
 

@@ -84,6 +84,7 @@ UIClamRoom::UIClamRoom(std::shared_ptr<DataLoader> dataLoader) :
     m_openOne.set_click_sound("");   // The scales make the sound
     m_openTen.set_click_sound("");
     m_openOne.set_hotkey(sf::Keyboard::Key::Space);
+    m_openOne.set_attention(true);
     m_openOne.set_callback([this]() { open(1); });
     m_openTen.set_callback([this]() { open(10); });
 }
@@ -500,7 +501,7 @@ void UIClamRoom::render(sf::RenderWindow& window)
     if (m_phase == Phase::IDLE)
         hint = player && player->shinyScales > 0 ? "Feed the giant clam a Shiny Scale..."
             : "No Shiny Scales: raise your School Rank, or craft one from Fish Scales (+)";
-    else if (m_phase == Phase::REVEALED) hint = "Click to continue: your fish wait in the Clam Storage";
+    else if (m_phase == Phase::REVEALED) hint = "Tap to continue: your fish wait in the Clam Storage";
     if (!hint.empty())
     {
         UISkin::style_text(m_text, 36, UISkin::TITLE);

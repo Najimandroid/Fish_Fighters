@@ -45,7 +45,7 @@ UIEquipSlider::UIEquipSlider(std::shared_ptr<DataLoader> dataLoader)
     m_nextButton(ARROW_SIZE, { 1920.f - 36.f - ARROW_SIZE, ARROW_Y }, "icon_play"),
     m_lineupPanel(lineup_panel_rect().size, lineup_panel_rect().position, UISkin::PANEL_DARK, 1.2f),
     m_lineupTitle(UISkin::heavy_font(), "LINEUP"),
-    m_hint(UISkin::regular_font(), "Click or drag a fish to add it   -   Drag in the lineup to reorder   -   Right click to remove"),
+    m_hint(UISkin::regular_font(), "Tap or drag a fish to add it   -   Drag in the lineup to reorder   -   Drag it out to remove"),
     m_ghostCost(UISkin::heavy_font())
 {
     if (!m_placeholderTexture.loadFromFile("assets/images/textures/icons/placeholder.png")) {
@@ -665,10 +665,20 @@ void UIEquipSlider::end_drag(const sf::Vector2f& pos)
     }
 
     // A unit of the lineup: dropped on another slot, it swaps with the unit there (or moves to the
-    // end of the lineup on an empty slot, the lineup has no gaps); anywhere else, it goes back
+    // end of the lineup on an empty slot, the lineup has no gaps); dropped out of the lineup panel, it leaves the
+    // lineup (the touch way to remove one; right click works too); in the panel between slots, it goes back
     if (m_dragFromSlot >= 0)
     {
         auto player = m_dataLoader->get_player_data().lock();
+        if (player && targetSlot == -1 && !lineup_panel_rect().contains(pos)
+            && player->equippedUnits[m_dragFromSlot] == m_tempGhost->uid)
+        {
+            player->unequip_unit(m_dragFromSlot);
+            play_sound("unequip");
+            refresh_slots_after_unequip();
+            m_tempGhost->scaleTween = tweeny::from(m_tempGhost->currentScale).to(0.f).during(12).via(tweeny::easing::quadraticIn);
+            return;
+        }
         if (player && targetSlot != -1 && targetSlot != m_dragFromSlot
             && player->equippedUnits[m_dragFromSlot] == m_tempGhost->uid)
         {

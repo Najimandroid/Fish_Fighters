@@ -33,12 +33,15 @@
 #include "widgets/UIResultsPanel.h"
 #include "widgets/UIBadge.h"
 #include "widgets/UIUpgradeIcon.h"
+#include "widgets/UIAmbience.h"
+#include "widgets/UIHubMascot.h"
 #include "UISkin.h"
 
 #include "../audio/AudioManager.h"
 
 #include <algorithm>
 #include <iostream>
+#include <random>
 
 namespace
 {
@@ -68,9 +71,58 @@ void UIManager::init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<Sta
  * Clears the screen for a Fish Tank menu: the Fish Tank theme (it keeps playing from one menu to the next)
  * and a swish of water between the screens
  */
+/*
+ * A new menu screen: under a wall of bubbles that rise away, its buttons popping in one after the other
+ */
+void UIManager::start_screen_reveal()
+{
+    static std::mt19937 random{ std::random_device{}() };
+    auto between = [](float from, float to) { return std::uniform_real_distribution<float>(from, to)(random); };
+    m_revealBubbles.clear();
+    for (int row = 0; row < 8; ++row)
+        for (int column = 0; column < 12; ++column)
+        {
+            RevealBubble bubble;
+            bubble.position = { column * 172.f + between(-30.f, 30.f), row * 150.f + 60.f + between(-30.f, 30.f) };
+            bubble.radius = between(100.f, 150.f);
+            bubble.speed = between(1900.f, 2900.f);
+            bubble.delay = between(0.f, 0.07f);
+            m_revealBubbles.push_back(bubble);
+        }
+    m_revealTime = 0.f;
+    m_needsEntrance = true;
+}
+
+void UIManager::render_screen_reveal(sf::RenderWindow& window)
+{
+    const float REVEAL = 0.5f;
+    if (m_revealTime < 0.f) return;
+    if (m_revealTime >= REVEAL) { m_revealTime = -1.f; return; }
+
+    // Deep water at first, gone fast, while the bubbles rise away faster and faster
+    sf::RectangleShape water({ 1920.f, 1080.f });
+    water.setFillColor(sf::Color(22, 58, 92, static_cast<std::uint8_t>(255.f * std::clamp(1.f - m_revealTime / 0.16f, 0.f, 1.f))));
+    window.draw(water);
+
+    const sf::Texture& texture = UISkin::texture("bubble");
+    const float textureSize = static_cast<float>(std::max(1u, texture.getSize().x));
+    sf::Sprite sprite(texture);
+    sprite.setOrigin({ textureSize / 2.f, textureSize / 2.f });
+    const float fade = std::clamp(1.f - (m_revealTime - 0.28f) / 0.22f, 0.f, 1.f);
+    for (const RevealBubble& bubble : m_revealBubbles)
+    {
+        const float t = std::max(0.f, m_revealTime - bubble.delay);
+        sprite.setPosition({ bubble.position.x, bubble.position.y - bubble.speed * t * (0.4f + t) });
+        sprite.setScale({ bubble.radius * 2.f / textureSize, bubble.radius * 2.f / textureSize });
+        sprite.setColor(sf::Color(255, 255, 255, static_cast<std::uint8_t>(255.f * fade)));
+        window.draw(sprite);
+    }
+}
+
 void UIManager::enter_menu_screen()
 {
     m_uiElements.clear();
+    start_screen_reveal();
     if (m_audio)
     {
         // Back from the Clam Room, its theme melts into the Fish Tank's where it is (both share their grid)
@@ -115,6 +167,8 @@ void UIManager::generate_title_uis()
     startButton->set_text_size(84);
     startButton->set_click_sound("ui_start");
     startButton->set_callback(start);
+    startButton->set_attention(true);
+    m_needsEntrance = true;   // The buttons pop in (no bubbles: the game just opened)
 
     auto quitButton = std::make_shared<UIButtonElement>(
         sf::Vector2f{ 240.f, 90.f },
@@ -164,6 +218,20 @@ void UIManager::add_ui_element(std::shared_ptr<UIElement> element)
 // Update all UI elements (called each frame)
 void UIManager::update_uis(float deltaTime)
 {
+    // A screen just built under the bubbles: its buttons pop in one after the other
+    if (m_needsEntrance)
+    {
+        m_needsEntrance = false;
+        float delay = 0.12f;
+        for (auto& element : m_uiElements)
+            if (auto button = std::dynamic_pointer_cast<UIButtonElement>(element); button && button->is_visible())
+            {
+                button->set_entrance(delay);
+                delay += 0.045f;
+            }
+    }
+    if (m_revealTime >= 0.f) m_revealTime += deltaTime;
+
     for (auto& element : m_uiElements)
     {
         element->update(deltaTime);
@@ -200,6 +268,7 @@ void UIManager::render_uis(sf::RenderWindow& window, sf::View& uiView, sf::View&
             element->render(window);
         }
     }
+    render_screen_reveal(window);   // Over everything: the bubbles a new screen opens under
 }
 
 /*
@@ -291,6 +360,7 @@ void UIManager::generate_fish_tank_uis()
         "BATTLE!"
     );
     battleButton->set_text_size(70);
+    battleButton->set_attention(true);
     battleButton->set_callback([this]()
         {
             m_pendingAction = [this]() {
@@ -368,6 +438,7 @@ void UIManager::generate_fish_tank_uis()
     auto quitDialog = make_quit_dialog(quitButton);
 
     add_ui_element(bg);
+    add_ui_element(std::make_shared<UIAmbience>());
     add_ui_element(std::make_shared<UIFishTank>(m_dataLoader));   // The lineup swims in the porthole
     add_ui_element(titleBar);
     add_ui_element(shellsInfo);
@@ -409,6 +480,7 @@ void UIManager::generate_fish_tank_uis()
         UIToast::announce_school_rank_rewards(*player);
         if (player->shinyScales != before) m_dataLoader->save_progress();
     }
+    add_ui_element(std::make_shared<UIHubMascot>(m_dataLoader, hub_tips()));   // The Fish, by the floor, with tips
     add_ui_element(optionsButton);
     add_ui_element(quitButton);
     add_ui_element(std::make_shared<UIToast>());
@@ -473,6 +545,7 @@ UIManager::ClamCounters UIManager::add_clam_counters()
 void UIManager::generate_clam_room_uis(bool fromStorage)
 {
     m_uiElements.clear();
+    if (!fromStorage) start_screen_reveal();   // From the storage, the view zooms out of the clam instead
     if (m_audio)
     {
         m_audio->play_music_in_sync(CLAM_MUSIC);
@@ -552,6 +625,7 @@ void UIManager::generate_encyclopedia_uis()
     auto backButton = make_back_button([this]() { generate_fish_tank_uis(); });
 
     add_ui_element(bg);
+    add_ui_element(std::make_shared<UIAmbience>());
     add_ui_element(titleBar);
     add_ui_element(shellsInfo);
     add_ui_element(backButton);
@@ -587,6 +661,7 @@ void UIManager::generate_upgrade_menu_uis()
     auto backButton = make_back_button([this]() { generate_fish_tank_uis(); });
 
     add_ui_element(bg);
+    add_ui_element(std::make_shared<UIAmbience>());
     add_ui_element(upgradeSlider);
     add_ui_element(titleBar);
     add_ui_element(shellsInfo);
@@ -614,6 +689,7 @@ void UIManager::generate_equip_menu_uis()
         });
 
     add_ui_element(bg);
+    add_ui_element(std::make_shared<UIAmbience>());
     add_ui_element(equipSlider);
     add_ui_element(titleBar);
     add_ui_element(shellsInfo);
@@ -768,6 +844,7 @@ void UIManager::generate_chapter_map_uis()
         "BATTLE!"
     );
     battleButton->set_text_size(66);
+    battleButton->set_attention(true);
     battleButton->set_click_sound("");   // The battle start jingle instead; the stage's theme follows it
     battleButton->set_callback([this, chapterMap]()
         {
@@ -935,6 +1012,43 @@ std::string UIManager::next_stage_label() const
 
     auto stage = m_dataLoader->get_stage_data(chapter->stages[index].UID);
     return "Stage " + std::to_string(index + 1) + (stage ? "  -  " + stage->name : "");
+}
+
+/*
+ * What the Fish says in the Fish Tank: what's worth doing now first, then general tips
+ */
+std::vector<std::string> UIManager::hub_tips() const
+{
+    std::vector<std::string> tips;
+    auto player = m_dataLoader->get_player_data().lock();
+    if (!player) return tips;
+
+    if (m_dataLoader->is_clam_room_open() && player->shinyScales > 0)
+        tips.push_back("The giant clam looks hungry... We have " + std::to_string(player->shinyScales)
+            + (player->shinyScales == 1 ? " Shiny Scale" : " Shiny Scales") + " to feed it!");
+    int stored = 0;
+    for (const auto& [uid, count] : player->clamStorage) stored += count;
+    if (stored > 0)
+        tips.push_back(std::to_string(stored) + (stored == 1 ? " fish is" : " fish are") + " waiting in the Clam Storage. Let's go meet them!");
+    if (is_upgrade_available())
+        tips.push_back("We have enough shells to train someone. Try UPGRADE!");
+    const int rank = player->get_school_rank();
+    for (int i = 0; i < 200; ++i)
+        if (const auto milestone = PlayerData::school_rank_milestone(i); milestone.power > rank)
+        {
+            tips.push_back("School Rank " + std::to_string(milestone.power) + " gives " + std::to_string(milestone.shinyScales)
+                + (milestone.shinyScales == 1 ? " Shiny Scale" : " Shiny Scales") + ". Every level we gain counts!");
+            break;
+        }
+    if (const std::string next = next_stage_label(); !next.empty())
+        tips.push_back("Next up: " + next + ". I'm ready when you are!");
+
+    tips.push_back("Tap a fish in the porthole to say hi!");
+    tips.push_back("In battle, upgrade your wallet early: it earns shells faster.");
+    tips.push_back("Mix cheap fish to stall with strong fish to hit hard.");
+    tips.push_back("Lost a battle? Upgrade a few fish and try again!");
+    tips.push_back("The Encyclopedia knows every enemy we've met.");
+    return tips;
 }
 
 /*

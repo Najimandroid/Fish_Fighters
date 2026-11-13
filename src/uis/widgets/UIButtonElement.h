@@ -56,6 +56,14 @@ public:
     // A key that works like a click (F for the speed button, 1-0 for the deploy slots...)
     void set_hotkey(std::optional<sf::Keyboard::Key> key);
 
+    // Popping in when its screen appears: hidden for delay seconds, then it grows in with a little overshoot
+    // (UIManager staggers the buttons of a new screen)
+    void set_entrance(float delay);
+
+    // The screen's main call to action (BATTLE!, START, OPEN...): it breathes gently and a light sweeps across it
+    // now and then (on the yellow image)
+    void set_attention(bool hasAttention);
+
     // Override UIElement functions
     void update(float deltaTime) override;
     void render(sf::RenderWindow& window) override;
@@ -85,4 +93,10 @@ protected:
     std::string m_clickSound = "ui_click";
     bool m_firesOnPress = false;
     std::optional<sf::Keyboard::Key> m_hotkey;
+
+    // The pop-in and the attention look run on a shared clock (subclasses have their own update)
+    float m_entranceStart = -1.f;   // When the pop-in starts (-1: none)
+    bool m_hasAttention = false;
+    float entrance_scale() const;   // 0 (not in yet) to 1
+    void render_shine(sf::RenderWindow& window, const sf::FloatRect& rect);
 };

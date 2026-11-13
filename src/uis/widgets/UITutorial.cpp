@@ -63,7 +63,7 @@ UITutorial::Hint UITutorial::hint_of(Step step) const
     switch (step)
     {
     case Step::WALLET:  return { "This is your wallet: it fills up by itself. Spend it to send fish!", WALLET, false };
-    case Step::DEPLOY:  return { "Click a fish to send it into battle! Its number key works too.", DEPLOY_TRAY, true };
+    case Step::DEPLOY:  return { "Tap a fish to send it into battle! Its number key works too.", DEPLOY_TRAY, true };
     case Step::CASH_UP: return { "Upgrade your WALLET: it holds more and fills up faster.", CASH_UP, true };
     case Step::BASE:    return { "Destroy the enemy base on the left to win. Don't let them reach your fish bowl!", {}, false };
     default:            return { "", {}, false };

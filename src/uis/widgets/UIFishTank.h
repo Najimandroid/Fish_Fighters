@@ -4,6 +4,7 @@
 
 #include <memory>
 #include <random>
+#include <string>
 #include <vector>
 
 class DataLoader;
@@ -14,7 +15,8 @@ struct EntityData;
  * ----------
  * The Fish Tank's porthole as a live tank (the hub): the player's lineup swims in the glass, each fish in its
  * current form with its battle walking frames. They swim across, turn around at the glass, bob and change
- * depth; now and then one lets out bubbles. Clicking a fish makes it attack (its attack frames) with a "blub".
+ * depth; now and then one lets out bubbles. Clicking a fish makes it attack (its attack frames) with a "blub",
+ * its name and level showing over it a moment.
  * The porthole's ring is drawn over them (porthole_ring.png), so they stay behind the glass.
  *
  * The glass and the ring are the hub background's (assets/images/textures/backgrounds/menus/fish_tank.png).
@@ -49,6 +51,8 @@ private:
         int frame = 0;
         bool isAttacking = false;
         float bubblesIn = 0.f;          // Seconds before it lets out a few bubbles
+        std::string tag;                // "Fish  Lv.12 +3": shown over it a moment when it's tapped
+        float tagTime = -1.f;           // Seconds since it was tapped (-1: no tag)
     };
 
     struct Bubble

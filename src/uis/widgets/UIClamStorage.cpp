@@ -452,7 +452,7 @@ void UIClamStorage::render_panel(sf::RenderWindow& window)
         text("CLAM STORAGE", 44, UISkin::TITLE, { PANEL_CENTER, 200.f }, { 0.5f, 0.5f });
         UISkin::draw_fitted(window, UISkin::texture("icon_clam_storage"), { { PANEL_CENTER - 70.f, 240.f }, { 140.f, 140.f } });
         text(std::to_string(stored) + (stored == 1 ? " fish waiting" : " fish waiting"), 34, UISkin::NUMBER, { PANEL_CENTER, 420.f }, { 0.5f, 0.5f });
-        text(UISkin::wrap_text(stored > 0 ? "Click a fish to pick it: use it on your fish, or sell it." : "Feed the giant clam: the fish it gives wait here.",
+        text(UISkin::wrap_text(stored > 0 ? "Tap a fish to pick it: use it on your fish, or sell it." : "Feed the giant clam: the fish it gives wait here.",
             28, TEXT_WIDTH, UISkin::regular_font()), 28, UISkin::TEXT, { PANEL_CENTER, 500.f }, { 0.5f, 0.f }, true);
         text(UISkin::wrap_text("Fish Scales: 10 craft a Shiny Scale (the + next to your Shiny Scales).", 24, TEXT_WIDTH, UISkin::regular_font()),
             24, UISkin::TITLE, { PANEL_CENTER, 820.f }, { 0.5f, 0.f }, true);

@@ -51,6 +51,8 @@ private:
     int m_heldBack = 0;
     float m_trailingRoom = 0.f;
     float m_pop = 0.f;                        // 1 when something lands, back to 0
+    float m_shown = -1.f;                     // The amount the digits show (rolls to the real one; -1: not yet)
+    float m_spent = 0.f;                      // 1 when the amount goes down (the digits flash red), back to 0
 
     const float OFFSET_Y = 18.f;      // Vertical padding from the top
     const float OFFSET_X = 24.f;      // Horizontal padding from the right
