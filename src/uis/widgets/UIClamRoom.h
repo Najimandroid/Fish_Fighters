@@ -15,7 +15,8 @@ class UIPlayerShellsInfo;
  * UIClamRoom
  * ----------
  * The Clam Room's giant clam (the gacha): feed it Shiny Scales, get fish. Every opening is a little show:
- *   1. the scales fly from the counter into the clam
+ *   1. the clam opens halfway (ui/clam_semi_opened.png), the scales fly from their pill into its mouth, it hops up
+ *      with its mouth full (the gulp) and snaps shut as it lands
  *   2. the clam hops and shakes harder and harder (rigid: a hard shell never squashes)
  *   3. it pops open: a flash, a burst of bubbles, light rays
  *   4. the fish rise out in bubbles, swimming: NEW! for a fish joining, +1 EXTRA LEVEL for one already owned (like
@@ -31,7 +32,7 @@ class UIPlayerShellsInfo;
  *
  * The fish come from every fish of the game, equally likely (PlayerData::receive_fish gives them).
  * The clam has a shadow on the ground like the fish and enemies (effects/shadow.png), smaller and fainter when it jumps.
- * Textures: ui/clam_closed.png, ui/clam_opened.png (same 300 x 300 canvas), ui/bubble.png, ui/icon_shiny_scale.png,
+ * Textures: ui/clam_closed.png, ui/clam_semi_opened.png, ui/clam_opened.png (same 300 x 300 canvas), ui/bubble.png, ui/icon_shiny_scale.png,
  * and each fish's sheet (its first frame, cropped to the fish: the icons are close-ups cut at the edges).
  */
 class UIClamRoom : public UIElement
@@ -95,7 +96,10 @@ private:
     void open(int count);
     void go_to(Phase phase);
     void skip();
-    void spawn_bubbles(int count, float speed);
+    void spawn_bubbles(int count, float speed);                      // From the open clam's mouth
+    void spawn_bubbles(int count, float speed, sf::Vector2f from);
+    sf::Vector2f semi_mouth() const;                                  // The half-open clam's mouth (the scales go in)
+    float scales_landed_time() const;                                 // In FEEDING: the last scale is in
     sf::Vector2f mouth() const;
     sf::FloatRect clam_bounds() const;   // The closed clam on screen (clicks make it rattle)
     float random(float from, float to);
@@ -115,6 +119,7 @@ private:
     int m_count = 1;              // Scales fed this time
     int m_hop = -1;               // Last hop that landed (sounds once per landing)
     bool m_isShaking = false;
+    bool m_hasGulped = false;     // FEEDING: it shut its mouth on the scales
     float m_tapTime = 0.f;        // A click on the idle clam: seconds of its heave, thud and rattle left
     float m_tapCooldown = 0.f;    // Seconds before it can be poked again
     float m_tapSide = 0.f;        // Where it was poked: -1 its left edge, 0 its middle, 1 its right edge

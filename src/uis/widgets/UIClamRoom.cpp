@@ -23,6 +23,11 @@ namespace
 
     // Timing (seconds)
     const float SCALE_FLIGHT = 0.4f, SCALE_GAP = 0.06f;
+
+    // Eating the scales: the clam opens halfway (clam_semi_opened.png), the scales fly into its mouth (a little bump
+    // each), it hops up with its mouth full (the gulp), snaps shut as it lands, then a breath before the hops
+    const sf::Vector2f SEMI_MOUTH_IN_CANVAS{ 150.f, 210.f };   // The half-open clam's mouth
+    const float FEED_OPEN = 0.15f, GULP_HOP = 0.34f, GULP_HEIGHT = 32.f, FEED_SETTLE = 0.3f;
     const float HOP = 0.36f, HOP_HEIGHT = 46.f;
     const float SHAKE_ONE = 0.45f, SHAKE_TEN = 0.8f;
     const float OPEN_POP = 0.45f;
@@ -110,6 +115,16 @@ float UIClamRoom::random(float from, float to)
 sf::Vector2f UIClamRoom::mouth() const
 {
     return CLAM_BASE + (MOUTH_IN_CANVAS - CLAM_ORIGIN) * CLAM_SCALE;
+}
+
+sf::Vector2f UIClamRoom::semi_mouth() const
+{
+    return CLAM_BASE + (SEMI_MOUTH_IN_CANVAS - CLAM_ORIGIN) * CLAM_SCALE;
+}
+
+float UIClamRoom::scales_landed_time() const
+{
+    return FEED_OPEN + SCALE_FLIGHT + SCALE_GAP * static_cast<float>(m_count - 1);
 }
 
 sf::FloatRect UIClamRoom::clam_bounds() const
@@ -264,6 +279,7 @@ void UIClamRoom::open(int count)
     m_count = count;
     m_hop = -1;
     m_isShaking = false;
+    m_hasGulped = false;
     go_to(Phase::FEEDING);
 }
 
@@ -301,7 +317,11 @@ void UIClamRoom::skip()
 
 void UIClamRoom::spawn_bubbles(int count, float speed)
 {
-    const sf::Vector2f from = mouth();
+    spawn_bubbles(count, speed, mouth());
+}
+
+void UIClamRoom::spawn_bubbles(int count, float speed, sf::Vector2f from)
+{
     for (int i = 0; i < count; ++i)
     {
         Bubble bubble;
@@ -348,14 +368,25 @@ void UIClamRoom::update(float deltaTime)
     {
     case Phase::FEEDING:
     {
-        // A scale lands every SCALE_GAP: its sound, rising for a x10
-        const int landed = static_cast<int>((m_phaseTime - SCALE_FLIGHT) / SCALE_GAP) + 1;
-        if (landed - 1 > m_hop && m_phaseTime >= SCALE_FLIGHT)
+        // Half open, it eats: a scale lands in its mouth every SCALE_GAP (its sound, rising for a x10)
+        const float flying = m_phaseTime - FEED_OPEN;
+        const int landed = static_cast<int>((flying - SCALE_FLIGHT) / SCALE_GAP) + 1;
+        if (flying >= SCALE_FLIGHT && m_hop < m_count - 1 && landed - 1 > m_hop)
         {
             m_hop = std::min(landed, m_count) - 1;
             play_sound("scale_use", 1.f + 0.04f * static_cast<float>(m_hop));
         }
-        if (m_phaseTime >= SCALE_FLIGHT + SCALE_GAP * static_cast<float>(m_count - 1) + 0.15f) { m_hop = -1; go_to(Phase::CHARGING); }
+
+        // Then the gulp: a hop with its mouth full, shut as it lands (a thud, a "blub", bubbles escaping)
+        const float shut = scales_landed_time() + GULP_HOP;
+        if (!m_hasGulped && m_phaseTime >= shut)
+        {
+            m_hasGulped = true;
+            play_sound("clam_hop", 0.95f);
+            play_sound("fish_blub", 0.8f);
+            spawn_bubbles(8, 0.4f, semi_mouth());
+        }
+        if (m_phaseTime >= shut + FEED_SETTLE) { m_hop = -1; go_to(Phase::CHARGING); }
         break;
     }
     case Phase::CHARGING:
@@ -518,7 +549,8 @@ void UIClamRoom::render_clam(sf::RenderWindow& window)
 {
     const bool isOpen = m_phase == Phase::OPENING || m_phase == Phase::REVEALING || m_phase == Phase::REVEALED
         || (m_phase == Phase::CLOSING && m_phaseTime < CLOSE * 0.5f);
-    const sf::Texture& texture = UISkin::texture(isOpen ? "clam_opened" : "clam_closed");
+    const bool isEating = m_phase == Phase::FEEDING && m_phaseTime < scales_landed_time() + GULP_HOP;   // Half open
+    const sf::Texture& texture = UISkin::texture(isOpen ? "clam_opened" : isEating ? "clam_semi_opened" : "clam_closed");
 
     // A hard shell: it never squashes, it jumps, tilts, rattles and jolts as one rigid piece
     float jump = 0.f, angle = 0.f, shiftX = 0.f;
@@ -552,6 +584,35 @@ void UIClamRoom::render_clam(sf::RenderWindow& window)
                 angle -= side * std::sin(s * 30.f) * 2.5f * decay * decay;
                 shiftX = std::sin(s * 26.f) * 3.f * decay * decay;
             }
+        }
+        break;
+    }
+    case Phase::FEEDING:
+    {
+        const float landedAt = scales_landed_time(), shut = landedAt + GULP_HOP;
+        if (m_phaseTime < FEED_OPEN)
+            jump = 8.f * std::sin(m_phaseTime / FEED_OPEN * PI);   // A little jolt as it opens
+        else if (m_phaseTime < landedAt)
+        {
+            // Each scale landing in its mouth bumps it a little
+            for (int i = 0; i < m_count; ++i)
+            {
+                const float age = m_phaseTime - (FEED_OPEN + SCALE_FLIGHT + SCALE_GAP * static_cast<float>(i));
+                if (age >= 0.f && age < 0.12f) jump = std::max(jump, 5.f * (1.f - age / 0.12f));
+            }
+        }
+        else if (m_phaseTime < shut)
+        {
+            // The gulp: a hop with its mouth full
+            const float u = (m_phaseTime - landedAt) / GULP_HOP;
+            jump = GULP_HEIGHT * std::sin(u * PI);
+            angle = 2.5f * std::sin(u * 2.f * PI);
+        }
+        else
+        {
+            // Shut: it settles
+            const float s = m_phaseTime - shut, decay = std::max(0.f, 1.f - s / FEED_SETTLE);
+            angle = std::sin(s * 32.f) * 2.f * decay * decay;
         }
         break;
     }
@@ -741,15 +802,16 @@ void UIClamRoom::render_scales(sf::RenderWindow& window)
     const float iconSize = static_cast<float>(std::max(1u, icon.getSize().x));
     for (int i = 0; i < m_count; ++i)
     {
-        const float t = (m_phaseTime - SCALE_GAP * static_cast<float>(i)) / SCALE_FLIGHT;
+        // Once the clam is half open, into its mouth (shrinking as they go in)
+        const float t = (m_phaseTime - FEED_OPEN - SCALE_GAP * static_cast<float>(i)) / SCALE_FLIGHT;
         if (t <= 0.f || t >= 1.f) continue;
         const float eased = t * t * (3.f - 2.f * t);
         const sf::Vector2f from = scales_source();
-        sf::Vector2f position = from + (mouth() - from) * eased;
+        sf::Vector2f position = from + (semi_mouth() - from) * eased;
         position.y -= std::sin(t * PI) * 160.f;   // An arc
         sf::Sprite scale(icon);
         scale.setOrigin({ iconSize / 2.f, iconSize / 2.f });
-        const float size = 70.f * (1.f - 0.4f * t);
+        const float size = 70.f * (1.f - 0.6f * t);
         scale.setScale({ size / iconSize, size / iconSize });
         scale.setRotation(sf::degrees(t * 540.f));
         scale.setPosition(position);
