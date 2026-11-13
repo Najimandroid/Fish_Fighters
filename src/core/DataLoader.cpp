@@ -624,6 +624,8 @@ bool DataLoader::load_player(const std::string& path)
 
         // Shells
         m_playerData->shells = read_int(j.at("money"), "shells");
+        m_playerData->shinyScales = j.at("money").contains("shinyScales")
+            ? read_int(j.at("money"), "shinyScales") : PlayerData::TEST_STARTING_SHINY_SCALES;
 
         // Owned units
         m_playerData->ownedUnits.clear();
@@ -712,6 +714,7 @@ bool DataLoader::save_player(const std::string& path)
 
     // Shells
     j["money"]["shells"] = m_playerData->shells;
+    j["money"]["shinyScales"] = m_playerData->shinyScales;
 
     // Owned units
     for (auto& [uid, unitInfo] : m_playerData->ownedUnits)

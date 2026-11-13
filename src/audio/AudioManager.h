@@ -49,6 +49,10 @@ public:
     // Crossfades to this theme (nothing if it's already playing; an unknown name is reported once and ignored)
     void play_music(const std::string& name, float fadeSeconds = 0.8f);
 
+    // Crossfades to a theme written on the same grid as the one playing (the Fish Tank and the Clam Room), starting
+    // it at the same playing position, so the two overlap note for note
+    void play_music_in_sync(const std::string& name, float fadeSeconds = 1.5f);
+
     // The music fades out quickly and the jingle plays once
     void play_jingle(const std::string& name);
 

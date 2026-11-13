@@ -16,6 +16,37 @@ void PlayerData::unlock_unit(int unitUid)
     }
 }
 
+bool PlayerData::spend_shiny_scales(int amount)
+{
+    if (amount < 0 || shinyScales < amount) return false;
+    shinyScales -= amount;
+    return true;
+}
+
+PlayerData::FishReward PlayerData::receive_fish(int unitUid)
+{
+    FishReward reward;
+    reward.uid = unitUid;
+    auto owned = ownedUnits.find(unitUid);
+    if (owned == ownedUnits.end())
+    {
+        unitsWaitingToBeUnlocked.erase(unitUid);
+        ownedUnits[unitUid] = { 1, 0 };
+        reward.isNew = true;
+    }
+    else if (owned->second.level >= MAX_UNIT_LEVEL)
+    {
+        reward.isMaxed = true;
+    }
+    else
+    {
+        upgrade_unit(unitUid);
+    }
+    reward.level = get_unit_level(unitUid);
+    reward.form = get_unit_form(unitUid);
+    return reward;
+}
+
 /*
  * Adds a unit UID to the list of units waiting to be unlocked in the upgrade menu.
  */

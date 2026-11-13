@@ -12,6 +12,7 @@ class DataLoader;
  * (like the XP counter of The Battle Cats).
  * Inherits from UITextElement for text rendering.
  * Continuously updates to reflect changes in the player's shells.
+ * The same pill shows the Shiny Scales (the Clam Room's currency), further left so both fit.
  */
 
 class UIPlayerShellsInfo : public UITextElement
@@ -20,7 +21,8 @@ public:
 
     // Constructor
     // dataLoader: reference to DataLoader to access player data
-    UIPlayerShellsInfo(std::shared_ptr<DataLoader> dataLoader);
+    enum class Currency { SHELLS, SHINY_SCALES };
+    UIPlayerShellsInfo(std::shared_ptr<DataLoader> dataLoader, Currency currency = Currency::SHELLS);
 
     // Update the displayed shell count
     // deltaTime is not used but required to override base class
@@ -32,6 +34,7 @@ public:
 private:
 
     std::shared_ptr<DataLoader> m_dataLoader; // Reference to DataLoader to access player info
+    Currency m_currency = Currency::SHELLS;
 
     const float OFFSET_Y = 18.f;      // Vertical padding from the top
     const float OFFSET_X = 24.f;      // Horizontal padding from the right

@@ -119,6 +119,57 @@
         "maxInstances": 2,
         "priority": 85
     },
+    "scale_use": {
+        "files": [
+            "assets/audios/sfx/scale_use.ogg"
+        ],
+        "volume": 0.45,
+        "pitch": 0,
+        "cooldown": 0.03,
+        "maxInstances": 4,
+        "priority": 75
+    },
+    "clam_hop": {
+        "files": [
+            "assets/audios/sfx/clam_hop_1.ogg",
+            "assets/audios/sfx/clam_hop_2.ogg"
+        ],
+        "volume": 0.55,
+        "pitch": 0.03,
+        "cooldown": 0.05,
+        "maxInstances": 2,
+        "priority": 70
+    },
+    "clam_shake": {
+        "files": [
+            "assets/audios/sfx/clam_shake.ogg"
+        ],
+        "volume": 0.5,
+        "pitch": 0,
+        "cooldown": 0.3,
+        "maxInstances": 1,
+        "priority": 75
+    },
+    "clam_open": {
+        "files": [
+            "assets/audios/sfx/clam_open.ogg"
+        ],
+        "volume": 0.85,
+        "pitch": 0,
+        "cooldown": 0.5,
+        "maxInstances": 1,
+        "priority": 90
+    },
+    "fish_reveal": {
+        "files": [
+            "assets/audios/sfx/fish_reveal.ogg"
+        ],
+        "volume": 0.55,
+        "pitch": 0,
+        "cooldown": 0.04,
+        "maxInstances": 3,
+        "priority": 80
+    },
     "deploy": {
         "files": [
             "assets/audios/sfx/deploy_1.ogg",

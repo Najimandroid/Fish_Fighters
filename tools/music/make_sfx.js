@@ -337,6 +337,75 @@ define("unequip", { volume: 0.4, pitch: 0.04, cooldown: 0.05, maxInstances: 2 },
     reverb(s, 0.15);
     return s;
 });
+
+// ----- Clam Room -----
+// A Shiny Scale fed to the clam: a glassy glint, a glockenspiel sparkle, a tiny gulp. Up to ten in a row, the game
+// raises the pitch each time (so no random pitch here)
+define("scale_use", { volume: 0.45, pitch: 0, cooldown: 0.03, maxInstances: 4, priority: 75 }, 1, () => {
+    const s = new Sound(0.7);
+    tone(s, { dur: 0.06, freq: 4200, amp: 0.12, attack: 0.001, tau: 0.02 });                                     // the glint
+    bell(s, { freq: 2490, ratio: 1.41, index: 1.4, tau: 0.09, amp: 0.3, pan: 0.15 });                           // a scale is thin and hard
+    note(s, { at: 0.02, program: 9, key: 94, velocity: 96, len: 0.3, amp: 0.55 });                              // Bb6 on glockenspiel
+    bubble(s, { at: 0.07, freq: 520, size: 0.05, amp: 0.22, rise: 1.4 });                                        // gulped
+    reverb(s, 0.22, 0.8);
+    return s;
+});
+// The clam lands after a hop. A hard shell on rock, never squishy: a hollow knock, a click, a thud, a puff of sand
+define("clam_hop", { volume: 0.55, pitch: 0.03, cooldown: 0.05, maxInstances: 2, priority: 70 }, 2, p => {
+    const s = new Sound(0.45);
+    tone(s, { dur: 0.09, freq: t => 150 * p * Math.pow(0.55, t / 0.09), amp: 0.55, tau: 0.035 });                // the thud
+    bell(s, { freq: 610 * p, ratio: 2.76, index: 2.2, tau: 0.035, amp: 0.32 });                                  // hollow knock of the shell
+    bell(s, { at: 0.002, freq: 1730 * p, ratio: 1.53, index: 1.2, tau: 0.018, amp: 0.18 });
+    noise(s, { dur: 0.012, amp: 0.3, attack: 0.0005, tau: 0.004, filter: { type: "bandpass", freq: 2600, q: 1.4 } });   // the click
+    noise(s, { at: 0.01, dur: 0.16, amp: 0.1, attack: 0.01, tau: 0.05, filter: { type: "lowpass", freq: 2200 } });      // sand
+    reverb(s, 0.1, 0.5);
+    return s;
+});
+// The clam shakes before it opens: the shell rattling on the rock faster and harder, and a magic shimmer rising
+// under it (the suspense). Plays once, the opening follows 0.45 s (one scale) or 0.8 s (ten) later
+define("clam_shake", { volume: 0.5, pitch: 0, cooldown: 0.3, maxInstances: 1, priority: 75 }, 1, () => {
+    const s = new Sound(1.1);
+    for (let t = 0, i = 0; t < 0.85; i++) {
+        const x = t / 0.85;
+        bell(s, { at: t, freq: 820 + random() * 520, ratio: 2.76, index: 1.6, tau: 0.014, amp: 0.1 + 0.16 * x, pan: i % 2 ? 0.25 : -0.25 });
+        noise(s, { at: t, dur: 0.008, amp: 0.08 + 0.12 * x, attack: 0.0005, tau: 0.003, filter: { type: "bandpass", freq: 2200, q: 1.2 } });
+        t += 0.05 - 0.028 * x;                                                                                      // faster and faster
+    }
+    tone(s, { dur: 0.95, freq: t => 520 * Math.pow(3, t / 0.95), amp: 0.08, attack: 0.5, release: 0.1, vibrato: 0.012, vibratoHz: 9 });   // shimmer
+    tone(s, { dur: 0.95, freq: t => 780 * Math.pow(3, t / 0.95), amp: 0.05, attack: 0.6, release: 0.1, vibrato: 0.012, vibratoHz: 11, pan: 0.3 });
+    noise(s, { dur: 0.95, amp: 0.1, attack: 0.7, release: 0.08, filter: { type: "bandpass", freq: t => 700 * Math.pow(5, t / 0.95), q: 1.5 } });  // riser
+    reverb(s, 0.18, 0.7);
+    return s;
+});
+// The clam pops open: the hinge's hard clack, the water rushing out, a burst of bubbles and the magic: a soft
+// choir and a celesta chord in Bb (the room's key), a glockenspiel run going up
+define("clam_open", { volume: 0.85, pitch: 0, cooldown: 0.5, maxInstances: 1, priority: 90 }, 1, () => {
+    const s = new Sound(2.6);
+    bell(s, { freq: 520, ratio: 2.76, index: 2.5, tau: 0.05, amp: 0.4 });                                        // clack
+    noise(s, { dur: 0.015, amp: 0.35, attack: 0.0005, tau: 0.005, filter: { type: "bandpass", freq: 2400, q: 1.3 } });
+    boom(s, { from: 120, to: 60, dur: 0.3, amp: 0.3, drive: 1.6 });
+    noise(s, { at: 0.01, dur: 0.6, amp: 0.2, attack: 0.04, tau: 0.22, filter: { type: "bandpass", freq: t => 450 * Math.pow(6, Math.min(t / 0.4, 1)), q: 0.9 } });  // whoosh
+    [58, 62, 65, 70].forEach(key => note(s, { at: 0.04, program: 52, key, velocity: 84, len: 1.3, amp: 0.3 }));    // choir "aah"
+    [82, 86, 89].forEach(key => note(s, { at: 0.06, program: 8, key, velocity: 100, len: 1.0, amp: 0.45 }));       // celesta
+    [94, 98, 101, 106].forEach((key, i) => note(s, { at: 0.1 + i * 0.06, program: 9, key, velocity: 104, len: 0.5, amp: 0.4, pan: -0.3 + i * 0.2 }));
+    bell(s, { at: 0.3, freq: 3730, ratio: 1.41, index: 1, tau: 0.4, amp: 0.08 });
+    bubbles(s, { at: 0.03, count: 26, spread: 0.9, low: 380, high: 2400, amp: 0.2 });
+    reverb(s, 0.3, 1);
+    return s;
+});
+// A fish rises out in its bubble: the bubble's "bloop", a pop, a two-note music box "ta-da". One per fish, the game
+// raises the pitch for each of a x10 (so no random pitch here)
+define("fish_reveal", { volume: 0.55, pitch: 0, cooldown: 0.04, maxInstances: 3, priority: 80 }, 1, () => {
+    const s = new Sound(0.9);
+    bubble(s, { freq: 420, size: 0.08, amp: 0.38, rise: 1.8 });
+    noise(s, { at: 0.07, dur: 0.01, amp: 0.18, attack: 0.0005, tau: 0.003, filter: { type: "highpass", freq: 2500 } });   // pop
+    note(s, { at: 0.07, program: 10, key: 89, velocity: 100, len: 0.2, amp: 0.55, pan: -0.1 });                // F6
+    note(s, { at: 0.16, program: 10, key: 94, velocity: 108, len: 0.4, amp: 0.6, pan: 0.1 });                  // Bb6
+    bell(s, { at: 0.16, freq: 3000, ratio: 1.41, index: 0.9, tau: 0.2, amp: 0.07 });
+    bubbles(s, { at: 0.1, count: 4, spread: 0.25, low: 900, high: 2000, amp: 0.1 });
+    reverb(s, 0.22, 0.8);
+    return s;
+});
 // ----- Battle -----
 define("deploy", { volume: 0.6, pitch: 0.06, cooldown: 0.05, maxInstances: 3 }, 2, p => {
     const s = new Sound(0.8);

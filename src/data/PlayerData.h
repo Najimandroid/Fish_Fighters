@@ -57,6 +57,14 @@ public:
     // Decreases shells if enough, returns false if insufficient
     bool spend_shells(int amount);
 
+    // Shiny Scales (the Clam Room's currency): false if there aren't enough
+    bool spend_shiny_scales(int amount);
+
+    // A fish out of a clam: a new one joins at level 1, one already owned gains a level (its form follows);
+    // at the max level nothing changes (isMaxed: the caller gives the Shiny Scale back)
+    struct FishReward { int uid = -1; bool isNew = false; bool isMaxed = false; int level = 0; int form = 0; };
+    FishReward receive_fish(int unitUid);
+
     // ===== Progression =====
 
     // Marks a stage as completed and applies rewards
@@ -93,6 +101,8 @@ public:
 public:
     // Currency
     int shells = 0;
+    int shinyScales = 0;                   // The Clam Room's currency
+    static constexpr int TEST_STARTING_SHINY_SCALES = 100;   // A save without Shiny Scales starts with these (testing)
 
     // Units
     struct OwnedUnit 

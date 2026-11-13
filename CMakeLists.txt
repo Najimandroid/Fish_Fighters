@@ -74,6 +74,7 @@ set(PROJECT_SOURCES
     src/uis/widgets/UIFishParade.cpp
     src/uis/widgets/UITutorial.cpp
     src/uis/widgets/UIBattleIntro.cpp
+    src/uis/widgets/UIClamRoom.cpp
     src/uis/widgets/UIStageCash.cpp
     src/uis/widgets/UICashUp.cpp
     src/uis/widgets/UIBaseHealthInfo.cpp

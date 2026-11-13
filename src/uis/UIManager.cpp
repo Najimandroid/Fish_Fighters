@@ -11,6 +11,7 @@
 #include "widgets/UIFishParade.h"
 #include "widgets/UITutorial.h"
 #include "widgets/UIBattleIntro.h"
+#include "widgets/UIClamRoom.h"
 #include "widgets/UIStatusIcons.h"
 #include "widgets/UIUpgradeSlider.h"
 #include "widgets/UIEquipSlider.h"
@@ -38,6 +39,7 @@
 namespace
 {
     const std::string MENU_MUSIC = "theme_base";     // The Fish Tank menus
+    const std::string CLAM_MUSIC = "theme_clam";     // The Clam Room: the Fish Tank theme gone magic, on the same grid
     const std::string TITLE_MUSIC = "theme_title";   // The title screen
     const float TITLE_MUSIC_TEMPO = 168.f;           // Its tempo: the title bounces on the beat
 }
@@ -66,7 +68,9 @@ void UIManager::enter_menu_screen()
     m_uiElements.clear();
     if (m_audio)
     {
-        m_audio->play_music(MENU_MUSIC);
+        // Back from the Clam Room, its theme melts into the Fish Tank's where it is (both share their grid)
+        if (m_audio->get_current_music() == CLAM_MUSIC) m_audio->play_music_in_sync(MENU_MUSIC);
+        else m_audio->play_music(MENU_MUSIC);
         m_audio->play_sound("ui_transition");
     }
 }
@@ -359,6 +363,15 @@ void UIManager::generate_fish_tank_uis()
     add_ui_element(encyclopediaButton);
     add_ui_element(nextStage);
     add_ui_element(upgradeBadge);
+
+    // The Clam Room, next to the tank (under the porthole)
+    auto clamButton = std::make_shared<UIButtonElement>(sf::Vector2f{ 400.f, 96.f }, sf::Vector2f{ 1192.f, 860.f }, "CLAM ROOM");
+    clamButton->set_text_size(44);
+    clamButton->set_style(UIButtonElement::Style::Secondary);
+    clamButton->set_callback([this]() { m_pendingAction = [this]() { generate_clam_room_uis(); }; });
+    add_ui_element(clamButton);
+    if (auto player = m_dataLoader->get_player_data().lock(); player && player->shinyScales > 0)
+        add_ui_element(std::make_shared<UIBadge>(sf::Vector2f{ 1192.f + 400.f - 14.f, 860.f + 12.f }, "!"));
     add_ui_element(optionsButton);
     add_ui_element(quitButton);
     add_ui_element(optionsMenu);  // Windows last: on top while open
@@ -368,6 +381,37 @@ void UIManager::generate_fish_tank_uis()
 /*
  * Generate the Encyclopedia: every fish and every enemy (black until owned / met), their stats and abilities
  */
+/*
+ * The Clam Room: the dim purple room, the giant clam (UIClamRoom), the shells and the Shiny Scales, back to the
+ * Fish Tank. Its theme fades in over the Fish Tank's at the same place in the music
+ */
+void UIManager::generate_clam_room_uis()
+{
+    m_uiElements.clear();
+    if (m_audio)
+    {
+        m_audio->play_music_in_sync(CLAM_MUSIC);
+        m_audio->play_sound("ui_transition");
+    }
+
+    auto bg = std::make_shared<UITextureElement>(sf::Vector2f{ 1920.f, 1080.f }, sf::Vector2f{ 0.f, 0.f },
+        "assets/images/textures/backgrounds/menus/title.png");
+    auto room = std::make_shared<UIClamRoom>(m_dataLoader);
+    std::weak_ptr<UIClamRoom> weakRoom = room;
+    auto backButton = make_back_button([this, weakRoom]()
+        {
+            if (auto room = weakRoom.lock(); room && room->is_busy()) return;   // Not in the middle of an opening
+            generate_fish_tank_uis();
+        });
+
+    add_ui_element(bg);
+    add_ui_element(room);
+    add_ui_element(std::make_shared<UITitleBar>("Clam Room"));
+    add_ui_element(std::make_shared<UIPlayerShellsInfo>(m_dataLoader));
+    add_ui_element(std::make_shared<UIPlayerShellsInfo>(m_dataLoader, UIPlayerShellsInfo::Currency::SHINY_SCALES));
+    add_ui_element(backButton);
+}
+
 void UIManager::generate_encyclopedia_uis()
 {
     enter_menu_screen();

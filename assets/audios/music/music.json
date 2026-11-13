@@ -62,6 +62,15 @@
         "loopStart": 4320000,
         "loopLength": 4114286
     },
+    "theme_clam": {
+        "title": "Pearl Chamber",
+        "kind": "menu",
+        "file": "assets/audios/music/theme_clam.ogg",
+        "sampleRate": 48000,
+        "key": "Bb",
+        "loopStart": 4320000,
+        "loopLength": 4114286
+    },
     "theme_shanty": {
         "title": "Sunken Galleon",
         "kind": "stage",
