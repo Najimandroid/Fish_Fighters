@@ -68,7 +68,7 @@ public:
     // Shiny Scales (the Clam Room's currency): false if there aren't enough
     bool spend_shiny_scales(int amount);
 
-    // ===== The Clam Room: Clam Storage, Fish Scales, Shoal Power =====
+    // ===== The Clam Room: Clam Storage, Fish Scales, School Rank =====
 
     // A fish out of a clam goes into the Clam Storage (isNew: a kind the player has neither in the tank nor stored)
     struct FishReward { int uid = -1; bool isNew = false; };
@@ -93,16 +93,16 @@ public:
     static constexpr int FISH_SCALES_PER_SHINY = 10;
     bool craft_shiny_scale();
 
-    // Shoal Power: every owned fish's level and extra levels added up. Its milestones give Shiny Scales (like
-    // The Battle Cats' User Rank gives Rare Tickets): SHOAL_MILESTONES, then one more every SHOAL_STEP_AFTER
-    int get_shoal_power() const;
-    struct ShoalMilestone { int power; int shinyScales; };
-    static constexpr ShoalMilestone SHOAL_MILESTONES[] = { { 10, 1 }, { 25, 1 }, { 50, 1 }, { 77, 7 }, { 100, 1 }, { 125, 1 } };
-    static constexpr int SHOAL_STEP_AFTER = 25;
-    static ShoalMilestone shoal_milestone(int index);    // The index-th one (past the list: every SHOAL_STEP_AFTER)
+    // School Rank: every owned fish's level and extra levels added up. Its milestones give Shiny Scales (like
+    // The Battle Cats' User Rank gives Rare Tickets): SCHOOL_RANK_MILESTONES, then one more every SCHOOL_RANK_STEP_AFTER
+    int get_school_rank() const;
+    struct SchoolRankMilestone { int power; int shinyScales; };
+    static constexpr SchoolRankMilestone SCHOOL_RANK_MILESTONES[] = { { 10, 1 }, { 25, 1 }, { 50, 1 }, { 77, 7 }, { 100, 1 }, { 125, 1 } };
+    static constexpr int SCHOOL_RANK_STEP_AFTER = 25;
+    static SchoolRankMilestone school_rank_milestone(int index);    // The index-th one (past the list: every SCHOOL_RANK_STEP_AFTER)
 
     // Gives the Shiny Scales of the milestones reached and not claimed yet: returns how many
-    int claim_shoal_rewards();
+    int claim_school_rank_rewards();
 
     // The Clam Room's welcome gift (one Shiny Scale for the first roll), once: true if it was given now
     bool give_clam_room_gift();
@@ -150,7 +150,7 @@ public:
     int shinyScales = 0;                   // The Clam Room's currency
     int fishScales = 0;                    // From selling stored fish: FISH_SCALES_PER_SHINY make a Shiny Scale
     std::map<int, int> clamStorage;        // Fish out of the clam waiting to be used or sold: unit UID -> how many
-    int shoalRewardsClaimed = 0;           // Shoal Power milestones already rewarded
+    int schoolRankRewardsClaimed = 0;           // School Rank milestones already rewarded
     bool hasClamRoomGift = false;          // The welcome Shiny Scale was given
 
     // Units

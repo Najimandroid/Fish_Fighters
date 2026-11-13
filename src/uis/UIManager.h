@@ -65,7 +65,7 @@ public:
     void generate_upgrade_menu_uis();
     void generate_equip_menu_uis();
     void generate_encyclopedia_uis();
-    void generate_clam_room_uis();   // The gacha: Shiny Scales into the giant clam, fish out
+    void generate_clam_room_uis(bool fromStorage = false);   // The gacha: Shiny Scales into the giant clam, fish out
     void generate_clam_storage_uis();   // The fish out of the clam, to use or sell
     void generate_battle_uis();
     void generate_chapter_map_uis();

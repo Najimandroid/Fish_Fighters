@@ -98,28 +98,28 @@ bool PlayerData::craft_shiny_scale()
     return true;
 }
 
-int PlayerData::get_shoal_power() const
+int PlayerData::get_school_rank() const
 {
     int power = 0;
     for (const auto& [uid, unit] : ownedUnits) power += unit.level + unit.extraLevels;
     return power;
 }
 
-PlayerData::ShoalMilestone PlayerData::shoal_milestone(int index)
+PlayerData::SchoolRankMilestone PlayerData::school_rank_milestone(int index)
 {
-    const int listed = static_cast<int>(std::size(SHOAL_MILESTONES));
-    if (index < listed) return SHOAL_MILESTONES[std::max(0, index)];
-    return { SHOAL_MILESTONES[listed - 1].power + SHOAL_STEP_AFTER * (index - listed + 1), 1 };
+    const int listed = static_cast<int>(std::size(SCHOOL_RANK_MILESTONES));
+    if (index < listed) return SCHOOL_RANK_MILESTONES[std::max(0, index)];
+    return { SCHOOL_RANK_MILESTONES[listed - 1].power + SCHOOL_RANK_STEP_AFTER * (index - listed + 1), 1 };
 }
 
-int PlayerData::claim_shoal_rewards()
+int PlayerData::claim_school_rank_rewards()
 {
     int given = 0;
-    const int power = get_shoal_power();
-    while (shoal_milestone(shoalRewardsClaimed).power <= power)
+    const int power = get_school_rank();
+    while (school_rank_milestone(schoolRankRewardsClaimed).power <= power)
     {
-        given += shoal_milestone(shoalRewardsClaimed).shinyScales;
-        shoalRewardsClaimed += 1;
+        given += school_rank_milestone(schoolRankRewardsClaimed).shinyScales;
+        schoolRankRewardsClaimed += 1;
     }
     shinyScales += given;
     return given;

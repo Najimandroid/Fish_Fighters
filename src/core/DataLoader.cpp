@@ -684,9 +684,10 @@ bool DataLoader::load_player(const std::string& path)
         m_playerData->lastStage = j.at("progression").contains("lastStage")
             ? read_int(j.at("progression"), "lastStage") : -1;
 
-        // Shoal Power milestones rewarded, the Clam Room's welcome gift (missing in older saves)
+        // School Rank milestones rewarded, the Clam Room's welcome gift (missing in older saves)
         const json& progression = j.at("progression");
-        m_playerData->shoalRewardsClaimed = progression.contains("shoalRewardsClaimed") ? read_int(progression, "shoalRewardsClaimed") : 0;
+        m_playerData->schoolRankRewardsClaimed = progression.contains("schoolRankRewardsClaimed") ? read_int(progression, "schoolRankRewardsClaimed")
+            : progression.contains("shoalRewardsClaimed") ? read_int(progression, "shoalRewardsClaimed") : 0;   // Its first name
         m_playerData->hasClamRoomGift = progression.contains("clamRoomGift") && progression.at("clamRoomGift").get<bool>();
 
         // Enemies met in battle (missing in older saves)
@@ -776,7 +777,7 @@ bool DataLoader::save_player(const std::string& path)
     // Current chapter
     j["progression"]["currentChapter"] = m_playerData->currentChapter;
     j["progression"]["lastStage"] = m_playerData->lastStage;
-    j["progression"]["shoalRewardsClaimed"] = m_playerData->shoalRewardsClaimed;
+    j["progression"]["schoolRankRewardsClaimed"] = m_playerData->schoolRankRewardsClaimed;
     j["progression"]["clamRoomGift"] = m_playerData->hasClamRoomGift;
 
     // Enemies met in battle (sorted, so the file doesn't change order between saves)

@@ -85,7 +85,7 @@ void UIUpgradeSlider::upgrade_selected()
 				player->unlock_unit(unitUid); // Unlock if not owned
 				play_sound("unlock");
 			}
-			UIToast::announce_shoal_rewards(*player);   // A Shoal Power milestone: Shiny Scales
+			UIToast::announce_school_rank_rewards(*player);   // A School Rank milestone: Shiny Scales
 
 			// The form (and so the name and icon) can change with the level
 			auto icon = m_upgradeIcons[m_currentIndex];

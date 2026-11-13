@@ -24,11 +24,14 @@ class UIPlayerShellsInfo;
  *      others. Every fish goes into the Clam Storage (UIClamStorage), where it's used (unlocks the fish, or +1
  *      extra level) or sold (shells, or a Fish Scale)
  *   5. a click and it closes again
- * The STORAGE button (bottom right, with how many fish wait there) opens the Clam Storage (set_on_storage).
+ * STORAGE (bottom right: the Clam Storage's chest, its name small under it, how many fish wait there) pops the
+ * clam open and dives into it, the view going dark pink: the Clam Storage is inside (set_on_storage). Coming back,
+ * the view zooms out of the open clam, which snaps shut (enter_from_storage).
  * A click on the idle clam pokes it where it was clicked: pressed down on that side, it rocks on its round bottom (the
  * other side heaves up; in the middle it hops), drops back with a thud (clam_tap, heard on that side) and rocks back,
  * once a second at most: it's heavy.
- * OPEN costs 1 Shiny Scale, OPEN x10 ten (ten fish in a 5 x 2 grid). A click skips ahead. The fish are stored
+ * OPEN costs 1 Shiny Scale, OPEN x10 ten (ten fish in a 5 x 2 grid). The show can't be skipped (opening a clam is rare: it's to be enjoyed);
+ * once every fish is out, a click closes the clam. The fish are stored
  * (and saved) the moment the scales are spent: the show only presents them.
  *
  * The fish come from every fish of the game, equally likely (PlayerData::receive_fish gives them).
@@ -52,14 +55,18 @@ public:
     // The Shiny Scales pill: the scales fly out of it into the clam
     void set_scales_counter(std::shared_ptr<UIPlayerShellsInfo> scales);
 
-    // The STORAGE button's action (opens the Clam Storage)
+    // What happens once the view has dived into the clam (opens the Clam Storage)
     void set_on_storage(std::function<void()> onStorage);
+
+    // Coming back from the Clam Storage: the view zooms out of the open clam, which then snaps shut
+    void enter_from_storage();
 
     // What flies over the title bar (drawn by UIClamRoomOverlay, after the title bar and the pills)
     void render_overlay(sf::RenderWindow& window);
 
 private:
-    enum class Phase { IDLE, FEEDING, CHARGING, OPENING, REVEALING, REVEALED, CLOSING };
+    // TO_STORAGE: the clam pops open and the view dives into it (dark pink: the Clam Storage). FROM_STORAGE: back
+    enum class Phase { IDLE, FEEDING, CHARGING, OPENING, REVEALING, REVEALED, CLOSING, TO_STORAGE, FROM_STORAGE };
 
     struct Reveal
     {
@@ -83,7 +90,7 @@ private:
 
     void open(int count);
     void go_to(Phase phase);
-    void skip();
+    void close_clam();   // Once every fish is out (the show itself can't be skipped)
     void spawn_bubbles(int count, float speed);                      // From the open clam's mouth
     void spawn_bubbles(int count, float speed, sf::Vector2f from);
     sf::Vector2f semi_mouth() const;                                  // The half-open clam's mouth (the scales go in)
@@ -92,6 +99,10 @@ private:
     sf::FloatRect clam_bounds() const;   // The closed clam on screen (clicks make it rattle)
     float random(float from, float to);
 
+    float zoom() const;                  // The dive into the clam: 1 (none) to ZOOM_MAX
+    float inside_fade() const;           // The dark pink over it: 0 to 1
+    bool is_transition() const { return m_phase == Phase::TO_STORAGE || m_phase == Phase::FROM_STORAGE; }
+    void render_storage_icon(sf::RenderWindow& window, int stored);
     void render_clam(sf::RenderWindow& window);
     void render_reveals(sf::RenderWindow& window);
     void render_scales(sf::RenderWindow& window);
@@ -99,7 +110,9 @@ private:
     std::shared_ptr<DataLoader> m_dataLoader;
     UIButtonElement m_openOne;
     UIButtonElement m_openTen;
-    UIButtonElement m_storage;    // To the Clam Storage
+    std::function<void()> m_onStorage;
+    bool m_isStorageHovered = false;   // The chest icon (STORAGE) grows under the mouse
+    bool m_hasCue = false;             // TO_STORAGE / FROM_STORAGE: its sound played (or the screen changed)
     sf::Text m_text;
 
     Phase m_phase = Phase::IDLE;

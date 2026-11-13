@@ -111,8 +111,9 @@ class Song {
     // mix: each group's loudness in dB relative to the lead group (0), applied by render_stems.js
     // kind: "menu", "stage" or "jingle" (the editor lists the menu and stage themes for the stages)
     // barBeats: beats per bar (3 for a waltz); key: its tonic (the battle start jingle and the boss stinger match it)
-    constructor(name, title, tempo, { introBars = 0, bodyBars = 0, mix = {}, kind = "stage", barBeats = 4, key = null } = {}) {
-        Object.assign(this, { name, title, tempo, barBeats, key, intro: introBars * barBeats, length: bodyBars * barBeats, mix, kind, parts: [] });
+    // loudnessDb: dB from the usual loudness target (mix_music.js), for a theme meant to sit lower (a muffled variant)
+    constructor(name, title, tempo, { introBars = 0, bodyBars = 0, mix = {}, kind = "stage", barBeats = 4, key = null, loudnessDb = 0 } = {}) {
+        Object.assign(this, { name, title, tempo, barBeats, key, intro: introBars * barBeats, length: bodyBars * barBeats, mix, kind, loudnessDb, parts: [] });
         BAR = barBeats;
     }
     part(name, program, options) { const p = new Part(name, program, options); this.parts.push(p); return p; }
@@ -1365,6 +1366,65 @@ const FISH_TANK = (() => {
         glissUp(a2);
         drops(a2);
         bubbles(bub, a2 + 61, { count: 9, spread: 3, low: 350, high: 1400 });
+    });
+    songs.push(song);
+}
+
+// =====================================================================================================
+// 7c. "Pearl Chamber (Inside)" - the Clam Storage, inside the clam: Pearl Chamber muffled and calmer, on exactly
+//     its grid (so the game crossfades the two where they are, AudioManager::play_music_in_sync). Heard through the
+//     shell: every part low-passed, long echoes; no brushes, no crystal; the celesta and the music box soft and far,
+//     the voices and the halo holding the chords, a slow harp, a round bass. 3 dB under the other themes.
+//     Intro 2 | A 16 (celesta, far) | B 8 (the voices hum) | A' 16 (music box, far)
+// =====================================================================================================
+{
+    const { A1, A2, B, MEL_A, MEL_B } = FISH_TANK;
+    const song = new Song("theme_clam_inside", "Fish Fighters - Pearl Chamber (Inside)", 112, { key: "Bb", kind: "menu", introBars: 2, bodyBars: 40,
+        loudnessDb: -3, mix: { lead: 0, voices: -3, harp: -6, pad: -5, bass: -6, fx: -12 } });
+    const muffled = (cutoff, echo) => ({ lowpass: cutoff, ...(echo ? { echo } : {}) });
+    const celesta = song.part("Celesta", 8, { group: "lead", volume: 92, pan: -0.1, fx: muffled(1400, { beats: 1.5, feedback: 0.45, mix: 0.4 }) });
+    const musicBox = song.part("Music box", 10, { group: "lead", volume: 88, pan: 0.2, fx: muffled(1500, { beats: 1.5, feedback: 0.45, mix: 0.4 }) });
+    const voices = song.part("Voices", 53, { group: "voices", volume: 92, fx: muffled(1100, { beats: 1.5, feedback: 0.35, mix: 0.3 }) });
+    const harp = song.part("Harp", 46, { group: "harp", volume: 84, pan: 0.3, fx: muffled(1500, { beats: 1.5, feedback: 0.4, mix: 0.35 }) });
+    const halo = song.part("Halo pad", 94, { group: "pad", volume: 84, fx: muffled(1200) });
+    const bass = song.part("Fretless bass", 35, { group: "bass", volume: 94, fx: muffled(600) });
+    const bub = song.synth("Bubbles", "bubbles", { group: "fx" });
+
+    const BASS_LONG = [[0, 3.8, "R", 80]];   // One round note a bar
+    const SLOW_ARP = { pattern: [0, 2, 1, 3], rate: 1, center: 60, velocity: 36, gate: 0.95 };
+
+    // Intro: the voices and the halo, the bass, a few far bubbles
+    const pI = progression("Bbmaj7 | Cm7 F7", 0);
+    sustain(voices, pI, { center: 60, velocity: 52 });
+    sustain(halo, pI, { center: 55, velocity: 54 });
+    bassline(bass, pI, { pattern: [[0, 1.9, "R", 74], [2, 1.9, "5", 66]] });
+    bubbles(bub, 1, { count: 5, spread: 4, low: 300, high: 900 });
+
+    song.body(s => {
+        const a = s, b = s + 64, a2 = s + 96;
+        const pA = progression(A1 + " | " + A2, a), pB = progression(B, b), pA2 = progression(A1 + " | " + A2, a2);
+
+        // A: the tune on a far celesta over the voices and the halo, a slow harp, a round bass
+        celesta.at(a).play(MEL_A, { velocity: 72, gate: 0.95 });
+        sustain(voices, pA, { center: 60, velocity: 48 });
+        sustain(halo, pA, { center: 55, velocity: 50 });
+        arp(harp, pA, SLOW_ARP);
+        bassline(bass, pA, { pattern: BASS_LONG });
+        bubbles(bub, a + 30, { count: 3, spread: 2, low: 300, high: 800 });
+
+        // B: the voices hum the whistle's melody, the halo below
+        voices.at(b).play(MEL_B, { velocity: 70, gate: 0.98, transpose: -12 });
+        sustain(halo, pB, { center: 55, velocity: 52 });
+        arp(harp, pB, SLOW_ARP);
+        bassline(bass, pB, { pattern: BASS_LONG });
+
+        // A': the music box, far, on the tune
+        musicBox.at(a2).play(MEL_A, { velocity: 70, gate: 0.9 });
+        sustain(voices, pA2, { center: 60, velocity: 48 });
+        sustain(halo, pA2, { center: 55, velocity: 50 });
+        arp(harp, pA2, SLOW_ARP);
+        bassline(bass, pA2, { pattern: BASS_LONG });
+        bubbles(bub, a2 + 60, { count: 4, spread: 3, low: 300, high: 900 });
     });
     songs.push(song);
 }
@@ -2828,6 +2888,7 @@ for (const song of songs) {
         lengthSeconds: +(end * spb).toFixed(3),
         loopStartSample: song.length ? introSamples + lengthSamples : null,
         loopLengthSample: song.length ? lengthSamples : null,
+        ...(song.loudnessDb ? { loudnessDb: song.loudnessDb } : {}),
     };
     const l = loops[song.name];
     console.log(song.name.padEnd(17), (l.lengthSeconds.toFixed(1) + " s").padStart(8),

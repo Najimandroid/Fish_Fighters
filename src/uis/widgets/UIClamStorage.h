@@ -24,7 +24,7 @@ class UIConfirmDialog;
  *   - SELL for shells (5 x the fish's base upgrade cost each) or for one Fish Scale each (10 Fish Scales craft a
  *     Shiny Scale: the dialog says so before selling). Both ask first (UIConfirmDialog). The shells / Fish Scales
  *     fly from the fish into their pill (UIFlyingIcons).
- * Using fish raises the Shoal Power: its milestones' Shiny Scales are announced (UIToast).
+ * Using fish raises the School Rank: its milestones' Shiny Scales are announced (UIToast).
  */
 class UIClamStorage : public UIElement
 {

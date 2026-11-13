@@ -229,7 +229,7 @@ void SaveDataEditor::draw_progress(EditorContext& ctx)
         int shells = read_int(m_save["money"], "shells");
         if (ImGui::DragInt("##shells", &shells, 10.f, 0, 1000000000)) { m_save["money"]["shells"] = std::max(0, shells); m_hasChanges = true; }
 
-        property_label("Shiny Scales", "The Clam Room's currency (from the Shoal Power's milestones, the welcome gift, crafting)");
+        property_label("Shiny Scales", "The Clam Room's currency (from the School Rank's milestones, the welcome gift, crafting)");
         int scales = m_save["money"].contains("shinyScales") ? read_int(m_save["money"], "shinyScales") : 0;
         if (ImGui::DragInt("##scales", &scales, 1.f, 0, 1000000)) { m_save["money"]["shinyScales"] = std::max(0, scales); m_hasChanges = true; }
 

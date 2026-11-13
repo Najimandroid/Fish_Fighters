@@ -19,49 +19,52 @@ UIToast::UIToast() :
 {
 }
 
-std::deque<UIToast::News>& UIToast::queue()
+UIToast::State& UIToast::state()
 {
-    static std::deque<News> news;
-    return news;
+    static State shared;
+    return shared;
 }
 
 void UIToast::show(const std::string& title, const std::string& line, const std::string& icon)
 {
-    queue().push_back({ title, line, icon });
+    state().news.push_back({ title, line, icon });
 }
 
-void UIToast::announce_shoal_rewards(PlayerData& player)
+void UIToast::announce_school_rank_rewards(PlayerData& player)
 {
-    const int scales = player.claim_shoal_rewards();
+    const int scales = player.claim_school_rank_rewards();
     if (scales <= 0) return;
-    show("SHOAL POWER " + std::to_string(player.get_shoal_power()) + "!",
+    show("SCHOOL RANK " + std::to_string(player.get_school_rank()) + "!",
         "+" + std::to_string(scales) + " Shiny Scale" + (scales > 1 ? "s" : "") + " for the Clam Room", "icon_shiny_scale");
 }
 
 void UIToast::update(float deltaTime)
 {
-    if (queue().empty()) { m_time = 0.f; return; }
-    if (!m_hasSounded)
+    State& shared = state();
+    if (shared.news.empty()) { shared.time = 0.f; return; }
+    if (!shared.hasSounded)
     {
-        m_hasSounded = true;
+        shared.hasSounded = true;
         play_sound("unlock");
     }
-    m_time += deltaTime;
-    if (m_time >= SHOWN)
+    shared.time += deltaTime;
+    if (shared.time >= SHOWN)
     {
-        queue().pop_front();
-        m_time = 0.f;
-        m_hasSounded = false;
+        shared.news.pop_front();
+        shared.time = 0.f;
+        shared.hasSounded = false;
     }
 }
 
 void UIToast::render(sf::RenderWindow& window)
 {
-    if (queue().empty()) return;
-    const News& news = queue().front();
+    const State& shared = state();
+    if (shared.news.empty()) return;
+    const News& news = shared.news.front();
+    const float time = shared.time;
 
     // Slides down, waits, slides back up
-    const float in = std::clamp(m_time / SLIDE, 0.f, 1.f), out = std::clamp((SHOWN - m_time) / SLIDE, 0.f, 1.f);
+    const float in = std::clamp(time / SLIDE, 0.f, 1.f), out = std::clamp((SHOWN - time) / SLIDE, 0.f, 1.f);
     const float shown = std::min(in, out);
     const float eased = 1.f - (1.f - shown) * (1.f - shown);
     const sf::FloatRect box{ { (1920.f - SIZE.x) / 2.f, TOP - (1.f - eased) * (SIZE.y + TOP) }, SIZE };

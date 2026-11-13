@@ -10,20 +10,28 @@
 #include <algorithm>
 #include <cmath>
 #include <map>
+#include <tuple>
 
 namespace
 {
     const float PI = 3.14159265f;
 
-    const sf::FloatRect TANK{ { 60.f, 140.f }, { 1240.f, 760.f } };     // Where the fish swim
-    const sf::FloatRect PANEL{ { 1330.f, 140.f }, { 530.f, 760.f } };   // About the ones picked
+    const sf::FloatRect TANK{ { 60.f, 150.f }, { 1240.f, 750.f } };     // Where the fish swim
+    const sf::FloatRect PANEL{ { 1330.f, 150.f }, { 530.f, 750.f } };   // About the ones picked
     const float PANEL_X = PANEL.position.x + 30.f, PANEL_CENTER = PANEL.position.x + PANEL.size.x / 2.f;
     const float TEXT_WIDTH = PANEL.size.x - 60.f;
     const sf::FloatRect CHECKBOX{ { PANEL_X, 488.f }, { 38.f, 38.f } };
 
     const sf::Vector2f FISH_SIZE{ 140.f, 90.f };   // A floater's box (its sprite fits inside)
     const float WALK_FRAME_SECONDS = 0.12f;
-    const sf::Color WATER{ 40, 110, 170, 110 };
+
+    // Inside the clam: dark pink, pearly glows, the shell's white lips at the top and the bottom
+    const sf::Color INSIDE_TOP{ 58, 16, 46 }, INSIDE_BOTTOM{ 112, 34, 82 };
+    const sf::Color INSIDE_PINK{ 70, 22, 52 };        // What the dive into the clam ends on (UIClamRoom): the fade in starts there
+    const sf::Color NACRE{ 255, 170, 220 };
+    const sf::Color PINK_TINT{ 255, 180, 220 };       // The dark panels, pink
+    const sf::Color WATER{ 190, 80, 140, 60 };
+    const float FADE_IN = 0.4f;
     const sf::Color PICKED{ 255, 222, 48 };         // The ring around a picked fish (UISkin::NUMBER)
     const sf::Color CORAL{ 255, 128, 104 };
 }
@@ -174,7 +182,7 @@ int UIClamStorage::selected_count() const
 }
 
 /*
- * USE: unlocks the fish or adds extra levels (as many of the picked ones as can be used), then the Shoal Power's
+ * USE: unlocks the fish or adds extra levels (as many of the picked ones as can be used), then the School Rank's
  * milestones
  */
 void UIClamStorage::use_selected()
@@ -197,7 +205,7 @@ void UIClamStorage::use_selected()
         auto data = m_dataLoader->get_unit_data(m_selectedUid, 0);
         UIToast::show("NEW FISH!", (data ? data->name : std::string("A fish")) + " joined your tank", "");
     }
-    UIToast::announce_shoal_rewards(*player);
+    UIToast::announce_school_rank_rewards(*player);
     m_dataLoader->save_progress();
 
     // The used ones leave the water (the picked ones first)
@@ -344,8 +352,43 @@ void UIClamStorage::render(sf::RenderWindow& window)
 {
     if (!m_isVisible) return;
 
-    // The tank: dark glass, blue water, bubbles
-    UISkin::draw_nine_slice(window, UISkin::PANEL_DARK, TANK, 1.2f);
+    // Inside the clam: a dark pink gradient, pearly glows drifting slowly
+    sf::VertexArray inside(sf::PrimitiveType::TriangleStrip, 4);
+    inside[0] = sf::Vertex{ { 0.f, 0.f }, INSIDE_TOP };
+    inside[1] = sf::Vertex{ { 1920.f, 0.f }, INSIDE_TOP };
+    inside[2] = sf::Vertex{ { 0.f, 1080.f }, INSIDE_BOTTOM };
+    inside[3] = sf::Vertex{ { 1920.f, 1080.f }, INSIDE_BOTTOM };
+    window.draw(inside);
+    for (int glow = 0; glow < 4; ++glow)
+    {
+        const float phase = static_cast<float>(glow) * 1.7f;
+        const sf::Vector2f center{ 960.f + std::sin(m_time * 0.11f + phase) * 700.f, 560.f + std::cos(m_time * 0.08f + phase * 1.3f) * 300.f };
+        for (int ring = 6; ring >= 1; --ring)
+        {
+            const float radius = 70.f * static_cast<float>(ring);
+            sf::CircleShape circle(radius);
+            circle.setOrigin({ radius, radius });
+            circle.setPosition(center);
+            circle.setFillColor(sf::Color(NACRE.r, NACRE.g, NACRE.b, 7));
+            window.draw(circle);
+        }
+    }
+
+    // The shell's white lips: scallops peeking under the title bar, and along the bottom
+    for (const auto& [y, radius, spacing] : { std::tuple{ 86.f, 58.f, 112.f }, std::tuple{ 1112.f, 74.f, 132.f } })
+        for (float x = -20.f; x < 1960.f; x += spacing)
+        {
+            sf::CircleShape scallop(radius);
+            scallop.setOrigin({ radius, radius });
+            scallop.setPosition({ x, y });
+            scallop.setFillColor(sf::Color(250, 244, 250));
+            scallop.setOutlineThickness(6.f);
+            scallop.setOutlineColor(UISkin::OUTLINE);
+            window.draw(scallop);
+        }
+
+    // The tank: a pink pool in the clam, pearly bubbles
+    UISkin::draw_nine_slice(window, UISkin::PANEL_DARK, TANK, 1.2f, PINK_TINT);
     sf::RectangleShape water(TANK.size - sf::Vector2f{ 40.f, 40.f });
     water.setPosition(TANK.position + sf::Vector2f{ 20.f, 20.f });
     water.setFillColor(WATER);
@@ -355,9 +398,9 @@ void UIClamStorage::render(sf::RenderWindow& window)
         sf::CircleShape circle(bubble.radius);
         circle.setOrigin({ bubble.radius, bubble.radius });
         circle.setPosition(bubble.position);
-        circle.setFillColor(sf::Color(200, 240, 255, 60));
+        circle.setFillColor(sf::Color(255, 235, 248, 60));
         circle.setOutlineThickness(1.5f);
-        circle.setOutlineColor(sf::Color(220, 250, 255, 140));
+        circle.setOutlineColor(sf::Color(255, 240, 250, 150));
         window.draw(circle);
     }
 
@@ -372,6 +415,14 @@ void UIClamStorage::render(sf::RenderWindow& window)
     }
 
     render_panel(window);
+
+    // Coming in from the dive into the clam: out of its dark pink
+    if (m_time < FADE_IN)
+    {
+        sf::RectangleShape fade({ 1920.f, 1080.f });
+        fade.setFillColor(sf::Color(INSIDE_PINK.r, INSIDE_PINK.g, INSIDE_PINK.b, static_cast<std::uint8_t>(255.f * (1.f - m_time / FADE_IN))));
+        window.draw(fade);
+    }
 }
 
 /*
@@ -380,7 +431,7 @@ void UIClamStorage::render(sf::RenderWindow& window)
  */
 void UIClamStorage::render_panel(sf::RenderWindow& window)
 {
-    UISkin::draw_nine_slice(window, UISkin::PANEL_DARK, PANEL, 1.2f);
+    UISkin::draw_nine_slice(window, UISkin::PANEL_DARK, PANEL, 1.2f, PINK_TINT);
     auto player = m_dataLoader->get_player_data().lock();
     auto text = [&](const std::string& string, unsigned int size, sf::Color color, sf::Vector2f position, sf::Vector2f anchor, bool isBody = false)
         {

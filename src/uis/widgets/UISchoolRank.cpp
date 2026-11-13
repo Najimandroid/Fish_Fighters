@@ -1,4 +1,4 @@
-#include "UIShoalPower.h"
+#include "UISchoolRank.h"
 #include "../UISkin.h"
 #include "../../core/DataLoader.h"
 #include "../../data/PlayerData.h"
@@ -11,23 +11,23 @@ namespace
     const sf::Color TRACK{ 40, 56, 74 };
 }
 
-UIShoalPower::UIShoalPower(std::shared_ptr<DataLoader> dataLoader) :
+UISchoolRank::UISchoolRank(std::shared_ptr<DataLoader> dataLoader) :
     UIElement(BOX.size, BOX.position),
     m_dataLoader(std::move(dataLoader))
 {
 }
 
-void UIShoalPower::render(sf::RenderWindow& window)
+void UISchoolRank::render(sf::RenderWindow& window)
 {
     auto player = m_dataLoader->get_player_data().lock();
     if (!m_isVisible || !player) return;
 
     UISkin::draw_nine_slice(window, UISkin::PANEL_DARK, BOX, 0.9f);
-    const int power = player->get_shoal_power();
-    const PlayerData::ShoalMilestone next = PlayerData::shoal_milestone(player->shoalRewardsClaimed);
-    const int previous = player->shoalRewardsClaimed > 0 ? PlayerData::shoal_milestone(player->shoalRewardsClaimed - 1).power : 0;
+    const int power = player->get_school_rank();
+    const PlayerData::SchoolRankMilestone next = PlayerData::school_rank_milestone(player->schoolRankRewardsClaimed);
+    const int previous = player->schoolRankRewardsClaimed > 0 ? PlayerData::school_rank_milestone(player->schoolRankRewardsClaimed - 1).power : 0;
 
-    sf::Text text(UISkin::heavy_font(), "SHOAL POWER");
+    sf::Text text(UISkin::heavy_font(), "SCHOOL RANK");
     UISkin::style_text(text, 28, UISkin::TITLE);
     UISkin::set_text_anchor(text, { 0.f, 0.5f });
     text.setPosition({ BOX.position.x + 26.f, BOX.position.y + 34.f });

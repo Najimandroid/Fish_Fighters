@@ -60,17 +60,24 @@ namespace
     const float TAP_COOLDOWN = 1.1f;
     const float WALK_FRAME_SECONDS = 0.12f;  // The fish swim in their bubbles (like in the Fish Tank)
 
+    // STORAGE: the Clam Storage's chest as a button, its name small under it (bottom right)
+    const sf::FloatRect STORAGE_ICON{ { 1700.f, 880.f }, { 140.f, 120.f } };
+
+    // Into the Clam Storage: the clam pops open (TO_STORAGE_OPEN), the view dives into its mouth from DIVE_START
+    // (ZOOM_MAX times closer), going dark pink from INSIDE_FADE. Out: the view zooms out of the open clam (from
+    // dark pink) until OUT_ZOOM, the clam snaps shut at FROM_STORAGE_SHUT
+    const float TO_STORAGE_OPEN = 0.18f, DIVE_START = 0.3f, INSIDE_FADE = 0.75f, TO_STORAGE = 1.25f;
+    const float OUT_ZOOM = 0.75f, FROM_STORAGE_SHUT = 0.8f, FROM_STORAGE = 1.1f;
+    const float ZOOM_MAX = 6.f;
+    const sf::Color INSIDE_PINK{ 70, 22, 52 };   // The Clam Storage's dark pink
 }
 
 UIClamRoom::UIClamRoom(std::shared_ptr<DataLoader> dataLoader) :
     m_dataLoader(std::move(dataLoader)),
     m_openOne({ 360.f, 110.f }, { 580.f, 930.f }, "OPEN"),
     m_openTen({ 360.f, 110.f }, { 980.f, 930.f }, "OPEN x10"),
-    m_storage({ 340.f, 110.f }, { 1520.f, 930.f }, "STORAGE"),
     m_text(UISkin::heavy_font())
 {
-    m_storage.set_text_size(38);
-    m_storage.set_style(UIButtonElement::Style::Secondary);
     m_openOne.set_text_size(48);
     m_openTen.set_text_size(38);
     m_openTen.set_style(UIButtonElement::Style::Secondary);
@@ -112,6 +119,34 @@ void UIClamRoom::go_to(Phase phase)
 {
     m_phase = phase;
     m_phaseTime = 0.f;
+    m_hasCue = false;
+}
+
+void UIClamRoom::enter_from_storage()
+{
+    go_to(Phase::FROM_STORAGE);
+}
+
+float UIClamRoom::zoom() const
+{
+    if (m_phase == Phase::TO_STORAGE)
+    {
+        const float u = std::clamp((m_phaseTime - DIVE_START) / (TO_STORAGE - DIVE_START), 0.f, 1.f);
+        return 1.f + (ZOOM_MAX - 1.f) * std::pow(u, 2.2f);   // Slow, then faster and faster
+    }
+    if (m_phase == Phase::FROM_STORAGE)
+    {
+        const float u = std::clamp(m_phaseTime / OUT_ZOOM, 0.f, 1.f);
+        return ZOOM_MAX - (ZOOM_MAX - 1.f) * (1.f - std::pow(1.f - u, 2.2f));   // Fast, then slowing down
+    }
+    return 1.f;
+}
+
+float UIClamRoom::inside_fade() const
+{
+    if (m_phase == Phase::TO_STORAGE) return std::clamp((m_phaseTime - INSIDE_FADE) / (TO_STORAGE - INSIDE_FADE), 0.f, 1.f);
+    if (m_phase == Phase::FROM_STORAGE) return 1.f - std::clamp(m_phaseTime / 0.35f, 0.f, 1.f);
+    return 0.f;
 }
 
 void UIClamRoom::set_scales_counter(std::shared_ptr<UIPlayerShellsInfo> scales)
@@ -121,7 +156,7 @@ void UIClamRoom::set_scales_counter(std::shared_ptr<UIPlayerShellsInfo> scales)
 
 void UIClamRoom::set_on_storage(std::function<void()> onStorage)
 {
-    m_storage.set_callback(std::move(onStorage));
+    m_onStorage = std::move(onStorage);
 }
 
 sf::Vector2f UIClamRoom::scales_source() const
@@ -194,27 +229,16 @@ void UIClamRoom::open(int count)
 }
 
 /*
- * A click: the hops and the shake are skipped, the fish all come out at once, or the clam closes
+ * A click (or Space / Enter) once every fish is out: the clam closes
  */
-void UIClamRoom::skip()
+void UIClamRoom::close_clam()
 {
-    switch (m_phase)
+    // The show itself can't be skipped (opening a clam is rare: it's to be enjoyed); once every fish is out, a
+    // click closes the clam
+    if (m_phase == Phase::REVEALED)
     {
-    case Phase::FEEDING:
-    case Phase::CHARGING:
-        go_to(Phase::OPENING);
-        play_sound("clam_open");
-        spawn_bubbles(36, 1.f);
-        break;
-    case Phase::REVEALING:
-        for (Reveal& reveal : m_reveals) reveal.appearAt = std::min(reveal.appearAt, m_phaseTime);
-        break;
-    case Phase::REVEALED:
         go_to(Phase::CLOSING);
         play_sound("clam_hop", 1.1f);
-        break;
-    default:
-        break;
     }
 }
 
@@ -264,10 +288,8 @@ void UIClamRoom::update(float deltaTime)
     const int scales = player ? player->shinyScales : 0;
     m_openOne.set_enabled(m_phase == Phase::IDLE && scales >= 1);
     m_openTen.set_enabled(m_phase == Phase::IDLE && scales >= 10);
-    m_storage.set_enabled(m_phase == Phase::IDLE);
     m_openOne.update(deltaTime);
     m_openTen.update(deltaTime);
-    m_storage.update(deltaTime);
 
     switch (m_phase)
     {
@@ -329,6 +351,30 @@ void UIClamRoom::update(float deltaTime)
     case Phase::CLOSING:
         if (m_phaseTime >= CLOSE) { m_reveals.clear(); go_to(Phase::IDLE); }
         break;
+    case Phase::TO_STORAGE:
+        // It pops open ("blub", a few bubbles), the view dives in; once inside, the Clam Storage
+        if (!m_hasCue && m_phaseTime >= TO_STORAGE_OPEN)
+        {
+            m_hasCue = true;
+            play_sound("fish_blub", 0.8f);
+            spawn_bubbles(12, 0.5f);
+        }
+        if (m_phaseTime >= TO_STORAGE && m_onStorage)
+        {
+            auto onStorage = std::move(m_onStorage);   // Once (it changes the screen)
+            m_onStorage = nullptr;
+            onStorage();
+        }
+        break;
+    case Phase::FROM_STORAGE:
+        // Out of the clam: it snaps shut behind us
+        if (!m_hasCue && m_phaseTime >= FROM_STORAGE_SHUT)
+        {
+            m_hasCue = true;
+            play_sound("clam_hop");
+        }
+        if (m_phaseTime >= FROM_STORAGE) go_to(Phase::IDLE);
+        break;
     default:
         break;
     }
@@ -347,6 +393,19 @@ void UIClamRoom::render(sf::RenderWindow& window)
 {
     if (!m_isVisible) return;
 
+    // Diving into the clam (or out of it): the room seen through a view closing in on its mouth
+    const sf::View baseView = window.getView();
+    const float dive = zoom();
+    if (dive > 1.001f)
+    {
+        sf::View zoomed = baseView;
+        const float closeness = (dive - 1.f) / (ZOOM_MAX - 1.f);
+        const sf::Vector2f inside = mouth() + sf::Vector2f{ 0.f, -30.f };
+        zoomed.setCenter(baseView.getCenter() + (inside - baseView.getCenter()) * closeness);
+        zoomed.setSize(baseView.getSize() / dive);
+        window.setView(zoomed);
+    }
+
     // The room is dim and purple: something magic lives here
     sf::RectangleShape veil({ 1920.f, 1080.f });
     veil.setFillColor(sf::Color(40, 18, 70, 130));
@@ -354,7 +413,7 @@ void UIClamRoom::render(sf::RenderWindow& window)
 
     // A soft magic glow behind the clam, breathing
     const float breath = 0.85f + 0.15f * std::sin(m_time * 1.6f);
-    const bool isOpen = m_phase == Phase::OPENING || m_phase == Phase::REVEALING || m_phase == Phase::REVEALED;
+    const bool isOpen = m_phase == Phase::OPENING || m_phase == Phase::REVEALING || m_phase == Phase::REVEALED || is_transition();
     for (int ring = 8; ring >= 1; --ring)
     {
         const float radius = 60.f * static_cast<float>(ring) * breath + (isOpen ? 40.f : 0.f);
@@ -409,6 +468,16 @@ void UIClamRoom::render(sf::RenderWindow& window)
 
     render_reveals(window);
 
+    // Inside the clam: dark pink (the Clam Storage), then nothing else of the room
+    window.setView(baseView);
+    if (is_transition())
+    {
+        sf::RectangleShape inside({ 1920.f, 1080.f });
+        inside.setFillColor(sf::Color(INSIDE_PINK.r, INSIDE_PINK.g, INSIDE_PINK.b, static_cast<std::uint8_t>(255.f * inside_fade())));
+        window.draw(inside);
+        return;
+    }
+
     // The buttons, a Shiny Scale on each (what they cost)
     m_openOne.render(window);
     m_openTen.render(window);
@@ -420,37 +489,17 @@ void UIClamRoom::render(sf::RenderWindow& window)
             button->is_enabled() ? sf::Color::White : sf::Color(255, 255, 255, 120));
     }
 
-    // STORAGE, with the Clam Storage's icon and how many fish wait there
+    // STORAGE: the Clam Storage's chest, with how many fish wait there
     auto player = m_dataLoader->get_player_data().lock();
     int stored = 0;
     if (player) for (const auto& [uid, count] : player->clamStorage) stored += count;
-    m_storage.render(window);
-    const sf::FloatRect storageBox = m_storage.get_bounds();
-    UISkin::draw_fitted(window, UISkin::texture("icon_clam_storage"),
-        { { storageBox.position.x + 12.f, storageBox.position.y + storageBox.size.y / 2.f - 28.f }, { 56.f, 56.f } },
-        m_storage.is_enabled() ? sf::Color::White : sf::Color(255, 255, 255, 120));
-    if (stored > 0)
-    {
-        const float radius = 26.f;
-        sf::CircleShape badge(radius);
-        badge.setOrigin({ radius, radius });
-        badge.setPosition({ storageBox.position.x + storageBox.size.x - 10.f, storageBox.position.y + 8.f });
-        badge.setFillColor(CORAL);
-        badge.setOutlineThickness(4.f);
-        badge.setOutlineColor(UISkin::OUTLINE);
-        window.draw(badge);
-        UISkin::style_text(m_text, 28, sf::Color::White);
-        m_text.setString(std::to_string(stored));
-        UISkin::set_text_anchor(m_text, { 0.5f, 0.5f });
-        m_text.setPosition(badge.getPosition());
-        window.draw(m_text);
-    }
+    render_storage_icon(window, stored);
 
     // What to do
     std::string hint;
     if (m_phase == Phase::IDLE)
         hint = player && player->shinyScales > 0 ? "Feed the giant clam a Shiny Scale..."
-            : "No Shiny Scales: raise your Shoal Power, or craft one from Fish Scales (+)";
+            : "No Shiny Scales: raise your School Rank, or craft one from Fish Scales (+)";
     else if (m_phase == Phase::REVEALED) hint = "Click to continue: your fish wait in the Clam Storage";
     if (!hint.empty())
     {
@@ -468,7 +517,9 @@ void UIClamRoom::render(sf::RenderWindow& window)
 void UIClamRoom::render_clam(sf::RenderWindow& window)
 {
     const bool isOpen = m_phase == Phase::OPENING || m_phase == Phase::REVEALING || m_phase == Phase::REVEALED
-        || (m_phase == Phase::CLOSING && m_phaseTime < CLOSE * 0.5f);
+        || (m_phase == Phase::CLOSING && m_phaseTime < CLOSE * 0.5f)
+        || (m_phase == Phase::TO_STORAGE && m_phaseTime >= TO_STORAGE_OPEN)
+        || (m_phase == Phase::FROM_STORAGE && m_phaseTime < FROM_STORAGE_SHUT);
     const bool isEating = m_phase == Phase::FEEDING && m_phaseTime < scales_landed_time() + GULP_HOP;   // Half open
     const sf::Texture& texture = UISkin::texture(isOpen ? "clam_opened" : isEating ? "clam_semi_opened" : "clam_closed");
 
@@ -572,6 +623,15 @@ void UIClamRoom::render_clam(sf::RenderWindow& window)
     case Phase::CLOSING:
         jump = 10.f * std::sin(std::min(1.f, m_phaseTime / CLOSE) * PI);   // A little hop as it snaps shut
         break;
+    case Phase::TO_STORAGE:
+        // A pop as it opens for us
+        if (m_phaseTime < DIVE_START) jump = 12.f * std::sin(m_phaseTime / DIVE_START * PI);
+        break;
+    case Phase::FROM_STORAGE:
+        // A little hop as it snaps shut behind us
+        if (m_phaseTime >= FROM_STORAGE_SHUT)
+            jump = 9.f * std::sin(std::min(1.f, (m_phaseTime - FROM_STORAGE_SHUT) / (FROM_STORAGE - FROM_STORAGE_SHUT)) * PI);
+        break;
     default:
         break;
     }
@@ -599,6 +659,41 @@ void UIClamRoom::render_clam(sf::RenderWindow& window)
     clam.setRotation(sf::degrees(angle));
     clam.setPosition(CLAM_BASE + sf::Vector2f{ shiftX, -jump });
     window.draw(clam);
+}
+
+/*
+ * STORAGE: the Clam Storage's chest (bigger under the mouse, greyed while the clam is busy), "STORAGE" small under
+ * it, a coral badge with how many fish wait there
+ */
+void UIClamRoom::render_storage_icon(sf::RenderWindow& window, int stored)
+{
+    const bool isUsable = m_phase == Phase::IDLE;
+    const float grow = isUsable && m_isStorageHovered ? 1.08f : 1.f;
+    const sf::Vector2f center{ STORAGE_ICON.position.x + STORAGE_ICON.size.x / 2.f, STORAGE_ICON.position.y + 50.f };
+    const float size = 112.f * grow;
+    UISkin::draw_fitted(window, UISkin::texture("icon_clam_storage"), { center - sf::Vector2f{ size, size } / 2.f, { size, size } },
+        isUsable ? sf::Color::White : sf::Color(255, 255, 255, 120));
+
+    UISkin::style_text(m_text, 26, UISkin::TITLE);
+    m_text.setString("STORAGE");
+    UISkin::set_text_anchor(m_text, { 0.5f, 0.5f });
+    m_text.setPosition({ center.x, STORAGE_ICON.position.y + STORAGE_ICON.size.y - 6.f });
+    window.draw(m_text);
+
+    if (stored <= 0) return;
+    const float radius = 24.f;
+    sf::CircleShape badge(radius);
+    badge.setOrigin({ radius, radius });
+    badge.setPosition(center + sf::Vector2f{ 48.f, -44.f });
+    badge.setFillColor(CORAL);
+    badge.setOutlineThickness(4.f);
+    badge.setOutlineColor(UISkin::OUTLINE);
+    window.draw(badge);
+    UISkin::style_text(m_text, 26, sf::Color::White);
+    m_text.setString(std::to_string(stored));
+    UISkin::set_text_anchor(m_text, { 0.5f, 0.5f });
+    m_text.setPosition(badge.getPosition());
+    window.draw(m_text);
 }
 
 /*
@@ -711,12 +806,22 @@ void UIClamRoom::handle_event(const sf::Event& event, const sf::RenderWindow& wi
     {
         m_openOne.handle_event(event, window);
         m_openTen.handle_event(event, window);
-        m_storage.handle_event(event, window);
+
+        // STORAGE (the chest): grows under the mouse; a click dives into the clam
+        if (const auto* moved = event.getIf<sf::Event::MouseMoved>())
+            m_isStorageHovered = STORAGE_ICON.contains(window.mapPixelToCoords(moved->position));
 
         // A click on the clam: it heaves and thuds (just for fun), not more than once per TAP_COOLDOWN
         if (const auto* pressed = event.getIf<sf::Event::MouseButtonPressed>(); pressed && pressed->button == sf::Mouse::Button::Left)
         {
             const sf::Vector2f mouse = window.mapPixelToCoords(pressed->position);
+            if (STORAGE_ICON.contains(mouse) && m_onStorage)
+            {
+                play_sound("ui_click");
+                m_isStorageHovered = false;
+                go_to(Phase::TO_STORAGE);
+                return;
+            }
             if (clam_bounds().contains(mouse) && m_tapCooldown <= 0.f)
             {
                 m_tapTime = TAP_SHAKE;
@@ -727,7 +832,7 @@ void UIClamRoom::handle_event(const sf::Event& event, const sf::RenderWindow& wi
         }
         return;
     }
-    // Anything else: a click (or Space / Enter) skips ahead
-    if (const auto* pressed = event.getIf<sf::Event::MouseButtonPressed>(); pressed && pressed->button == sf::Mouse::Button::Left) skip();
-    if (const auto* key = event.getIf<sf::Event::KeyPressed>(); key && (key->code == sf::Keyboard::Key::Space || key->code == sf::Keyboard::Key::Enter)) skip();
+    // Anything else: a click (or Space / Enter) closes the clam once the fish are out
+    if (const auto* pressed = event.getIf<sf::Event::MouseButtonPressed>(); pressed && pressed->button == sf::Mouse::Button::Left) close_clam();
+    if (const auto* key = event.getIf<sf::Event::KeyPressed>(); key && (key->code == sf::Keyboard::Key::Space || key->code == sf::Keyboard::Key::Enter)) close_clam();
 }
