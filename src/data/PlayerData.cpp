@@ -1,5 +1,6 @@
 #include "PlayerData.h"
 #include "../core/DataLoader.h"
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 
@@ -23,7 +24,7 @@ bool PlayerData::spend_shiny_scales(int amount)
     return true;
 }
 
-PlayerData::FishReward PlayerData::receive_fish(int unitUid)
+PlayerData::FishReward PlayerData::receive_fish(int unitUid, int spareShells)
 {
     FishReward reward;
     reward.uid = unitUid;
@@ -34,15 +35,18 @@ PlayerData::FishReward PlayerData::receive_fish(int unitUid)
         ownedUnits[unitUid] = { 1, 0 };
         reward.isNew = true;
     }
-    else if (owned->second.level >= MAX_UNIT_LEVEL)
+    else if (owned->second.extraLevels >= MAX_EXTRA_LEVELS)
     {
-        reward.isMaxed = true;
+        reward.isSpare = true;
+        reward.shells = std::max(0, spareShells);
+        gain_shells(reward.shells);
     }
     else
     {
-        upgrade_unit(unitUid);
+        owned->second.extraLevels += 1;
     }
     reward.level = get_unit_level(unitUid);
+    reward.extraLevels = get_unit_extra_levels(unitUid);
     reward.form = get_unit_form(unitUid);
     return reward;
 }
@@ -57,27 +61,27 @@ void PlayerData::wait_to_be_unlocked(int unitUid)
 
 /*
  * Upgrades an owned unit by incrementing its level.
- * Updates its form if evolving
+ * Updates its form if evolving, into a form it has: a fish with one form stays in it (no unknown fish)
  */
-void PlayerData::upgrade_unit(int unitUid)
+void PlayerData::upgrade_unit(int unitUid, int formCount)
 {
     auto it = ownedUnits.find(unitUid);
     if (it == ownedUnits.end()) return;
 
 	// Checks if max level reached
-    if (it->second.level >= 30) return;
+    if (it->second.level >= MAX_UNIT_LEVEL) return;
 
     // Gain a level
     it->second.level += 1;
 
     // Evolution check
     int lvl = it->second.level;
+    int form = 0;
     if (lvl >= 31) // TODO: Lower it to 30 and add a third form for each unit
-        it->second.form = 2;
+        form = 2;
     else if (lvl >= 10)
-        it->second.form = 1;
-    else
-        it->second.form = 0;
+        form = 1;
+    it->second.form = std::min(form, std::max(1, formCount) - 1);
 }
 
 /*
@@ -114,6 +118,17 @@ int PlayerData::get_unit_level(int unitUid) const
 {
     auto it = ownedUnits.find(unitUid);
     return (it != ownedUnits.end()) ? it->second.level : 0;
+}
+
+int PlayerData::get_unit_extra_levels(int unitUid) const
+{
+    auto it = ownedUnits.find(unitUid);
+    return (it != ownedUnits.end()) ? it->second.extraLevels : 0;
+}
+
+int PlayerData::get_unit_power_level(int unitUid) const
+{
+    return get_unit_level(unitUid) + get_unit_extra_levels(unitUid);
 }
 
 int PlayerData::get_unit_form(int unitUid) const

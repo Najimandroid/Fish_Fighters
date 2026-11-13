@@ -634,8 +634,9 @@ bool DataLoader::load_player(const std::string& path)
             int uid = std::stoi(uidStr);
             int level = read_int(unitData, "level");
             int form = unitData.contains("form") ? read_int(unitData, "form") : 0;
+            int extraLevels = unitData.contains("extraLevels") ? read_int(unitData, "extraLevels") : 0;
 
-            m_playerData->ownedUnits[uid] = { level, form };
+            m_playerData->ownedUnits[uid] = { level, form, std::clamp(extraLevels, 0, PlayerData::MAX_EXTRA_LEVELS) };
         }
 
         // Units waiting to be unlocked
@@ -722,7 +723,8 @@ bool DataLoader::save_player(const std::string& path)
         j["units"]["owned"][std::to_string(uid)] = {
             {"uid", uid},
             {"level", unitInfo.level},
-            {"form", unitInfo.form}
+            {"form", unitInfo.form},
+            {"extraLevels", unitInfo.extraLevels}
         };
     }
 
@@ -858,13 +860,21 @@ Settings& DataLoader::get_settings()
 
 const std::shared_ptr<EntityData> DataLoader::get_unit_data(int uid, int form = 0) const
 {
-    auto it = m_unitsFormsDatabase.find({ uid, form });
-
-    if (it != m_unitsFormsDatabase.end()) {
-        return it->second;
+    // The form, else the last one it has under it (older saves can hold an evolution a fish doesn't have)
+    for (int f = form; f >= 0; --f)
+    {
+        auto it = m_unitsFormsDatabase.find({ uid, f });
+        if (it != m_unitsFormsDatabase.end()) return it->second;
     }
 
     return std::make_shared<EntityData>();
+}
+
+int DataLoader::get_unit_form_count(int uid) const
+{
+    int count = 0;
+    for (auto it = m_unitsFormsDatabase.lower_bound({ uid, 0 }); it != m_unitsFormsDatabase.end() && it->first.first == uid; ++it) count++;
+    return count;
 }
 
 const std::shared_ptr<EntityData> DataLoader::get_enemy_data(int uid) const
@@ -943,7 +953,31 @@ std::weak_ptr<PlayerData> DataLoader::get_player_data() const
 
 std::string DataLoader::get_unit_icon_texture_path(int uid, int form = 0) const
 {
+    const int forms = get_unit_form_count(uid);
+    if (forms > 0) form = std::clamp(form, 0, forms - 1);
     return "assets/images/textures/icons/units/icon_" + std::to_string(uid) + '_' + std::to_string(form) + ".png";
+}
+
+int DataLoader::get_clam_room_stage() const
+{
+    int found = -1;
+    for (const auto& [uid, stage] : m_stagesDatabase)
+        for (const auto& reward : stage->rewards)
+            if (reward->type == "clamRoom" && (found < 0 || uid < found)) found = uid;
+    return found;
+}
+
+bool DataLoader::is_clam_room_open() const
+{
+    bool isLocked = false;
+    for (const auto& [uid, stage] : m_stagesDatabase)
+        for (const auto& reward : stage->rewards)
+            if (reward->type == "clamRoom")
+            {
+                if (m_playerData && m_playerData->has_completed_stage(uid)) return true;
+                isLocked = true;
+            }
+    return !isLocked;
 }
 
 std::string DataLoader::get_enemy_icon_texture_path(int uid) const

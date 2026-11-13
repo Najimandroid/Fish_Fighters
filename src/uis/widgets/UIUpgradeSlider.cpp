@@ -76,7 +76,7 @@ void UIUpgradeSlider::upgrade_selected()
 			// Shells clinking for a level, a fanfare for a new fish
 			if (player->is_unit_owned(unitUid))
 			{
-				player->upgrade_unit(unitUid); // Upgrade if owned
+				player->upgrade_unit(unitUid, m_dataLoader->get_unit_form_count(unitUid)); // Upgrade if owned
 				play_sound("purchase");
 			}
 			else
@@ -145,6 +145,7 @@ void UIUpgradeSlider::init_icons()
 		icon->select(i == m_currentIndex);
 		icon->set_unit_name(unitData->name);
 		icon->set_unit_level(unitLevel);
+		icon->set_extra_levels(playerData->get_unit_extra_levels(unitUid));
 		icon->set_upgrade_cost(calculate_upgrade_cost(unitUid, unitLevel));
 
 		float posX = centerX + (i - m_currentIndex) * ICON_SPACING;
@@ -255,9 +256,12 @@ void UIUpgradeSlider::describe_upgrade(int uid, int level)
 	auto data = m_dataLoader->get_unit_data(uid, player ? player->get_unit_form(uid) : 0);
 	if (!data) return;
 
+	// The Clam Room's extra levels add to the stats, not to the price (their own row, under the level)
+	const int extra = player ? player->get_unit_extra_levels(uid) : 0;
 	const int now = std::max(1, level), next = m_isMaxLevel ? level : level <= 0 ? 1 : level + 1;
-	const float nowFactor = level <= 0 ? 0.f : PlayerData::stat_multiplier(now), nextFactor = PlayerData::stat_multiplier(next);
+	const float nowFactor = level <= 0 ? 0.f : PlayerData::stat_multiplier(now + extra), nextFactor = PlayerData::stat_multiplier(next + extra);
 	m_statRows.push_back({ "Level", level <= 0 ? "-" : std::to_string(level), std::to_string(next), next > level });
+	if (extra > 0) m_statRows.push_back({ "Extra levels", "", "+" + std::to_string(extra), false, true });
 	m_statRows.push_back({ "Health", level <= 0 ? "-" : format_stat(data->health * nowFactor), format_stat(data->health * nextFactor), !m_isMaxLevel });
 	m_statRows.push_back({ "Attack", level <= 0 ? "-" : format_stat(data->attackPower * nowFactor), format_stat(data->attackPower * nextFactor), !m_isMaxLevel });
 
@@ -293,6 +297,14 @@ void UIUpgradeSlider::render_upgrade_info(sf::RenderWindow& window)
 	y += 62.f;
 	for (const StatRow& row : m_statRows)
 	{
+		if (row.isExtra)
+		{
+			// The extra levels: purple, one value at the end of the row (no arrow: upgrading doesn't change them)
+			drawText(row.name, STAT_SIZE, UISkin::EXTRA, { STATS_X, y }, { 0.f, 0.5f });
+			drawText(row.next, STAT_SIZE, UISkin::EXTRA, { STATS_X + (m_isMaxLevel ? 250.f : 385.f), y }, { 1.f, 0.5f });
+			y += 48.f;
+			continue;
+		}
 		drawText(row.name, STAT_SIZE, UISkin::TEXT, { STATS_X, y }, { 0.f, 0.5f });
 		drawText(row.now, STAT_SIZE, UISkin::TEXT, { STATS_X + 250.f, y }, { 1.f, 0.5f });
 		if (!m_isMaxLevel)

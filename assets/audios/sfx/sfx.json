@@ -140,6 +140,17 @@
         "maxInstances": 2,
         "priority": 70
     },
+    "clam_tap": {
+        "files": [
+            "assets/audios/sfx/clam_tap_1.ogg",
+            "assets/audios/sfx/clam_tap_2.ogg"
+        ],
+        "volume": 0.4,
+        "pitch": 0.05,
+        "cooldown": 0.06,
+        "maxInstances": 2,
+        "priority": 40
+    },
     "clam_shake": {
         "files": [
             "assets/audios/sfx/clam_shake.ogg"

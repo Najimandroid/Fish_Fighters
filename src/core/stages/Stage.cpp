@@ -375,6 +375,8 @@ void Stage::begin_finish(bool isVictory)
 			}
 			else if (reward->type == "unit" && m_result.isFirstClear && reward->unitUID > 0 && !player->is_unit_owned(reward->unitUID))
 				m_result.newUnitUID = reward->unitUID;
+			else if (reward->type == "clamRoom" && m_result.isFirstClear && !m_dataLoader->is_clam_room_open())
+				m_result.opensClamRoom = true;
 		}
 
 		// A first win opens the map on the newest stage; a replay keeps it here (farming)
@@ -870,7 +872,8 @@ bool Stage::spawn_unit(std::shared_ptr<EntityData> unitData, bool ignoreCostAndL
 	{
 		if (player->is_unit_owned(unitData->UID))
 		{
-			const float multiplier = PlayerData::stat_multiplier(player->get_unit_level(unitData->UID));
+			// The Clam Room's extra levels count like levels here
+			const float multiplier = PlayerData::stat_multiplier(player->get_unit_power_level(unitData->UID));
 			unitMagnification.x = multiplier;
 			unitMagnification.y = multiplier;
 		}

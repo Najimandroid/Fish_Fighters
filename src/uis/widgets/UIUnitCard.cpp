@@ -30,6 +30,7 @@ UIUnitCard::UIUnitCard(const std::string& iconTexturePath) :
     UITextureElement({ BASE_WIDTH, BASE_WIDTH * HEIGHT_RATIO }, { 0.f, 0.f }, "assets/images/textures/icons/placeholder.png"),
     m_name(UISkin::heavy_font()),
     m_level(UISkin::heavy_font()),
+    m_levelExtra(UISkin::heavy_font()),
     m_value(UISkin::heavy_font()),
     m_badge(UISkin::heavy_font())
 {
@@ -43,6 +44,7 @@ UIUnitCard::UIUnitCard(const std::string& iconTexturePath) :
 
     UISkin::style_text(m_name, text_size(NAME_SIZE));
     UISkin::style_text(m_level, text_size(INFO_SIZE), UISkin::NUMBER);
+    UISkin::style_text(m_levelExtra, text_size(INFO_SIZE), UISkin::EXTRA);
     UISkin::style_text(m_value, text_size(INFO_SIZE), UISkin::NUMBER);
     UISkin::style_text(m_badge, text_size(BADGE_SIZE));
 }
@@ -71,6 +73,11 @@ void UIUnitCard::set_level_line(const std::string& text, sf::Color color)
 {
     m_level.setString(text);
     UISkin::set_text_color(m_level, color);
+}
+
+void UIUnitCard::set_level_extra(const std::string& text)
+{
+    m_levelExtra.setString(text);
 }
 
 void UIUnitCard::set_value_line(const std::string& text, sf::Color color, bool showsShell)
@@ -159,18 +166,31 @@ void UIUnitCard::render(sf::RenderWindow& window)
     // ----- Info lines: level on the left, value on the right -----
     const float lineY = (slot.position.y + slot.size.y + bottom) / 2.f;
 
-    // Both on one row: shrunk together when they would touch ("LEVEL 12" and a 4-digit price)
+    // Both on one row: shrunk together when they would touch ("LEVEL 12 +3" and a 4-digit price)
+    const bool hasExtra = !m_levelExtra.getString().isEmpty();
     m_level.setScale({ textScale, textScale });
+    m_levelExtra.setScale({ textScale, textScale });
     m_value.setScale({ textScale, textScale });
     const float iconRoom = m_showsShell ? 48.f * scale : 0.f;
+    const float extraGap = 8.f * scale;
     const float room = (right - left) - 52.f * scale;
-    const float needed = m_level.getGlobalBounds().size.x + m_value.getGlobalBounds().size.x + iconRoom;
+    const float needed = m_level.getGlobalBounds().size.x + (hasExtra ? extraGap + m_levelExtra.getGlobalBounds().size.x : 0.f)
+        + m_value.getGlobalBounds().size.x + iconRoom;
     const float fit = needed > room ? room / needed : 1.f;
 
     m_level.setScale({ textScale * fit, textScale * fit });
     UISkin::set_text_anchor(m_level, { 0.f, 0.5f });
     m_level.setPosition({ left + 18.f * scale, lineY });
     window.draw(m_level);
+
+    if (hasExtra)
+    {
+        m_levelExtra.setScale({ textScale * fit, textScale * fit });
+        UISkin::set_text_anchor(m_levelExtra, { 0.f, 0.5f });
+        const sf::FloatRect levelBounds = m_level.getGlobalBounds();
+        m_levelExtra.setPosition({ levelBounds.position.x + levelBounds.size.x + extraGap * fit, lineY });
+        window.draw(m_levelExtra);
+    }
 
     m_value.setScale({ textScale * fit, textScale * fit });
     UISkin::set_text_anchor(m_value, { 1.f, 0.5f });

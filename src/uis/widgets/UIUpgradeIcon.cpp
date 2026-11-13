@@ -16,6 +16,11 @@ void UIUpgradeIcon::set_unit_level(int level)
     m_currentLevel = level;
 }
 
+void UIUpgradeIcon::set_extra_levels(int extraLevels)
+{
+    m_extraLevels = extraLevels;
+}
+
 void UIUpgradeIcon::set_upgrade_cost(int cost)
 {
     m_upgradeCost = cost;
@@ -41,6 +46,7 @@ void UIUpgradeIcon::update(float deltaTime)
     const bool isLocked = m_currentLevel <= 0;
     set_locked(isLocked);
     set_level_line(isLocked ? "LOCKED" : "LEVEL " + std::to_string(m_currentLevel), isLocked ? UISkin::TEXT : UISkin::NUMBER);
+    set_level_extra(!isLocked && m_extraLevels > 0 ? "+" + std::to_string(m_extraLevels) : "");
 
     if (m_currentLevel >= MAX_LEVEL)
         set_value_line("MAX", UISkin::TEXT, false);

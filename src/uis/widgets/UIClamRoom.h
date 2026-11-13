@@ -17,9 +17,11 @@ class DataLoader;
  *   1. the scales fly from the counter into the clam
  *   2. the clam hops and shakes harder and harder (rigid: a hard shell never squashes)
  *   3. it pops open: a flash, a burst of bubbles, light rays
- *   4. the fish rise out in bubbles: NEW! for a fish joining, LEVEL n for one gaining a level (MAX: the scale
- *      comes back)
+ *   4. the fish rise out in bubbles, swimming: NEW! for a fish joining, +1 EXTRA LEVEL for one already owned (like
+ *      The Battle Cats' "+1": stronger, the price and the form don't change), +n SHELLS when its extra levels
+ *      are maxed (PlayerData::MAX_EXTRA_LEVELS)
  *   5. a click and it closes again
+ * A click on the idle clam makes it rattle (clam_tap).
  * OPEN costs 1 Shiny Scale, OPEN x10 ten (ten fish in a 5 x 2 grid). A click skips ahead. The rewards are given
  * (and saved) the moment the scales are spent: the show only presents them.
  *
@@ -47,9 +49,14 @@ private:
     {
         std::string name;
         std::string texturePath;  // The fish's sheet...
-        sf::IntRect frame;        // ...its first frame, cropped to the fish
-        std::string tag;          // NEW!, LEVEL n or MAX
+        sf::IntRect box;          // ...the box its swimming frames use (in a frame)
+        int frameWidth = 0;
+        int frameCount = 1;       // Swimming frames
+        float frameOffset = 0.f;  // Seconds: the fish don't swim in step
+        std::string tag;          // NEW!, +1 EXTRA LEVEL or +n SHELLS (extra levels maxed)
         sf::Color tagColor;
+        std::string level;        // Under the tag: "LEVEL 7"...
+        std::string extra;        // ...and its extra levels after it: "+3" (purple)
         sf::Vector2f target;      // Where it floats once out
         float scale = 1.f;
         float appearAt = 0.f;     // Seconds into REVEALING
@@ -63,6 +70,7 @@ private:
     void skip();
     void spawn_bubbles(int count, float speed);
     sf::Vector2f mouth() const;
+    sf::FloatRect clam_bounds() const;   // The closed clam on screen (clicks make it rattle)
     float random(float from, float to);
 
     void render_clam(sf::RenderWindow& window);
@@ -80,6 +88,7 @@ private:
     int m_count = 1;              // Scales fed this time
     int m_hop = -1;               // Last hop that landed (sounds once per landing)
     bool m_isShaking = false;
+    float m_tapTime = 0.f;        // A click on the idle clam: seconds of rattling left
     std::vector<Reveal> m_reveals;
     std::vector<Bubble> m_bubbles;
     std::mt19937 m_random{ std::random_device{}() };

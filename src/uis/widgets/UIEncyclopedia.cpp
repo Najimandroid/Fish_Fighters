@@ -112,6 +112,7 @@ void UIEncyclopedia::build_entries()
             entry.isKnown = player && player->is_unit_owned(uid);
             const int form = entry.isKnown ? player->get_unit_form(uid) : 0;
             entry.level = entry.isKnown ? player->get_unit_level(uid) : 0;
+            entry.extraLevels = entry.isKnown ? player->get_unit_extra_levels(uid) : 0;
             entry.data = m_dataLoader->get_unit_data(uid, form);
             entry.iconPath = m_dataLoader->get_unit_icon_texture_path(uid, form);
             entry.form = entry.currentForm = form;
@@ -136,12 +137,12 @@ void UIEncyclopedia::build_entries()
 
 float UIEncyclopedia::health_of(const Entry& entry) const
 {
-    return static_cast<float>(entry.data->health) * (m_book == Book::FISH ? PlayerData::stat_multiplier(entry.level) : 1.f);
+    return static_cast<float>(entry.data->health) * (m_book == Book::FISH ? PlayerData::stat_multiplier(entry.level + entry.extraLevels) : 1.f);
 }
 
 float UIEncyclopedia::attack_of(const Entry& entry) const
 {
-    return static_cast<float>(entry.data->attackPower) * (m_book == Book::FISH ? PlayerData::stat_multiplier(entry.level) : 1.f);
+    return static_cast<float>(entry.data->attackPower) * (m_book == Book::FISH ? PlayerData::stat_multiplier(entry.level + entry.extraLevels) : 1.f);
 }
 
 /*
@@ -380,10 +381,13 @@ void UIEncyclopedia::render_details(sf::RenderWindow& window)
     // Level (fish) or types (enemies)
     if (m_book == Book::FISH)
     {
-        drawText("LEVEL " + std::to_string(entry.level), { INFO_X, top + 140.f }, 32, UISkin::NUMBER);
+        sf::FloatRect levelBounds = drawText("LEVEL " + std::to_string(entry.level), { INFO_X, top + 140.f }, 32, UISkin::NUMBER);
+        if (entry.extraLevels > 0)   // The Clam Room's extra levels, purple
+            levelBounds = drawText("+" + std::to_string(entry.extraLevels), { levelBounds.position.x + levelBounds.size.x + 8.f, top + 140.f }, 32, UISkin::EXTRA);
         for (auto& button : m_formButtons) button->render(window);
         if (entry.form > entry.currentForm && entry.form < static_cast<int>(std::size(FORM_LEVELS)) && entry.level < FORM_LEVELS[entry.form])
-            drawText("Comes at level " + std::to_string(FORM_LEVELS[entry.form]), { INFO_X + 200.f, top + 140.f }, 26, sf::Color(255, 128, 104));
+            drawText("Comes at level " + std::to_string(FORM_LEVELS[entry.form]),
+                { std::max(INFO_X + 200.f, levelBounds.position.x + levelBounds.size.x + 24.f), top + 140.f }, 26, sf::Color(255, 128, 104));
     }
     else
     {

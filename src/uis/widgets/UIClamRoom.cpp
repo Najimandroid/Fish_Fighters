@@ -34,23 +34,33 @@ namespace
 
     float ease_out_back(float t) { const float c = 1.70158f; t -= 1.f; return 1.f + (c + 1.f) * t * t * t + c * t * t; }
 
-    // A fish's first swimming frame, cropped to its pixels: the whole fish for its bubble (the icons are close-ups
-    // cut at the edges, and a sheet's frame leaves room for the attack effects)
-    sf::IntRect fish_bounds(const sf::Texture& sheet, int frameCount)
+    const float TAP_SHAKE = 0.4f;            // A click on the closed clam: it rattles this long
+    const float WALK_FRAME_SECONDS = 0.12f;  // The fish swim in their bubbles (like in the Fish Tank)
+
+    // A fish's swimming frames (0 .. knockback frame - 1), cropped to the box its pixels use in all of them: the
+    // whole fish for its bubble, still while it swims (the icons are close-ups cut at the edges, and a sheet's
+    // frame leaves room for the attack effects)
+    struct SwimFrames { sf::IntRect box; int frameWidth = 0; int count = 1; };
+    SwimFrames swim_frames(const sf::Texture& sheet, int frameCount, int knockbackFrameIndex)
     {
+        SwimFrames frames;
         const sf::Vector2u size = sheet.getSize();
         const unsigned int frameWidth = size.x / static_cast<unsigned int>(std::max(1, frameCount));
+        frames.frameWidth = static_cast<int>(frameWidth);
+        frames.count = std::clamp(knockbackFrameIndex, 1, std::max(1, frameCount));
         const sf::Image image = sheet.copyToImage();
         unsigned int left = frameWidth, top = size.y, right = 0, bottom = 0;
-        for (unsigned int y = 0; y < size.y; ++y)
-            for (unsigned int x = 0; x < frameWidth; ++x)
-                if (image.getPixel({ x, y }).a > 24)
-                {
-                    left = std::min(left, x); right = std::max(right, x);
-                    top = std::min(top, y); bottom = std::max(bottom, y);
-                }
-        if (left > right || top > bottom) return { { 0, 0 }, { static_cast<int>(frameWidth), static_cast<int>(size.y) } };
-        return { { static_cast<int>(left), static_cast<int>(top) }, { static_cast<int>(right - left + 1), static_cast<int>(bottom - top + 1) } };
+        for (int frame = 0; frame < frames.count; ++frame)
+            for (unsigned int y = 0; y < size.y; ++y)
+                for (unsigned int x = 0; x < frameWidth; ++x)
+                    if (image.getPixel({ static_cast<unsigned int>(frame) * frameWidth + x, y }).a > 24)
+                    {
+                        left = std::min(left, x); right = std::max(right, x);
+                        top = std::min(top, y); bottom = std::max(bottom, y);
+                    }
+        if (left > right || top > bottom) frames.box = { { 0, 0 }, { static_cast<int>(frameWidth), static_cast<int>(size.y) } };
+        else frames.box = { { static_cast<int>(left), static_cast<int>(top) }, { static_cast<int>(right - left + 1), static_cast<int>(bottom - top + 1) } };
+        return frames;
     }
 }
 
@@ -80,6 +90,13 @@ sf::Vector2f UIClamRoom::mouth() const
     return CLAM_BASE + (MOUTH_IN_CANVAS - CLAM_ORIGIN) * CLAM_SCALE;
 }
 
+sf::FloatRect UIClamRoom::clam_bounds() const
+{
+    // The closed shell fills the canvas from y 150 to its base, x 20 to 280
+    const sf::Vector2f topLeft = CLAM_BASE + (sf::Vector2f{ 20.f, 150.f } - CLAM_ORIGIN) * CLAM_SCALE;
+    return { topLeft, sf::Vector2f{ 260.f, 140.f } * CLAM_SCALE };
+}
+
 void UIClamRoom::go_to(Phase phase)
 {
     m_phase = phase;
@@ -105,24 +122,49 @@ void UIClamRoom::open(int count)
     if (pool.empty()) return;
 
     m_reveals.clear();
-    std::map<std::string, sf::IntRect> bounds;   // A fish drawn twice is cropped once
+    std::map<std::string, SwimFrames> frames;   // A fish drawn twice is cropped once
     for (int i = 0; i < count; ++i)
     {
         const int uid = pool[std::uniform_int_distribution<size_t>(0, pool.size() - 1)(m_random)];
-        const PlayerData::FishReward reward = player->receive_fish(uid);
-        if (reward.isMaxed) player->shinyScales += 1;   // Nothing left to give: the scale comes back
+        auto baseData = m_dataLoader->get_unit_data(uid, 0);
+        const int spareShells = baseData ? baseData->baseUpgradeCost * PlayerData::SPARE_FISH_SHELLS_FACTOR : 0;
+        const PlayerData::FishReward reward = player->receive_fish(uid, spareShells);
 
         Reveal reveal;
         auto data = m_dataLoader->get_unit_data(uid, reward.form);
-        reveal.name = data ? data->name : "?";
+        reveal.name = data && !data->name.empty() ? data->name : "?";
         if (data && !data->texture.empty())
         {
+            if (!frames.contains(data->texture))
+                frames[data->texture] = swim_frames(UISkin::texture_file(data->texture), data->frameCount, data->knockbackFrameIndex);
+            const SwimFrames& swim = frames[data->texture];
             reveal.texturePath = data->texture;
-            if (!bounds.contains(data->texture)) bounds[data->texture] = fish_bounds(UISkin::texture_file(data->texture), data->frameCount);
-            reveal.frame = bounds[data->texture];
+            reveal.box = swim.box;
+            reveal.frameWidth = swim.frameWidth;
+            reveal.frameCount = swim.count;
+            reveal.frameOffset = static_cast<float>(i) * 0.37f;   // Not all in step
         }
-        reveal.tag = reward.isNew ? "NEW!" : reward.isMaxed ? "MAX" : "LEVEL " + std::to_string(reward.level);
-        reveal.tagColor = reward.isNew ? CORAL : reward.isMaxed ? UISkin::TITLE : UISkin::NUMBER;
+
+        // NEW! / +1 EXTRA LEVEL / the shells of a fish whose extra levels are maxed; under it, its level now
+        if (reward.isNew)
+        {
+            reveal.tag = "NEW!";
+            reveal.tagColor = CORAL;
+        }
+        else if (reward.isSpare)
+        {
+            reveal.tag = "+" + std::to_string(reward.shells) + " SHELLS";
+            reveal.tagColor = UISkin::NUMBER;
+            reveal.level = "LEVEL " + std::to_string(reward.level);
+            reveal.extra = "+" + std::to_string(reward.extraLevels) + " MAX";
+        }
+        else
+        {
+            reveal.tag = "+1 EXTRA LEVEL";
+            reveal.tagColor = UISkin::EXTRA;
+            reveal.level = "LEVEL " + std::to_string(reward.level);
+            reveal.extra = "+" + std::to_string(reward.extraLevels);
+        }
         if (count == 1)
         {
             reveal.target = { 960.f, 470.f };
@@ -131,7 +173,7 @@ void UIClamRoom::open(int count)
         }
         else
         {
-            reveal.target = { 480.f + static_cast<float>(i % 5) * 240.f, i < 5 ? 310.f : 610.f };
+            reveal.target = { 480.f + static_cast<float>(i % 5) * 240.f, i < 5 ? 290.f : 615.f };
             reveal.scale = 0.85f;
             reveal.appearAt = 0.1f + static_cast<float>(i) * REVEAL_GAP;
         }
@@ -190,6 +232,7 @@ void UIClamRoom::update(float deltaTime)
 {
     m_time += deltaTime;
     m_phaseTime += deltaTime;
+    m_tapTime = m_phase == Phase::IDLE ? std::max(0.f, m_tapTime - deltaTime) : 0.f;
 
     auto player = m_dataLoader->get_player_data().lock();
     const int scales = player ? player->shinyScales : 0;
@@ -371,8 +414,18 @@ void UIClamRoom::render_clam(sf::RenderWindow& window)
     switch (m_phase)
     {
     case Phase::IDLE:
+    {
         angle = 1.2f * std::sin(m_time * 1.3f);   // Rocking slightly where it sits
+        if (m_tapTime > 0.f)
+        {
+            // Clicked: a short rattle on the rock, dying out (a little hop first)
+            const float t = TAP_SHAKE - m_tapTime, decay = m_tapTime / TAP_SHAKE;
+            angle += std::sin(t * 58.f) * 4.f * decay;
+            shiftX = std::sin(t * 44.f) * 7.f * decay;
+            jump = 10.f * std::max(0.f, std::sin(std::min(1.f, t / 0.12f) * PI));
+        }
         break;
+    }
     case Phase::CHARGING:
     {
         const int hops = m_count == 1 ? 3 : 4;
@@ -450,13 +503,15 @@ void UIClamRoom::render_reveals(sf::RenderWindow& window)
         bubble.setColor(sf::Color(255, 255, 255, static_cast<std::uint8_t>(170 * closing)));
         window.draw(bubble);
 
-        // The whole fish inside, as drawn on its sheet
-        if (!reveal.texturePath.empty() && reveal.frame.size.x > 0 && reveal.frame.size.y > 0)
+        // The whole fish inside, swimming (its walking frames, as drawn on its sheet)
+        if (!reveal.texturePath.empty() && reveal.box.size.x > 0 && reveal.box.size.y > 0)
         {
-            sf::Sprite fish(UISkin::texture_file(reveal.texturePath), reveal.frame);
-            const sf::Vector2f frameSize(reveal.frame.size);
-            const float fit = std::min(size * 0.8f / frameSize.x, size * 0.6f / frameSize.y);
-            fish.setOrigin(frameSize / 2.f);
+            const int frame = static_cast<int>((m_time + reveal.frameOffset) / WALK_FRAME_SECONDS) % std::max(1, reveal.frameCount);
+            sf::Sprite fish(UISkin::texture_file(reveal.texturePath),
+                { { frame * reveal.frameWidth + reveal.box.position.x, reveal.box.position.y }, reveal.box.size });
+            const sf::Vector2f boxSize(reveal.box.size);
+            const float fit = std::min(size * 0.8f / boxSize.x, size * 0.6f / boxSize.y);
+            fish.setOrigin(boxSize / 2.f);
             fish.setScale({ fit, fit });
             fish.setPosition(position);
             fish.setColor(sf::Color(255, 255, 255, static_cast<std::uint8_t>(255 * closing)));
@@ -464,17 +519,34 @@ void UIClamRoom::render_reveals(sf::RenderWindow& window)
         }
 
         if (t < 1.f || closing < 1.f) continue;
-        const float textScale = reveal.scale > 1.f ? 1.f : 0.8f;
-        UISkin::style_text(m_text, static_cast<unsigned int>(40 * textScale), sf::Color::White);
-        m_text.setString(reveal.name);
-        UISkin::set_text_anchor(m_text, { 0.5f, 0.f });
-        m_text.setPosition(position + sf::Vector2f{ 0.f, size * 0.62f });
-        window.draw(m_text);
-        UISkin::style_text(m_text, static_cast<unsigned int>(34 * textScale), reveal.tagColor);
-        m_text.setString(reveal.tag);
-        UISkin::set_text_anchor(m_text, { 0.5f, 0.f });
-        m_text.setPosition(position + sf::Vector2f{ 0.f, size * 0.62f + 50.f * textScale });
-        window.draw(m_text);
+
+        // Under the bubble: the name, the tag (NEW!, +1 EXTRA LEVEL, +n SHELLS), the level with its extra levels.
+        // Smaller in the x10 grid, where each fish has a 240 px column
+        const bool isBig = reveal.scale > 1.f;
+        const unsigned int nameSize = isBig ? 40 : 32, tagSize = isBig ? 34 : 25, levelSize = isBig ? 30 : 22;
+        float y = position.y + size * 0.62f;
+        auto line = [&](const std::string& string, unsigned int textSize, sf::Color color, float x, sf::Vector2f anchor)
+            {
+                UISkin::style_text(m_text, textSize, color);
+                m_text.setString(string);
+                UISkin::set_text_anchor(m_text, anchor);
+                m_text.setPosition({ x, y });
+                window.draw(m_text);
+                return m_text.getGlobalBounds();
+            };
+        line(reveal.name, nameSize, sf::Color::White, position.x, { 0.5f, 0.f });
+        y += static_cast<float>(nameSize) * 1.1f;
+        line(reveal.tag, tagSize, reveal.tagColor, position.x, { 0.5f, 0.f });
+        y += static_cast<float>(tagSize) * 1.15f;
+        if (!reveal.level.empty())
+        {
+            // "LEVEL 7 +3", centered as one
+            sf::Text measure(UISkin::heavy_font(), reveal.level + " " + reveal.extra);
+            UISkin::style_text(measure, levelSize, UISkin::NUMBER);
+            const float left = position.x - measure.getLocalBounds().size.x / 2.f;
+            const sf::FloatRect level = line(reveal.level, levelSize, UISkin::NUMBER, left, { 0.f, 0.f });
+            line(reveal.extra, levelSize, UISkin::EXTRA, level.position.x + level.size.x + static_cast<float>(levelSize) * 0.3f, { 0.f, 0.f });
+        }
     }
 }
 
@@ -510,6 +582,17 @@ void UIClamRoom::handle_event(const sf::Event& event, const sf::RenderWindow& wi
     {
         m_openOne.handle_event(event, window);
         m_openTen.handle_event(event, window);
+
+        // A click on the clam: it rattles (just for fun)
+        if (const auto* pressed = event.getIf<sf::Event::MouseButtonPressed>(); pressed && pressed->button == sf::Mouse::Button::Left)
+        {
+            const sf::Vector2f mouse = window.mapPixelToCoords(pressed->position);
+            if (clam_bounds().contains(mouse))
+            {
+                m_tapTime = TAP_SHAKE;
+                play_sound("clam_tap");
+            }
+        }
         return;
     }
     // Anything else: a click (or Space / Enter) skips ahead

@@ -66,7 +66,9 @@ public:
     Settings& get_settings();
 
     // Accessors
+    // A form the unit doesn't have gives its last one (a fish with one form never turns into an unknown fish)
     const std::shared_ptr<EntityData> get_unit_data(int uid, int form) const;
+    int get_unit_form_count(int uid) const;
     const std::shared_ptr<EntityData> get_enemy_data(int uid) const;
     const std::shared_ptr<StageData> get_stage_data(int uid) const;
     const std::shared_ptr<ChapterData> get_chapter_data(int uid) const;
@@ -81,8 +83,13 @@ public:
     const std::unordered_map<int, std::shared_ptr<EntityData>>& get_enemies_database() const;
     const std::unordered_map<int, std::shared_ptr<StageData>>& get_stages_database() const;
 
-    // Returns file paths for unit/enemy icons
+    // Returns file paths for unit/enemy icons (a form the unit doesn't have: its last one's)
     std::string get_unit_icon_texture_path(int uid, int form) const;
+
+    // The Clam Room opens when a stage with a "clamRoom" reward is cleared (set in FishEditor's stage rewards);
+    // no such stage: it's open from the start. get_clam_room_stage: that stage's UID (-1: none)
+    int get_clam_room_stage() const;
+    bool is_clam_room_open() const;
     std::string get_enemy_icon_texture_path(int uid) const;
 
 private:

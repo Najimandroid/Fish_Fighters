@@ -28,6 +28,7 @@ namespace UISkin
     inline const sf::Color SHADE{ 0, 0, 0, 140 };         // Darkens what can't be used
     inline const sf::Color EMPTY_SLOT_TINT{ 150, 170, 180 };// A slot with no unit in it
     inline const sf::Color TITLE{ 226, 240, 255 };        // Screen titles on the steel bar (pale blue)
+    inline const sf::Color EXTRA{ 205, 150, 255 };        // The Clam Room's extra levels ("LEVEL 7 +3"), its purple
 
     // ----- Fonts -----
     const sf::Font& heavy_font();    // M PLUS Rounded 1c Black: titles, buttons, numbers

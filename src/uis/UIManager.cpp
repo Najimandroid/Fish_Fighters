@@ -364,13 +364,27 @@ void UIManager::generate_fish_tank_uis()
     add_ui_element(nextStage);
     add_ui_element(upgradeBadge);
 
-    // The Clam Room, next to the tank (under the porthole)
+    // The Clam Room, next to the tank (under the porthole). Locked (greyed, the stage that opens it written above)
+    // until the stage with the "clamRoom" reward is cleared
+    const bool isClamRoomOpen = m_dataLoader->is_clam_room_open();
     auto clamButton = std::make_shared<UIButtonElement>(sf::Vector2f{ 400.f, 96.f }, sf::Vector2f{ 1192.f, 860.f }, "CLAM ROOM");
     clamButton->set_text_size(44);
     clamButton->set_style(UIButtonElement::Style::Secondary);
+    clamButton->set_enabled(isClamRoomOpen);
     clamButton->set_callback([this]() { m_pendingAction = [this]() { generate_clam_room_uis(); }; });
     add_ui_element(clamButton);
-    if (auto player = m_dataLoader->get_player_data().lock(); player && player->shinyScales > 0)
+    if (!isClamRoomOpen)
+    {
+        auto stage = m_dataLoader->get_stage_data(m_dataLoader->get_clam_room_stage());
+        auto lockLabel = std::make_shared<UITextElement>(sf::Vector2f{ 400.f, 30.f }, sf::Vector2f{ 0.f, 0.f },
+            stage ? "Clear \"" + stage->name + "\" to open" : "Locked", 26);
+        UISkin::style_text(lockLabel->get_text(), 26, UISkin::OUTLINE);
+        lockLabel->get_text().setOutlineThickness(0.f);
+        UISkin::set_text_anchor(lockLabel->get_text(), { 0.5f, 0.5f });
+        lockLabel->set_position({ 1192.f + 200.f, 860.f - 24.f });
+        add_ui_element(lockLabel);
+    }
+    else if (auto player = m_dataLoader->get_player_data().lock(); player && player->shinyScales > 0)
         add_ui_element(std::make_shared<UIBadge>(sf::Vector2f{ 1192.f + 400.f - 14.f, 860.f + 12.f }, "!"));
     add_ui_element(optionsButton);
     add_ui_element(quitButton);

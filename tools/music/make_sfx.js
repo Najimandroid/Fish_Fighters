@@ -361,6 +361,18 @@ define("clam_hop", { volume: 0.55, pitch: 0.03, cooldown: 0.05, maxInstances: 2,
     reverb(s, 0.1, 0.5);
     return s;
 });
+// The clam was clicked: it rattles on the rock, three quick knocks dying out (a hard shell, lighter than a hop)
+define("clam_tap", { volume: 0.4, pitch: 0.05, cooldown: 0.06, maxInstances: 2, priority: 40 }, 2, p => {
+    const s = new Sound(0.4);
+    [0, 0.055, 0.1].forEach((at, i) => {
+        const level = [1, 0.7, 0.45][i];
+        bell(s, { at, freq: (700 + i * 90) * p, ratio: 2.76, index: 2, tau: 0.025, amp: 0.3 * level, pan: i % 2 ? 0.2 : -0.2 });
+        noise(s, { at, dur: 0.01, amp: 0.22 * level, attack: 0.0005, tau: 0.003, filter: { type: "bandpass", freq: 2400, q: 1.3 } });
+        tone(s, { at, dur: 0.05, freq: t => 170 * p * Math.pow(0.6, t / 0.05), amp: 0.3 * level, tau: 0.02 });
+    });
+    reverb(s, 0.08, 0.5);
+    return s;
+});
 // The clam shakes before it opens: the shell rattling on the rock faster and harder, and a magic shimmer rising
 // under it (the suspense). Plays once, the opening follows 0.45 s (one scale) or 0.8 s (ten) later
 define("clam_shake", { volume: 0.5, pitch: 0, cooldown: 0.3, maxInstances: 1, priority: 75 }, 1, () => {

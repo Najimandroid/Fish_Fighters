@@ -51,6 +51,9 @@ protected:
     // Left info line ("LEVEL 5")
     void set_level_line(const std::string& text, sf::Color color);
 
+    // After the level, the Clam Room's extra levels ("+3", in UISkin::EXTRA); empty = none
+    void set_level_extra(const std::string& text);
+
     // Right info line, after a shell icon when it's a price in shells
     void set_value_line(const std::string& text, sf::Color color, bool showsShell);
 
@@ -68,6 +71,7 @@ private:
 
     sf::Text m_name;
     sf::Text m_level;
+    sf::Text m_levelExtra;
     sf::Text m_value;
     sf::Text m_badge;
 };
