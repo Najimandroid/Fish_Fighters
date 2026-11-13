@@ -75,6 +75,10 @@ set(PROJECT_SOURCES
     src/uis/widgets/UITutorial.cpp
     src/uis/widgets/UIBattleIntro.cpp
     src/uis/widgets/UIClamRoom.cpp
+    src/uis/widgets/UIClamStorage.cpp
+    src/uis/widgets/UIFlyingIcons.cpp
+    src/uis/widgets/UIShoalPower.cpp
+    src/uis/widgets/UIToast.cpp
     src/uis/widgets/UIStageCash.cpp
     src/uis/widgets/UICashUp.cpp
     src/uis/widgets/UIBaseHealthInfo.cpp

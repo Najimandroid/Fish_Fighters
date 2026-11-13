@@ -21,7 +21,9 @@ public:
 
     // Constructor
     // dataLoader: reference to DataLoader to access player data
-    enum class Currency { SHELLS, SHINY_SCALES };
+    // SHELLS at the right end of the title bar, SHINY_SCALES left of it, FISH_SCALES further left (a gap for the
+    // craft "+" button between them)
+    enum class Currency { SHELLS, SHINY_SCALES, FISH_SCALES };
     UIPlayerShellsInfo(std::shared_ptr<DataLoader> dataLoader, Currency currency = Currency::SHELLS);
 
     // Update the displayed shell count

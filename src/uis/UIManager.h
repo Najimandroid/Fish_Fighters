@@ -11,6 +11,7 @@ class Stage;
 class UIRoundButton;
 class UIButtonElement;
 class UIConfirmDialog;
+class UIPlayerShellsInfo;
 class UIOptionsMenu;
 class AudioManager;
 enum class GameSpeedState;
@@ -65,6 +66,7 @@ public:
     void generate_equip_menu_uis();
     void generate_encyclopedia_uis();
     void generate_clam_room_uis();   // The gacha: Shiny Scales into the giant clam, fish out
+    void generate_clam_storage_uis();   // The fish out of the clam, to use or sell
     void generate_battle_uis();
     void generate_chapter_map_uis();
     void generate_victory_uis();
@@ -104,6 +106,15 @@ private:
 
     // "Quit Fish Fighters?" dialog that quitButton opens (add it last, so it's on top)
     std::shared_ptr<UIConfirmDialog> make_quit_dialog(const std::shared_ptr<UIButtonElement>& quitButton);
+
+    // The Clam Room's and Clam Storage's counters (shells, Shiny Scales, Fish Scales) and the craft "+": adds them,
+    // returns them with the craft dialog (add it last)
+    struct ClamCounters
+    {
+        std::shared_ptr<UIPlayerShellsInfo> shells, shinyScales, fishScales;
+        std::shared_ptr<UIConfirmDialog> craftDialog;
+    };
+    ClamCounters add_clam_counters();
 
     // The Options window (add it after the screen's other elements) and a button that opens it
     std::shared_ptr<UIOptionsMenu> make_options_menu();

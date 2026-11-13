@@ -34,10 +34,6 @@ namespace
     const float REVEAL_GAP = 0.18f;
     const float CLOSE = 0.35f;
 
-    // A spare fish's shells: SHELLS_PER_SPARE leave its bubble once it's out, one after the other, into the pill
-    const int SHELLS_PER_SPARE = 8;
-    const float SHELLS_DELAY = 0.55f, SHELLS_GAP = 0.07f, SHELL_FLIGHT = 0.65f, SHELL_SIZE = 50.f;
-    const sf::Vector2f SHELL_COUNTER{ 1645.f, 55.f };     // Where they fly to without the pill
 
     // The clam's shadow on the ground (like the fish and enemies): a bit wider than the closed shell, centered on its
     // bottom edge so half of it shows under it, drawn twice (the room is dark: one would hardly show)
@@ -64,39 +60,17 @@ namespace
     const float TAP_COOLDOWN = 1.1f;
     const float WALK_FRAME_SECONDS = 0.12f;  // The fish swim in their bubbles (like in the Fish Tank)
 
-    // A fish's swimming frames (0 .. knockback frame - 1), cropped to the box its pixels use in all of them: the
-    // whole fish for its bubble, still while it swims (the icons are close-ups cut at the edges, and a sheet's
-    // frame leaves room for the attack effects)
-    struct SwimFrames { sf::IntRect box; int frameWidth = 0; int count = 1; };
-    SwimFrames swim_frames(const sf::Texture& sheet, int frameCount, int knockbackFrameIndex)
-    {
-        SwimFrames frames;
-        const sf::Vector2u size = sheet.getSize();
-        const unsigned int frameWidth = size.x / static_cast<unsigned int>(std::max(1, frameCount));
-        frames.frameWidth = static_cast<int>(frameWidth);
-        frames.count = std::clamp(knockbackFrameIndex, 1, std::max(1, frameCount));
-        const sf::Image image = sheet.copyToImage();
-        unsigned int left = frameWidth, top = size.y, right = 0, bottom = 0;
-        for (int frame = 0; frame < frames.count; ++frame)
-            for (unsigned int y = 0; y < size.y; ++y)
-                for (unsigned int x = 0; x < frameWidth; ++x)
-                    if (image.getPixel({ static_cast<unsigned int>(frame) * frameWidth + x, y }).a > 24)
-                    {
-                        left = std::min(left, x); right = std::max(right, x);
-                        top = std::min(top, y); bottom = std::max(bottom, y);
-                    }
-        if (left > right || top > bottom) frames.box = { { 0, 0 }, { static_cast<int>(frameWidth), static_cast<int>(size.y) } };
-        else frames.box = { { static_cast<int>(left), static_cast<int>(top) }, { static_cast<int>(right - left + 1), static_cast<int>(bottom - top + 1) } };
-        return frames;
-    }
 }
 
 UIClamRoom::UIClamRoom(std::shared_ptr<DataLoader> dataLoader) :
     m_dataLoader(std::move(dataLoader)),
     m_openOne({ 360.f, 110.f }, { 580.f, 930.f }, "OPEN"),
     m_openTen({ 360.f, 110.f }, { 980.f, 930.f }, "OPEN x10"),
+    m_storage({ 340.f, 110.f }, { 1520.f, 930.f }, "STORAGE"),
     m_text(UISkin::heavy_font())
 {
+    m_storage.set_text_size(38);
+    m_storage.set_style(UIButtonElement::Style::Secondary);
     m_openOne.set_text_size(48);
     m_openTen.set_text_size(38);
     m_openTen.set_style(UIButtonElement::Style::Secondary);
@@ -138,50 +112,22 @@ void UIClamRoom::go_to(Phase phase)
 {
     m_phase = phase;
     m_phaseTime = 0.f;
-    if (phase == Phase::REVEALING) m_showTime = 0.f;
 }
 
-void UIClamRoom::set_counters(std::shared_ptr<UIPlayerShellsInfo> shells, std::shared_ptr<UIPlayerShellsInfo> scales)
+void UIClamRoom::set_scales_counter(std::shared_ptr<UIPlayerShellsInfo> scales)
 {
-    m_shellsInfo = shells;
     m_scalesInfo = scales;
 }
 
-sf::Vector2f UIClamRoom::shells_target() const
+void UIClamRoom::set_on_storage(std::function<void()> onStorage)
 {
-    auto pill = m_shellsInfo.lock();
-    return pill ? pill->get_icon_center() : SHELL_COUNTER;
+    m_storage.set_callback(std::move(onStorage));
 }
 
 sf::Vector2f UIClamRoom::scales_source() const
 {
     auto pill = m_scalesInfo.lock();
     return pill ? pill->get_icon_center() : SCALE_COUNTER;
-}
-
-float UIClamRoom::shell_start(const FlyingShell& shell) const
-{
-    const float appearAt = shell.reveal < m_reveals.size() ? m_reveals[shell.reveal].appearAt : 0.f;
-    return appearAt + SHELLS_DELAY + SHELLS_GAP * static_cast<float>(shell.index);
-}
-
-/*
- * The shells that reached the pill: counted there (it pops), a tick rising with each, the collect sound for the
- * last one of a fish. all: every one lands now (the clam closes)
- */
-void UIClamRoom::land_shells(bool all)
-{
-    auto pill = m_shellsInfo.lock();
-    for (FlyingShell& shell : m_flyingShells)
-    {
-        if (shell.hasLanded || (!all && m_showTime < shell_start(shell) + SHELL_FLIGHT)) continue;
-        shell.hasLanded = true;
-        if (pill) pill->receive(shell.amount);
-        if (all) continue;
-        play_sound("reward_tick", 1.f + 0.06f * static_cast<float>(shell.index));
-        if (shell.isLast) play_sound("shell_collect");
-    }
-    if (all) m_flyingShells.clear();
 }
 
 /*
@@ -202,24 +148,18 @@ void UIClamRoom::open(int count)
     const std::vector<int> pool(uids.begin(), uids.end());
     if (pool.empty()) return;
 
-    land_shells(true);
     m_reveals.clear();
-    std::map<std::string, SwimFrames> frames;   // A fish drawn twice is cropped once
     for (int i = 0; i < count; ++i)
     {
         const int uid = pool[std::uniform_int_distribution<size_t>(0, pool.size() - 1)(m_random)];
-        auto baseData = m_dataLoader->get_unit_data(uid, 0);
-        const int spareShells = baseData ? baseData->baseUpgradeCost * PlayerData::SPARE_FISH_SHELLS_FACTOR : 0;
-        const PlayerData::FishReward reward = player->receive_fish(uid, spareShells);
+        const PlayerData::FishReward reward = player->receive_fish(uid);   // Into the Clam Storage
 
         Reveal reveal;
-        auto data = m_dataLoader->get_unit_data(uid, reward.form);
+        auto data = m_dataLoader->get_unit_data(uid, player->get_unit_form(uid));
         reveal.name = data && !data->name.empty() ? data->name : "?";
         if (data && !data->texture.empty())
         {
-            if (!frames.contains(data->texture))
-                frames[data->texture] = swim_frames(UISkin::texture_file(data->texture), data->frameCount, data->knockbackFrameIndex);
-            const SwimFrames& swim = frames[data->texture];
+            const UISkin::SwimFrames& swim = UISkin::swim_frames(data->texture, data->frameCount, data->knockbackFrameIndex);
             reveal.texturePath = data->texture;
             reveal.box = swim.box;
             reveal.frameWidth = swim.frameWidth;
@@ -227,39 +167,9 @@ void UIClamRoom::open(int count)
             reveal.frameOffset = static_cast<float>(i) * 0.37f;   // Not all in step
         }
 
-        // NEW! / +1 EXTRA LEVEL / the shells of a fish whose extra levels are maxed; under it, its level now
-        if (reward.isNew)
-        {
-            reveal.tag = "NEW!";
-            reveal.tagColor = CORAL;
-        }
-        else if (reward.isSpare)
-        {
-            // Its shells fly out of its bubble into the pill, which counts them as they land
-            for (int k = 0; k < SHELLS_PER_SPARE && reward.shells > 0; ++k)
-            {
-                FlyingShell shell;
-                shell.reveal = m_reveals.size();
-                shell.index = k;
-                shell.amount = reward.shells / SHELLS_PER_SPARE + (k == SHELLS_PER_SPARE - 1 ? reward.shells % SHELLS_PER_SPARE : 0);
-                shell.isLast = k == SHELLS_PER_SPARE - 1;
-                shell.bend = { random(-170.f, 40.f), random(-90.f, 70.f) };
-                shell.spin = random(-540.f, 540.f);
-                m_flyingShells.push_back(shell);
-            }
-            if (auto pill = m_shellsInfo.lock()) pill->hold_back(reward.shells);
-            reveal.tag = "+" + std::to_string(reward.shells) + " SHELLS";
-            reveal.tagColor = UISkin::NUMBER;
-            reveal.level = "LEVEL " + std::to_string(reward.level);
-            reveal.extra = "+" + std::to_string(reward.extraLevels) + " MAX";
-        }
-        else
-        {
-            reveal.tag = "+1 EXTRA LEVEL";
-            reveal.tagColor = UISkin::EXTRA;
-            reveal.level = "LEVEL " + std::to_string(reward.level);
-            reveal.extra = "+" + std::to_string(reward.extraLevels);
-        }
+        // NEW! for a kind the player doesn't have yet; every fish goes into the Clam Storage
+        reveal.tag = reward.isNew ? "NEW!" : "TO STORAGE";
+        reveal.tagColor = reward.isNew ? CORAL : UISkin::TITLE;
         if (count == 1)
         {
             reveal.target = { 960.f, 470.f };
@@ -280,7 +190,6 @@ void UIClamRoom::open(int count)
     m_hop = -1;
     m_isShaking = false;
     m_hasGulped = false;
-    m_showTime = 0.f;   // The shells' clock starts with the fish (REVEALING): not the last opening's
     go_to(Phase::FEEDING);
 }
 
@@ -301,13 +210,6 @@ void UIClamRoom::skip()
         for (Reveal& reveal : m_reveals) reveal.appearAt = std::min(reveal.appearAt, m_phaseTime);
         break;
     case Phase::REVEALED:
-        // Shells still flying: they all land at once; else the clam closes
-        if (!m_flyingShells.empty())
-        {
-            land_shells(true);
-            play_sound("shell_collect");
-            break;
-        }
         go_to(Phase::CLOSING);
         play_sound("clam_hop", 1.1f);
         break;
@@ -362,8 +264,10 @@ void UIClamRoom::update(float deltaTime)
     const int scales = player ? player->shinyScales : 0;
     m_openOne.set_enabled(m_phase == Phase::IDLE && scales >= 1);
     m_openTen.set_enabled(m_phase == Phase::IDLE && scales >= 10);
+    m_storage.set_enabled(m_phase == Phase::IDLE);
     m_openOne.update(deltaTime);
     m_openTen.update(deltaTime);
+    m_storage.update(deltaTime);
 
     switch (m_phase)
     {
@@ -423,19 +327,10 @@ void UIClamRoom::update(float deltaTime)
         break;
     }
     case Phase::CLOSING:
-        if (m_phaseTime >= CLOSE) { land_shells(true); m_reveals.clear(); go_to(Phase::IDLE); }
+        if (m_phaseTime >= CLOSE) { m_reveals.clear(); go_to(Phase::IDLE); }
         break;
     default:
         break;
-    }
-
-    // A spare fish's shells reaching the pill
-    if (m_phase == Phase::REVEALING || m_phase == Phase::REVEALED)
-    {
-        m_showTime += deltaTime;
-        land_shells(false);
-        if (!m_flyingShells.empty() && std::all_of(m_flyingShells.begin(), m_flyingShells.end(), [](const FlyingShell& shell) { return shell.hasLanded; }))
-            m_flyingShells.clear();
     }
 
     for (Bubble& bubble : m_bubbles)
@@ -525,14 +420,38 @@ void UIClamRoom::render(sf::RenderWindow& window)
             button->is_enabled() ? sf::Color::White : sf::Color(255, 255, 255, 120));
     }
 
+    // STORAGE, with the Clam Storage's icon and how many fish wait there
+    auto player = m_dataLoader->get_player_data().lock();
+    int stored = 0;
+    if (player) for (const auto& [uid, count] : player->clamStorage) stored += count;
+    m_storage.render(window);
+    const sf::FloatRect storageBox = m_storage.get_bounds();
+    UISkin::draw_fitted(window, UISkin::texture("icon_clam_storage"),
+        { { storageBox.position.x + 12.f, storageBox.position.y + storageBox.size.y / 2.f - 28.f }, { 56.f, 56.f } },
+        m_storage.is_enabled() ? sf::Color::White : sf::Color(255, 255, 255, 120));
+    if (stored > 0)
+    {
+        const float radius = 26.f;
+        sf::CircleShape badge(radius);
+        badge.setOrigin({ radius, radius });
+        badge.setPosition({ storageBox.position.x + storageBox.size.x - 10.f, storageBox.position.y + 8.f });
+        badge.setFillColor(CORAL);
+        badge.setOutlineThickness(4.f);
+        badge.setOutlineColor(UISkin::OUTLINE);
+        window.draw(badge);
+        UISkin::style_text(m_text, 28, sf::Color::White);
+        m_text.setString(std::to_string(stored));
+        UISkin::set_text_anchor(m_text, { 0.5f, 0.5f });
+        m_text.setPosition(badge.getPosition());
+        window.draw(m_text);
+    }
+
     // What to do
     std::string hint;
     if (m_phase == Phase::IDLE)
-    {
-        auto player = m_dataLoader->get_player_data().lock();
-        hint = player && player->shinyScales > 0 ? "Feed the giant clam a Shiny Scale..." : "No Shiny Scales left: win battles to find more!";
-    }
-    else if (m_phase == Phase::REVEALED) hint = "Click to continue";
+        hint = player && player->shinyScales > 0 ? "Feed the giant clam a Shiny Scale..."
+            : "No Shiny Scales: raise your Shoal Power, or craft one from Fish Scales (+)";
+    else if (m_phase == Phase::REVEALED) hint = "Click to continue: your fish wait in the Clam Storage";
     if (!hint.empty())
     {
         UISkin::style_text(m_text, 36, UISkin::TITLE);
@@ -731,7 +650,7 @@ void UIClamRoom::render_reveals(sf::RenderWindow& window)
         // Under the bubble: the name, the tag (NEW!, +1 EXTRA LEVEL, +n SHELLS), the level with its extra levels.
         // Smaller in the x10 grid, where each fish has a 240 px column
         const bool isBig = reveal.scale > 1.f;
-        const unsigned int nameSize = isBig ? 40 : 32, tagSize = isBig ? 34 : 25, levelSize = isBig ? 30 : 22;
+        const unsigned int nameSize = isBig ? 40 : 32, tagSize = isBig ? 34 : 25;
         float y = position.y + size * 0.62f;
         auto line = [&](const std::string& string, unsigned int textSize, sf::Color color, float x, sf::Vector2f anchor)
             {
@@ -745,16 +664,6 @@ void UIClamRoom::render_reveals(sf::RenderWindow& window)
         line(reveal.name, nameSize, sf::Color::White, position.x, { 0.5f, 0.f });
         y += static_cast<float>(nameSize) * 1.1f;
         line(reveal.tag, tagSize, reveal.tagColor, position.x, { 0.5f, 0.f });
-        y += static_cast<float>(tagSize) * 1.15f;
-        if (!reveal.level.empty())
-        {
-            // "LEVEL 7 +3", centered as one
-            sf::Text measure(UISkin::heavy_font(), reveal.level + " " + reveal.extra);
-            UISkin::style_text(measure, levelSize, UISkin::NUMBER);
-            const float left = position.x - measure.getLocalBounds().size.x / 2.f;
-            const sf::FloatRect level = line(reveal.level, levelSize, UISkin::NUMBER, left, { 0.f, 0.f });
-            line(reveal.extra, levelSize, UISkin::EXTRA, level.position.x + level.size.x + static_cast<float>(levelSize) * 0.3f, { 0.f, 0.f });
-        }
     }
 }
 
@@ -766,33 +675,6 @@ void UIClamRoom::render_overlay(sf::RenderWindow& window)
 {
     if (!m_isVisible) return;
     render_scales(window);
-
-    // The shells only fly once the fish are out (before that, they wait inside the closed clam)
-    if (m_phase != Phase::REVEALING && m_phase != Phase::REVEALED) return;
-    const sf::Texture& icon = UISkin::texture("icon_shell");
-    const sf::Vector2f iconSize(icon.getSize());
-    if (iconSize.x <= 0.f || iconSize.y <= 0.f) return;
-    const sf::Vector2f to = shells_target();
-    for (const FlyingShell& shell : m_flyingShells)
-    {
-        if (shell.hasLanded || shell.reveal >= m_reveals.size()) continue;
-        const float t = (m_showTime - shell_start(shell)) / SHELL_FLIGHT;
-        if (t <= 0.f || t >= 1.f) continue;
-
-        // Out sideways at the bubble's height, then up into the pill from below (not across the Shiny Scales' pill)
-        const sf::Vector2f from = m_reveals[shell.reveal].target;
-        const sf::Vector2f control{ to.x + shell.bend.x, from.y + shell.bend.y };
-        const float e = t * t * (3.f - 2.f * t);
-        const sf::Vector2f position = from * ((1.f - e) * (1.f - e)) + control * (2.f * (1.f - e) * e) + to * (e * e);
-        const float size = SHELL_SIZE * (t < 0.15f ? 0.4f + 0.6f * t / 0.15f : 1.f - 0.3f * (t - 0.15f) / 0.85f);
-
-        sf::Sprite sprite(icon);
-        sprite.setOrigin(iconSize / 2.f);
-        sprite.setScale({ size / iconSize.x, size / iconSize.y });
-        sprite.setRotation(sf::degrees(shell.spin * t));
-        sprite.setPosition(position);
-        window.draw(sprite);
-    }
 }
 
 /*
@@ -829,6 +711,7 @@ void UIClamRoom::handle_event(const sf::Event& event, const sf::RenderWindow& wi
     {
         m_openOne.handle_event(event, window);
         m_openTen.handle_event(event, window);
+        m_storage.handle_event(event, window);
 
         // A click on the clam: it heaves and thuds (just for fun), not more than once per TAP_COOLDOWN
         if (const auto* pressed = event.getIf<sf::Event::MouseButtonPressed>(); pressed && pressed->button == sf::Mouse::Button::Left)

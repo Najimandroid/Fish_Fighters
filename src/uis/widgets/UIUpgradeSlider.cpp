@@ -1,4 +1,5 @@
 #include "UIUpgradeSlider.h"
+#include "UIToast.h"
 #include "../UISkin.h"
 #include "../../core/DataLoader.h"
 
@@ -84,6 +85,7 @@ void UIUpgradeSlider::upgrade_selected()
 				player->unlock_unit(unitUid); // Unlock if not owned
 				play_sound("unlock");
 			}
+			UIToast::announce_shoal_rewards(*player);   // A Shoal Power milestone: Shiny Scales
 
 			// The form (and so the name and icon) can change with the level
 			auto icon = m_upgradeIcons[m_currentIndex];

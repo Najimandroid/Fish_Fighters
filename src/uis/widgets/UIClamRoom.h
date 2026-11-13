@@ -3,6 +3,7 @@
 #include "UIElement.h"
 #include "UIButtonElement.h"
 
+#include <functional>
 #include <memory>
 #include <random>
 #include <string>
@@ -19,15 +20,15 @@ class UIPlayerShellsInfo;
  *      with its mouth full (the gulp) and snaps shut as it lands
  *   2. the clam hops and shakes harder and harder (rigid: a hard shell never squashes)
  *   3. it pops open: a flash, a burst of bubbles, light rays
- *   4. the fish rise out in bubbles, swimming: NEW! for a fish joining, +1 EXTRA LEVEL for one already owned (like
- *      The Battle Cats' "+1": stronger, the price and the form don't change), +n SHELLS when its extra levels
- *      are maxed (PlayerData::MAX_EXTRA_LEVELS): its shells fly out of the bubble into the shells pill, which
- *      counts them as they land
+ *   4. the fish rise out in bubbles, swimming: NEW! for a kind the player doesn't have yet, TO STORAGE for the
+ *      others. Every fish goes into the Clam Storage (UIClamStorage), where it's used (unlocks the fish, or +1
+ *      extra level) or sold (shells, or a Fish Scale)
  *   5. a click and it closes again
+ * The STORAGE button (bottom right, with how many fish wait there) opens the Clam Storage (set_on_storage).
  * A click on the idle clam pokes it where it was clicked: pressed down on that side, it rocks on its round bottom (the
  * other side heaves up; in the middle it hops), drops back with a thud (clam_tap, heard on that side) and rocks back,
  * once a second at most: it's heavy.
- * OPEN costs 1 Shiny Scale, OPEN x10 ten (ten fish in a 5 x 2 grid). A click skips ahead. The rewards are given
+ * OPEN costs 1 Shiny Scale, OPEN x10 ten (ten fish in a 5 x 2 grid). A click skips ahead. The fish are stored
  * (and saved) the moment the scales are spent: the show only presents them.
  *
  * The fish come from every fish of the game, equally likely (PlayerData::receive_fish gives them).
@@ -48,8 +49,11 @@ public:
     // While a clam is opening (the back button waits)
     bool is_busy() const { return m_phase != Phase::IDLE; }
 
-    // The title bar's pills: the Shiny Scales fly out of theirs, a spare fish's shells fly into theirs
-    void set_counters(std::shared_ptr<UIPlayerShellsInfo> shells, std::shared_ptr<UIPlayerShellsInfo> scales);
+    // The Shiny Scales pill: the scales fly out of it into the clam
+    void set_scales_counter(std::shared_ptr<UIPlayerShellsInfo> scales);
+
+    // The STORAGE button's action (opens the Clam Storage)
+    void set_on_storage(std::function<void()> onStorage);
 
     // What flies over the title bar (drawn by UIClamRoomOverlay, after the title bar and the pills)
     void render_overlay(sf::RenderWindow& window);
@@ -65,10 +69,8 @@ private:
         int frameWidth = 0;
         int frameCount = 1;       // Swimming frames
         float frameOffset = 0.f;  // Seconds: the fish don't swim in step
-        std::string tag;          // NEW!, +1 EXTRA LEVEL or +n SHELLS (extra levels maxed)
+        std::string tag;          // NEW! or TO STORAGE
         sf::Color tagColor;
-        std::string level;        // Under the tag: "LEVEL 7"...
-        std::string extra;        // ...and its extra levels after it: "+3" (purple)
         sf::Vector2f target;      // Where it floats once out
         float scale = 1.f;
         float appearAt = 0.f;     // Seconds into REVEALING
@@ -77,20 +79,6 @@ private:
 
     struct Bubble { sf::Vector2f position; sf::Vector2f velocity; float radius = 6.f; float age = 0.f; float life = 1.5f; };
 
-    // A shell of a spare fish (its extra levels maxed) flying out of its bubble into the shells pill
-    struct FlyingShell
-    {
-        size_t reveal = 0;        // Its fish (m_reveals)
-        int index = 0;            // Which one of its shells: they leave one after the other
-        int amount = 0;           // Shells it brings to the counter
-        bool isLast = false;      // The last one of its fish (the collect sound)
-        sf::Vector2f bend;        // Its arc: the curve's control point, from (the pill's x, the bubble's y)
-        float spin = 0.f;         // Degrees over the flight
-        bool hasLanded = false;
-    };
-    float shell_start(const FlyingShell& shell) const;   // In m_showTime
-    void land_shells(bool all);                           // The ones that arrived (all: every one, now)
-    sf::Vector2f shells_target() const;
     sf::Vector2f scales_source() const;
 
     void open(int count);
@@ -111,6 +99,7 @@ private:
     std::shared_ptr<DataLoader> m_dataLoader;
     UIButtonElement m_openOne;
     UIButtonElement m_openTen;
+    UIButtonElement m_storage;    // To the Clam Storage
     sf::Text m_text;
 
     Phase m_phase = Phase::IDLE;
@@ -126,9 +115,6 @@ private:
     bool m_hasTapLanded = true;   // Its thud played
     std::vector<Reveal> m_reveals;
     std::vector<Bubble> m_bubbles;
-    std::vector<FlyingShell> m_flyingShells;
-    float m_showTime = 0.f;       // Seconds since the fish started coming out (REVEALING, then REVEALED)
-    std::weak_ptr<UIPlayerShellsInfo> m_shellsInfo;
     std::weak_ptr<UIPlayerShellsInfo> m_scalesInfo;
     std::mt19937 m_random{ std::random_device{}() };
 };
@@ -136,8 +122,8 @@ private:
 /*
  * UIClamRoomOverlay
  * -----------------
- * Draws what the Clam Room throws over the title bar (the Shiny Scales leaving their pill, a spare fish's shells
- * going into theirs), so they reach the counters: added after the title bar and the pills.
+ * Draws what the Clam Room throws over the title bar (the Shiny Scales leaving their pill), so they come out of the
+ * counter: added after the title bar and the pills.
  */
 class UIClamRoomOverlay : public UIElement
 {

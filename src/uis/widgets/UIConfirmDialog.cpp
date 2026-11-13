@@ -69,6 +69,20 @@ void UIConfirmDialog::set_confirm_sound(const std::string& soundName)
     m_confirmButton.set_click_sound(soundName);
 }
 
+void UIConfirmDialog::set_texts(const std::string& question, const std::string& explanation, const std::string& confirmLabel)
+{
+    m_question.setString(question);
+    UISkin::set_text_anchor(m_question, { 0.5f, 0.5f });
+    m_explanation.setString(UISkin::wrap_text(explanation, EXPLANATION_SIZE, EXPLANATION_WIDTH, UISkin::regular_font()));
+    UISkin::set_text_anchor(m_explanation, { 0.5f, 0.5f });
+    m_confirmButton.set_text(confirmLabel);
+}
+
+void UIConfirmDialog::set_confirm_tint(const sf::Color& tint)
+{
+    m_confirmButton.set_fill_color(tint);
+}
+
 void UIConfirmDialog::update(float deltaTime)
 {
     m_confirmButton.update(deltaTime);

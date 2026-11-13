@@ -28,6 +28,12 @@ public:
     // Sound of the confirm button ("ui_back" by default)
     void set_confirm_sound(const std::string& soundName);
 
+    // Changes what it asks (a dialog reused for different things: selling 3 Clownfish, crafting...)
+    void set_texts(const std::string& question, const std::string& explanation, const std::string& confirmLabel);
+
+    // The confirm button's color: orange by default (danger), white keeps the yellow (a good action)
+    void set_confirm_tint(const sf::Color& tint);
+
     void update(float deltaTime) override;
     void render(sf::RenderWindow& window) override;
     void handle_event(const sf::Event& event, const sf::RenderWindow& window) override;

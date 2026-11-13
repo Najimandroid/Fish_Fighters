@@ -10,6 +10,7 @@ namespace
     const float ICON_SIZE = 62.f;
     const float PADDING = 18.f;
     const float SHINY_OFFSET_X = 364.f;   // The Shiny Scales pill: left of the shells pill
+    const float FISH_OFFSET_X = 744.f;    // The Fish Scales pill: left of it, room for the craft "+" between
 }
 
 /*
@@ -29,12 +30,17 @@ UIPlayerShellsInfo::UIPlayerShellsInfo(std::shared_ptr<DataLoader> dataLoader, C
 void UIPlayerShellsInfo::update(float deltaTime)
 {
     if (auto player = m_dataLoader->get_player_data().lock())
-        m_text.setString(std::to_string((m_currency == Currency::SHELLS ? player->shells : player->shinyScales) - m_heldBack));
+    {
+        const int amount = m_currency == Currency::SHELLS ? player->shells
+            : m_currency == Currency::SHINY_SCALES ? player->shinyScales : player->fishScales;
+        m_text.setString(std::to_string(amount - m_heldBack));
+    }
     m_pop = std::max(0.f, m_pop - deltaTime * 5.f);
 
     const float textWidth = m_text.getLocalBounds().size.x;
     m_size = { std::max(MIN_PILL_WIDTH, textWidth + ICON_SIZE + 3.f * PADDING), PILL_HEIGHT };
-    m_position = { 1920.f - (m_currency == Currency::SHELLS ? OFFSET_X : SHINY_OFFSET_X) - m_size.x, OFFSET_Y };
+    const float offset = m_currency == Currency::SHELLS ? OFFSET_X : m_currency == Currency::SHINY_SCALES ? SHINY_OFFSET_X : FISH_OFFSET_X;
+    m_position = { 1920.f - offset - m_size.x, OFFSET_Y };
 
     // Digits on the right of the pill, vertically centered
     UISkin::set_text_anchor(m_text, { 1.f, 0.5f });
@@ -47,7 +53,8 @@ void UIPlayerShellsInfo::render(sf::RenderWindow& window)
 
     UISkin::draw_nine_slice(window, UISkin::PANEL_DARK, get_bounds(), 1.f);
     const float iconSize = ICON_SIZE * (1.f + 0.3f * m_pop);   // Pops when something lands in it
-    UISkin::draw_fitted(window, UISkin::texture(m_currency == Currency::SHELLS ? "icon_shell" : "icon_shiny_scale"),
+    const char* icon = m_currency == Currency::SHELLS ? "icon_shell" : m_currency == Currency::SHINY_SCALES ? "icon_shiny_scale" : "icon_fish_scale";
+    UISkin::draw_fitted(window, UISkin::texture(icon),
         { get_icon_center() - sf::Vector2f{ iconSize, iconSize } / 2.f, { iconSize, iconSize } });
     window.draw(m_text);
 }
