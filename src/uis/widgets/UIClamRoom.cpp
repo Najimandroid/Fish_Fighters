@@ -280,6 +280,7 @@ void UIClamRoom::open(int count)
     m_hop = -1;
     m_isShaking = false;
     m_hasGulped = false;
+    m_showTime = 0.f;   // The shells' clock starts with the fish (REVEALING): not the last opening's
     go_to(Phase::FEEDING);
 }
 
@@ -766,6 +767,8 @@ void UIClamRoom::render_overlay(sf::RenderWindow& window)
     if (!m_isVisible) return;
     render_scales(window);
 
+    // The shells only fly once the fish are out (before that, they wait inside the closed clam)
+    if (m_phase != Phase::REVEALING && m_phase != Phase::REVEALED) return;
     const sf::Texture& icon = UISkin::texture("icon_shell");
     const sf::Vector2f iconSize(icon.getSize());
     if (iconSize.x <= 0.f || iconSize.y <= 0.f) return;
