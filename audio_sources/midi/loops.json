@@ -79,6 +79,17 @@
         "loopStartSample": 4320000,
         "loopLengthSample": 4114286
     },
+    "theme_clam_inside": {
+        "title": "Pearl Chamber (Inside)",
+        "kind": "menu",
+        "key": "Bb",
+        "tempo": 112,
+        "sampleRate": 48000,
+        "lengthSeconds": 175.688,
+        "loopStartSample": 4320000,
+        "loopLengthSample": 4114286,
+        "loudnessDb": -3
+    },
     "theme_shanty": {
         "title": "Sunken Galleon",
         "kind": "stage",

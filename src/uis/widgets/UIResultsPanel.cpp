@@ -242,7 +242,7 @@ void UIResultsPanel::render_victory(sf::RenderWindow& window, const sf::FloatRec
             UISkin::draw_fitted(window, UISkin::texture("clam_closed"),
                 { { textLeft - 24.f - 166.f * 0.8f / 2.f - clamSize / 2.f, centerY - clamSize * 0.72f }, { clamSize, clamSize } });
         draw_text(window, "CLAM ROOM OPEN!", 40, UISkin::EXTRA, { textLeft, centerY - 22.f }, { 0.f, 0.5f }, alpha_of(pop * 2.f));
-        draw_text(window, "Feed it Shiny Scales in the Fish Tank", 28, UISkin::TEXT, { textLeft, centerY + 24.f }, { 0.f, 0.5f }, alpha_of(pop * 2.f));
+        draw_text(window, "A Shiny Scale waits for you there", 28, UISkin::TEXT, { textLeft, centerY + 24.f }, { 0.f, 0.5f }, alpha_of(pop * 2.f));
     }
 }
 

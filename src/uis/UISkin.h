@@ -44,6 +44,12 @@ namespace UISkin
     // Cell of an icon sheet made of square cells, read left to right then top to bottom
     sf::IntRect icon_cell(const sf::Texture& sheet, int index, int cellSize);
 
+    // A fish's swimming frames (0 .. knockback frame - 1 of its sheet), cropped to the box its pixels use in all of
+    // them: the whole fish, still while it swims (icons are close-ups cut at the edges, and a sheet's frame leaves
+    // room for the attack effects). Worked out once per sheet. Frame k: { k * frameWidth + box.x, box.y, box.size }
+    struct SwimFrames { sf::IntRect box; int frameWidth = 0; int count = 1; };
+    const SwimFrames& swim_frames(const std::string& sheetPath, int frameCount, int knockbackFrameIndex);
+
     // ----- 9-slice -----
     // An image cut in 3 x 3: the corners keep their shape, the edges and the middle stretch
     struct NineSlice

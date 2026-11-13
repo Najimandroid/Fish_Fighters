@@ -624,8 +624,14 @@ bool DataLoader::load_player(const std::string& path)
 
         // Shells
         m_playerData->shells = read_int(j.at("money"), "shells");
-        m_playerData->shinyScales = j.at("money").contains("shinyScales")
-            ? read_int(j.at("money"), "shinyScales") : PlayerData::TEST_STARTING_SHINY_SCALES;
+        m_playerData->shinyScales = j.at("money").contains("shinyScales") ? read_int(j.at("money"), "shinyScales") : 0;
+        m_playerData->fishScales = j.at("money").contains("fishScales") ? read_int(j.at("money"), "fishScales") : 0;
+
+        // The Clam Storage: fish out of the clam waiting to be used or sold (missing in older saves)
+        m_playerData->clamStorage.clear();
+        if (j.at("units").contains("clamStorage"))
+            for (auto& [uidStr, count] : j.at("units").at("clamStorage").items())
+                if (const int stored = read_int_value(count, "clamStorage"); stored > 0) m_playerData->clamStorage[std::stoi(uidStr)] = stored;
 
         // Owned units
         m_playerData->ownedUnits.clear();
@@ -678,6 +684,12 @@ bool DataLoader::load_player(const std::string& path)
         m_playerData->lastStage = j.at("progression").contains("lastStage")
             ? read_int(j.at("progression"), "lastStage") : -1;
 
+        // School Rank milestones rewarded, the Clam Room's welcome gift (missing in older saves)
+        const json& progression = j.at("progression");
+        m_playerData->schoolRankRewardsClaimed = progression.contains("schoolRankRewardsClaimed") ? read_int(progression, "schoolRankRewardsClaimed")
+            : progression.contains("shoalRewardsClaimed") ? read_int(progression, "shoalRewardsClaimed") : 0;   // Its first name
+        m_playerData->hasClamRoomGift = progression.contains("clamRoomGift") && progression.at("clamRoomGift").get<bool>();
+
         // Enemies met in battle (missing in older saves)
         m_playerData->seenEnemies.clear();
         if (j.at("progression").contains("seenEnemies"))
@@ -716,6 +728,12 @@ bool DataLoader::save_player(const std::string& path)
     // Shells
     j["money"]["shells"] = m_playerData->shells;
     j["money"]["shinyScales"] = m_playerData->shinyScales;
+    j["money"]["fishScales"] = m_playerData->fishScales;
+
+    // The Clam Storage
+    j["units"]["clamStorage"] = json::object();
+    for (const auto& [uid, count] : m_playerData->clamStorage)
+        if (count > 0) j["units"]["clamStorage"][std::to_string(uid)] = count;
 
     // Owned units
     for (auto& [uid, unitInfo] : m_playerData->ownedUnits)
@@ -759,6 +777,8 @@ bool DataLoader::save_player(const std::string& path)
     // Current chapter
     j["progression"]["currentChapter"] = m_playerData->currentChapter;
     j["progression"]["lastStage"] = m_playerData->lastStage;
+    j["progression"]["schoolRankRewardsClaimed"] = m_playerData->schoolRankRewardsClaimed;
+    j["progression"]["clamRoomGift"] = m_playerData->hasClamRoomGift;
 
     // Enemies met in battle (sorted, so the file doesn't change order between saves)
     std::vector<int> seenEnemies(m_playerData->seenEnemies.begin(), m_playerData->seenEnemies.end());

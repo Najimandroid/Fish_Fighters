@@ -24,31 +24,113 @@ bool PlayerData::spend_shiny_scales(int amount)
     return true;
 }
 
-PlayerData::FishReward PlayerData::receive_fish(int unitUid, int spareShells)
+PlayerData::FishReward PlayerData::receive_fish(int unitUid)
 {
     FishReward reward;
     reward.uid = unitUid;
-    auto owned = ownedUnits.find(unitUid);
-    if (owned == ownedUnits.end())
+    reward.isNew = !is_unit_owned(unitUid) && get_stored_count(unitUid) == 0;
+    clamStorage[unitUid] += 1;
+    return reward;
+}
+
+int PlayerData::get_stored_count(int unitUid) const
+{
+    auto it = clamStorage.find(unitUid);
+    return it != clamStorage.end() ? it->second : 0;
+}
+
+PlayerData::StoredUse PlayerData::preview_use(int unitUid, int count) const
+{
+    StoredUse use;
+    count = std::clamp(count, 0, get_stored_count(unitUid));
+    if (count <= 0) return use;
+
+    int room = MAX_EXTRA_LEVELS - get_unit_extra_levels(unitUid);
+    if (!is_unit_owned(unitUid))
+    {
+        use.unlocks = true;   // The first one joins the tank (level 1, no extra level yet)
+        use.usable = 1;
+        room = MAX_EXTRA_LEVELS;
+        count -= 1;
+    }
+    use.extraLevels = std::min(count, std::max(0, room));
+    use.usable += use.extraLevels;
+    return use;
+}
+
+int PlayerData::use_stored_fish(int unitUid, int count)
+{
+    const StoredUse use = preview_use(unitUid, count);
+    if (use.usable <= 0) return 0;
+    if (use.unlocks)
     {
         unitsWaitingToBeUnlocked.erase(unitUid);
         ownedUnits[unitUid] = { 1, 0 };
-        reward.isNew = true;
     }
-    else if (owned->second.extraLevels >= MAX_EXTRA_LEVELS)
+    ownedUnits[unitUid].extraLevels = std::min(MAX_EXTRA_LEVELS, ownedUnits[unitUid].extraLevels + use.extraLevels);
+    if ((clamStorage[unitUid] -= use.usable) <= 0) clamStorage.erase(unitUid);
+    return use.usable;
+}
+
+int PlayerData::sell_stored_fish_for_shells(int unitUid, int count, int shellsEach)
+{
+    count = std::clamp(count, 0, get_stored_count(unitUid));
+    if (count <= 0) return 0;
+    gain_shells(count * std::max(0, shellsEach));
+    if ((clamStorage[unitUid] -= count) <= 0) clamStorage.erase(unitUid);
+    return count;
+}
+
+int PlayerData::sell_stored_fish_for_scales(int unitUid, int count)
+{
+    count = std::clamp(count, 0, get_stored_count(unitUid));
+    if (count <= 0) return 0;
+    fishScales += count;
+    if ((clamStorage[unitUid] -= count) <= 0) clamStorage.erase(unitUid);
+    return count;
+}
+
+bool PlayerData::craft_shiny_scale()
+{
+    if (fishScales < FISH_SCALES_PER_SHINY) return false;
+    fishScales -= FISH_SCALES_PER_SHINY;
+    shinyScales += 1;
+    return true;
+}
+
+int PlayerData::get_school_rank() const
+{
+    int power = 0;
+    for (const auto& [uid, unit] : ownedUnits) power += unit.level + unit.extraLevels;
+    return power;
+}
+
+PlayerData::SchoolRankMilestone PlayerData::school_rank_milestone(int index)
+{
+    const int listed = static_cast<int>(std::size(SCHOOL_RANK_MILESTONES));
+    if (index < listed) return SCHOOL_RANK_MILESTONES[std::max(0, index)];
+    return { SCHOOL_RANK_MILESTONES[listed - 1].power + SCHOOL_RANK_STEP_AFTER * (index - listed + 1), 1 };
+}
+
+int PlayerData::claim_school_rank_rewards()
+{
+    int given = 0;
+    const int power = get_school_rank();
+    while (school_rank_milestone(schoolRankRewardsClaimed).power <= power)
     {
-        reward.isSpare = true;
-        reward.shells = std::max(0, spareShells);
-        gain_shells(reward.shells);
+        given += school_rank_milestone(schoolRankRewardsClaimed).shinyScales;
+        schoolRankRewardsClaimed += 1;
     }
-    else
-    {
-        owned->second.extraLevels += 1;
-    }
-    reward.level = get_unit_level(unitUid);
-    reward.extraLevels = get_unit_extra_levels(unitUid);
-    reward.form = get_unit_form(unitUid);
-    return reward;
+    shinyScales += given;
+    return given;
+}
+
+bool PlayerData::give_clam_room_gift()
+{
+    if (hasClamRoomGift) return false;
+    hasClamRoomGift = true;
+    shinyScales += 1;
+    return true;
 }
 
 /*

@@ -12,6 +12,10 @@
 #include "widgets/UITutorial.h"
 #include "widgets/UIBattleIntro.h"
 #include "widgets/UIClamRoom.h"
+#include "widgets/UIClamStorage.h"
+#include "widgets/UIFlyingIcons.h"
+#include "widgets/UISchoolRank.h"
+#include "widgets/UIToast.h"
 #include "widgets/UIStatusIcons.h"
 #include "widgets/UIUpgradeSlider.h"
 #include "widgets/UIEquipSlider.h"
@@ -40,6 +44,7 @@ namespace
 {
     const std::string MENU_MUSIC = "theme_base";     // The Fish Tank menus
     const std::string CLAM_MUSIC = "theme_clam";     // The Clam Room: the Fish Tank theme gone magic, on the same grid
+    const std::string CLAM_INSIDE_MUSIC = "theme_clam_inside";   // The Clam Storage: the Clam Room's, muffled and calmer
     const std::string TITLE_MUSIC = "theme_title";   // The title screen
     const float TITLE_MUSIC_TEMPO = 168.f;           // Its tempo: the title bounces on the beat
 }
@@ -69,7 +74,7 @@ void UIManager::enter_menu_screen()
     if (m_audio)
     {
         // Back from the Clam Room, its theme melts into the Fish Tank's where it is (both share their grid)
-        if (m_audio->get_current_music() == CLAM_MUSIC) m_audio->play_music_in_sync(MENU_MUSIC);
+        if (m_audio->get_current_music() == CLAM_MUSIC || m_audio->get_current_music() == CLAM_INSIDE_MUSIC) m_audio->play_music_in_sync(MENU_MUSIC);
         else m_audio->play_music(MENU_MUSIC);
         m_audio->play_sound("ui_transition");
     }
@@ -162,6 +167,15 @@ void UIManager::update_uis(float deltaTime)
     for (auto& element : m_uiElements)
     {
         element->update(deltaTime);
+    }
+
+    // An action an animation asked for when it ended (the zoom into the Clam Storage): after the loop, since it can
+    // change the screen
+    if (m_pendingAction)
+    {
+        auto action = m_pendingAction;
+        m_pendingAction = nullptr;
+        action();
     }
 }
 
@@ -384,10 +398,20 @@ void UIManager::generate_fish_tank_uis()
         lockLabel->set_position({ 1192.f + 200.f, 860.f - 24.f });
         add_ui_element(lockLabel);
     }
-    else if (auto player = m_dataLoader->get_player_data().lock(); player && player->shinyScales > 0)
+    else if (auto player = m_dataLoader->get_player_data().lock(); player && (player->shinyScales > 0 || !player->clamStorage.empty()))
         add_ui_element(std::make_shared<UIBadge>(sf::Vector2f{ 1192.f + 400.f - 14.f, 860.f + 12.f }, "!"));
+
+    // The School Rank (top right), and its milestones reached since last time
+    add_ui_element(std::make_shared<UISchoolRank>(m_dataLoader));
+    if (auto player = m_dataLoader->get_player_data().lock())
+    {
+        const int before = player->shinyScales;
+        UIToast::announce_school_rank_rewards(*player);
+        if (player->shinyScales != before) m_dataLoader->save_progress();
+    }
     add_ui_element(optionsButton);
     add_ui_element(quitButton);
+    add_ui_element(std::make_shared<UIToast>());
     add_ui_element(optionsMenu);  // Windows last: on top while open
     add_ui_element(quitDialog);
 }
@@ -396,21 +420,75 @@ void UIManager::generate_fish_tank_uis()
  * Generate the Encyclopedia: every fish and every enemy (black until owned / met), their stats and abilities
  */
 /*
- * The Clam Room: the dim purple room, the giant clam (UIClamRoom), the shells and the Shiny Scales, back to the
- * Fish Tank. Its theme fades in over the Fish Tank's at the same place in the music
+ * The Clam Room's and the Clam Storage's title bar: the shells, the Shiny Scales, the Fish Scales, and the "+"
+ * between them that crafts a Shiny Scale from 10 Fish Scales (it asks first, and says how to get Fish Scales).
+ * The craft dialog is returned: add it last (it's a window)
  */
-void UIManager::generate_clam_room_uis()
+UIManager::ClamCounters UIManager::add_clam_counters()
+{
+    ClamCounters counters;
+    counters.shells = std::make_shared<UIPlayerShellsInfo>(m_dataLoader);
+    counters.shinyScales = std::make_shared<UIPlayerShellsInfo>(m_dataLoader, UIPlayerShellsInfo::Currency::SHINY_SCALES);
+    counters.fishScales = std::make_shared<UIPlayerShellsInfo>(m_dataLoader, UIPlayerShellsInfo::Currency::FISH_SCALES);
+    add_ui_element(counters.shells);
+    add_ui_element(counters.shinyScales);
+    add_ui_element(counters.fishScales);
+
+    auto craftDialog = std::make_shared<UIConfirmDialog>("", "", "CRAFT", "CANCEL");
+    craftDialog->set_confirm_tint(sf::Color::White);   // A good action: yellow
+    craftDialog->set_confirm_sound("");
+    counters.craftDialog = craftDialog;
+
+    // Inside the right end of the Shiny Scales pill (its right edge stays at 1920 - 364 whatever its width)
+    counters.shinyScales->set_trailing_room(58.f);
+    auto plus = std::make_shared<UIButtonElement>(sf::Vector2f{ 50.f, 50.f }, sf::Vector2f{ 1920.f - 364.f - 12.f - 50.f, 30.f }, "+");
+    plus->set_text_size(40);
+    std::weak_ptr<UIConfirmDialog> weakDialog = craftDialog;
+    plus->set_callback([this, weakDialog]()
+        {
+            auto dialog = weakDialog.lock();
+            auto player = m_dataLoader->get_player_data().lock();
+            if (!dialog || !player) return;
+            const int need = PlayerData::FISH_SCALES_PER_SHINY;
+            dialog->set_texts("Craft a Shiny Scale?", std::to_string(need) + " Fish Scales make one (you have " + std::to_string(player->fishScales)
+                + "). Sell fish in the Clam Storage for more.", "CRAFT");
+            dialog->open([this]()
+                {
+                    auto player = m_dataLoader->get_player_data().lock();
+                    if (!player || !player->craft_shiny_scale()) { if (m_audio) m_audio->play_sound("ui_error"); return; }
+                    if (m_audio) m_audio->play_sound("purchase");
+                    m_dataLoader->save_progress();
+                });
+        });
+    add_ui_element(plus);
+    return counters;
+}
+
+/*
+ * The Clam Room: the dim purple room, the giant clam (UIClamRoom), the shells, the Shiny Scales and the Fish Scales
+ * (with the craft "+"), STORAGE (dives into the clam: the Clam Storage), back to the Fish Tank. Its theme fades in
+ * over the Fish Tank's (or the Clam Storage's) at the same place in the music. fromStorage: the view zooms out of
+ * the open clam first. The first visit gives one Shiny Scale for a first roll
+ */
+void UIManager::generate_clam_room_uis(bool fromStorage)
 {
     m_uiElements.clear();
     if (m_audio)
     {
         m_audio->play_music_in_sync(CLAM_MUSIC);
-        m_audio->play_sound("ui_transition");
+        if (!fromStorage) m_audio->play_sound("ui_transition");
+    }
+    if (auto player = m_dataLoader->get_player_data().lock(); player && player->give_clam_room_gift())
+    {
+        UIToast::show("A WELCOME GIFT!", "1 Shiny Scale for your first clam", "icon_shiny_scale");
+        m_dataLoader->save_progress();
     }
 
     auto bg = std::make_shared<UITextureElement>(sf::Vector2f{ 1920.f, 1080.f }, sf::Vector2f{ 0.f, 0.f },
         "assets/images/textures/backgrounds/menus/title.png");
     auto room = std::make_shared<UIClamRoom>(m_dataLoader);
+    room->set_on_storage([this]() { m_pendingAction = [this]() { generate_clam_storage_uis(); }; });
+    if (fromStorage) room->enter_from_storage();
     std::weak_ptr<UIClamRoom> weakRoom = room;
     auto backButton = make_back_button([this, weakRoom]()
         {
@@ -421,13 +499,46 @@ void UIManager::generate_clam_room_uis()
     add_ui_element(bg);
     add_ui_element(room);
     add_ui_element(std::make_shared<UITitleBar>("Clam Room"));
-    auto shellsPill = std::make_shared<UIPlayerShellsInfo>(m_dataLoader);
-    auto scalesPill = std::make_shared<UIPlayerShellsInfo>(m_dataLoader, UIPlayerShellsInfo::Currency::SHINY_SCALES);
-    room->set_counters(shellsPill, scalesPill);   // The scales fly out of theirs, a spare fish's shells into theirs
-    add_ui_element(shellsPill);
-    add_ui_element(scalesPill);
+    const ClamCounters counters = add_clam_counters();
+    room->set_scales_counter(counters.shinyScales);   // The scales fly out of it
     add_ui_element(std::make_shared<UIClamRoomOverlay>(room));   // What flies over the title bar
     add_ui_element(backButton);
+    add_ui_element(std::make_shared<UIToast>());
+    add_ui_element(counters.craftDialog);
+}
+
+/*
+ * The Clam Storage, inside the clam (dark pink, UIClamStorage draws it all): the fish out of the clam, picked to be
+ * used or sold, the counters they fly into, back to the Clam Room (out of the clam). Its theme is the Clam Room's
+ * muffled and calmer, swapped at the same place in the music
+ */
+void UIManager::generate_clam_storage_uis()
+{
+    m_uiElements.clear();
+    if (m_audio) m_audio->play_music_in_sync(CLAM_INSIDE_MUSIC);
+
+    auto storage = std::make_shared<UIClamStorage>(m_dataLoader);
+    auto flying = std::make_shared<UIFlyingIcons>();
+    auto sellDialog = std::make_shared<UIConfirmDialog>("", "", "SELL", "CANCEL");
+    sellDialog->set_confirm_sound("");
+    std::weak_ptr<UIFlyingIcons> weakFlying = flying;
+    auto backButton = make_back_button([this, weakFlying]()
+        {
+            if (auto flying = weakFlying.lock()) flying->land_all();
+            generate_clam_room_uis(true);
+        });
+
+    add_ui_element(storage);
+    add_ui_element(std::make_shared<UITitleBar>("Clam Storage"));
+    const ClamCounters counters = add_clam_counters();
+    storage->set_counters(counters.shells, counters.fishScales);
+    storage->set_flying_icons(flying);
+    storage->set_confirm_dialog(sellDialog);
+    add_ui_element(flying);   // Over the title bar: into the pills
+    add_ui_element(backButton);
+    add_ui_element(std::make_shared<UIToast>());
+    add_ui_element(sellDialog);
+    add_ui_element(counters.craftDialog);
 }
 
 void UIManager::generate_encyclopedia_uis()
@@ -480,6 +591,7 @@ void UIManager::generate_upgrade_menu_uis()
     add_ui_element(titleBar);
     add_ui_element(shellsInfo);
     add_ui_element(backButton);
+    add_ui_element(std::make_shared<UIToast>());   // School Rank milestones reached by upgrading
 }
 
 /*

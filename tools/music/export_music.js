@@ -88,6 +88,8 @@ for (const [name, info] of Object.entries(loops)) {
         samples = samples.slice(0, (end + RATE / 20) * 2);
         measured = loudness(samples.subarray(start * 2, end * 2));
         speakerGainDb = themeGainDb(samples.subarray(start * 2, end * 2));   // -16 LUFS, or more for a bass-heavy theme
+        // A theme meant to sit lower or higher (loudnessDb, compose_music.js): -16 LUFS plus that, no small-speaker lift
+        if (info.loudnessDb) speakerGainDb = -16 + info.loudnessDb - measured;
     } else {
         let frames = samples.length / 2;
         while (frames > 0 && Math.abs(samples[frames * 2 - 1]) < 1e-4 && Math.abs(samples[frames * 2 - 2]) < 1e-4) frames--;

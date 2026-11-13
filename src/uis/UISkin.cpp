@@ -282,6 +282,32 @@ const sf::Texture& UISkin::texture_file(const std::string& path)
     return *textures.emplace(path, std::move(texture)).first->second;
 }
 
+const UISkin::SwimFrames& UISkin::swim_frames(const std::string& sheetPath, int frameCount, int knockbackFrameIndex)
+{
+    static std::unordered_map<std::string, SwimFrames> cache;
+    if (auto it = cache.find(sheetPath); it != cache.end()) return it->second;
+
+    SwimFrames frames;
+    const sf::Texture& sheet = texture_file(sheetPath);
+    const sf::Vector2u size = sheet.getSize();
+    const unsigned int frameWidth = size.x / static_cast<unsigned int>(std::max(1, frameCount));
+    frames.frameWidth = static_cast<int>(frameWidth);
+    frames.count = std::clamp(knockbackFrameIndex, 1, std::max(1, frameCount));
+    const sf::Image image = sheet.copyToImage();
+    unsigned int left = frameWidth, top = size.y, right = 0, bottom = 0;
+    for (int frame = 0; frame < frames.count; ++frame)
+        for (unsigned int y = 0; y < size.y; ++y)
+            for (unsigned int x = 0; x < frameWidth; ++x)
+                if (image.getPixel({ static_cast<unsigned int>(frame) * frameWidth + x, y }).a > 24)
+                {
+                    left = std::min(left, x); right = std::max(right, x);
+                    top = std::min(top, y); bottom = std::max(bottom, y);
+                }
+    if (left > right || top > bottom) frames.box = { { 0, 0 }, { static_cast<int>(frameWidth), static_cast<int>(size.y) } };
+    else frames.box = { { static_cast<int>(left), static_cast<int>(top) }, { static_cast<int>(right - left + 1), static_cast<int>(bottom - top + 1) } };
+    return cache.emplace(sheetPath, frames).first->second;
+}
+
 sf::IntRect UISkin::icon_cell(const sf::Texture& sheet, int index, int cellSize)
 {
     const int columns = std::max(1, static_cast<int>(sheet.getSize().x) / cellSize);

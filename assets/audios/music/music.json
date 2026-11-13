@@ -71,6 +71,15 @@
         "loopStart": 4320000,
         "loopLength": 4114286
     },
+    "theme_clam_inside": {
+        "title": "Pearl Chamber (Inside)",
+        "kind": "menu",
+        "file": "assets/audios/music/theme_clam_inside.ogg",
+        "sampleRate": 48000,
+        "key": "Bb",
+        "loopStart": 4320000,
+        "loopLength": 4114286
+    },
     "theme_shanty": {
         "title": "Sunken Galleon",
         "kind": "stage",

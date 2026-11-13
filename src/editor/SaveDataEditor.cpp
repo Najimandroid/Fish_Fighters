@@ -229,9 +229,13 @@ void SaveDataEditor::draw_progress(EditorContext& ctx)
         int shells = read_int(m_save["money"], "shells");
         if (ImGui::DragInt("##shells", &shells, 10.f, 0, 1000000000)) { m_save["money"]["shells"] = std::max(0, shells); m_hasChanges = true; }
 
-        property_label("Shiny Scales", "The Clam Room's currency (a save without it starts with 100 while it's tested)");
-        int scales = m_save["money"].contains("shinyScales") ? read_int(m_save["money"], "shinyScales") : 100;
+        property_label("Shiny Scales", "The Clam Room's currency (from the School Rank's milestones, the welcome gift, crafting)");
+        int scales = m_save["money"].contains("shinyScales") ? read_int(m_save["money"], "shinyScales") : 0;
         if (ImGui::DragInt("##scales", &scales, 1.f, 0, 1000000)) { m_save["money"]["shinyScales"] = std::max(0, scales); m_hasChanges = true; }
+
+        property_label("Fish Scales", "From selling fish in the Clam Storage: 10 craft a Shiny Scale");
+        int fishScales = m_save["money"].contains("fishScales") ? read_int(m_save["money"], "fishScales") : 0;
+        if (ImGui::DragInt("##fishScales", &fishScales, 1.f, 0, 1000000)) { m_save["money"]["fishScales"] = std::max(0, fishScales); m_hasChanges = true; }
 
         property_label("Current chapter", "The chapter the map opens on");
         int chapter = read_int(m_save["progression"], "currentChapter", 1);

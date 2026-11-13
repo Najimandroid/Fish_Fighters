@@ -166,7 +166,12 @@ for (const piece of Object.keys(loops)) {
 
     // Loudness target, then the limiter for the peaks
     // (the themes: -16 LUFS, or louder for a bass-heavy one so small speakers hear it as loud: themeGainDb)
-    const gain = Math.pow(10, (loops[piece].kind === "jingle" ? TARGET_LUFS.jingle - loudness(mix) : themeGainDb(mix)) / 20);
+    // (loudnessDb: a song meant to sit lower or higher than the others, set in compose_music.js: the plain target
+    // plus that, without the small-speaker lift, which would undo a muffled theme)
+    const offset = loops[piece].loudnessDb;
+    const gainDb = loops[piece].kind === "jingle" ? TARGET_LUFS.jingle - loudness(mix)
+        : offset ? TARGET_LUFS.other + offset - loudness(mix) : themeGainDb(mix);
+    const gain = Math.pow(10, gainDb / 20);
     for (let i = 0; i < mix.length; i++) mix[i] *= gain;
     const reduction = limit(mix);
 
