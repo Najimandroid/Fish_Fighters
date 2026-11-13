@@ -421,8 +421,12 @@ void UIManager::generate_clam_room_uis()
     add_ui_element(bg);
     add_ui_element(room);
     add_ui_element(std::make_shared<UITitleBar>("Clam Room"));
-    add_ui_element(std::make_shared<UIPlayerShellsInfo>(m_dataLoader));
-    add_ui_element(std::make_shared<UIPlayerShellsInfo>(m_dataLoader, UIPlayerShellsInfo::Currency::SHINY_SCALES));
+    auto shellsPill = std::make_shared<UIPlayerShellsInfo>(m_dataLoader);
+    auto scalesPill = std::make_shared<UIPlayerShellsInfo>(m_dataLoader, UIPlayerShellsInfo::Currency::SHINY_SCALES);
+    room->set_counters(shellsPill, scalesPill);   // The scales fly out of theirs, a spare fish's shells into theirs
+    add_ui_element(shellsPill);
+    add_ui_element(scalesPill);
+    add_ui_element(std::make_shared<UIClamRoomOverlay>(room));   // What flies over the title bar
     add_ui_element(backButton);
 }
 

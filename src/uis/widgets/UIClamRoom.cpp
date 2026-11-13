@@ -1,6 +1,8 @@
 #include "UIClamRoom.h"
+#include "UIPlayerShellsInfo.h"
 #include "../UISkin.h"
 #include "../../core/DataLoader.h"
+#include "../../data/BattlefieldLayout.h"
 #include "../../data/PlayerData.h"
 
 #include <algorithm>
@@ -26,6 +28,15 @@ namespace
     const float OPEN_POP = 0.45f;
     const float REVEAL_GAP = 0.18f;
     const float CLOSE = 0.35f;
+
+    // A spare fish's shells: SHELLS_PER_SPARE leave its bubble once it's out, one after the other, into the pill
+    const int SHELLS_PER_SPARE = 8;
+    const float SHELLS_DELAY = 0.55f, SHELLS_GAP = 0.07f, SHELL_FLIGHT = 0.65f, SHELL_SIZE = 50.f;
+    const sf::Vector2f SHELL_COUNTER{ 1645.f, 55.f };     // Where they fly to without the pill
+
+    // The clam's shadow on the ground (like the fish and enemies): as wide as the closed shell, under its base
+    const float CLAM_SHADOW_WIDTH = 250.f * 2.2f;
+    const float CLAM_SHADOW_Y = 822.f;
 
     const sf::Color GLOW{ 190, 130, 255 };
     const sf::Color RAYS{ 255, 240, 200 };
@@ -104,6 +115,50 @@ void UIClamRoom::go_to(Phase phase)
 {
     m_phase = phase;
     m_phaseTime = 0.f;
+    if (phase == Phase::REVEALING) m_showTime = 0.f;
+}
+
+void UIClamRoom::set_counters(std::shared_ptr<UIPlayerShellsInfo> shells, std::shared_ptr<UIPlayerShellsInfo> scales)
+{
+    m_shellsInfo = shells;
+    m_scalesInfo = scales;
+}
+
+sf::Vector2f UIClamRoom::shells_target() const
+{
+    auto pill = m_shellsInfo.lock();
+    return pill ? pill->get_icon_center() : SHELL_COUNTER;
+}
+
+sf::Vector2f UIClamRoom::scales_source() const
+{
+    auto pill = m_scalesInfo.lock();
+    return pill ? pill->get_icon_center() : SCALE_COUNTER;
+}
+
+float UIClamRoom::shell_start(const FlyingShell& shell) const
+{
+    const float appearAt = shell.reveal < m_reveals.size() ? m_reveals[shell.reveal].appearAt : 0.f;
+    return appearAt + SHELLS_DELAY + SHELLS_GAP * static_cast<float>(shell.index);
+}
+
+/*
+ * The shells that reached the pill: counted there (it pops), a tick rising with each, the collect sound for the
+ * last one of a fish. all: every one lands now (the clam closes)
+ */
+void UIClamRoom::land_shells(bool all)
+{
+    auto pill = m_shellsInfo.lock();
+    for (FlyingShell& shell : m_flyingShells)
+    {
+        if (shell.hasLanded || (!all && m_showTime < shell_start(shell) + SHELL_FLIGHT)) continue;
+        shell.hasLanded = true;
+        if (pill) pill->receive(shell.amount);
+        if (all) continue;
+        play_sound("reward_tick", 1.f + 0.06f * static_cast<float>(shell.index));
+        if (shell.isLast) play_sound("shell_collect");
+    }
+    if (all) m_flyingShells.clear();
 }
 
 /*
@@ -124,6 +179,7 @@ void UIClamRoom::open(int count)
     const std::vector<int> pool(uids.begin(), uids.end());
     if (pool.empty()) return;
 
+    land_shells(true);
     m_reveals.clear();
     std::map<std::string, SwimFrames> frames;   // A fish drawn twice is cropped once
     for (int i = 0; i < count; ++i)
@@ -156,6 +212,19 @@ void UIClamRoom::open(int count)
         }
         else if (reward.isSpare)
         {
+            // Its shells fly out of its bubble into the pill, which counts them as they land
+            for (int k = 0; k < SHELLS_PER_SPARE && reward.shells > 0; ++k)
+            {
+                FlyingShell shell;
+                shell.reveal = m_reveals.size();
+                shell.index = k;
+                shell.amount = reward.shells / SHELLS_PER_SPARE + (k == SHELLS_PER_SPARE - 1 ? reward.shells % SHELLS_PER_SPARE : 0);
+                shell.isLast = k == SHELLS_PER_SPARE - 1;
+                shell.bend = { random(-170.f, 40.f), random(-90.f, 70.f) };
+                shell.spin = random(-540.f, 540.f);
+                m_flyingShells.push_back(shell);
+            }
+            if (auto pill = m_shellsInfo.lock()) pill->hold_back(reward.shells);
             reveal.tag = "+" + std::to_string(reward.shells) + " SHELLS";
             reveal.tagColor = UISkin::NUMBER;
             reveal.level = "LEVEL " + std::to_string(reward.level);
@@ -207,6 +276,13 @@ void UIClamRoom::skip()
         for (Reveal& reveal : m_reveals) reveal.appearAt = std::min(reveal.appearAt, m_phaseTime);
         break;
     case Phase::REVEALED:
+        // Shells still flying: they all land at once; else the clam closes
+        if (!m_flyingShells.empty())
+        {
+            land_shells(true);
+            play_sound("shell_collect");
+            break;
+        }
         go_to(Phase::CLOSING);
         play_sound("clam_hop", 1.1f);
         break;
@@ -307,10 +383,19 @@ void UIClamRoom::update(float deltaTime)
         break;
     }
     case Phase::CLOSING:
-        if (m_phaseTime >= CLOSE) { m_reveals.clear(); go_to(Phase::IDLE); }
+        if (m_phaseTime >= CLOSE) { land_shells(true); m_reveals.clear(); go_to(Phase::IDLE); }
         break;
     default:
         break;
+    }
+
+    // A spare fish's shells reaching the pill
+    if (m_phase == Phase::REVEALING || m_phase == Phase::REVEALED)
+    {
+        m_showTime += deltaTime;
+        land_shells(false);
+        if (!m_flyingShells.empty() && std::all_of(m_flyingShells.begin(), m_flyingShells.end(), [](const FlyingShell& shell) { return shell.hasLanded; }))
+            m_flyingShells.clear();
     }
 
     for (Bubble& bubble : m_bubbles)
@@ -363,7 +448,6 @@ void UIClamRoom::render(sf::RenderWindow& window)
     }
 
     render_clam(window);
-    render_scales(window);
 
     // Bubbles out of the clam
     const sf::Texture& bubbleTexture = UISkin::texture("bubble");
@@ -500,6 +584,22 @@ void UIClamRoom::render_clam(sf::RenderWindow& window)
         break;
     }
 
+    // Its shadow on the ground, like the fish and enemies have: it stays down, smaller and fainter while the clam
+    // is in the air
+    const sf::Texture& shadowTexture = UISkin::texture_file(SHADOW_TEXTURE);
+    const sf::Vector2f shadowSize(shadowTexture.getSize());
+    if (shadowSize.x > 0.f && shadowSize.y > 0.f)
+    {
+        const float air = std::clamp(jump / 100.f, 0.f, 0.6f);
+        const float width = CLAM_SHADOW_WIDTH * (1.f - 0.5f * air);
+        sf::Sprite shadow(shadowTexture);
+        shadow.setOrigin(shadowSize / 2.f);
+        shadow.setScale({ width / shadowSize.x, width * SHADOW_HEIGHT_RATIO / shadowSize.y });
+        shadow.setPosition({ CLAM_BASE.x + shiftX, CLAM_SHADOW_Y });
+        shadow.setColor(sf::Color(255, 255, 255, static_cast<std::uint8_t>(255.f * (1.f - air))));
+        window.draw(shadow);
+    }
+
     sf::Sprite clam(texture);
     clam.setOrigin(CLAM_ORIGIN);
     clam.setScale({ CLAM_SCALE, CLAM_SCALE });
@@ -585,6 +685,41 @@ void UIClamRoom::render_reveals(sf::RenderWindow& window)
 }
 
 /*
+ * Over the title bar: the Shiny Scales leaving their pill, and a spare fish's shells flying out of its bubble into
+ * the shells pill (each pops out, then swoops in an arc, faster and faster, spinning)
+ */
+void UIClamRoom::render_overlay(sf::RenderWindow& window)
+{
+    if (!m_isVisible) return;
+    render_scales(window);
+
+    const sf::Texture& icon = UISkin::texture("icon_shell");
+    const sf::Vector2f iconSize(icon.getSize());
+    if (iconSize.x <= 0.f || iconSize.y <= 0.f) return;
+    const sf::Vector2f to = shells_target();
+    for (const FlyingShell& shell : m_flyingShells)
+    {
+        if (shell.hasLanded || shell.reveal >= m_reveals.size()) continue;
+        const float t = (m_showTime - shell_start(shell)) / SHELL_FLIGHT;
+        if (t <= 0.f || t >= 1.f) continue;
+
+        // Out sideways at the bubble's height, then up into the pill from below (not across the Shiny Scales' pill)
+        const sf::Vector2f from = m_reveals[shell.reveal].target;
+        const sf::Vector2f control{ to.x + shell.bend.x, from.y + shell.bend.y };
+        const float e = t * t * (3.f - 2.f * t);
+        const sf::Vector2f position = from * ((1.f - e) * (1.f - e)) + control * (2.f * (1.f - e) * e) + to * (e * e);
+        const float size = SHELL_SIZE * (t < 0.15f ? 0.4f + 0.6f * t / 0.15f : 1.f - 0.3f * (t - 0.15f) / 0.85f);
+
+        sf::Sprite sprite(icon);
+        sprite.setOrigin(iconSize / 2.f);
+        sprite.setScale({ size / iconSize.x, size / iconSize.y });
+        sprite.setRotation(sf::degrees(shell.spin * t));
+        sprite.setPosition(position);
+        window.draw(sprite);
+    }
+}
+
+/*
  * The Shiny Scales flying from the counter into the clam, spinning, in an arc
  */
 void UIClamRoom::render_scales(sf::RenderWindow& window)
@@ -597,7 +732,8 @@ void UIClamRoom::render_scales(sf::RenderWindow& window)
         const float t = (m_phaseTime - SCALE_GAP * static_cast<float>(i)) / SCALE_FLIGHT;
         if (t <= 0.f || t >= 1.f) continue;
         const float eased = t * t * (3.f - 2.f * t);
-        sf::Vector2f position = SCALE_COUNTER + (mouth() - SCALE_COUNTER) * eased;
+        const sf::Vector2f from = scales_source();
+        sf::Vector2f position = from + (mouth() - from) * eased;
         position.y -= std::sin(t * PI) * 160.f;   // An arc
         sf::Sprite scale(icon);
         scale.setOrigin({ iconSize / 2.f, iconSize / 2.f });

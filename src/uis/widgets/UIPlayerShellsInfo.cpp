@@ -2,6 +2,8 @@
 #include "../UISkin.h"
 #include "../../core/DataLoader.h"
 
+#include <algorithm>
+
 namespace
 {
     const unsigned int DIGITS_SIZE = 52;
@@ -27,7 +29,8 @@ UIPlayerShellsInfo::UIPlayerShellsInfo(std::shared_ptr<DataLoader> dataLoader, C
 void UIPlayerShellsInfo::update(float deltaTime)
 {
     if (auto player = m_dataLoader->get_player_data().lock())
-        m_text.setString(std::to_string(m_currency == Currency::SHELLS ? player->shells : player->shinyScales));
+        m_text.setString(std::to_string((m_currency == Currency::SHELLS ? player->shells : player->shinyScales) - m_heldBack));
+    m_pop = std::max(0.f, m_pop - deltaTime * 5.f);
 
     const float textWidth = m_text.getLocalBounds().size.x;
     m_size = { std::max(MIN_PILL_WIDTH, textWidth + ICON_SIZE + 3.f * PADDING), PILL_HEIGHT };
@@ -43,7 +46,24 @@ void UIPlayerShellsInfo::render(sf::RenderWindow& window)
     if (!m_isVisible) return;
 
     UISkin::draw_nine_slice(window, UISkin::PANEL_DARK, get_bounds(), 1.f);
+    const float iconSize = ICON_SIZE * (1.f + 0.3f * m_pop);   // Pops when something lands in it
     UISkin::draw_fitted(window, UISkin::texture(m_currency == Currency::SHELLS ? "icon_shell" : "icon_shiny_scale"),
-        { { m_position.x + PADDING, m_position.y + (m_size.y - ICON_SIZE) / 2.f }, { ICON_SIZE, ICON_SIZE } });
+        { get_icon_center() - sf::Vector2f{ iconSize, iconSize } / 2.f, { iconSize, iconSize } });
     window.draw(m_text);
+}
+
+void UIPlayerShellsInfo::hold_back(int amount)
+{
+    m_heldBack += std::max(0, amount);
+}
+
+void UIPlayerShellsInfo::receive(int amount)
+{
+    m_heldBack = std::max(0, m_heldBack - std::max(0, amount));
+    m_pop = 1.f;
+}
+
+sf::Vector2f UIPlayerShellsInfo::get_icon_center() const
+{
+    return { m_position.x + PADDING + ICON_SIZE / 2.f, m_position.y + m_size.y / 2.f };
 }
