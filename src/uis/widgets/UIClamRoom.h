@@ -21,7 +21,7 @@ class DataLoader;
  *      The Battle Cats' "+1": stronger, the price and the form don't change), +n SHELLS when its extra levels
  *      are maxed (PlayerData::MAX_EXTRA_LEVELS)
  *   5. a click and it closes again
- * A click on the idle clam makes it rattle (clam_tap).
+ * A click on the idle clam makes it heave and drop back with a thud (clam_tap), once a second at most: it's heavy.
  * OPEN costs 1 Shiny Scale, OPEN x10 ten (ten fish in a 5 x 2 grid). A click skips ahead. The rewards are given
  * (and saved) the moment the scales are spent: the show only presents them.
  *
@@ -88,7 +88,9 @@ private:
     int m_count = 1;              // Scales fed this time
     int m_hop = -1;               // Last hop that landed (sounds once per landing)
     bool m_isShaking = false;
-    float m_tapTime = 0.f;        // A click on the idle clam: seconds of rattling left
+    float m_tapTime = 0.f;        // A click on the idle clam: seconds of its heave, thud and rattle left
+    float m_tapCooldown = 0.f;    // Seconds before it can be poked again
+    bool m_hasTapLanded = true;   // Its thud played
     std::vector<Reveal> m_reveals;
     std::vector<Bubble> m_bubbles;
     std::mt19937 m_random{ std::random_device{}() };

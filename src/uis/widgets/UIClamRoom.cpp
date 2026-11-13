@@ -34,7 +34,10 @@ namespace
 
     float ease_out_back(float t) { const float c = 1.70158f; t -= 1.f; return 1.f + (c + 1.f) * t * t * t + c * t * t; }
 
-    const float TAP_SHAKE = 0.4f;            // A click on the closed clam: it rattles this long
+    // A click on the closed clam (it's heavy): it heaves up on one side, drops back with a thud (clam_tap, at the
+    // landing), rattles to a stop; then it can't be poked again before TAP_COOLDOWN
+    const float TAP_SHAKE = 0.6f, TAP_LIFT = 0.13f, TAP_DROP = 0.07f, TAP_HEIGHT = 14.f;
+    const float TAP_COOLDOWN = 1.1f;
     const float WALK_FRAME_SECONDS = 0.12f;  // The fish swim in their bubbles (like in the Fish Tank)
 
     // A fish's swimming frames (0 .. knockback frame - 1), cropped to the box its pixels use in all of them: the
@@ -232,7 +235,23 @@ void UIClamRoom::update(float deltaTime)
 {
     m_time += deltaTime;
     m_phaseTime += deltaTime;
-    m_tapTime = m_phase == Phase::IDLE ? std::max(0.f, m_tapTime - deltaTime) : 0.f;
+    if (m_phase == Phase::IDLE)
+    {
+        // A poke: the thud when it lands back
+        m_tapCooldown = std::max(0.f, m_tapCooldown - deltaTime);
+        m_tapTime = std::max(0.f, m_tapTime - deltaTime);
+        if (!m_hasTapLanded && TAP_SHAKE - m_tapTime >= TAP_LIFT + TAP_DROP)
+        {
+            m_hasTapLanded = true;
+            play_sound("clam_tap");
+        }
+    }
+    else
+    {
+        m_tapTime = 0.f;
+        m_tapCooldown = 0.f;
+        m_hasTapLanded = true;
+    }
 
     auto player = m_dataLoader->get_player_data().lock();
     const int scales = player ? player->shinyScales : 0;
@@ -418,11 +437,26 @@ void UIClamRoom::render_clam(sf::RenderWindow& window)
         angle = 1.2f * std::sin(m_time * 1.3f);   // Rocking slightly where it sits
         if (m_tapTime > 0.f)
         {
-            // Clicked: a short rattle on the rock, dying out (a little hop first)
-            const float t = TAP_SHAKE - m_tapTime, decay = m_tapTime / TAP_SHAKE;
-            angle += std::sin(t * 58.f) * 4.f * decay;
-            shiftX = std::sin(t * 44.f) * 7.f * decay;
-            jump = 10.f * std::max(0.f, std::sin(std::min(1.f, t / 0.12f) * PI));
+            // Poked: it heaves up on one side (slow, it's heavy), drops back fast, then rattles to a stop
+            const float t = TAP_SHAKE - m_tapTime, landing = TAP_LIFT + TAP_DROP;
+            if (t < TAP_LIFT)
+            {
+                const float u = t / TAP_LIFT;
+                jump = TAP_HEIGHT * std::sin(u * PI * 0.5f);
+                angle -= 5.f * std::sin(u * PI * 0.5f);
+            }
+            else if (t < landing)
+            {
+                const float u = (t - TAP_LIFT) / TAP_DROP, fall = 1.f - u * u;   // Falling: faster and faster
+                jump = TAP_HEIGHT * fall;
+                angle -= 5.f * fall;
+            }
+            else
+            {
+                const float s = t - landing, decay = std::max(0.f, 1.f - s / (TAP_SHAKE - landing));
+                angle += std::sin(s * 30.f) * 2.5f * decay * decay;
+                shiftX = std::sin(s * 26.f) * 3.f * decay * decay;
+            }
         }
         break;
     }
@@ -583,14 +617,15 @@ void UIClamRoom::handle_event(const sf::Event& event, const sf::RenderWindow& wi
         m_openOne.handle_event(event, window);
         m_openTen.handle_event(event, window);
 
-        // A click on the clam: it rattles (just for fun)
+        // A click on the clam: it heaves and thuds (just for fun), not more than once per TAP_COOLDOWN
         if (const auto* pressed = event.getIf<sf::Event::MouseButtonPressed>(); pressed && pressed->button == sf::Mouse::Button::Left)
         {
             const sf::Vector2f mouse = window.mapPixelToCoords(pressed->position);
-            if (clam_bounds().contains(mouse))
+            if (clam_bounds().contains(mouse) && m_tapCooldown <= 0.f)
             {
                 m_tapTime = TAP_SHAKE;
-                play_sound("clam_tap");
+                m_tapCooldown = TAP_COOLDOWN;
+                m_hasTapLanded = false;
             }
         }
         return;

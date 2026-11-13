@@ -361,16 +361,20 @@ define("clam_hop", { volume: 0.55, pitch: 0.03, cooldown: 0.05, maxInstances: 2,
     reverb(s, 0.1, 0.5);
     return s;
 });
-// The clam was clicked: it rattles on the rock, three quick knocks dying out (a hard shell, lighter than a hop)
-define("clam_tap", { volume: 0.4, pitch: 0.05, cooldown: 0.06, maxInstances: 2, priority: 40 }, 2, p => {
-    const s = new Sound(0.4);
-    [0, 0.055, 0.1].forEach((at, i) => {
-        const level = [1, 0.7, 0.45][i];
-        bell(s, { at, freq: (700 + i * 90) * p, ratio: 2.76, index: 2, tau: 0.025, amp: 0.3 * level, pan: i % 2 ? 0.2 : -0.2 });
-        noise(s, { at, dur: 0.01, amp: 0.22 * level, attack: 0.0005, tau: 0.003, filter: { type: "bandpass", freq: 2400, q: 1.3 } });
-        tone(s, { at, dur: 0.05, freq: t => 170 * p * Math.pow(0.6, t / 0.05), amp: 0.3 * level, tau: 0.02 });
+// The clam was poked: it heaves up and drops back on the rock (played as it lands). Heavy: a deep thud, a hollow
+// knock of the shell, sand puffing, then two small rattles as it settles
+define("clam_tap", { volume: 0.55, pitch: 0.04, cooldown: 0.3, maxInstances: 1, priority: 40 }, 2, p => {
+    const s = new Sound(0.6);
+    boom(s, { from: 115 * p, to: 58 * p, dur: 0.22, amp: 0.45, drive: 1.8 });                                    // the weight landing
+    bell(s, { freq: 430 * p, ratio: 2.76, index: 2.6, tau: 0.05, amp: 0.34 });                                   // hollow knock of the shell
+    noise(s, { dur: 0.014, amp: 0.26, attack: 0.0005, tau: 0.005, filter: { type: "bandpass", freq: 1800, q: 1.2 } });
+    noise(s, { at: 0.01, dur: 0.28, amp: 0.13, attack: 0.015, tau: 0.08, filter: { type: "lowpass", freq: 1600 } });   // sand
+    [0.09, 0.16].forEach((at, i) => {                                                                           // settling
+        const level = [0.5, 0.3][i];
+        bell(s, { at, freq: (520 + i * 70) * p, ratio: 2.76, index: 1.8, tau: 0.025, amp: 0.25 * level, pan: i ? 0.2 : -0.2 });
+        tone(s, { at, dur: 0.05, freq: t => 140 * p * Math.pow(0.6, t / 0.05), amp: 0.3 * level, tau: 0.02 });
     });
-    reverb(s, 0.08, 0.5);
+    reverb(s, 0.1, 0.6);
     return s;
 });
 // The clam shakes before it opens: the shell rattling on the rock faster and harder, and a magic shimmer rising

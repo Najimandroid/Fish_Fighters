@@ -145,10 +145,10 @@
             "assets/audios/sfx/clam_tap_1.ogg",
             "assets/audios/sfx/clam_tap_2.ogg"
         ],
-        "volume": 0.4,
-        "pitch": 0.05,
-        "cooldown": 0.06,
-        "maxInstances": 2,
+        "volume": 0.55,
+        "pitch": 0.04,
+        "cooldown": 0.3,
+        "maxInstances": 1,
         "priority": 40
     },
     "clam_shake": {
