@@ -24,7 +24,8 @@ class DataLoader;
  * (and saved) the moment the scales are spent: the show only presents them.
  *
  * The fish come from every fish of the game, equally likely (PlayerData::receive_fish gives them).
- * Textures: ui/clam_closed.png, ui/clam_opened.png (same 300 x 300 canvas), ui/bubble.png, ui/icon_shiny_scale.png.
+ * Textures: ui/clam_closed.png, ui/clam_opened.png (same 300 x 300 canvas), ui/bubble.png, ui/icon_shiny_scale.png,
+ * and each fish's sheet (its first frame, cropped to the fish: the icons are close-ups cut at the edges).
  */
 class UIClamRoom : public UIElement
 {
@@ -45,7 +46,8 @@ private:
     struct Reveal
     {
         std::string name;
-        std::string iconPath;
+        std::string texturePath;  // The fish's sheet...
+        sf::IntRect frame;        // ...its first frame, cropped to the fish
         std::string tag;          // NEW!, LEVEL n or MAX
         sf::Color tagColor;
         sf::Vector2f target;      // Where it floats once out

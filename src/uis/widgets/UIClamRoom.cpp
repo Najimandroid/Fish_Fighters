@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <map>
 #include <set>
 
 namespace
@@ -32,6 +33,25 @@ namespace
     const sf::Color TEAL{ 72, 217, 230 };
 
     float ease_out_back(float t) { const float c = 1.70158f; t -= 1.f; return 1.f + (c + 1.f) * t * t * t + c * t * t; }
+
+    // A fish's first swimming frame, cropped to its pixels: the whole fish for its bubble (the icons are close-ups
+    // cut at the edges, and a sheet's frame leaves room for the attack effects)
+    sf::IntRect fish_bounds(const sf::Texture& sheet, int frameCount)
+    {
+        const sf::Vector2u size = sheet.getSize();
+        const unsigned int frameWidth = size.x / static_cast<unsigned int>(std::max(1, frameCount));
+        const sf::Image image = sheet.copyToImage();
+        unsigned int left = frameWidth, top = size.y, right = 0, bottom = 0;
+        for (unsigned int y = 0; y < size.y; ++y)
+            for (unsigned int x = 0; x < frameWidth; ++x)
+                if (image.getPixel({ x, y }).a > 24)
+                {
+                    left = std::min(left, x); right = std::max(right, x);
+                    top = std::min(top, y); bottom = std::max(bottom, y);
+                }
+        if (left > right || top > bottom) return { { 0, 0 }, { static_cast<int>(frameWidth), static_cast<int>(size.y) } };
+        return { { static_cast<int>(left), static_cast<int>(top) }, { static_cast<int>(right - left + 1), static_cast<int>(bottom - top + 1) } };
+    }
 }
 
 UIClamRoom::UIClamRoom(std::shared_ptr<DataLoader> dataLoader) :
@@ -85,6 +105,7 @@ void UIClamRoom::open(int count)
     if (pool.empty()) return;
 
     m_reveals.clear();
+    std::map<std::string, sf::IntRect> bounds;   // A fish drawn twice is cropped once
     for (int i = 0; i < count; ++i)
     {
         const int uid = pool[std::uniform_int_distribution<size_t>(0, pool.size() - 1)(m_random)];
@@ -94,7 +115,12 @@ void UIClamRoom::open(int count)
         Reveal reveal;
         auto data = m_dataLoader->get_unit_data(uid, reward.form);
         reveal.name = data ? data->name : "?";
-        reveal.iconPath = m_dataLoader->get_unit_icon_texture_path(uid, reward.form);
+        if (data && !data->texture.empty())
+        {
+            reveal.texturePath = data->texture;
+            if (!bounds.contains(data->texture)) bounds[data->texture] = fish_bounds(UISkin::texture_file(data->texture), data->frameCount);
+            reveal.frame = bounds[data->texture];
+        }
         reveal.tag = reward.isNew ? "NEW!" : reward.isMaxed ? "MAX" : "LEVEL " + std::to_string(reward.level);
         reveal.tagColor = reward.isNew ? CORAL : reward.isMaxed ? UISkin::TITLE : UISkin::NUMBER;
         if (count == 1)
@@ -424,9 +450,18 @@ void UIClamRoom::render_reveals(sf::RenderWindow& window)
         bubble.setColor(sf::Color(255, 255, 255, static_cast<std::uint8_t>(170 * closing)));
         window.draw(bubble);
 
-        const sf::Vector2f iconSize{ size * 0.82f, size * 0.62f };
-        UISkin::draw_fitted(window, UISkin::texture_file(reveal.iconPath), { position - iconSize / 2.f, iconSize },
-            sf::Color(255, 255, 255, static_cast<std::uint8_t>(255 * closing)));
+        // The whole fish inside, as drawn on its sheet
+        if (!reveal.texturePath.empty() && reveal.frame.size.x > 0 && reveal.frame.size.y > 0)
+        {
+            sf::Sprite fish(UISkin::texture_file(reveal.texturePath), reveal.frame);
+            const sf::Vector2f frameSize(reveal.frame.size);
+            const float fit = std::min(size * 0.8f / frameSize.x, size * 0.6f / frameSize.y);
+            fish.setOrigin(frameSize / 2.f);
+            fish.setScale({ fit, fit });
+            fish.setPosition(position);
+            fish.setColor(sf::Color(255, 255, 255, static_cast<std::uint8_t>(255 * closing)));
+            window.draw(fish);
+        }
 
         if (t < 1.f || closing < 1.f) continue;
         const float textScale = reveal.scale > 1.f ? 1.f : 0.8f;
