@@ -24,6 +24,11 @@ void UIEquipIcon::set_deployment_cost(int cost)
     m_deploymentCost = cost;
 }
 
+void UIEquipIcon::set_extra_levels(int extraLevels)
+{
+    m_extraLevels = extraLevels;
+}
+
 void UIEquipIcon::set_in_lineup(bool isInLineup)
 {
     set_badge(isInLineup ? "IN USE" : "");
@@ -37,6 +42,7 @@ void UIEquipIcon::update(float deltaTime)
     UIUnitCard::update(deltaTime);
 
     set_level_line("LEVEL " + std::to_string(m_currentLevel), UISkin::NUMBER);
+    set_level_extra(m_extraLevels > 0 ? "+" + std::to_string(m_extraLevels) : "");
     set_value_line(std::to_string(m_deploymentCost) + "$", UISkin::NUMBER, false);
 }
 

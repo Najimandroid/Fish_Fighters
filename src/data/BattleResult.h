@@ -12,6 +12,7 @@ struct BattleResult
     bool isFirstClear = false;          // Won for the first time (all rewards, not only shells)
     int shells = 0;                     // Shells earned
     int newUnitUID = -1;                // A fish unlocked by this win (-1: none)
+    bool opensClamRoom = false;         // This win opened the Clam Room (a "clamRoom" stage reward, first clear)
     float enemyBaseHealth = 0.f;        // What was left of the enemy base (defeat: "how close was it")
     float enemyBaseMaxHealth = 1.f;
 };

@@ -64,8 +64,9 @@ private:
     int m_describedUid = -1;   // The description is wrapped again only when the selection changes
     int m_describedLevel = -1;
 
-    // What the upgrade gives: { name, now, next } rows, the evolution line; what it costs
-    struct StatRow { std::string name, now, next; bool isBetter = false; };
+    // What the upgrade gives: { name, now, next } rows, the evolution line; what it costs.
+    // isExtra: the Clam Room's extra levels ("+3", in UISkin::EXTRA), one value: the upgrade doesn't change them
+    struct StatRow { std::string name, now, next; bool isBetter = false; bool isExtra = false; };
     std::vector<StatRow> m_statRows;
     std::string m_evolutionLine;
     int m_cost = 0;

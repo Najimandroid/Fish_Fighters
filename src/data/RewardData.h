@@ -13,6 +13,7 @@ struct RewardData
     std::string type;   // The type of reward:
     // - "shells" => currency
     // - "unit"   => unlocks a new unit
+    // - "clamRoom" => opens the Clam Room (the gacha; FishEditor: stage rewards, "+ Clam Room")
 
     int amount = 0;     // Used for quantifiable rewards (e.g., shells gained)
 

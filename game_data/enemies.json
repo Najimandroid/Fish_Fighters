@@ -23,7 +23,9 @@
         "frameCount": 7,
         "knockbackFrameIndex": 2,
         "abilities": [],
-        "shadowScale": 0.4
+        "shadowScale": 0.47,
+        "shadowOffset": 45,
+        "cashDrop": 20
     },
     "UID_2": {
         "UID": 2,
@@ -31,14 +33,14 @@
         "description": "A mean crab.",
         "health": 1000,
         "attackPower": 500,
-        "attackRange": 100,
+        "attackRange": 180,
         "attackFrequency": 7,
         "attackType": 2,
         "foreswing": 0.6,
         "backswing": 0.3,
         "damageZone": [
             0,
-            110
+            185
         ],
         "types": [
             1
@@ -48,33 +50,38 @@
         "texture": "assets/images/textures/enemies/crab_sheet.png",
         "frameCount": 14,
         "knockbackFrameIndex": 4,
-        "abilities": []
+        "abilities": [],
+        "shadowScale": 1.12,
+        "cashDrop": 1000,
+        "attackSound": "attack_heavy"
     },
     "UID_3": {
         "UID": 3,
         "name": "Small Snail",
         "description": "A very cute and innocent snail..?",
-        "health": 250,
+        "health": 2500,
         "attackPower": 100,
-        "attackRange": 15,
+        "attackRange": 40,
         "attackFrequency": 10,
         "attackType": 2,
         "foreswing": 0.8,
         "backswing": 0.2,
         "damageZone": [
             0,
-            18
+            50
         ],
         "types": [
             -1,
             0
         ],
-        "movementSpeed": 5,
+        "movementSpeed": 3,
         "knockbackCount": 0,
         "texture": "assets/images/textures/enemies/small_snail_sheet.png",
         "frameCount": 12,
         "knockbackFrameIndex": 2,
-        "abilities": []
+        "abilities": [],
+        "cashDrop": 1000,
+        "attackSound": "attack_bite"
     },
     "UID_4": {
         "UID": 4,
@@ -101,7 +108,10 @@
         "frameCount": 13,
         "knockbackFrameIndex": 4,
         "abilities": [],
-        "shadowScale": 0.71
+        "shadowScale": 0.71,
+        "shadowOffset": 21,
+        "cashDrop": 200,
+        "attackSound": "attack_slap"
     },
     "UID_5": {
         "UID": 5,
@@ -116,7 +126,7 @@
         "backswing": 0.2,
         "damageZone": [
             0,
-            50
+            70
         ],
         "types": [
             1
@@ -126,7 +136,9 @@
         "texture": "assets/images/textures/enemies/small_crab_sheet.png",
         "frameCount": 6,
         "knockbackFrameIndex": 2,
-        "abilities": []
+        "abilities": [],
+        "shadowOffset": 42,
+        "cashDrop": 300
     },
     "UID_6": {
         "UID": 6,
@@ -152,6 +164,70 @@
         "texture": "assets/images/textures/enemies/clam_sheet.png",
         "frameCount": 10,
         "knockbackFrameIndex": 6,
-        "abilities": []
+        "abilities": [],
+        "cashDrop": 50,
+        "attackSound": "attack_heavy"
+    },
+    "UID_7": {
+        "UID": 7,
+        "name": "Jellyfish",
+        "description": "He loves electro music",
+        "health": 15,
+        "attackPower": 15,
+        "attackRange": 110,
+        "attackFrequency": 5,
+        "attackType": 2,
+        "foreswing": 0.2,
+        "backswing": 0.4,
+        "damageZone": [
+            0,
+            120
+        ],
+        "types": [
+            3
+        ],
+        "movementSpeed": 5,
+        "knockbackCount": 3,
+        "texture": "assets/images/textures/enemies/jellyfishSheet.png",
+        "frameCount": 16,
+        "knockbackFrameIndex": 8,
+        "abilities": [
+            {
+                "type": "PARALYZE_ATTACK",
+                "value": 0.5,
+                "chance": 25,
+                "duration": 3
+            }
+        ],
+        "attackSound": "attack_zap",
+        "cashDrop": 50
+    },
+    "UID_8": {
+        "UID": 8,
+        "name": "Hermit",
+        "description": "His hard shell helps him protect from attacks.",
+        "health": 100,
+        "attackPower": 12,
+        "attackRange": 35,
+        "attackFrequency": 4,
+        "attackType": 1,
+        "foreswing": 0.3,
+        "backswing": 0.3,
+        "damageZone": [
+            0,
+            40
+        ],
+        "types": [
+            0,
+            1
+        ],
+        "movementSpeed": 4,
+        "knockbackCount": 0,
+        "texture": "assets/images/textures/enemies/hermitsheet_5.png",
+        "frameCount": 16,
+        "knockbackFrameIndex": 9,
+        "abilities": [],
+        "cashDrop": 300,
+        "attackSound": "attack_pinch"
     }
 }

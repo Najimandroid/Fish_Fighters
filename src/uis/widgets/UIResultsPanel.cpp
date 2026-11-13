@@ -33,6 +33,7 @@ namespace
             height = 530.f;
             if (result.isFirstClear) height += 50.f;
             if (result.newUnitUID >= 0) height += 150.f;
+            if (result.opensClamRoom) height += 140.f;
         }
         return { { (SCREEN_SIZE.x - PANEL_WIDTH) / 2.f, (SCREEN_SIZE.y - height) / 2.f - 20.f }, { PANEL_WIDTH, height } };
     }
@@ -150,6 +151,11 @@ void UIResultsPanel::update(float deltaTime)
         m_isNewFishShown = true;
         play_sound("unlock");
     }
+    if (!m_isClamRoomShown && m_result.opensClamRoom && m_time >= clam_room_time())
+    {
+        m_isClamRoomShown = true;
+        play_sound("clam_open");
+    }
 }
 
 void UIResultsPanel::render(sf::RenderWindow& window)
@@ -223,6 +229,26 @@ void UIResultsPanel::render_victory(sf::RenderWindow& window, const sf::FloatRec
         draw_text(window, "NEW FISH!", 40, CORAL, { textLeft, centerY - 22.f }, { 0.f, 0.5f }, alpha_of(pop * 2.f));
         draw_text(window, "Unlock it in Upgrade", 28, UISkin::TEXT, { textLeft, centerY + 24.f }, { 0.f, 0.5f }, alpha_of(pop * 2.f));
     }
+
+    // The Clam Room opened: the clam pops in (under the new fish, if there's one too)
+    if (m_isClamRoomShown)
+    {
+        const float pop = std::clamp((m_time - clam_room_time()) / 0.25f, 0.f, 1.f);
+        const float scale = ease_out_back(pop);
+        const float centerY = panel.position.y + 470.f + (m_result.newUnitUID >= 0 ? 145.f : 0.f);
+        const float textLeft = SCREEN_SIZE.x / 2.f - 120.f;
+        const float clamSize = 190.f * scale;   // The canvas: the closed clam fills its lower half
+        if (scale > 0.05f)
+            UISkin::draw_fitted(window, UISkin::texture("clam_closed"),
+                { { textLeft - 24.f - 166.f * 0.8f / 2.f - clamSize / 2.f, centerY - clamSize * 0.72f }, { clamSize, clamSize } });
+        draw_text(window, "CLAM ROOM OPEN!", 40, UISkin::EXTRA, { textLeft, centerY - 22.f }, { 0.f, 0.5f }, alpha_of(pop * 2.f));
+        draw_text(window, "Feed it Shiny Scales in the Fish Tank", 28, UISkin::TEXT, { textLeft, centerY + 24.f }, { 0.f, 0.5f }, alpha_of(pop * 2.f));
+    }
+}
+
+float UIResultsPanel::clam_room_time() const
+{
+    return NEW_FISH_TIME + (m_result.newUnitUID >= 0 ? 0.6f : 0.f);
 }
 
 void UIResultsPanel::render_defeat(sf::RenderWindow& window, const sf::FloatRect& panel, std::uint8_t alpha)

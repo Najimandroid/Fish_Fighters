@@ -61,6 +61,8 @@ private:
     bool m_isCountDone = false;
     bool m_isNewFishShown = false;
     sf::Texture m_newFishTexture;
+    bool m_isClamRoomShown = false;   // "CLAM ROOM OPEN!" (the stage unlocked it), after the new fish
+    float clam_room_time() const;
 
     UIButtonElement m_primaryButton;
     UIButtonElement m_secondaryButton;

@@ -86,21 +86,38 @@ namespace
     }
 
     // One checkbox per enemy type, after its icon. True when the list changed
+    // One checkbox (with its icon) per enemy type, wrapping onto new lines when the space runs out (a narrow
+    // table cell, like the abilities' Targets column, keeps them inside it)
     bool enemy_type_checkboxes(EditorContext& ctx, std::vector<int>& types)
     {
         bool changed = false;
+        const ImGuiStyle& style = ImGui::GetStyle();
+        const float right = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x;
+        bool isFirst = true;
         for (EntityType enemyType : ENEMY_TYPES)
         {
             const int type = static_cast<int>(enemyType);
             bool hasType = std::find(types.begin(), types.end(), type) != types.end();
             ImGui::PushID(type);
             EditorWidgets::FrameUV uv;
-            if (const sf::Texture* icon = EditorWidgets::type_icon(ctx, enemyType, uv))
+            const sf::Texture* icon = EditorWidgets::type_icon(ctx, enemyType, uv);
+            const char* label = to_string(static_cast<EntityType>(type));
+
+            // On the same line as the previous one only if it fits
+            const float width = (icon ? ImGui::GetFrameHeight() + 4.f : 0.f) + ImGui::GetFrameHeight() + style.ItemInnerSpacing.x + ImGui::CalcTextSize(label).x;
+            if (!isFirst)
+            {
+                const float nextX = ImGui::GetItemRectMax().x + style.ItemSpacing.x;
+                if (nextX + width <= right) ImGui::SameLine();
+            }
+            isFirst = false;
+
+            if (icon)
             {
                 EditorWidgets::image_in_box(icon, ImVec2(ImGui::GetFrameHeight(), ImGui::GetFrameHeight()), uv);
                 ImGui::SameLine(0.f, 4.f);
             }
-            if (ImGui::Checkbox(to_string(static_cast<EntityType>(type)), &hasType))
+            if (ImGui::Checkbox(label, &hasType))
             {
                 if (hasType) types.push_back(type);
                 else types.erase(std::remove(types.begin(), types.end(), type), types.end());
@@ -108,9 +125,7 @@ namespace
                 changed = true;
             }
             ImGui::PopID();
-            ImGui::SameLine();
         }
-        ImGui::NewLine();
         return changed;
     }
 

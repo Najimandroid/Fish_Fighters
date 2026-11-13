@@ -31,8 +31,9 @@ public:
     // Adds a unit to the waiting list (to be unlocked later)
     void wait_to_be_unlocked(int unitUid);   
 
-    // Increases the level of an owned unit
-    void upgrade_unit(int unitUid);         
+    // Increases the level of an owned unit. It evolves at levels 10 and 30 into the forms it has
+    // (formCount: DataLoader::get_unit_form_count; a fish with one form stays in it)
+    void upgrade_unit(int unitUid, int formCount);
 
     // Equips a unit to a specific slot (0-9)
     void equip_unit(int unitUid, int slot);    
@@ -43,8 +44,14 @@ public:
     // Checks if the player owns the unit
     bool is_unit_owned(int unitUid) const;
 
-    // Returns the level of the unit, 0 if not owned
+    // Returns the level of the unit, 0 if not owned (the level bought with shells: prices and evolutions)
     int get_unit_level(int unitUid) const;
+
+    // The extra levels the Clam Room gave it (the "+3" after its level)
+    int get_unit_extra_levels(int unitUid) const;
+
+    // Level + extra levels: what its health and attack grow with
+    int get_unit_power_level(int unitUid) const;
 
     // Returns the form of the unit, 0 being its default form
     int get_unit_form(int unitUid) const;
@@ -56,6 +63,24 @@ public:
 
     // Decreases shells if enough, returns false if insufficient
     bool spend_shells(int amount);
+
+    // Shiny Scales (the Clam Room's currency): false if there aren't enough
+    bool spend_shiny_scales(int amount);
+
+    // A fish out of a clam, like The Battle Cats' capsules: a new one joins at level 1, one already owned gains an
+    // EXTRA level (+1: stronger, but its price and its form don't change); one already at MAX_EXTRA_LEVELS is
+    // turned into shells instead (spareShells, given here)
+    struct FishReward
+    {
+        int uid = -1;
+        bool isNew = false;
+        bool isSpare = false;   // Extra levels maxed: turned into shells
+        int level = 0;
+        int extraLevels = 0;
+        int form = 0;
+        int shells = 0;         // Shells given (a spare fish)
+    };
+    FishReward receive_fish(int unitUid, int spareShells);
 
     // ===== Progression =====
 
@@ -82,6 +107,10 @@ public:
 
     // ===== Levels =====
     static constexpr int MAX_UNIT_LEVEL = 30;
+    static constexpr int MAX_EXTRA_LEVELS = 10;       // The Clam Room's "+n" goes up to this
+
+    // Shells a fish the clam can't add an extra level to is worth (x its baseUpgradeCost)
+    static constexpr int SPARE_FISH_SHELLS_FACTOR = 5;
 
     // Health and attack of a unit at this level, compared to level 1 (x1.15 per level)
     static float stat_multiplier(int level);
@@ -93,12 +122,15 @@ public:
 public:
     // Currency
     int shells = 0;
+    int shinyScales = 0;                   // The Clam Room's currency
+    static constexpr int TEST_STARTING_SHINY_SCALES = 100;   // A save without Shiny Scales starts with these (testing)
 
     // Units
-    struct OwnedUnit 
+    struct OwnedUnit
     {
         int level = 1;
         int form = 0;
+        int extraLevels = 0;   // From the Clam Room (saved as "extraLevels")
     };
 
     std::unordered_map<int, OwnedUnit> ownedUnits;      // Key: unit UID, Value: unit infos

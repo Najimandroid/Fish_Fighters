@@ -341,7 +341,16 @@ namespace
             ImGui::PushID(static_cast<int>(i));
 
             const bool isUnit = read_string(reward, "type") == "unit";
-            if (isUnit)
+            if (read_string(reward, "type") == "clamRoom")
+            {
+                ImGui::Dummy(ImVec2(56.f, 42.f));
+                ImGui::SameLine();
+                ImGui::BeginGroup();
+                ImGui::Text("Opens the Clam Room");
+                ImGui::TextDisabled("Locked in the Fish Tank until this stage is cleared");
+                ImGui::EndGroup();
+            }
+            else if (isUnit)
             {
                 const int uid = read_int(reward, "UID");
                 unit_icon(ctx, uid, 0, ImVec2(56.f, 42.f));
@@ -386,6 +395,12 @@ namespace
         if (ImGui::Button("+ Shells")) { list.push_back({ { "type", "shells" }, { "amount", 100 } }); ctx.commit(STAGES_FILE); }
         ImGui::SameLine();
         if (ImGui::Button("+ Unit")) ImGui::OpenPopup("AddUnitReward");
+        ImGui::SameLine();
+        const bool hasClamRoom = std::any_of(list.begin(), list.end(), [](const ordered_json& reward) { return read_string(reward, "type") == "clamRoom"; });
+        ImGui::BeginDisabled(hasClamRoom);
+        if (ImGui::Button("+ Clam Room")) { list.push_back({ { "type", "clamRoom" } }); ctx.commit(STAGES_FILE); }
+        ImGui::EndDisabled();
+        ImGui::SetItemTooltip("Clearing this stage opens the Clam Room (the gacha). No stage with it: the Clam Room is open from the start");
         int newUnit = 0;
         if (unit_picker(ctx, "AddUnitReward", newUnit))
         {

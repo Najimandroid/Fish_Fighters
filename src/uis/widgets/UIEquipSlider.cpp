@@ -208,6 +208,7 @@ void UIEquipSlider::init_icons()
         icon->select(i == m_currentIndex);
         icon->set_unit_name(unitData->name);
         icon->set_unit_level(unitLevel);
+        icon->set_extra_levels(playerData->get_unit_extra_levels(unitUid));
         icon->set_deployment_cost(unitData->cost);
 
         // Positioning logic: offset from center

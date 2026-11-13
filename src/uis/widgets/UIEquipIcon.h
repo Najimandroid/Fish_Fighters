@@ -35,6 +35,7 @@ public:
 
     // Set unit info
     void set_unit_level(int level);
+    void set_extra_levels(int extraLevels);   // The Clam Room's "+3" after the level
     void set_deployment_cost(int cost);
     void set_in_lineup(bool isInLineup);
 
@@ -48,5 +49,6 @@ private:
     int m_uid = -1;            // Unit ID
     int m_deploymentCost = 100;
     int m_currentLevel = 1;
+    int m_extraLevels = 0;
     std::string m_texturePath; // Path to texture
 };

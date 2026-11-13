@@ -1198,6 +1198,21 @@ const F_MAJOR = [5, 7, 9, 10, 0, 2, 4], EB_MAJOR = [3, 5, 7, 8, 10, 0, 2], EB_LY
     songs.push(song);
 }
 
+// The Fish Tank theme's chords and tune: the Clam Room's theme plays them too, on the same grid (so they crossfade)
+const FISH_TANK = (() => {
+    const A1 = "Bbmaj7 | Gm7 | Cm7 | F7 | Bbmaj7 | Gm7 | Cm7 F7 | Bbmaj7";
+    const A2 = "Bbmaj7 | Gm7 | Ebmaj7 | Ebm6 | Dm7 | G7 | Cm7 F7 | Bbmaj7";
+    const B = "Ebmaj7 | F/Eb | Dm7 | Gm7 | Cm7 | F7 | Ebmaj7 | F7";
+    const MOTIF = "F4:.5 Bb4:.5 D5:.75 C5:.25 r:.5 Bb4:.5 F5:1";
+    const MEL_A = MOTIF + " | r:.5 D5:.5 F5:.5 G5:.5 r:.5 F5:.25 D5:.75 r:.5 | Eb5:.5 G5:.5 Bb5:.75 G5:.25 r:.5 Eb5:.5 C5:1 | r:.5 A4:.5 C5:.5 Eb5:.5 r:.5 D5:.25 C5:.75 r:.5 | " +
+        MOTIF + " | r:.5 G5:.5 Bb5:.5 A5:.5 r:.5 G5:.25 F5:.75 r:.5 | Eb5:.5 D5:.5 C5:.5 Bb4:.5 A4:.5 C5:.5 Eb5:.5 F5:.5 | D5:1.5 r:2.5 | " +
+        MOTIF + " | r:.5 D5:.5 F5:.5 G5:.5 r:.5 Bb5:.25 A5:.75 r:.5 | G5:.5 Bb5:.5 D6:.75 Bb5:.25 r:.5 G5:.5 Eb5:1 | r:.5 Gb5:.5 Bb5:.5 C6:.5 r:.5 Bb5:.25 Gb5:.75 r:.5 | " +
+        "F5:.5 A5:.5 C6:.75 A5:.25 r:.5 F5:.5 D5:1 | r:.5 B4:.5 D5:.5 F5:.5 r:.5 E5:.25 D5:.75 r:.5 | Eb5:.5 G5:.5 Bb5:.5 G5:.5 A5:.5 C6:.5 Eb6:.5 C6:.5 | Bb5:1.5 r:2.5";
+    const MEL_B = "G5:1 Bb5:1 D6:2 | C6:1 A5:1 F5:2 | F5:1 A5:1 C6:1.5 A5:.5 | Bb5:2 G5:2 | Eb5:1 G5:1 Bb5:1 C6:1 | A5:1 C6:1 Eb6:2 | D6:1.5 Bb5:.5 G5:2 | F5:1 Eb5:1 C5:1 A4:1";
+    const COUNTER = "A4:4 | F4:4 | Eb5:4 | Eb5:2 C5:2 | A4:4 | F4:4 | Eb5:2 Eb5:2 | D5:4 | A4:4 | Bb4:4 | G4:4 | Gb4:4 | F4:4 | F4:4 | Eb5:2 Eb5:2 | D5:4";
+    return { A1, A2, B, MOTIF, MEL_A, MEL_B, COUNTER };
+})();
+
 // =====================================================================================================
 // 7. "Fish Tank" - the Fish Tank menus (upgrade, equip, encyclopedia, map). Laid-back aquarium funk: the motif
 //    on vibraphone over Rhodes and muted-guitar chops, a whistle in the middle, kalimba answers.
@@ -1215,16 +1230,7 @@ const F_MAJOR = [5, 7, 9, 10, 0, 2, 4], EB_MAJOR = [3, 5, 7, 8, 10, 0, 2], EB_LY
     const kit = song.drums("Kit", 0, { group: "drums", volume: 86 });
     const bub = song.synth("Bubbles", "bubbles", { group: "bubbles" });
 
-    const A1 = "Bbmaj7 | Gm7 | Cm7 | F7 | Bbmaj7 | Gm7 | Cm7 F7 | Bbmaj7";
-    const A2 = "Bbmaj7 | Gm7 | Ebmaj7 | Ebm6 | Dm7 | G7 | Cm7 F7 | Bbmaj7";
-    const B = "Ebmaj7 | F/Eb | Dm7 | Gm7 | Cm7 | F7 | Ebmaj7 | F7";
-    const MOTIF = "F4:.5 Bb4:.5 D5:.75 C5:.25 r:.5 Bb4:.5 F5:1";
-    const MEL_A = MOTIF + " | r:.5 D5:.5 F5:.5 G5:.5 r:.5 F5:.25 D5:.75 r:.5 | Eb5:.5 G5:.5 Bb5:.75 G5:.25 r:.5 Eb5:.5 C5:1 | r:.5 A4:.5 C5:.5 Eb5:.5 r:.5 D5:.25 C5:.75 r:.5 | " +
-        MOTIF + " | r:.5 G5:.5 Bb5:.5 A5:.5 r:.5 G5:.25 F5:.75 r:.5 | Eb5:.5 D5:.5 C5:.5 Bb4:.5 A4:.5 C5:.5 Eb5:.5 F5:.5 | D5:1.5 r:2.5 | " +
-        MOTIF + " | r:.5 D5:.5 F5:.5 G5:.5 r:.5 Bb5:.25 A5:.75 r:.5 | G5:.5 Bb5:.5 D6:.75 Bb5:.25 r:.5 G5:.5 Eb5:1 | r:.5 Gb5:.5 Bb5:.5 C6:.5 r:.5 Bb5:.25 Gb5:.75 r:.5 | " +
-        "F5:.5 A5:.5 C6:.75 A5:.25 r:.5 F5:.5 D5:1 | r:.5 B4:.5 D5:.5 F5:.5 r:.5 E5:.25 D5:.75 r:.5 | Eb5:.5 G5:.5 Bb5:.5 G5:.5 A5:.5 C6:.5 Eb6:.5 C6:.5 | Bb5:1.5 r:2.5";
-    const MEL_B = "G5:1 Bb5:1 D6:2 | C6:1 A5:1 F5:2 | F5:1 A5:1 C6:1.5 A5:.5 | Bb5:2 G5:2 | Eb5:1 G5:1 Bb5:1 C6:1 | A5:1 C6:1 Eb6:2 | D6:1.5 Bb5:.5 G5:2 | F5:1 Eb5:1 C5:1 A4:1";
-    const COUNTER = "A4:4 | F4:4 | Eb5:4 | Eb5:2 C5:2 | A4:4 | F4:4 | Eb5:2 Eb5:2 | D5:4 | A4:4 | Bb4:4 | G4:4 | Gb4:4 | F4:4 | F4:4 | Eb5:2 Eb5:2 | D5:4";
+    const { A1, A2, B, MOTIF, MEL_A, MEL_B, COUNTER } = FISH_TANK;
     const EP_FUNK = [[0, 0.4, 64], [0.75, 0.2, 56], [1.5, 0.4, 60], [2.5, 0.2, 56], [2.75, 0.45, 62], [3.5, 0.2, 56]];
     const CHOPS = "x.xx.x.x.xx.x.x.";
     const BASS_FUNK = [[0, 0.4, "R", 100], [0.75, 0.2, "8", 78], [1, 0.25, "R", 74], [1.5, 0.4, "5", 88], [2.5, 0.2, "R", 78], [2.75, 0.4, "8", 84], [3.5, 0.4, "app", 86]];
@@ -1276,6 +1282,88 @@ const F_MAJOR = [5, 7, 9, 10, 0, 2, 4], EB_MAJOR = [3, 5, 7, 8, 10, 0, 2], EB_LY
         beat(kit, a2, 16, FUNK);
         kit.hit(a2, CRASH, 80, 1);
         kalimba.at(a2 + 30).play("D6:.5 C6:.5 Bb5:.5 F5:.5", { velocity: 72 });
+        bubbles(bub, a2 + 61, { count: 9, spread: 3, low: 350, high: 1400 });
+    });
+    songs.push(song);
+}
+
+// =====================================================================================================
+// 7b. "Pearl Chamber" - the Clam Room: the Fish Tank theme gone magic and a little mysterious, on exactly its grid
+//     (same tempo, key, chords, tune and length), so the game crossfades the two where they are
+//     (AudioManager::play_music_in_sync). The vibraphone's tune on a celesta in echoes, then a music box; a choir
+//     of soft voices holding the chords, a glass harmonica (bowed glass) and a halo pad in the dark, harp
+//     glissandos and crystal drops, a fretless bass, only a whisper of brushes and shaker.
+//     Intro 2 | A 16 (celesta) | B 8 (the voices sing) | A' 16 (music box and celesta, the glass above)
+// =====================================================================================================
+{
+    const { A1, A2, B, MEL_A, MEL_B, COUNTER } = FISH_TANK;
+    const song = new Song("theme_clam", "Fish Fighters - Pearl Chamber", 112, { key: "Bb", kind: "menu", introBars: 2, bodyBars: 40,
+        mix: { lead: 0, voices: -4, harp: -6, pad: -7, bass: -6, drums: -14, fx: -9 } });
+    const celesta = song.part("Celesta", 8, { group: "lead", volume: 104, pan: -0.1, fx: { echo: { beats: 0.75, feedback: 0.4, mix: 0.3 } } });
+    const musicBox = song.part("Music box", 10, { group: "lead", volume: 94, pan: 0.2, fx: { echo: { beats: 1.5, feedback: 0.35, mix: 0.3 } } });
+    const voices = song.part("Voices", 53, { group: "voices", volume: 96, fx: { lowpass: 3000, echo: { beats: 1.5, feedback: 0.3, mix: 0.25 } } });
+    const harp = song.part("Harp", 46, { group: "harp", volume: 92, pan: 0.3 });
+    const crystal = song.part("Crystal", 98, { group: "harp", volume: 80, pan: -0.35, fx: { echo: { beats: 0.75, feedback: 0.45, mix: 0.35 } } });
+    const glass = song.part("Bowed glass", 92, { group: "pad", volume: 86, fx: { lowpass: 3200 } });
+    const halo = song.part("Halo pad", 94, { group: "pad", volume: 80 });
+    const bass = song.part("Fretless bass", 35, { group: "bass", volume: 100 });
+    const kit = song.drums("Brushes", 40, { group: "drums", volume: 80 });
+    const bub = song.synth("Bubbles", "bubbles", { group: "fx" });
+
+    const BASS_SOFT = [[0, 1.4, "R", 92], [1.5, 0.4, "5", 76], [2, 1.4, "8", 84], [3.5, 0.4, "app", 80]];
+    const WHISPER = { [SHAKER]: "g.o.g.o.g.o.g.o.", [SIDE_STICK]: "........g......." };
+    const PENTATONIC = [10, 0, 2, 5, 7];   // Bb major pentatonic: the harp and the crystal never clash with the chords
+    const glissUp = t => gliss(harp, t, pitch("Bb3"), pitch("F6"), 1.5, PENTATONIC, 62, 2.5);
+    const drops = start => {
+        crystal.at(start + 30).play("D6:.5 C6:.5 Bb5:.5 F5:.5", { velocity: 70 });
+        crystal.at(start + 62).play("F6:.5 D6:.5 C6:.5 Bb5:.5", { velocity: 70 });
+    };
+
+    // Intro: the voices and the halo rise, a harp glissando, crystal drops, bubbles (the Fish Tank's intro chords)
+    const pI = progression("Bbmaj7 | Cm7 F7", 0);
+    sustain(voices, pI, { center: 60, velocity: 60 });
+    sustain(halo, pI, { center: 55, velocity: 56 });
+    bassline(bass, pI, { pattern: [[0, 1.9, "R", 84], [2, 1.9, "5", 76]] });
+    glissUp(0);
+    crystal.at(4).play("F6:.5 D6:.5 Bb5:1 r:2", { velocity: 66 });
+    bubbles(bub, 0.5, { count: 10, spread: 4, low: 350, high: 1300 });
+
+    song.body(s => {
+        const a = s, b = s + 64, a2 = s + 96;
+        const pA = progression(A1 + " | " + A2, a), pB = progression(B, b), pA2 = progression(A1 + " | " + A2, a2);
+
+        // A: the tune on celesta in echoes over the voices, the glass and the harp; a whisper of brushes
+        celesta.at(a).play(MEL_A, { velocity: 92, gate: 0.9 });
+        sustain(voices, pA, { center: 60, velocity: 54 });
+        sustain(glass, pA, { center: 67, velocity: 44 });
+        arp(harp, pA, { pattern: [0, 1, 2, 3, 2, 1], rate: 0.5, center: 62, velocity: 48, gate: 0.9 });
+        bassline(bass, pA, { pattern: BASS_SOFT });
+        beat(kit, a, 16, WHISPER);
+        glissUp(a);
+        glissUp(a + 32);
+        drops(a);
+        bubbles(bub, a + 29, { count: 5, spread: 1.5 });
+
+        // B: the voices sing the whistle's melody, the halo in the dark, crystal sparkling
+        voices.at(b).play(MEL_B, { velocity: 88, gate: 0.98, transpose: -12 });
+        sustain(halo, pB, { center: 58, velocity: 56 });
+        arp(crystal, pB, { pattern: [0, 2, 1, 3], rate: 1, center: 79, velocity: 50 });
+        arp(harp, pB, { pattern: [0, 2, 1, 3], rate: 0.5, center: 62, velocity: 44 });
+        bassline(bass, pB, { pattern: [[0, 1.9, "R", 88], [2, 1.9, "8", 80]] });
+        beat(kit, b, 8, WHISPER);
+        glissUp(b + 16);
+        bubbles(bub, b + 14, { count: 6, spread: 2, low: 300, high: 1000 });
+
+        // A': the music box on the tune, the celesta doubling the second half, the glass singing the counter-melody
+        musicBox.at(a2).play(MEL_A, { velocity: 94, gate: 0.85 });
+        celesta.at(a2 + 32).play(MEL_A.split("|").slice(8).join("|"), { velocity: 70 });
+        glass.at(a2).play(COUNTER, { velocity: 58, transpose: 12 });
+        sustain(voices, pA2, { center: 60, velocity: 56 });
+        arp(harp, pA2, { pattern: [0, 1, 2, 3, 2, 1], rate: 0.5, center: 62, velocity: 50, gate: 0.9 });
+        bassline(bass, pA2, { pattern: BASS_SOFT });
+        beat(kit, a2, 16, WHISPER);
+        glissUp(a2);
+        drops(a2);
         bubbles(bub, a2 + 61, { count: 9, spread: 3, low: 350, high: 1400 });
     });
     songs.push(song);

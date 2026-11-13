@@ -69,6 +69,16 @@
         "loopStartSample": 4320000,
         "loopLengthSample": 4114286
     },
+    "theme_clam": {
+        "title": "Pearl Chamber",
+        "kind": "menu",
+        "key": "Bb",
+        "tempo": 112,
+        "sampleRate": 48000,
+        "lengthSeconds": 175.701,
+        "loopStartSample": 4320000,
+        "loopLengthSample": 4114286
+    },
     "theme_shanty": {
         "title": "Sunken Galleon",
         "kind": "stage",

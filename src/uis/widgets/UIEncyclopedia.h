@@ -44,6 +44,7 @@ private:
         std::shared_ptr<EntityData> data;  // Current form for fish
         bool isKnown = false;              // Owned fish, enemies met
         int level = 0;                     // Fish only
+        int extraLevels = 0;               // Fish only: the Clam Room's "+3" (it counts for the stats)
         std::string iconPath;              // Fish only
         int form = 0;                      // Fish: the form shown (starts on the current one)
         int currentForm = 0;               // Fish: the form reached

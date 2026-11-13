@@ -246,6 +246,26 @@ void AudioManager::play_music(const std::string& name, float fadeSeconds)
     m_current = std::move(track);
 }
 
+void AudioManager::play_music_in_sync(const std::string& name, float fadeSeconds)
+{
+    m_queuedMusic.clear();
+    if (m_current && m_current->name == name) return;
+    const bool canSync = m_current && !m_current->isJingle && m_current->music->getStatus() == sf::SoundSource::Status::Playing;
+    const sf::Time offset = canSync ? m_current->music->getPlayingOffset() : sf::Time::Zero;
+
+    auto track = open_track(name);
+    if (!track) return;
+
+    fade_out_current(fadeSeconds);
+    track->level = 0.f;
+    track->target = 1.f;
+    track->fadeSpeed = 1.f / std::max(0.01f, fadeSeconds);
+    apply_volume(*track);
+    track->music->play();
+    if (canSync) track->music->setPlayingOffset(offset);   // Only works once playing
+    m_current = std::move(track);
+}
+
 void AudioManager::play_jingle(const std::string& name)
 {
     m_queuedMusic.clear();

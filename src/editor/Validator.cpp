@@ -223,7 +223,7 @@ namespace
                     const std::string type = read_string(reward, "type");
                     if (type == "unit" && !project.find_uid(DataFile::UNITS, read_int(reward, "UID", 0)))
                         add(report, true, owner + ": rewards unit " + std::to_string(read_int(reward, "UID", 0)) + ", which doesn't exist", target);
-                    else if (type != "unit" && type != "shells")
+                    else if (type != "unit" && type != "shells" && type != "clamRoom")
                         add(report, true, owner + ": unknown reward type \"" + type + "\"", target);
                 }
             }

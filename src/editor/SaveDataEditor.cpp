@@ -12,6 +12,7 @@ namespace
 {
     const char* SAVE_FILE = "game_data/player.json";
     const int MAX_LEVEL = 30;
+    const int MAX_EXTRA_LEVELS = 10;   // PlayerData::MAX_EXTRA_LEVELS
     const int LINEUP_SIZE = 10;
 
     // Sorted unique numbers of a JSON array
@@ -228,6 +229,10 @@ void SaveDataEditor::draw_progress(EditorContext& ctx)
         int shells = read_int(m_save["money"], "shells");
         if (ImGui::DragInt("##shells", &shells, 10.f, 0, 1000000000)) { m_save["money"]["shells"] = std::max(0, shells); m_hasChanges = true; }
 
+        property_label("Shiny Scales", "The Clam Room's currency (a save without it starts with 100 while it's tested)");
+        int scales = m_save["money"].contains("shinyScales") ? read_int(m_save["money"], "shinyScales") : 100;
+        if (ImGui::DragInt("##scales", &scales, 1.f, 0, 1000000)) { m_save["money"]["shinyScales"] = std::max(0, scales); m_hasChanges = true; }
+
         property_label("Current chapter", "The chapter the map opens on");
         int chapter = read_int(m_save["progression"], "currentChapter", 1);
         if (ImGui::InputInt("##chapter", &chapter)) { m_save["progression"]["currentChapter"] = std::max(1, chapter); m_hasChanges = true; }
@@ -305,11 +310,12 @@ void SaveDataEditor::draw_units(EditorContext& ctx)
             return read_string((*unit)["forms"][form], "name");
         };
 
-    if (ImGui::BeginTable("##units", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingStretchProp))
+    if (ImGui::BeginTable("##units", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingStretchProp))
     {
         ImGui::TableSetupColumn("Fish", ImGuiTableColumnFlags_WidthStretch, 2.f);
         ImGui::TableSetupColumn("Owned", ImGuiTableColumnFlags_WidthFixed);
         ImGui::TableSetupColumn("Level", ImGuiTableColumnFlags_WidthStretch, 1.f);
+        ImGui::TableSetupColumn("Extra", ImGuiTableColumnFlags_WidthStretch, 0.7f);
         ImGui::TableSetupColumn("Form", ImGuiTableColumnFlags_WidthStretch, 1.f);
         ImGui::TableSetupColumn("To unlock", ImGuiTableColumnFlags_WidthFixed);
         ImGui::TableHeadersRow();
@@ -347,6 +353,12 @@ void SaveDataEditor::draw_units(EditorContext& ctx)
 
             ImGui::TableSetColumnIndex(3);
             ImGui::SetNextItemWidth(-FLT_MIN);
+            int extra = read_int(ownedUnit, "extraLevels", 0);
+            if (ImGui::SliderInt("##extra", &extra, 0, MAX_EXTRA_LEVELS, "+%d") && isOwned) { owned[key]["extraLevels"] = extra; m_hasChanges = true; }
+            ImGui::SetItemTooltip("Extra levels from the Clam Room: stronger, the price and the form don't change");
+
+            ImGui::TableSetColumnIndex(4);
+            ImGui::SetNextItemWidth(-FLT_MIN);
             int form = read_int(ownedUnit, "form");
             if (ImGui::SliderInt("##form", &form, 0, std::max(0, formCount - 1), form < formCount ? unitName(uid, form).c_str() : "%d") && isOwned)
             {
@@ -355,7 +367,7 @@ void SaveDataEditor::draw_units(EditorContext& ctx)
             }
             ImGui::EndDisabled();
 
-            ImGui::TableSetColumnIndex(4);
+            ImGui::TableSetColumnIndex(5);
             ImGui::BeginDisabled(isOwned);
             bool isWaiting = waiting.contains(key);
             if (ImGui::Checkbox("##waiting", &isWaiting))

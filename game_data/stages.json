@@ -81,7 +81,8 @@
                 "type": "unit",
                 "UID": 2
             }
-        ]
+        ],
+        "music": "theme_default"
     },
     "UID_1": {
         "UID": 1,
@@ -114,7 +115,8 @@
                 "type": "shells",
                 "amount": 150
             }
-        ]
+        ],
+        "music": "theme_default"
     },
     "UID_2": {
         "UID": 2,
@@ -311,7 +313,11 @@
                 "type": "shells",
                 "amount": 600
             }
-        ]
+        ],
+        "musicChange": {
+            "music": "theme_stressful",
+            "baseHealth": 99
+        }
     },
     "UID_6": {
         "UID": 6,
@@ -423,7 +429,7 @@
         "unitsLimit": 20,
         "baseHealth": 500,
         "length": 2160,
-        "baseTexture": "assets/images/textures/bases/enemyBaseTEST.png",
+        "baseTexture": "assets/images/textures/bases/RocksBase.png",
         "backgroundTexture": "assets/images/textures/backgrounds/stages/CoralReef.png",
         "numberOfDifferentEnemies": 5,
         "enemies": [
@@ -516,14 +522,14 @@
         "unitsLimit": 20,
         "baseHealth": 600,
         "length": 1160,
-        "baseTexture": "assets/images/textures/bases/RocksBase.png",
+        "baseTexture": "assets/images/textures/bases/starBase.png",
         "backgroundTexture": "assets/images/textures/backgrounds/stages/CoralReef.png",
         "numberOfDifferentEnemies": 3,
         "enemies": [
             {
                 "UID": 4,
-                "amount": 5,
-                "respawnTime": 0.5,
+                "amount": 4,
+                "respawnTime": 1,
                 "spawnStart": 1,
                 "layer": -1,
                 "baseHealth": 100,
@@ -536,8 +542,8 @@
             },
             {
                 "UID": 4,
-                "amount": 10,
-                "respawnTime": 0.5,
+                "amount": 8,
+                "respawnTime": 2,
                 "spawnStart": 1,
                 "layer": -1,
                 "baseHealth": 9,
@@ -568,14 +574,15 @@
                 "type": "shells",
                 "amount": 600
             }
-        ]
+        ],
+        "music": "theme_default"
     },
     "UID_9": {
         "UID": 9,
         "stageName": "Run & Pinch",
         "enemiesLimit": 20,
         "unitsLimit": 20,
-        "baseHealth": 600,
+        "baseHealth": 1500,
         "length": 1460,
         "baseTexture": "assets/images/textures/bases/RocksBase.png",
         "backgroundTexture": "assets/images/textures/backgrounds/stages/CoralSeabed.png",
@@ -669,8 +676,1007 @@
         "rewards": [
             {
                 "type": "shells",
+                "amount": 800
+            }
+        ],
+        "music": "theme_crab"
+    },
+    "UID_10": {
+        "UID": 10,
+        "stageName": "Jelly Field",
+        "enemiesLimit": 10,
+        "unitsLimit": 20,
+        "baseHealth": 1000,
+        "length": 1600,
+        "baseTexture": "assets/images/textures/bases/JellyBase.png",
+        "backgroundTexture": "assets/images/textures/backgrounds/stages/CoralSeabed.png",
+        "numberOfDifferentEnemies": 4,
+        "enemies": [
+            {
+                "UID": 4,
+                "amount": 5,
+                "respawnTime": 10,
+                "spawnStart": 5,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 7,
+                "amount": -1,
+                "respawnTime": 15,
+                "spawnStart": 0,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 6,
+                "amount": 5,
+                "respawnTime": 3,
+                "spawnStart": 2,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 1,
+                "amount": 10,
+                "respawnTime": 4,
+                "spawnStart": 1,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            }
+        ],
+        "rewards": [
+            {
+                "type": "shells",
                 "amount": 300
             }
-        ]
+        ],
+        "music": "theme_calm"
+    },
+    "UID_11": {
+        "UID": 11,
+        "stageName": "Shocking Ain't It?",
+        "enemiesLimit": 10,
+        "unitsLimit": 20,
+        "baseHealth": 1000,
+        "length": 1600,
+        "baseTexture": "assets/images/textures/bases/JellyBase.png",
+        "backgroundTexture": "assets/images/textures/backgrounds/stages/CoralSeabed.png",
+        "numberOfDifferentEnemies": 3,
+        "enemies": [
+            {
+                "UID": 4,
+                "amount": 5,
+                "respawnTime": 9,
+                "spawnStart": 0,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 7,
+                "amount": 5,
+                "respawnTime": 15,
+                "spawnStart": 0,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 1,
+                "amount": 20,
+                "respawnTime": 5,
+                "spawnStart": 0,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            }
+        ],
+        "rewards": [
+            {
+                "type": "shells",
+                "amount": 600
+            },
+            {
+                "type": "unit",
+                "UID": 5
+            }
+        ],
+        "music": "theme_calm"
+    },
+    "UID_12": {
+        "UID": 12,
+        "stageName": "Shiny Sand",
+        "enemiesLimit": 10,
+        "unitsLimit": 20,
+        "baseHealth": 1000,
+        "length": 900,
+        "baseTexture": "assets/images/textures/bases/RocksBase.png",
+        "backgroundTexture": "assets/images/textures/backgrounds/stages/CoralSeabed.png",
+        "numberOfDifferentEnemies": 3,
+        "enemies": [
+            {
+                "UID": 7,
+                "amount": 5,
+                "respawnTime": 5,
+                "spawnStart": 20,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 6,
+                "amount": 15,
+                "respawnTime": 5,
+                "spawnStart": 0,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 1,
+                "amount": -1,
+                "respawnTime": 1,
+                "spawnStart": 0,
+                "layer": -1,
+                "baseHealth": 99,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            }
+        ],
+        "rewards": [
+            {
+                "type": "shells",
+                "amount": 300
+            }
+        ],
+        "music": "theme_calm"
+    },
+    "UID_13": {
+        "UID": 13,
+        "stageName": "On The Pit's Edge",
+        "enemiesLimit": 10,
+        "unitsLimit": 20,
+        "baseHealth": 1000,
+        "length": 1300,
+        "baseTexture": "assets/images/textures/bases/crabBase.png",
+        "backgroundTexture": "assets/images/textures/backgrounds/stages/ShallowSeabed.png",
+        "numberOfDifferentEnemies": 5,
+        "enemies": [
+            {
+                "UID": 1,
+                "amount": -1,
+                "respawnTime": 2,
+                "spawnStart": 0,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 6,
+                "amount": -1,
+                "respawnTime": 5,
+                "spawnStart": 5,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 4,
+                "amount": 10,
+                "respawnTime": 10,
+                "spawnStart": 3,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 4,
+                "amount": 5,
+                "respawnTime": 7,
+                "spawnStart": 0,
+                "layer": -1,
+                "baseHealth": 75,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 7,
+                "amount": 5,
+                "respawnTime": 8,
+                "spawnStart": 2,
+                "layer": -1,
+                "baseHealth": 75,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            }
+        ],
+        "rewards": [
+            {
+                "type": "shells",
+                "amount": 300
+            }
+        ],
+        "music": "theme_preboss"
+    },
+    "UID_14": {
+        "UID": 14,
+        "stageName": "The Pit",
+        "enemiesLimit": 10,
+        "unitsLimit": 20,
+        "baseHealth": 1200,
+        "length": 1450,
+        "baseTexture": "assets/images/textures/bases/crabBase.png",
+        "backgroundTexture": "assets/images/textures/backgrounds/stages/RockField.png",
+        "numberOfDifferentEnemies": 4,
+        "enemies": [
+            {
+                "UID": 3,
+                "amount": 1,
+                "respawnTime": 0,
+                "spawnStart": 10,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 1,
+                "bypassEnemyLimit": 1
+            },
+            {
+                "UID": 4,
+                "amount": -1,
+                "respawnTime": 20,
+                "spawnStart": 5,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 7,
+                "amount": -1,
+                "respawnTime": 30,
+                "spawnStart": 20,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 1,
+                "amount": -1,
+                "respawnTime": 8,
+                "spawnStart": 5,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            }
+        ],
+        "rewards": [
+            {
+                "type": "shells",
+                "amount": 1000
+            },
+            {
+                "type": "unit",
+                "UID": 4
+            }
+        ],
+        "music": "theme_boss"
+    },
+    "UID_15": {
+        "UID": 15,
+        "stageName": "Pinch & Hide",
+        "enemiesLimit": 20,
+        "unitsLimit": 20,
+        "baseHealth": 1200,
+        "length": 1100,
+        "baseTexture": "assets/images/textures/bases/RocksBase.png",
+        "backgroundTexture": "assets/images/textures/backgrounds/stages/RockField.png",
+        "numberOfDifferentEnemies": 5,
+        "enemies": [
+            {
+                "UID": 8,
+                "amount": 3,
+                "respawnTime": 20,
+                "spawnStart": 2,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 8,
+                "amount": 3,
+                "respawnTime": 8,
+                "spawnStart": 0,
+                "layer": -1,
+                "baseHealth": 75,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 4,
+                "amount": 6,
+                "respawnTime": 12,
+                "spawnStart": 6,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 4,
+                "amount": 6,
+                "respawnTime": 6,
+                "spawnStart": 0,
+                "layer": -1,
+                "baseHealth": 75,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 6,
+                "amount": 10,
+                "respawnTime": 12,
+                "spawnStart": 0,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            }
+        ],
+        "rewards": [
+            {
+                "type": "shells",
+                "amount": 500
+            }
+        ],
+        "music": "theme_default"
+    },
+    "UID_16": {
+        "UID": 16,
+        "stageName": "Seafood Bed",
+        "enemiesLimit": 40,
+        "unitsLimit": 20,
+        "baseHealth": 1200,
+        "length": 800,
+        "baseTexture": "assets/images/textures/bases/crabBase.png",
+        "backgroundTexture": "assets/images/textures/backgrounds/stages/ShallowSeabed.png",
+        "numberOfDifferentEnemies": 6,
+        "enemies": [
+            {
+                "UID": 8,
+                "amount": 10,
+                "respawnTime": 8,
+                "spawnStart": 10,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 8,
+                "amount": 3,
+                "respawnTime": 1,
+                "spawnStart": 20,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 8,
+                "amount": 3,
+                "respawnTime": 1,
+                "spawnStart": 60,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 6,
+                "amount": 20,
+                "respawnTime": 6,
+                "spawnStart": 2,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 1,
+                "amount": -1,
+                "respawnTime": 10,
+                "spawnStart": 5,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 1,
+                "amount": 10,
+                "respawnTime": 3,
+                "spawnStart": 2,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            }
+        ],
+        "rewards": [
+            {
+                "type": "shells",
+                "amount": 500
+            }
+        ],
+        "music": "theme_calm"
+    },
+    "UID_17": {
+        "UID": 17,
+        "stageName": "Zap Behind The Wall",
+        "enemiesLimit": 40,
+        "unitsLimit": 20,
+        "baseHealth": 1200,
+        "length": 1200,
+        "baseTexture": "assets/images/textures/bases/JellyBase.png",
+        "backgroundTexture": "assets/images/textures/backgrounds/stages/ShallowSeabed.png",
+        "numberOfDifferentEnemies": 5,
+        "enemies": [
+            {
+                "UID": 8,
+                "amount": -1,
+                "respawnTime": 15,
+                "spawnStart": 14,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 8,
+                "amount": 3,
+                "respawnTime": 2,
+                "spawnStart": 10,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 7,
+                "amount": 7,
+                "respawnTime": 8,
+                "spawnStart": 20,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 7,
+                "amount": 3,
+                "respawnTime": 2,
+                "spawnStart": 13,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 3,
+                "amount": 1,
+                "respawnTime": 0,
+                "spawnStart": 10,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            }
+        ],
+        "rewards": [
+            {
+                "type": "shells",
+                "amount": 500
+            }
+        ],
+        "music": "theme_crab_boss"
+    },
+    "UID_18": {
+        "UID": 18,
+        "stageName": "Staring: A Snail!",
+        "enemiesLimit": 40,
+        "unitsLimit": 20,
+        "baseHealth": 1200,
+        "length": 1200,
+        "baseTexture": "assets/images/textures/bases/starBase.png",
+        "backgroundTexture": "assets/images/textures/backgrounds/stages/ShallowSeabed.png",
+        "numberOfDifferentEnemies": 5,
+        "enemies": [
+            {
+                "UID": 3,
+                "amount": 1,
+                "respawnTime": 5,
+                "spawnStart": 0,
+                "layer": -1,
+                "baseHealth": 90,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 1,
+                "bypassEnemyLimit": 1
+            },
+            {
+                "UID": 4,
+                "amount": 10,
+                "respawnTime": 3,
+                "spawnStart": 0,
+                "layer": -1,
+                "baseHealth": 90,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 4,
+                "amount": 3,
+                "respawnTime": 0.5,
+                "spawnStart": 20,
+                "layer": -1,
+                "baseHealth": 90,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 4,
+                "amount": 3,
+                "respawnTime": 0.5,
+                "spawnStart": 60,
+                "layer": -1,
+                "baseHealth": 90,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 1,
+                "amount": 20,
+                "respawnTime": 4,
+                "spawnStart": 2,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            }
+        ],
+        "rewards": [
+            {
+                "type": "shells",
+                "amount": 1500
+            },
+            {
+                "type": "unit",
+                "UID": 6
+            }
+        ],
+        "music": "theme_preboss",
+        "musicChange": {
+            "music": "theme_energetic",
+            "baseHealth": 90
+        }
+    },
+    "UID_19": {
+        "UID": 19,
+        "stageName": "Peculiar Algaes",
+        "enemiesLimit": 20,
+        "unitsLimit": 20,
+        "baseHealth": 1500,
+        "length": 1600,
+        "baseTexture": "assets/images/textures/bases/enemyBaseTEST.png",
+        "backgroundTexture": "assets/images/textures/backgrounds/stages/KelpForest.png",
+        "numberOfDifferentEnemies": 6,
+        "enemies": [
+            {
+                "UID": 5,
+                "amount": 5,
+                "respawnTime": 10,
+                "spawnStart": 2,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 5,
+                "amount": -1,
+                "respawnTime": 12,
+                "spawnStart": 120,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 1,
+                "amount": -1,
+                "respawnTime": 6,
+                "spawnStart": 1,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 8,
+                "amount": 4,
+                "respawnTime": 4,
+                "spawnStart": 0,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 8,
+                "amount": -1,
+                "respawnTime": 12,
+                "spawnStart": 60,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 7,
+                "amount": -1,
+                "respawnTime": 12,
+                "spawnStart": 10,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            }
+        ],
+        "rewards": [
+            {
+                "type": "shells",
+                "amount": 800
+            }
+        ],
+        "music": "theme_danger"
+    },
+    "UID_20": {
+        "UID": 20,
+        "stageName": "The Submerged Roots",
+        "enemiesLimit": 40,
+        "unitsLimit": 20,
+        "baseHealth": 1500,
+        "length": 2200,
+        "baseTexture": "assets/images/textures/bases/ShipwreckBase.png",
+        "backgroundTexture": "assets/images/textures/backgrounds/stages/KelpForest.png",
+        "numberOfDifferentEnemies": 5,
+        "enemies": [
+            {
+                "UID": 4,
+                "amount": 20,
+                "respawnTime": 5,
+                "spawnStart": 5,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 4,
+                "amount": 12,
+                "respawnTime": 2,
+                "spawnStart": 0,
+                "layer": -1,
+                "baseHealth": 25,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 8,
+                "amount": 10,
+                "respawnTime": 4,
+                "spawnStart": 0,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 5,
+                "amount": 6,
+                "respawnTime": 8,
+                "spawnStart": 2,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 5,
+                "amount": 8,
+                "respawnTime": 3,
+                "spawnStart": 0,
+                "layer": -1,
+                "baseHealth": 25,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            }
+        ],
+        "rewards": [
+            {
+                "type": "shells",
+                "amount": 800
+            }
+        ],
+        "music": "theme_danger"
+    },
+    "UID_21": {
+        "UID": 21,
+        "stageName": "Deadly Depths",
+        "enemiesLimit": 20,
+        "unitsLimit": 20,
+        "baseHealth": 1500,
+        "length": 1500,
+        "baseTexture": "assets/images/textures/bases/SharkBase.png",
+        "backgroundTexture": "assets/images/textures/backgrounds/stages/RockField.png",
+        "numberOfDifferentEnemies": 2,
+        "enemies": [
+            {
+                "UID": 3,
+                "amount": 2,
+                "respawnTime": 15,
+                "spawnStart": 3,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 1,
+                "amount": -1,
+                "respawnTime": 3,
+                "spawnStart": 6,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    1,
+                    1
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            }
+        ],
+        "rewards": [
+            {
+                "type": "shells",
+                "amount": 800
+            }
+        ],
+        "music": "theme_boss_v1"
     }
 }
