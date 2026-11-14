@@ -49,4 +49,7 @@ namespace Platform
 
     // Whether the game has this file (an image, a sound...), on PC or in the APK
     bool exists(const std::string& path);
+
+    // A line for the developer: the console on PC, the phone's log on Android (adb logcat -s FishFighters)
+    void log(const std::string& message);
 }

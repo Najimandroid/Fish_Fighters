@@ -1,5 +1,6 @@
 #include "UIOptionsMenu.h"
 #include "../UISkin.h"
+#include "../../core/Platform.h"
 #include "../../core/DataLoader.h"
 #include "../../audio/AudioManager.h"
 
@@ -48,10 +49,20 @@ UIOptionsMenu::UIOptionsMenu(std::shared_ptr<DataLoader> dataLoader, std::shared
     addText("Music", ROW_SIZE, UISkin::TEXT, { LEFT, MUSIC_Y }, { 0.f, 0.5f });
     addText("Effects", ROW_SIZE, UISkin::TEXT, { LEFT, EFFECTS_Y }, { 0.f, 0.5f });
     addText("Mute in background", ROW_SIZE, UISkin::TEXT, { LEFT, MUTE_Y }, { 0.f, 0.5f });
-    addText("DISPLAY", HEADER_SIZE, UISkin::TITLE, { LEFT, 600.f }, { 0.f, 0.5f });
-    addText("CONTROLS", HEADER_SIZE, UISkin::TITLE, { LEFT, 765.f }, { 0.f, 0.5f });
-    addText("Pause: Esc, P or Space    Speed: F    Camera: drag and mouse wheel", 26, UISkin::TEXT,
-        { LEFT, 805.f }, { 0.f, 0.5f });
+    // A phone is always full screen: no DISPLAY there, and its controls are touch
+    if constexpr (!Platform::IS_MOBILE)
+    {
+        addText("DISPLAY", HEADER_SIZE, UISkin::TITLE, { LEFT, 600.f }, { 0.f, 0.5f });
+        addText("CONTROLS", HEADER_SIZE, UISkin::TITLE, { LEFT, 765.f }, { 0.f, 0.5f });
+        addText("Pause: Esc, P or Space    Speed: F    Camera: drag and mouse wheel", 26, UISkin::TEXT,
+            { LEFT, 805.f }, { 0.f, 0.5f });
+    }
+    else
+    {
+        addText("CONTROLS", HEADER_SIZE, UISkin::TITLE, { LEFT, 600.f }, { 0.f, 0.5f });
+        addText("Pause and speed: the buttons at the top left    Camera: drag the battlefield", 26, UISkin::TEXT,
+            { LEFT, 640.f }, { 0.f, 0.5f });
+    }
 
     // Sliders: live, the Effects one plays a click so its level can be heard
     auto onVolume = [this](float Settings::* field)
@@ -143,8 +154,11 @@ void UIOptionsMenu::render(sf::RenderWindow& window)
     m_musicSlider.render(window);
     m_effectsSlider.render(window);
     m_muteButton.render(window);
-    m_fullscreenButton.render(window);
-    m_windowedButton.render(window);
+    if constexpr (!Platform::IS_MOBILE)
+    {
+        m_fullscreenButton.render(window);
+        m_windowedButton.render(window);
+    }
     m_closeButton.render(window);
 }
 
@@ -166,8 +180,11 @@ void UIOptionsMenu::handle_event(const sf::Event& event, const sf::RenderWindow&
     m_musicSlider.handle_event(event, window);
     m_effectsSlider.handle_event(event, window);
     m_muteButton.handle_event(event, window);
-    m_fullscreenButton.handle_event(event, window);
-    m_windowedButton.handle_event(event, window);
+    if constexpr (!Platform::IS_MOBILE)
+    {
+        m_fullscreenButton.handle_event(event, window);
+        m_windowedButton.handle_event(event, window);
+    }
     m_closeButton.handle_event(event, window);
 }
 

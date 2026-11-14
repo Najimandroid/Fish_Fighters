@@ -94,6 +94,12 @@ private:
 
     tweeny::tween<float, float> m_offsetTween;
     sf::Vector2f m_viewOffset{ 0.f, 0.f };      // current camera offset
+
+    // Dragging the map (UI coordinates)
+    bool m_isPressing = false;
+    bool m_isDraggingMap = false;
+    sf::Vector2f m_pressPoint;
+    sf::Vector2f m_pressOffset;
     sf::Vector2f m_targetOffset{ 0.f, 0.f };    // target camera offset
     float m_moveSpeed = 5.f;
 };

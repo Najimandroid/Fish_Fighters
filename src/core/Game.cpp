@@ -124,7 +124,9 @@ void Game::calculate_delta_time()
     // A frame never counts more than MAX_FRAME_SECONDS: after a stall (loading a battle, the phone coming back from the
     // background, a dragged window) the game carries on where it was instead of jumping ahead
     const float MAX_FRAME_SECONDS = 0.1f;
-    m_deltaTime = std::min(m_deltaClock.restart().asSeconds(), MAX_FRAME_SECONDS);
+    const float frameSeconds = m_deltaClock.restart().asSeconds();
+    if (frameSeconds > 0.25f) Platform::log("Slow frame: " + std::to_string(static_cast<int>(frameSeconds * 1000.f)) + " ms");
+    m_deltaTime = std::min(frameSeconds, MAX_FRAME_SECONDS);
     m_realDeltaTime = m_deltaTime;
 
     switch (m_speedState)

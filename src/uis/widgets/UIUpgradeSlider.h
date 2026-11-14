@@ -3,6 +3,7 @@
 #include "UIUpgradeIcon.h"
 #include "UIButtonElement.h"
 #include "UIOfferButton.h"
+#include "UISwipe.h"
 #include "UIRoundButton.h"
 #include "UIPanel.h"
 #include "UIAbilityList.h"
@@ -52,6 +53,7 @@ private:
     std::vector<std::shared_ptr<UIUpgradeIcon>> m_upgradeIcons; // Icon objects for the slider
 
     UIOfferButton m_upgradeButton;    // UPGRADE! (UNLOCK!) with its price on it, in shells
+    UISwipe m_swipe;                  // Swiping the cards sideways
     UIRoundButton m_previousButton;   // Arrows on both sides of the cards
     UIRoundButton m_nextButton;
 

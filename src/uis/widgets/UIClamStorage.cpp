@@ -36,8 +36,9 @@ namespace
     const sf::Color CORAL{ 255, 128, 104 };
     // The clam's inner face, and the pearl card's mother-of-pearl and ink
     const sf::Color SHELL_CENTER{ 178, 96, 150 }, SHELL_EDGE{ 46, 12, 38 };
-    const sf::Color CARD_TOP{ 255, 240, 248 }, CARD_BOTTOM{ 244, 206, 230 };
-    const sf::Color INK{ 92, 30, 78 }, INK_SOFT{ 146, 82, 128 }, EXTRA_INK{ 130, 62, 196 }, WARNING_INK{ 212, 70, 70 };
+    // Deep pearl (light text on it): a pale card looked washed out in the dark clam
+    const sf::Color CARD_TOP{ 146, 62, 116 }, CARD_BOTTOM{ 92, 30, 76 };
+    const sf::Color INK{ 255, 238, 248 }, INK_SOFT{ 238, 190, 222 }, EXTRA_INK{ 214, 166, 255 }, WARNING_INK{ 255, 136, 116 };
     const float CARD_CORNER = 44.f;
 }
 
@@ -454,7 +455,7 @@ void UIClamStorage::render(sf::RenderWindow& window)
             sf::CircleShape scallop(radius);
             scallop.setOrigin({ radius, radius });
             scallop.setPosition({ x, y });
-            scallop.setFillColor(sf::Color(252, 240, 248));
+            scallop.setFillColor(sf::Color(226, 186, 214));   // The shell's rim: pearly, not glaring white
             scallop.setOutlineThickness(6.f);
             scallop.setOutlineColor(UISkin::OUTLINE);
             window.draw(scallop);
@@ -521,7 +522,7 @@ void UIClamStorage::render_panel(sf::RenderWindow& window)
     sheen.setPoint(1, PANEL.position + sf::Vector2f{ PANEL.size.x * 0.75f, 10.f });
     sheen.setPoint(2, PANEL.position + sf::Vector2f{ PANEL.size.x * 0.35f, PANEL.size.y * 0.5f });
     sheen.setPoint(3, PANEL.position + sf::Vector2f{ PANEL.size.x * 0.15f, PANEL.size.y * 0.5f });
-    sheen.setFillColor(sf::Color(255, 255, 255, 46));
+    sheen.setFillColor(sf::Color(255, 220, 245, 30));
     window.draw(sheen);
 
     auto player = m_dataLoader->get_player_data().lock();
@@ -530,7 +531,7 @@ void UIClamStorage::render_panel(sf::RenderWindow& window)
         {
             if (isBody) UISkin::style_body_text(m_text, size, color);
             else UISkin::style_text(m_text, size, color);
-            if (!isOutlined) m_text.setOutlineThickness(0.f);
+            if (!isOutlined && isBody) m_text.setOutlineThickness(0.f);   // Titles keep the game's outline
             m_text.setString(string);
             UISkin::set_text_anchor(m_text, anchor);
             m_text.setPosition(position);
@@ -567,7 +568,7 @@ void UIClamStorage::render_panel(sf::RenderWindow& window)
 
     // "Select all": a pearl box, coral with a white tick when on
     sf::ConvexShape box = UISkin::rounded_rect(CHECKBOX, 9.f);
-    box.setFillColor(m_selectAll ? sf::Color(242, 118, 158) : sf::Color(255, 250, 253));
+    box.setFillColor(m_selectAll ? sf::Color(242, 118, 158) : sf::Color(70, 22, 58));
     box.setOutlineThickness(4.f);
     box.setOutlineColor(UISkin::OUTLINE);
     window.draw(box);

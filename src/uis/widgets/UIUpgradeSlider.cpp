@@ -366,25 +366,35 @@ void UIUpgradeSlider::handle_event(const sf::Event& event, const sf::RenderWindo
 			move_to_index(m_currentIndex + 1);
 	}
 
+	// The cards: a swipe sideways moves by one card; a tap on a side card brings it to the middle (on release, so a
+	// swipe that starts on a card doesn't pick it). The arrows, drawn over the far cards, come first
+	const auto is_on_arrow = [this](sf::Vector2f point)
+		{
+			return (m_previousButton.is_visible() && m_previousButton.get_bounds().contains(point))
+				|| (m_nextButton.is_visible() && m_nextButton.get_bounds().contains(point));
+		};
 	if (const auto* mousePressed = event.getIf<sf::Event::MouseButtonPressed>())
 	{
-		if (mousePressed->button == sf::Mouse::Button::Left)
-		{
-			sf::Vector2f mousePos = window.mapPixelToCoords(mousePressed->position);
-
-			// The arrows are drawn over the far cards: they come first
-			const bool isOnArrow = (m_previousButton.is_visible() && m_previousButton.get_bounds().contains(mousePos))
-				|| (m_nextButton.is_visible() && m_nextButton.get_bounds().contains(mousePos));
-
-			for (int i = 0; i < static_cast<int>(m_upgradeIcons.size()) && !isOnArrow; ++i)
-			{
+		const sf::Vector2f mousePos = window.mapPixelToCoords(mousePressed->position);
+		if (mousePressed->button == sf::Mouse::Button::Left && mousePos.y < DESCRIPTION_PANEL.position.y && !is_on_arrow(mousePos))
+			m_swipe.press(mousePos);
+	}
+	else if (const auto* mouseMoved = event.getIf<sf::Event::MouseMoved>())
+	{
+		m_swipe.move(window.mapPixelToCoords(mouseMoved->position));
+	}
+	else if (const auto* mouseReleased = event.getIf<sf::Event::MouseButtonReleased>(); mouseReleased && m_swipe.isDown)
+	{
+		const sf::Vector2f mousePos = window.mapPixelToCoords(mouseReleased->position);
+		if (const int direction = m_swipe.release(mousePos))
+			move_to_index(m_currentIndex - direction);
+		else
+			for (int i = 0; i < static_cast<int>(m_upgradeIcons.size()); ++i)
 				if (i != m_currentIndex && m_upgradeIcons[i]->get_bounds().contains(mousePos))
 				{
 					move_to_index(i);
 					break;
 				}
-			}
-		}
 	}
 
 	m_previousButton.handle_event(event, window);

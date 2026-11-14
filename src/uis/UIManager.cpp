@@ -977,6 +977,7 @@ void UIManager::start_battle(int stageUid)
     m_battleCover = std::make_shared<UIBattleIntro>(m_dataLoader->get_stage_data(stageUid)->name, HOLD_UNTIL_REPLACED);
     add_ui_element(m_battleCover);
     m_pendingBattleStage = stageUid;
+    Platform::log("Battle start: the water rises");
     stage->prepare(stageUid);   // The slow reading happens on a worker thread while the water rises and the bubbles go up
 }
 
@@ -991,8 +992,11 @@ void UIManager::finish_battle_start()
     m_battleCover.reset();
     auto stage = m_stage.lock();
     if (!stage) return;
+    Platform::log("Battle start: covered and read, loading");
+    sf::Clock clock;
     stage->load(stageUid);   // Unloads the previous battle if any
     generate_battle_uis();
+    Platform::log("Battle start: loaded in " + std::to_string(clock.getElapsedTime().asMilliseconds()) + " ms");
 }
 
 /*

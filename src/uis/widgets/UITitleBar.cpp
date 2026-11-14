@@ -39,7 +39,7 @@ void UITitleBar::render(sf::RenderWindow& window)
     sf::VertexArray band(sf::PrimitiveType::TriangleStrip, 4);
     // Its colors: top, bottom, the bevel, the rivets (pearls on mother-of-pearl)
     struct Look { sf::Color top, bottom, bevel, rivet; };
-    const Look look = m_material == Material::NACRE ? Look{ { 255, 232, 244 }, { 236, 186, 218 }, { 255, 252, 255 }, { 255, 250, 255 } }
+    const Look look = m_material == Material::NACRE ? Look{ { 150, 66, 118 }, { 96, 32, 78 }, { 226, 156, 204 }, { 255, 236, 248 } }
         : m_material == Material::VIOLET ? Look{ { 78, 60, 126 }, { 46, 34, 86 }, { 152, 130, 204 }, { 132, 112, 182 } }
         : Look{ { 82, 100, 126 }, { 54, 68, 90 }, { 132, 152, 178 }, { 120, 138, 162 } };
     band[0] = sf::Vertex{ { left, top }, look.top };

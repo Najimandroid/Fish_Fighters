@@ -7,6 +7,9 @@
 #include <SFML/System/FileInputStream.hpp>
 #include <SFML/System/NativeActivity.hpp>
 #include <android/native_activity.h>
+#include <android/log.h>
+#else
+#include <iostream>
 #endif
 
 namespace
@@ -55,6 +58,15 @@ std::string Platform::writable(const std::string& path)
     return full.string();
 #else
     return path;
+#endif
+}
+
+void Platform::log(const std::string& message)
+{
+#if defined(__ANDROID__)
+    __android_log_print(ANDROID_LOG_INFO, "FishFighters", "%s", message.c_str());
+#else
+    std::cerr << message << std::endl;
 #endif
 }
 

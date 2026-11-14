@@ -5,6 +5,7 @@
 #include "UIButtonElement.h"
 #include "UIRoundButton.h"
 #include "UIPanel.h"
+#include "UISwipe.h"
 
 #include "tweeny.h"
 
@@ -135,6 +136,7 @@ private:
     sf::Text m_ghostCost;             // Deploy cost on the dragged unit
 
     // Drag state tracking
+    UISwipe m_swipe;                  // Swiping the cards sideways
     bool m_mouseDown = false;
     bool m_dragging = false;
     int m_dragFromSlot = -1;          // Lineup slot being dragged to another slot (-1: a card is dragged)

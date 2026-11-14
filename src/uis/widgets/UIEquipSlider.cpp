@@ -405,19 +405,12 @@ void UIEquipSlider::handle_event(const sf::Event& event, const sf::RenderWindow&
                 m_mouseDownPos = mousePos;
                 m_holdClock.restart();
             }
-            else if (!(m_previousButton.is_visible() && m_previousButton.get_bounds().contains(mousePos))
-                && !(m_nextButton.is_visible() && m_nextButton.get_bounds().contains(mousePos)))
-            {
-                // Pressed another icon -> switch selection (the arrows, drawn over the far cards, come first)
-                for (int i = 0; i < static_cast<int>(m_equipIcons.size()); ++i)
-                {
-                    if (i != m_currentIndex && m_equipIcons[i]->get_bounds().contains(mousePos))
-                    {
-                        move_to_index(i);
-                        break;
-                    }
-                }
-            }
+            // Over the cards (not the lineup, not the arrows drawn over the far cards): it may be a swipe; a tap on a
+            // side card picks it when released
+            const bool isOnArrow = (m_previousButton.is_visible() && m_previousButton.get_bounds().contains(mousePos))
+                || (m_nextButton.is_visible() && m_nextButton.get_bounds().contains(mousePos));
+            if (m_dragFromSlot < 0 && !isOnArrow && mousePos.y < lineup_panel_rect().position.y - 30.f)
+                m_swipe.press(mousePos);
         }
     }
 
@@ -426,13 +419,19 @@ void UIEquipSlider::handle_event(const sf::Event& event, const sf::RenderWindow&
     {
         sf::Vector2f mousePos = window.mapPixelToCoords(mouseMoved->position);
 
-        // Start drag if the mouse has moved more than a threshold
+        // Start a drag once it has moved a little (a finger wobbles: not on the first pixels). From the current card,
+        // sliding sideways is a swipe of the cards instead (a card goes down to the lineup)
+        m_swipe.move(mousePos);
         if (m_mouseDown && !m_dragging)
         {
             float dx = mousePos.x - m_mouseDownPos.x;
             float dy = mousePos.y - m_mouseDownPos.y;
-            if (std::sqrt(dx * dx + dy * dy) > 5.f)
+            const bool isSideways = m_dragFromSlot < 0 && std::abs(dx) > 1.4f * std::abs(dy);
+            if (std::sqrt(dx * dx + dy * dy) > 12.f && !isSideways)
+            {
+                m_swipe.cancel();
                 begin_drag(mousePos);
+            }
         }
 
         // While dragging, move ghost with cursor
@@ -448,14 +447,31 @@ void UIEquipSlider::handle_event(const sf::Event& event, const sf::RenderWindow&
         if (mouseReleased->button == sf::Mouse::Button::Left)
         {
             const sf::Vector2f mousePos = window.mapPixelToCoords(mouseReleased->position);
+            const int swipe = m_swipe.isDown ? m_swipe.release(mousePos) : 0;
             if (m_dragging && m_tempGhost && m_tempGhost->active)
             {
                 end_drag(mousePos);
+            }
+            else if (swipe != 0)
+            {
+                // Swiped: the next card (slid left) or the previous one
+                const int newIndex = m_currentIndex - swipe;
+                if (newIndex >= 0 && newIndex < static_cast<int>(m_equipIcons.size())) move_to_index(newIndex);
             }
             else if (m_mouseDown && !m_dragging && m_dragFromSlot < 0
                 && !m_equipIcons.empty() && m_equipIcons[m_currentIndex]->get_bounds().contains(mousePos))
             {
                 add_selected_to_lineup();   // A click, not a drag
+            }
+            else if (!m_dragging && m_dragFromSlot < 0)
+            {
+                // A tap on a side card: it comes to the middle
+                for (int i = 0; i < static_cast<int>(m_equipIcons.size()); ++i)
+                    if (i != m_currentIndex && m_equipIcons[i]->get_bounds().contains(mousePos))
+                    {
+                        move_to_index(i);
+                        break;
+                    }
             }
             m_mouseDown = false;
             m_dragging = false;

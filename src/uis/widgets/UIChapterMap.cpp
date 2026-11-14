@@ -5,6 +5,7 @@
 #include "../../core/stages/Stage.h"
 
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 
 namespace
@@ -14,6 +15,8 @@ namespace
 
     // Info panel at the bottom, between the back button and the BATTLE button (UIManager)
     const sf::FloatRect INFO_PANEL{ { 180.f, 862.f }, { 1260.f, 190.f } };
+    const float MAP_TOP = 112.f, MAP_BOTTOM = INFO_PANEL.position.y - 6.f;   // Where a press can drag the map (not the bars)
+    const float DRAG_START = 14.f;   // A finger wobbles: a tap moves a few pixels
 
     const float MARKER_SIZE = 66.f;
     const float SELECTED_MARKER_SIZE = 84.f;
@@ -490,21 +493,40 @@ void UIChapterMap::render_stage_enemies(sf::RenderWindow& window, const PlayerDa
 
 void UIChapterMap::handle_event(const sf::Event& event, const sf::RenderWindow& window)
 {
+    // Dragging the map scrolls it (a finger or the mouse), within its edges; a tap (no drag) picks a stage
     if (const auto* mouseButtonPressed = event.getIf<sf::Event::MouseButtonPressed>())
     {
-        if (mouseButtonPressed->button == sf::Mouse::Button::Left)
+        const sf::Vector2f point = window.mapPixelToCoords(mouseButtonPressed->position);
+        if (mouseButtonPressed->button == sf::Mouse::Button::Left && point.y > MAP_TOP && point.y < MAP_BOTTOM)
         {
-            sf::Vector2f worldPos = window.mapPixelToCoords(mouseButtonPressed->position);
-            worldPos -= m_viewOffset;
-
-            for (auto& icon : m_stageIcons)
-            {
-                if ((icon.unlocked || icon.completed) && icon.circle.getGlobalBounds().contains(worldPos))
-                {
-                    select_stage(icon.stageUID);
-                }
-            }
+            m_isPressing = true;
+            m_isDraggingMap = false;
+            m_pressPoint = point;
+            m_pressOffset = m_viewOffset;
         }
+    }
+    else if (const auto* mouseMoved = event.getIf<sf::Event::MouseMoved>(); mouseMoved && m_isPressing)
+    {
+        const sf::Vector2f delta = window.mapPixelToCoords(mouseMoved->position) - m_pressPoint;
+        if (!m_isDraggingMap && std::hypot(delta.x, delta.y) > DRAG_START) m_isDraggingMap = true;
+        if (m_isDraggingMap)
+        {
+            m_viewOffset = clamp_to_map(m_pressOffset + delta, m_background.getGlobalBounds().size);
+            m_offsetTween = tweeny::from(m_viewOffset.x, m_viewOffset.y).to(m_viewOffset.x, m_viewOffset.y).during(1);   // No glide fighting the finger
+            m_offsetTween.step(1);
+        }
+    }
+    else if (const auto* mouseButtonReleased = event.getIf<sf::Event::MouseButtonReleased>(); mouseButtonReleased && m_isPressing)
+    {
+        m_isPressing = false;
+        if (!m_isDraggingMap && mouseButtonReleased->button == sf::Mouse::Button::Left)
+        {
+            const sf::Vector2f worldPos = window.mapPixelToCoords(mouseButtonReleased->position) - m_viewOffset;
+            for (auto& icon : m_stageIcons)
+                if ((icon.unlocked || icon.completed) && icon.circle.getGlobalBounds().contains(worldPos))
+                    select_stage(icon.stageUID);
+        }
+        m_isDraggingMap = false;
     }
     else if (const auto* keyPressed = event.getIf<sf::Event::KeyPressed>())
     {
