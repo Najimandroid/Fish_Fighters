@@ -31,7 +31,7 @@
         "enemies": [
             {
                 "UID": 1,
-                "amount": 8,
+                "amount": 4,
                 "respawnTime": 0.5,
                 "spawnStart": 5,
                 "layer": -1,
@@ -45,7 +45,7 @@
             },
             {
                 "UID": 1,
-                "amount": 20,
+                "amount": 8,
                 "respawnTime": 0.5,
                 "spawnStart": 5,
                 "layer": -1,
@@ -80,6 +80,9 @@
             {
                 "type": "unit",
                 "UID": 2
+            },
+            {
+                "type": "clamRoom"
             }
         ],
         "music": "theme_default"
