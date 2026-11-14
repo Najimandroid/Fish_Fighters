@@ -38,8 +38,9 @@ public:
     // Tints the button image (white keeps the yellow)
     void set_fill_color(const sf::Color& color);
 
-    // Yellow for the screen's main action, steel blue for the others (and choices not selected)
-    enum class Style { Primary, Secondary };
+    // Yellow for the screen's main action, steel blue for the others (and choices not selected); coral for the
+    // secondary actions inside the clam (the Clam Storage: no metal in there), a pearly gloss on it
+    enum class Style { Primary, Secondary, Coral };
     void set_style(Style style);
 
     // A disabled button is greyed out and ignores clicks (a click on it plays the error sound)

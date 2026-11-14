@@ -690,6 +690,8 @@ bool DataLoader::load_player(const std::string& path)
         m_playerData->schoolRankRewardsClaimed = progression.contains("schoolRankRewardsClaimed") ? read_int(progression, "schoolRankRewardsClaimed")
             : progression.contains("shoalRewardsClaimed") ? read_int(progression, "shoalRewardsClaimed") : 0;   // Its first name
         m_playerData->hasClamRoomGift = progression.contains("clamRoomGift") && progression.at("clamRoomGift").get<bool>();
+        m_playerData->adsDay = progression.contains("adsDay") ? progression.at("adsDay").get<std::string>() : "";
+        m_playerData->adsToday = progression.contains("adsToday") ? progression.at("adsToday").get<int>() : 0;
 
         // Enemies met in battle (missing in older saves)
         m_playerData->seenEnemies.clear();
@@ -780,6 +782,8 @@ bool DataLoader::save_player(const std::string& path)
     j["progression"]["lastStage"] = m_playerData->lastStage;
     j["progression"]["schoolRankRewardsClaimed"] = m_playerData->schoolRankRewardsClaimed;
     j["progression"]["clamRoomGift"] = m_playerData->hasClamRoomGift;
+    j["progression"]["adsDay"] = m_playerData->adsDay;
+    j["progression"]["adsToday"] = m_playerData->adsToday;
 
     // Enemies met in battle (sorted, so the file doesn't change order between saves)
     std::vector<int> seenEnemies(m_playerData->seenEnemies.begin(), m_playerData->seenEnemies.end());

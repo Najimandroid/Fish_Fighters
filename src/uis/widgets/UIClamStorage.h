@@ -2,6 +2,7 @@
 
 #include "UIElement.h"
 #include "UIButtonElement.h"
+#include "UIRoundButton.h"
 
 #include <memory>
 #include <random>
@@ -62,6 +63,11 @@ private:
     void use_selected();
     void ask_sell(bool forFishScales);
     void sell_selected(bool forFishScales);
+    bool is_card_open() const;                 // A kind is picked: its card is up
+    void use_all();                            // USE ALL: every stored fish that can be used
+    void ask_sell_all();                       // SELL ALL: every stored fish, for shells (asks first)
+    void sell_all();
+    int stored_total() const;
     int shells_each(int uid) const;
     float random(float from, float to);
 
@@ -77,6 +83,9 @@ private:
     UIButtonElement m_use;
     UIButtonElement m_sellShells;
     UIButtonElement m_sellScales;
+    UIRoundButton m_closeCard;        // The card's X
+    UIButtonElement m_useAll;         // Along the bottom, with the fish count
+    UIButtonElement m_sellAll;
     sf::Text m_text;
 
     std::vector<Floater> m_floaters;

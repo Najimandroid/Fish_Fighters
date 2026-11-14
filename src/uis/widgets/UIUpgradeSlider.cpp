@@ -33,14 +33,14 @@ namespace
  */
 UIUpgradeSlider::UIUpgradeSlider(std::shared_ptr<DataLoader> dataLoader) :
 	m_dataLoader(dataLoader),
-	m_upgradeButton(UPGRADE_BUTTON.size, UPGRADE_BUTTON.position, "UPGRADE!"),
+	m_upgradeButton(UPGRADE_BUTTON.size, UPGRADE_BUTTON.position, "UPGRADE!", UIOfferButton::Kind::CURRENCY, "icon_shell", 0),
 	m_previousButton(ARROW_SIZE, { 36.f, ARROW_Y }, "icon_play"),
 	m_nextButton(ARROW_SIZE, { 1920.f - 36.f - ARROW_SIZE, ARROW_Y }, "icon_play"),
 	m_descriptionPanel(DESCRIPTION_PANEL.size, DESCRIPTION_PANEL.position, UISkin::PANEL_DARK, 1.2f),
 	m_unitName(UISkin::heavy_font()),
 	m_description(UISkin::regular_font())
 {
-	m_upgradeButton.set_text_size(60);
+	m_upgradeButton.set_text_size(54);
 	m_upgradeButton.set_attention(true);   // Breathes while there are enough shells (greyed: still)
 	m_upgradeButton.set_click_sound("");   // upgrade_selected plays "purchase" or "unlock"
 	m_upgradeButton.set_callback([this]() { upgrade_selected(); });
@@ -218,6 +218,8 @@ void UIUpgradeSlider::update(float deltaTime)
 	const int level = player->get_unit_level(uid);
 	m_upgradeButton.set_text(level <= 0 ? "UNLOCK!" : "UPGRADE!");
 	m_upgradeButton.set_enabled(level < UIUpgradeIcon::MAX_LEVEL && player->shells >= calculate_upgrade_cost(uid, level));
+	m_upgradeButton.set_cost(level < UIUpgradeIcon::MAX_LEVEL ? calculate_upgrade_cost(uid, level) : -1);   // The price on the button
+	if (level >= UIUpgradeIcon::MAX_LEVEL) m_upgradeButton.set_text("MAX LEVEL");
 	m_upgradeButton.update(deltaTime);
 
 	// Name and description of the selected unit (wrapped to the panel)
@@ -320,20 +322,12 @@ void UIUpgradeSlider::render_upgrade_info(sf::RenderWindow& window)
 	if (!m_evolutionLine.empty())
 		drawText(UISkin::wrap_text(m_evolutionLine, 28, 420.f), 28, UISkin::NUMBER, { STATS_X, y + 10.f }, { 0.f, 0.f });
 
-	// Under the button: the price, or what is missing
+	// The price is on the button; under it, what is missing
 	auto player = m_dataLoader->get_player_data().lock();
-	if (!player || m_upgradeIcons.empty()) return;
+	if (!player || m_upgradeIcons.empty() || m_isMaxLevel) return;
 	const float centerX = UPGRADE_BUTTON.position.x + UPGRADE_BUTTON.size.x / 2.f;
-	const float priceY = UPGRADE_BUTTON.position.y + UPGRADE_BUTTON.size.y + 46.f;
-	if (m_isMaxLevel)
-	{
-		drawText("MAX LEVEL", 40, UISkin::TITLE, { centerX, priceY }, { 0.5f, 0.5f });
-		return;
-	}
-	const sf::FloatRect price = drawText(std::to_string(m_cost), 44, UISkin::NUMBER, { centerX + 24.f, priceY }, { 0.5f, 0.5f });
-	UISkin::draw_fitted(window, UISkin::texture("icon_shell"), { { price.position.x - 62.f, priceY - 26.f }, { 52.f, 52.f } });
 	if (player->shells < m_cost)
-		drawText("Need " + std::to_string(m_cost - player->shells) + " more shells", 28, CORAL, { centerX, priceY + 50.f }, { 0.5f, 0.5f });
+		drawText("Need " + std::to_string(m_cost - player->shells) + " more shells", 28, CORAL, { centerX, UPGRADE_BUTTON.position.y + UPGRADE_BUTTON.size.y + 34.f }, { 0.5f, 0.5f });
 }
 
 /*

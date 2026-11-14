@@ -2,6 +2,7 @@
 
 #include "UIUpgradeIcon.h"
 #include "UIButtonElement.h"
+#include "UIOfferButton.h"
 #include "UIRoundButton.h"
 #include "UIPanel.h"
 #include "UIAbilityList.h"
@@ -50,7 +51,7 @@ private:
     std::vector<int> m_availableUpgrades; // List of all unit UIDs to display
     std::vector<std::shared_ptr<UIUpgradeIcon>> m_upgradeIcons; // Icon objects for the slider
 
-    UIButtonElement m_upgradeButton;  // Button to upgrade selected unit
+    UIOfferButton m_upgradeButton;    // UPGRADE! (UNLOCK!) with its price on it, in shells
     UIRoundButton m_previousButton;   // Arrows on both sides of the cards
     UIRoundButton m_nextButton;
 

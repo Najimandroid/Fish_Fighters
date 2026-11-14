@@ -39,6 +39,8 @@
 #include "widgets/UIInfoPanel.h"
 #include "widgets/UIIconTile.h"
 #include "widgets/UIClamBackdrop.h"
+#include "widgets/UIAdOverlay.h"
+#include "widgets/UIChartBackground.h"
 #include "UISkin.h"
 #include "../core/Platform.h"
 
@@ -605,17 +607,36 @@ void UIManager::generate_clam_room_uis(bool fromStorage)
 
     add_ui_element(bg);
     add_ui_element(room);
-    auto clamTitle = std::make_shared<UITitleBar>("Clam Room");
+    auto clamTitle = std::make_shared<UITitleBar>("Clam Room", UITitleBar::Material::VIOLET);
     add_ui_element(clamTitle);
     auto clamInfo = add_info_button(clamTitle->get_info_position(), "The giant clam",
         "Feed the clam Shiny Scales: each one gives a random fish. OPEN uses 1 scale, OPEN x10 uses 10.\n\nEvery fish goes to the Clam Storage (the chest): use it for a fish you don't have yet, or to give a fish you have an extra level; or sell it.\n\nShiny Scales come from School Rank milestones. 10 Fish Scales make one: tap the + in the Shiny Scales counter.");
     const ClamCounters counters = add_clam_counters();
     room->set_scales_counter(counters.shinyScales);   // The scales fly out of it
+    for (const auto& pill : { counters.shells, counters.shinyScales, counters.fishScales }) pill->set_tint(sf::Color(206, 186, 255));   // Violet room
+
+    // Phones: the FREE offer plays a rewarded ad (UIAdOverlay), then gives a Shiny Scale (a few a day)
+    auto adOverlay = std::make_shared<UIAdOverlay>();
+    std::weak_ptr<UIAdOverlay> weakAd = adOverlay;
+    room->set_on_watch_ad([this, weakAd]()
+        {
+            auto overlay = weakAd.lock();
+            if (!overlay || overlay->is_playing()) return;
+            overlay->play([this]()
+                {
+                    auto player = m_dataLoader->get_player_data().lock();
+                    if (!player || !player->watch_ad()) return;
+                    m_dataLoader->save_progress();
+                    if (m_audio) m_audio->play_sound("purchase");
+                    UIToast::show("+1 SHINY SCALE", "Thanks for watching!", "icon_shiny_scale");
+                });
+        });
     add_ui_element(std::make_shared<UIClamRoomOverlay>(room));   // What flies over the title bar
     add_ui_element(backButton);
     add_ui_element(std::make_shared<UIToast>());
     add_ui_element(counters.craftDialog);
     add_ui_element(clamInfo);
+    add_ui_element(adOverlay);   // Over everything while an ad plays
 }
 
 /*
@@ -642,11 +663,12 @@ void UIManager::generate_clam_storage_uis()
         });
 
     add_ui_element(storage);
-    auto storageTitle = std::make_shared<UITitleBar>("Clam Storage");
+    auto storageTitle = std::make_shared<UITitleBar>("Clam Storage", UITitleBar::Material::NACRE);   // Inside the clam
     add_ui_element(storageTitle);
     auto storageInfo = add_info_button(storageTitle->get_info_position(), "The Clam Storage",
         "The fish out of the clam wait here. Tap one to pick it; tap others of the same kind to add them, or tick Select all.\n\nUSE: a fish you don't have yet joins your tank, and every other one gives that fish +1 extra level, up to +10.\n\nSELL: for shells, or for 1 Fish Scale each. 10 Fish Scales make a Shiny Scale (the + in its counter).");
     const ClamCounters counters = add_clam_counters();
+    for (const auto& pill : { counters.shells, counters.shinyScales, counters.fishScales }) pill->set_tint(sf::Color(255, 168, 214));   // Plum, in the clam
     storage->set_counters(counters.shells, counters.fishScales);
     storage->set_flying_icons(flying);
     storage->set_confirm_dialog(sellDialog);
@@ -662,7 +684,7 @@ void UIManager::generate_encyclopedia_uis()
 {
     enter_menu_screen();
 
-    auto bg = std::make_shared<UIPatternBackground>("pattern_hull");
+    auto bg = std::make_shared<UIChartBackground>();   // The field guide's own place: a research chart
     auto encyclopedia = std::make_shared<UIEncyclopedia>(m_dataLoader);
     auto titleBar = std::make_shared<UITitleBar>("Encyclopedia");
     auto shellsInfo = std::make_shared<UIPlayerShellsInfo>(m_dataLoader);

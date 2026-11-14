@@ -11,9 +11,10 @@ namespace
     const float TITLE_X = 40.f;
 }
 
-UITitleBar::UITitleBar(const std::string& title) :
+UITitleBar::UITitleBar(const std::string& title, Material material) :
     UIElement({ SCREEN_WIDTH, HEIGHT }, { 0.f, 0.f }),
-    m_title(UISkin::heavy_font(), title)
+    m_title(UISkin::heavy_font(), title),
+    m_material(material)
 {
     UISkin::style_text(m_title, TITLE_SIZE, UISkin::TITLE);
     set_title(title);
@@ -36,15 +37,20 @@ void UITitleBar::render(sf::RenderWindow& window)
     const float left = std::min(0.f, screen.position.x), right = std::max(SCREEN_WIDTH, screen.position.x + screen.size.x);
     const float top = screen.position.y;
     sf::VertexArray band(sf::PrimitiveType::TriangleStrip, 4);
-    band[0] = sf::Vertex{ { left, top }, sf::Color(82, 100, 126) };
-    band[1] = sf::Vertex{ { right, top }, sf::Color(82, 100, 126) };
-    band[2] = sf::Vertex{ { left, BAND_BOTTOM }, sf::Color(54, 68, 90) };
-    band[3] = sf::Vertex{ { right, BAND_BOTTOM }, sf::Color(54, 68, 90) };
+    // Its colors: top, bottom, the bevel, the rivets (pearls on mother-of-pearl)
+    struct Look { sf::Color top, bottom, bevel, rivet; };
+    const Look look = m_material == Material::NACRE ? Look{ { 255, 232, 244 }, { 236, 186, 218 }, { 255, 252, 255 }, { 255, 250, 255 } }
+        : m_material == Material::VIOLET ? Look{ { 78, 60, 126 }, { 46, 34, 86 }, { 152, 130, 204 }, { 132, 112, 182 } }
+        : Look{ { 82, 100, 126 }, { 54, 68, 90 }, { 132, 152, 178 }, { 120, 138, 162 } };
+    band[0] = sf::Vertex{ { left, top }, look.top };
+    band[1] = sf::Vertex{ { right, top }, look.top };
+    band[2] = sf::Vertex{ { left, BAND_BOTTOM }, look.bottom };
+    band[3] = sf::Vertex{ { right, BAND_BOTTOM }, look.bottom };
     window.draw(band);
 
     sf::RectangleShape line({ right - left, 3.f });
     line.setPosition({ left, BAND_BOTTOM - 9.f });
-    line.setFillColor(sf::Color(132, 152, 178));
+    line.setFillColor(look.bevel);
     window.draw(line);
     line.setSize({ right - left, 5.f });
     line.setPosition({ left, BAND_BOTTOM - 5.f });
@@ -59,7 +65,7 @@ void UITitleBar::render(sf::RenderWindow& window)
 
     sf::CircleShape rivet(6.f);
     rivet.setOrigin({ 6.f, 6.f });
-    rivet.setFillColor(sf::Color(120, 138, 162));
+    rivet.setFillColor(look.rivet);
     rivet.setOutlineThickness(2.5f);
     rivet.setOutlineColor(UISkin::OUTLINE);
     for (const float x : { 14.f, 34.f, SCREEN_WIDTH - 34.f, SCREEN_WIDTH - 14.f })

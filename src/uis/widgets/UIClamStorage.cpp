@@ -16,8 +16,12 @@ namespace
 {
     const float PI = 3.14159265f;
 
-    const sf::FloatRect TANK{ { 60.f, 150.f }, { 1240.f, 750.f } };     // Where the fish swim
-    const sf::FloatRect PANEL{ { 1330.f, 150.f }, { 530.f, 750.f } };   // About the ones picked
+    // Like a storage room: the fish swim around the whole clam; a tap on one brings up its card (centered, over the
+    // dimmed clam); USE ALL / SELL ALL and how many fish wait along the bottom
+    const sf::FloatRect TANK{ { 40.f, 120.f }, { 1840.f, 810.f } };     // Where the fish swim
+    const sf::FloatRect PANEL{ { 960.f - 265.f, 150.f }, { 530.f, 750.f } };   // The card of the kind picked
+    const sf::Vector2f BULK_SIZE{ 300.f, 92.f };
+    const float BULK_Y = 960.f;
     const float PANEL_X = PANEL.position.x + 30.f, PANEL_CENTER = PANEL.position.x + PANEL.size.x / 2.f;
     const float TEXT_WIDTH = PANEL.size.x - 60.f;
     const sf::FloatRect CHECKBOX{ { PANEL_X, 488.f }, { 38.f, 38.f } };
@@ -25,15 +29,16 @@ namespace
     const sf::Vector2f FISH_SIZE{ 140.f, 90.f };   // A floater's box (its sprite fits inside)
     const float WALK_FRAME_SECONDS = 0.12f;
 
-    // Inside the clam: dark pink, pearly glows, the shell's white lips at the top and the bottom
-    const sf::Color INSIDE_TOP{ 58, 16, 46 }, INSIDE_BOTTOM{ 112, 34, 82 };
     const sf::Color INSIDE_PINK{ 70, 22, 52 };        // What the dive into the clam ends on (UIClamRoom): the fade in starts there
     const sf::Color NACRE{ 255, 170, 220 };
-    const sf::Color PINK_TINT{ 255, 180, 220 };       // The dark panels, pink
-    const sf::Color WATER{ 190, 80, 140, 60 };
     const float FADE_IN = 0.4f;
     const sf::Color PICKED{ 255, 222, 48 };         // The ring around a picked fish (UISkin::NUMBER)
     const sf::Color CORAL{ 255, 128, 104 };
+    // The clam's inner face, and the pearl card's mother-of-pearl and ink
+    const sf::Color SHELL_CENTER{ 178, 96, 150 }, SHELL_EDGE{ 46, 12, 38 };
+    const sf::Color CARD_TOP{ 255, 240, 248 }, CARD_BOTTOM{ 244, 206, 230 };
+    const sf::Color INK{ 92, 30, 78 }, INK_SOFT{ 146, 82, 128 }, EXTRA_INK{ 130, 62, 196 }, WARNING_INK{ 212, 70, 70 };
+    const float CARD_CORNER = 44.f;
 }
 
 UIClamStorage::UIClamStorage(std::shared_ptr<DataLoader> dataLoader) :
@@ -42,6 +47,9 @@ UIClamStorage::UIClamStorage(std::shared_ptr<DataLoader> dataLoader) :
     m_use({ PANEL.size.x - 60.f, 90.f }, { PANEL_X, 640.f }, "USE"),
     m_sellShells({ 225.f, 80.f }, { PANEL_X, 772.f }, ""),
     m_sellScales({ 225.f, 80.f }, { PANEL_X + 245.f, 772.f }, ""),
+    m_closeCard(84.f, PANEL.position + sf::Vector2f{ PANEL.size.x - 54.f, -30.f }, "icon_close"),
+    m_useAll(BULK_SIZE, { 960.f - BULK_SIZE.x - 15.f, BULK_Y }, "USE ALL"),
+    m_sellAll(BULK_SIZE, { 960.f + 15.f, BULK_Y }, "SELL ALL"),
     m_text(UISkin::heavy_font())
 {
     m_use.set_text_size(44);
@@ -49,10 +57,18 @@ UIClamStorage::UIClamStorage(std::shared_ptr<DataLoader> dataLoader) :
     m_use.set_callback([this]() { use_selected(); });
     for (UIButtonElement* sell : { &m_sellShells, &m_sellScales })
     {
-        sell->set_style(UIButtonElement::Style::Secondary);
+        sell->set_style(UIButtonElement::Style::Coral);   // No metal inside the clam
         sell->set_text_size(34);
     }
     m_sellShells.set_callback([this]() { ask_sell(false); });
+    m_closeCard.set_click_sound("ui_back");
+    m_closeCard.set_callback([this]() { clear_selection(); });
+    m_useAll.set_text_size(40);
+    m_useAll.set_click_sound("");   // Its own sounds
+    m_useAll.set_callback([this]() { use_all(); });
+    m_sellAll.set_text_size(40);
+    m_sellAll.set_style(UIButtonElement::Style::Coral);
+    m_sellAll.set_callback([this]() { ask_sell_all(); });
     m_sellScales.set_callback([this]() { ask_sell(true); });
 
     for (int i = 0; i < 18; ++i)
@@ -313,6 +329,15 @@ void UIClamStorage::update(float deltaTime)
     m_use.update(deltaTime);
     m_sellShells.update(deltaTime);
     m_sellScales.update(deltaTime);
+    m_closeCard.update(deltaTime);
+
+    // USE ALL: when at least one stored fish can be used; SELL ALL: when any wait
+    bool canUse = false;
+    if (player) for (const auto& [uid, stored] : player->clamStorage) canUse = canUse || player->preview_use(uid, stored).usable > 0;
+    m_useAll.set_enabled(canUse);
+    m_sellAll.set_enabled(stored_total() > 0);
+    m_useAll.update(deltaTime);
+    m_sellAll.update(deltaTime);
 }
 
 /*
@@ -351,16 +376,41 @@ void UIClamStorage::render_floater(sf::RenderWindow& window, const Floater& floa
 void UIClamStorage::render(sf::RenderWindow& window)
 {
     if (!m_isVisible) return;
-
-    // Inside the clam: a dark pink gradient, pearly glows drifting slowly
-    sf::VertexArray inside(sf::PrimitiveType::TriangleStrip, 4);
     const sf::FloatRect screen = UISkin::screen_rect();   // A phone's extra width too
-    const float left = screen.position.x, right = left + screen.size.x, top = screen.position.y, bottom = top + screen.size.y;
-    inside[0] = sf::Vertex{ { left, top }, INSIDE_TOP };
-    inside[1] = sf::Vertex{ { right, top }, INSIDE_TOP };
-    inside[2] = sf::Vertex{ { left, bottom }, INSIDE_BOTTOM };
-    inside[3] = sf::Vertex{ { right, bottom }, INSIDE_BOTTOM };
-    window.draw(inside);
+    const float top = screen.position.y, bottom = top + screen.size.y;
+
+    // The clam's inner face: deep plum at its edges, pearly pink where the light falls (on the fish)
+    UISkin::fill_screen(window, SHELL_EDGE);
+    const sf::Vector2f glowCenter = TANK.position + TANK.size / 2.f;
+    const int segments = 64;
+    sf::VertexArray face(sf::PrimitiveType::TriangleFan, segments + 2);
+    face[0] = sf::Vertex{ glowCenter, SHELL_CENTER };
+    for (int i = 0; i <= segments; ++i)
+    {
+        const float angle = static_cast<float>(i) / segments * 2.f * PI;
+        face[i + 1] = sf::Vertex{ glowCenter + sf::Vector2f{ std::cos(angle) * screen.size.x * 0.62f, std::sin(angle) * screen.size.y * 0.8f }, SHELL_EDGE };
+    }
+    window.draw(face);
+
+    // Its ribs: faint ridges fanning out from the hinge below the screen, like the inside of a scallop
+    const sf::Vector2f hinge{ 960.f, bottom + 480.f };
+    for (int rib = -10; rib <= 10; ++rib)
+    {
+        const float angle = static_cast<float>(rib) * 7.f * PI / 180.f;
+        const sf::Vector2f direction{ std::sin(angle), -std::cos(angle) };
+        const sf::Vector2f side{ -direction.y, direction.x };
+        const float length = 2300.f;
+        const sf::Color color = rib % 2 == 0 ? sf::Color(255, 214, 238, 16) : sf::Color(30, 0, 24, 30);
+        sf::ConvexShape ridge(4);
+        ridge.setPoint(0, hinge + side * 3.f);
+        ridge.setPoint(1, hinge + direction * length + side * 70.f);
+        ridge.setPoint(2, hinge + direction * length - side * 70.f);
+        ridge.setPoint(3, hinge - side * 3.f);
+        ridge.setFillColor(color);
+        window.draw(ridge);
+    }
+
+    // Pearly glows drifting slowly
     for (int glow = 0; glow < 4; ++glow)
     {
         const float phase = static_cast<float>(glow) * 1.7f;
@@ -371,52 +421,70 @@ void UIClamStorage::render(sf::RenderWindow& window)
             sf::CircleShape circle(radius);
             circle.setOrigin({ radius, radius });
             circle.setPosition(center);
-            circle.setFillColor(sf::Color(NACRE.r, NACRE.g, NACRE.b, 7));
+            circle.setFillColor(sf::Color(NACRE.r, NACRE.g, NACRE.b, 6));
             window.draw(circle);
         }
     }
 
-    // The shell's white lips: scallops peeking under the title bar, and along the bottom
-    for (const auto& [y, radius, spacing] : { std::tuple{ 86.f, 58.f, 112.f }, std::tuple{ 1112.f, 74.f, 132.f } })
-        for (float x = -20.f; x < 1960.f; x += spacing)
-        {
-            sf::CircleShape scallop(radius);
-            scallop.setOrigin({ radius, radius });
-            scallop.setPosition({ x, y });
-            scallop.setFillColor(sf::Color(250, 244, 250));
-            scallop.setOutlineThickness(6.f);
-            scallop.setOutlineColor(UISkin::OUTLINE);
-            window.draw(scallop);
-        }
-
-    // The tank: a pink pool in the clam, pearly bubbles
-    UISkin::draw_nine_slice(window, UISkin::PANEL_DARK, TANK, 1.2f, PINK_TINT);
-    sf::RectangleShape water(TANK.size - sf::Vector2f{ 40.f, 40.f });
-    water.setPosition(TANK.position + sf::Vector2f{ 20.f, 20.f });
-    water.setFillColor(WATER);
-    window.draw(water);
+    // Bubbles drifting up through the light, then the fish, free in it (no box: they're in the clam)
     for (const Bubble& bubble : m_bubbles)
     {
         sf::CircleShape circle(bubble.radius);
         circle.setOrigin({ bubble.radius, bubble.radius });
         circle.setPosition(bubble.position);
-        circle.setFillColor(sf::Color(255, 235, 248, 60));
+        circle.setFillColor(sf::Color(255, 235, 248, 40));
         circle.setOutlineThickness(1.5f);
-        circle.setOutlineColor(sf::Color(255, 240, 250, 150));
+        circle.setOutlineColor(sf::Color(255, 240, 250, 130));
         window.draw(circle);
     }
-
     for (const Floater& floater : m_floaters) render_floater(window, floater, 1.f);
     if (m_floaters.empty())
     {
-        UISkin::style_text(m_text, 36, UISkin::TITLE);
+        UISkin::style_text(m_text, 36, sf::Color(255, 220, 240));
         m_text.setString("The fish out of the clam wait here");
         UISkin::set_text_anchor(m_text, { 0.5f, 0.5f });
         m_text.setPosition(TANK.position + TANK.size / 2.f);
         window.draw(m_text);
     }
 
-    render_panel(window);
+    // The shell's white lips: scallops under the title bar and along the bottom (the clam's rim around us)
+    for (const auto& [y, radius, spacing] : { std::tuple{ 92.f, 54.f, 104.f }, std::tuple{ bottom + 34.f, 74.f, 132.f } })
+        for (float x = screen.position.x - 20.f; x < screen.position.x + screen.size.x + 40.f; x += spacing)
+        {
+            sf::CircleShape scallop(radius);
+            scallop.setOrigin({ radius, radius });
+            scallop.setPosition({ x, y });
+            scallop.setFillColor(sf::Color(252, 240, 248));
+            scallop.setOutlineThickness(6.f);
+            scallop.setOutlineColor(UISkin::OUTLINE);
+            window.draw(scallop);
+        }
+
+    // Along the bottom: USE ALL, SELL ALL, how many fish wait; under the title, what a tap does
+    if (!m_floaters.empty())
+    {
+        m_useAll.render(window);
+        m_sellAll.render(window);
+        const int total = stored_total();
+        UISkin::style_text(m_text, 34, sf::Color(255, 220, 240));
+        m_text.setString(std::to_string(total) + " fish");
+        UISkin::set_text_anchor(m_text, { 1.f, 0.5f });
+        m_text.setPosition({ 1872.f, BULK_Y + BULK_SIZE.y / 2.f });
+        window.draw(m_text);
+        UISkin::style_text(m_text, 26, sf::Color(255, 214, 238));
+        m_text.setString("Tap a fish to use or sell it");
+        UISkin::set_text_anchor(m_text, { 0.5f, 0.5f });
+        m_text.setPosition({ 960.f, 182.f });   // Under the shell's rim
+        window.draw(m_text);
+    }
+
+    // The card of the kind picked, over the dimmed clam
+    if (is_card_open())
+    {
+        UISkin::fill_screen(window, sf::Color(30, 0, 24, 150));
+        render_panel(window);
+        m_closeCard.render(window);
+    }
 
     // Coming in from the dive into the clam: out of its dark pink
     if (m_time < FADE_IN)
@@ -426,17 +494,43 @@ void UIClamStorage::render(sf::RenderWindow& window)
 }
 
 /*
- * The panel: the kind picked (swimming), its name and level, how many are picked, "Select all", what USE does,
- * USE, SELL for shells / for Fish Scales, and what Fish Scales are for
+ * The pearl card (mother-of-pearl, dark ink): the kind picked (swimming), its name and level, how many are picked,
+ * "Select all", what USE does, USE, SELL for shells / for Fish Scales
  */
 void UIClamStorage::render_panel(sf::RenderWindow& window)
 {
-    UISkin::draw_nine_slice(window, UISkin::PANEL_DARK, PANEL, 1.2f, PINK_TINT);
+    // The card: a soft pink pearl, lighter at the top, a dark outline and its shadow down-right
+    sf::ConvexShape card = UISkin::rounded_rect({ PANEL.position + sf::Vector2f{ UISkin::SHADOW_SHIFT, UISkin::SHADOW_DROP } * 1.5f, PANEL.size }, CARD_CORNER);
+    card.setFillColor(sf::Color(30, 0, 24, 110));
+    window.draw(card);
+    card = UISkin::rounded_rect(PANEL, CARD_CORNER);
+    card.setFillColor(CARD_BOTTOM);
+    card.setOutlineThickness(6.f);
+    card.setOutlineColor(UISkin::OUTLINE);
+    window.draw(card);
+    // Lighter towards the top: a few soft layers make the gradient (no hard edge)
+    for (const float reach : { 0.62f, 0.46f, 0.3f })
+    {
+        sf::ConvexShape light = UISkin::rounded_rect({ PANEL.position + sf::Vector2f{ 8.f, 8.f }, { PANEL.size.x - 16.f, PANEL.size.y * reach } }, CARD_CORNER - 8.f);
+        light.setFillColor(sf::Color(CARD_TOP.r, CARD_TOP.g, CARD_TOP.b, 90));
+        window.draw(light);
+    }
+    // A sheen across it (mother-of-pearl catches the light)
+    sf::ConvexShape sheen(4);
+    sheen.setPoint(0, PANEL.position + sf::Vector2f{ PANEL.size.x * 0.55f, 10.f });
+    sheen.setPoint(1, PANEL.position + sf::Vector2f{ PANEL.size.x * 0.75f, 10.f });
+    sheen.setPoint(2, PANEL.position + sf::Vector2f{ PANEL.size.x * 0.35f, PANEL.size.y * 0.5f });
+    sheen.setPoint(3, PANEL.position + sf::Vector2f{ PANEL.size.x * 0.15f, PANEL.size.y * 0.5f });
+    sheen.setFillColor(sf::Color(255, 255, 255, 46));
+    window.draw(sheen);
+
     auto player = m_dataLoader->get_player_data().lock();
-    auto text = [&](const std::string& string, unsigned int size, sf::Color color, sf::Vector2f position, sf::Vector2f anchor, bool isBody = false)
+    // Ink on the card (no outline), or the outlined game text
+    auto text = [&](const std::string& string, unsigned int size, sf::Color color, sf::Vector2f position, sf::Vector2f anchor, bool isBody = false, bool isOutlined = false)
         {
             if (isBody) UISkin::style_body_text(m_text, size, color);
             else UISkin::style_text(m_text, size, color);
+            if (!isOutlined) m_text.setOutlineThickness(0.f);
             m_text.setString(string);
             UISkin::set_text_anchor(m_text, anchor);
             m_text.setPosition(position);
@@ -444,20 +538,8 @@ void UIClamStorage::render_panel(sf::RenderWindow& window)
             return m_text.getGlobalBounds();
         };
 
-    int stored = 0;
-    if (player) for (const auto& [uid, count] : player->clamStorage) stored += count;
     const int count = selected_count();
-    if (!player || m_selectedUid < 0 || count == 0)
-    {
-        text("CLAM STORAGE", 44, UISkin::TITLE, { PANEL_CENTER, 200.f }, { 0.5f, 0.5f });
-        UISkin::draw_fitted(window, UISkin::texture("icon_clam_storage"), { { PANEL_CENTER - 70.f, 240.f }, { 140.f, 140.f } });
-        text(std::to_string(stored) + (stored == 1 ? " fish waiting" : " fish waiting"), 34, UISkin::NUMBER, { PANEL_CENTER, 420.f }, { 0.5f, 0.5f });
-        text(UISkin::wrap_text(stored > 0 ? "Tap a fish to pick it: use it on your fish, or sell it." : "Feed the giant clam: the fish it gives wait here.",
-            28, TEXT_WIDTH, UISkin::regular_font()), 28, UISkin::TEXT, { PANEL_CENTER, 500.f }, { 0.5f, 0.f }, true);
-        text(UISkin::wrap_text("Fish Scales: 10 craft a Shiny Scale (the + next to your Shiny Scales).", 24, TEXT_WIDTH, UISkin::regular_font()),
-            24, UISkin::TITLE, { PANEL_CENTER, 820.f }, { 0.5f, 0.f }, true);
-        return;
-    }
+    if (!player || m_selectedUid < 0 || count == 0) return;   // The card only comes up for a pick
 
     // The kind picked, swimming
     Floater portrait;
@@ -467,31 +549,43 @@ void UIClamStorage::render_panel(sf::RenderWindow& window)
     render_floater(window, portrait, 1.6f);
 
     auto data = m_dataLoader->get_unit_data(m_selectedUid, player->get_unit_form(m_selectedUid));
-    text(data ? data->name : "?", 42, sf::Color::White, { PANEL_CENTER, 360.f }, { 0.5f, 0.5f });
+    text(data ? data->name : "?", 42, INK, { PANEL_CENTER, 360.f }, { 0.5f, 0.5f });
     if (player->is_unit_owned(m_selectedUid))
     {
         const std::string level = "LEVEL " + std::to_string(player->get_unit_level(m_selectedUid));
         const std::string extra = "+" + std::to_string(player->get_unit_extra_levels(m_selectedUid));
         sf::Text measure(UISkin::heavy_font(), level + " " + extra);
-        UISkin::style_text(measure, 32, UISkin::NUMBER);
+        UISkin::style_text(measure, 32, INK);
         const float left = PANEL_CENTER - measure.getLocalBounds().size.x / 2.f;
-        const sf::FloatRect levelBounds = text(level, 32, UISkin::NUMBER, { left, 405.f }, { 0.f, 0.5f });
-        text(extra, 32, UISkin::EXTRA, { levelBounds.position.x + levelBounds.size.x + 10.f, 405.f }, { 0.f, 0.5f });
+        const sf::FloatRect levelBounds = text(level, 32, INK_SOFT, { left, 405.f }, { 0.f, 0.5f });
+        text(extra, 32, EXTRA_INK, { levelBounds.position.x + levelBounds.size.x + 10.f, 405.f }, { 0.f, 0.5f });
     }
-    else text("NOT IN YOUR TANK YET", 30, CORAL, { PANEL_CENTER, 405.f }, { 0.5f, 0.5f });
+    else text("NOT IN YOUR TANK YET", 30, WARNING_INK, { PANEL_CENTER, 405.f }, { 0.5f, 0.5f });
 
     const int ofKind = player->get_stored_count(m_selectedUid);
-    text("Picked: " + std::to_string(count) + " of " + std::to_string(ofKind), 30, UISkin::TITLE, { PANEL_CENTER, 450.f }, { 0.5f, 0.5f });
+    text("Picked: " + std::to_string(count) + " of " + std::to_string(ofKind), 30, INK_SOFT, { PANEL_CENTER, 450.f }, { 0.5f, 0.5f });
 
-    // "Select all"
-    sf::RectangleShape box(CHECKBOX.size);
-    box.setPosition(CHECKBOX.position);
-    box.setFillColor(sf::Color(20, 30, 44));
+    // "Select all": a pearl box, coral with a white tick when on
+    sf::ConvexShape box = UISkin::rounded_rect(CHECKBOX, 9.f);
+    box.setFillColor(m_selectAll ? sf::Color(242, 118, 158) : sf::Color(255, 250, 253));
     box.setOutlineThickness(4.f);
-    box.setOutlineColor(UISkin::TITLE);
+    box.setOutlineColor(UISkin::OUTLINE);
     window.draw(box);
-    if (m_selectAll) text("v", 34, PICKED, CHECKBOX.position + CHECKBOX.size / 2.f, { 0.5f, 0.5f });
-    text("Select all " + std::to_string(ofKind), 30, UISkin::TEXT, { CHECKBOX.position.x + CHECKBOX.size.x + 16.f, CHECKBOX.position.y + CHECKBOX.size.y / 2.f }, { 0.f, 0.5f });
+    if (m_selectAll)
+    {
+        const sf::Vector2f c = CHECKBOX.position + CHECKBOX.size / 2.f;
+        for (const auto& [from, to] : { std::pair{ sf::Vector2f{ -11.f, 1.f }, sf::Vector2f{ -3.f, 9.f } }, std::pair{ sf::Vector2f{ -3.f, 9.f }, sf::Vector2f{ 12.f, -8.f } } })
+        {
+            const sf::Vector2f delta = to - from;
+            sf::RectangleShape stroke({ std::hypot(delta.x, delta.y) + 6.f, 6.f });
+            stroke.setOrigin({ 3.f, 3.f });
+            stroke.setPosition(c + from);
+            stroke.setRotation(sf::radians(std::atan2(delta.y, delta.x)));
+            stroke.setFillColor(sf::Color::White);
+            window.draw(stroke);
+        }
+    }
+    text("Select all " + std::to_string(ofKind), 30, INK, { CHECKBOX.position.x + CHECKBOX.size.x + 16.f, CHECKBOX.position.y + CHECKBOX.size.y / 2.f }, { 0.f, 0.5f });
 
     // What USE would do
     const PlayerData::StoredUse use = player->preview_use(m_selectedUid, count);
@@ -506,13 +600,13 @@ void UIClamStorage::render_panel(sf::RenderWindow& window)
             + " to +" + std::to_string(extraNow + use.extraLevels) + ").";
     if (use.usable > 0 && use.usable < count)
         what += " Only " + std::to_string(use.usable) + " can be used (+" + std::to_string(PlayerData::MAX_EXTRA_LEVELS) + " is the max): sell the others.";
-    text(UISkin::wrap_text(what, 26, TEXT_WIDTH, UISkin::regular_font()), 26, use.usable > 0 ? UISkin::TEXT : CORAL,
+    text(UISkin::wrap_text(what, 26, TEXT_WIDTH, UISkin::regular_font()), 26, use.usable > 0 ? INK : WARNING_INK,
         { PANEL_CENTER, 548.f }, { 0.5f, 0.f }, true);
 
     m_use.render(window);
 
-    // SELL FOR: shells, Fish Scales (their icons on the buttons)
-    text("SELL FOR", 26, UISkin::TITLE, { PANEL_CENTER, 750.f }, { 0.5f, 0.5f });
+    // SELL FOR: shells, Fish Scales (their icons on the coral buttons)
+    text("SELL FOR", 26, INK_SOFT, { PANEL_CENTER, 750.f }, { 0.5f, 0.5f });
     m_sellShells.render(window);
     m_sellScales.render(window);
     for (const auto& [button, icon] : { std::pair<UIButtonElement*, const char*>{ &m_sellShells, "icon_shell" }, { &m_sellScales, "icon_fish_scale" } })
@@ -520,30 +614,132 @@ void UIClamStorage::render_panel(sf::RenderWindow& window)
         const sf::FloatRect bounds = button->get_bounds();
         UISkin::draw_fitted(window, UISkin::texture(icon), { { bounds.position.x + 10.f, bounds.position.y + bounds.size.y / 2.f - 24.f }, { 48.f, 48.f } });
     }
-    text("10 Fish Scales craft a Shiny Scale (+)", 22, UISkin::TITLE, { PANEL_CENTER, 872.f }, { 0.5f, 0.5f }, true);
+    text("10 Fish Scales craft a Shiny Scale (+)", 22, INK_SOFT, { PANEL_CENTER, 872.f }, { 0.5f, 0.5f }, true);
+}
+
+bool UIClamStorage::is_card_open() const
+{
+    return m_selectedUid >= 0 && selected_count() > 0;
+}
+
+int UIClamStorage::stored_total() const
+{
+    int total = 0;
+    if (auto player = m_dataLoader->get_player_data().lock())
+        for (const auto& [uid, count] : player->clamStorage) total += count;
+    return total;
+}
+
+/*
+ * USE ALL: every kind's usable fish, at once (new fish join the tank, the others give extra levels up to the max)
+ */
+void UIClamStorage::use_all()
+{
+    auto player = m_dataLoader->get_player_data().lock();
+    if (!player) return;
+    int used = 0;
+    bool hasUnlocked = false;
+    const std::map<int, int> stored = player->clamStorage;   // A copy: using them changes it
+    for (const auto& [uid, count] : stored)
+    {
+        const PlayerData::StoredUse use = player->preview_use(uid, count);
+        if (use.usable <= 0) continue;
+        int left = use.usable;   // The fish used rise as bubbles
+        for (const Floater& floater : m_floaters)
+            if (floater.uid == uid && left-- > 0)
+                for (int i = 0; i < 4; ++i) m_bubbles.push_back({ floater.position + sf::Vector2f{ random(-40.f, 40.f), random(-20.f, 20.f) }, random(90.f, 160.f), random(4.f, 9.f), true });
+        player->use_stored_fish(uid, use.usable);
+        used += use.usable;
+        if (use.unlocks)
+        {
+            hasUnlocked = true;
+            auto data = m_dataLoader->get_unit_data(uid, 0);
+            UIToast::show("NEW FISH!", (data ? data->name : std::string("A fish")) + " joined your tank", "");
+        }
+    }
+    if (used == 0) { play_sound("ui_error"); return; }
+    play_sound(hasUnlocked ? "unlock" : "purchase");
+    UIToast::announce_school_rank_rewards(*player);
+    m_dataLoader->save_progress();
+    clear_selection();
+    sync_floaters();
+}
+
+// SELL ALL asks first: how many shells, and whether some fish aren't in the tank yet
+void UIClamStorage::ask_sell_all()
+{
+    auto player = m_dataLoader->get_player_data().lock();
+    auto dialog = m_dialog.lock();
+    const int total = stored_total();
+    if (!player || !dialog || total <= 0) return;
+    int shells = 0;
+    bool hasNewFish = false;
+    for (const auto& [uid, count] : player->clamStorage)
+    {
+        shells += count * shells_each(uid);
+        hasNewFish = hasNewFish || !player->is_unit_owned(uid);
+    }
+    std::string explanation = "For " + std::to_string(shells) + " shells.";
+    if (hasNewFish) explanation += " Some of them aren't in your tank yet!";
+    dialog->set_texts("Sell all " + std::to_string(total) + " fish?", explanation, "SELL ALL");
+    dialog->open([this]() { sell_all(); });
+}
+
+void UIClamStorage::sell_all()
+{
+    auto player = m_dataLoader->get_player_data().lock();
+    if (!player) return;
+    auto flying = m_flying.lock();
+    const std::map<int, int> stored = player->clamStorage;
+    int index = 0;
+    for (const auto& [uid, count] : stored)
+    {
+        const int each = shells_each(uid);
+        int left = player->sell_stored_fish_for_shells(uid, count, each);
+        // Their shells fly out of each fish into the pill (it counts them as they land)
+        for (const Floater& floater : m_floaters)
+            if (floater.uid == uid && left-- > 0 && flying)
+                flying->launch("icon_shell", floater.position, m_shellsPill.lock(), each, 2, 0.04f * static_cast<float>(index++), "");
+    }
+    play_sound("shell_collect");
+    m_dataLoader->save_progress();
+    clear_selection();
+    m_floaters.clear();
+    sync_floaters();
 }
 
 void UIClamStorage::handle_event(const sf::Event& event, const sf::RenderWindow& window)
 {
     if (!m_isVisible) return;
-    m_use.handle_event(event, window);
-    m_sellShells.handle_event(event, window);
-    m_sellScales.handle_event(event, window);
 
-    const auto* pressed = event.getIf<sf::Event::MouseButtonPressed>();
-    if (!pressed || pressed->button != sf::Mouse::Button::Left) return;
-    const sf::Vector2f mouse = window.mapPixelToCoords(pressed->position);
-
-    // "Select all" (the box or its label)
-    const sf::FloatRect checkRow{ CHECKBOX.position, { TEXT_WIDTH, CHECKBOX.size.y } };
-    if (m_selectedUid >= 0 && checkRow.contains(mouse))
+    // The card is up: it takes the taps (its buttons, its X, "Select all"); a tap outside it closes it
+    if (is_card_open())
     {
-        set_select_all(!m_selectAll);
-        play_sound("ui_click");
+        m_use.handle_event(event, window);
+        m_sellShells.handle_event(event, window);
+        m_sellScales.handle_event(event, window);
+        m_closeCard.handle_event(event, window);
+        const auto* pressed = event.getIf<sf::Event::MouseButtonPressed>();
+        if (!pressed || pressed->button != sf::Mouse::Button::Left || !is_card_open()) return;
+        const sf::Vector2f mouse = window.mapPixelToCoords(pressed->position);
+        const sf::FloatRect checkRow{ CHECKBOX.position, { TEXT_WIDTH, CHECKBOX.size.y } };
+        if (checkRow.contains(mouse))
+        {
+            set_select_all(!m_selectAll);
+            play_sound("ui_click");
+        }
+        else if (!PANEL.contains(mouse) && !m_closeCard.get_bounds().contains(mouse))
+        {
+            clear_selection();
+            play_sound("ui_back");
+        }
         return;
     }
 
-    if (!TANK.contains(mouse)) return;
-    if (Floater* floater = floater_at(mouse)) click_fish(*floater);
-    else if (m_selectedUid >= 0) { clear_selection(); play_sound("ui_back"); }
+    // Else: USE ALL / SELL ALL, or a fish (its card comes up)
+    m_useAll.handle_event(event, window);
+    m_sellAll.handle_event(event, window);
+    const auto* pressed = event.getIf<sf::Event::MouseButtonPressed>();
+    if (!pressed || pressed->button != sf::Mouse::Button::Left) return;
+    if (Floater* floater = floater_at(window.mapPixelToCoords(pressed->position))) click_fish(*floater);
 }

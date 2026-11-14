@@ -23,10 +23,16 @@ UIOfferButton::UIOfferButton(sf::Vector2f size, sf::Vector2f position, const std
     }
 }
 
+void UIOfferButton::set_cost(int cost)
+{
+    m_hasCost = cost >= 0;
+    if (m_hasCost && m_kind == Kind::CURRENCY) m_cost.setString(std::to_string(cost));
+}
+
 void UIOfferButton::update(float deltaTime)
 {
     UIButtonElement::update(deltaTime);
-    m_text.setPosition(m_text.getPosition() - sf::Vector2f{ 0.f, m_shape.getSize().y * LABEL_RISE });
+    if (m_hasCost) m_text.setPosition(m_text.getPosition() - sf::Vector2f{ 0.f, m_shape.getSize().y * LABEL_RISE });
 }
 
 void UIOfferButton::render(sf::RenderWindow& window)
@@ -34,7 +40,7 @@ void UIOfferButton::render(sf::RenderWindow& window)
     if (!m_isVisible) return;
     UIButtonElement::render(window);
     const float scale = get_visual_scale();
-    if (scale < 0.02f) return;
+    if (scale < 0.02f || !m_hasCost) return;
 
     // The cost row, centered under the label: [icon] amount, or the ad tag
     const sf::FloatRect rect = get_visual_rect();

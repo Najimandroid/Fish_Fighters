@@ -302,7 +302,7 @@ void UIEquipSlider::render(sf::RenderWindow& window)
 
     m_previousButton.render(window);
     m_nextButton.render(window);
-    window.draw(m_hint);
+    // (How to add, reorder and remove fish is in the screen's "i", like the other screens: no line of text here)
 
     render_lineup(window);
 

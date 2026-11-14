@@ -19,7 +19,11 @@ public:
 
     static constexpr float HEIGHT = 112.f;
 
-    UITitleBar(const std::string& title);
+    // The band's material follows the screen's place: steel in the submarine, violet in the Clam Room, mother-of-pearl
+    // inside the clam (the Clam Storage)
+    enum class Material { STEEL, VIOLET, NACRE };
+
+    UITitleBar(const std::string& title, Material material = Material::STEEL);
 
     void set_title(const std::string& title);
 
@@ -32,4 +36,5 @@ public:
 private:
 
     sf::Text m_title;
+    Material m_material = Material::STEEL;
 };

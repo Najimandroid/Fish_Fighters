@@ -5,6 +5,7 @@
 #include <array>
 #include <map>
 #include <memory>
+#include <string>
 
 class StageData;
 
@@ -107,6 +108,12 @@ public:
     // The Clam Room's welcome gift (one Shiny Scale for the first roll), once: true if it was given now
     bool give_clam_room_gift();
 
+    // Rewarded ads (phones): ADS_PER_DAY a day (the count starts again each day). watch_ad counts one and gives its
+    // reward (a Shiny Scale); false when none is left today
+    static constexpr int ADS_PER_DAY = 3;
+    int ads_left_today() const;
+    bool watch_ad();
+
     // ===== Progression =====
 
     // Marks a stage as completed and applies rewards
@@ -152,6 +159,8 @@ public:
     std::map<int, int> clamStorage;        // Fish out of the clam waiting to be used or sold: unit UID -> how many
     int schoolRankRewardsClaimed = 0;           // School Rank milestones already rewarded
     bool hasClamRoomGift = false;          // The welcome Shiny Scale was given
+    std::string adsDay;                    // The day of the ads counted (YYYY-MM-DD), and how many
+    int adsToday = 0;
 
     // Units
     struct OwnedUnit

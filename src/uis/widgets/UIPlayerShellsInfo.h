@@ -44,12 +44,16 @@ public:
     // Room left at the right end of the pill for a button drawn there (the Shiny Scales' craft "+")
     void set_trailing_room(float room);
 
+    // Tints the dark pill (plum inside the clam)
+    void set_tint(sf::Color tint);
+
 private:
 
     std::shared_ptr<DataLoader> m_dataLoader; // Reference to DataLoader to access player info
     Currency m_currency = Currency::SHELLS;
     int m_heldBack = 0;
     float m_trailingRoom = 0.f;
+    sf::Color m_tint = sf::Color::White;
     float m_pop = 0.f;                        // 1 when something lands, back to 0
     float m_shown = -1.f;                     // The amount the digits show (rolls to the real one; -1: not yet)
     float m_spent = 0.f;                      // 1 when the amount goes down (the digits flash red), back to 0

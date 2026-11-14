@@ -4,6 +4,7 @@
 #include "../../core/DataLoader.h"
 #include "../../data/BattlefieldLayout.h"
 #include "../../data/PlayerData.h"
+#include "../../core/Platform.h"
 
 #include <algorithm>
 #include <cmath>
@@ -32,6 +33,14 @@ namespace
     const float SHAKE_ONE = 0.45f, SHAKE_TEN = 0.8f;
     const float OPEN_POP = 0.45f;
     const float REVEAL_GAP = 0.18f;
+    // The offers along the bottom (OPEN, OPEN x10; FREE for an ad on a phone), centered
+    const sf::Vector2f OFFER_SIZE{ 360.f, 126.f };
+    const float AD_OFFER_WIDTH = 300.f, OFFER_GAP = 30.f, OFFER_Y = 918.f;
+    float offers_left()
+    {
+        const float width = 2.f * OFFER_SIZE.x + OFFER_GAP + (Platform::HAS_REWARDED_ADS ? AD_OFFER_WIDTH + OFFER_GAP : 0.f);
+        return 960.f - width / 2.f;
+    }
     const float CLOSE = 1.f;           // Closing: the bubbles go back into its mouth (CLOSE_INHALE), it shuts (CLOSE_SHUT)
     const float CLOSE_INHALE = 0.58f;
     const float CLOSE_SHUT = 0.64f;
@@ -76,8 +85,10 @@ namespace
 
 UIClamRoom::UIClamRoom(std::shared_ptr<DataLoader> dataLoader) :
     m_dataLoader(std::move(dataLoader)),
-    m_openOne({ 360.f, 126.f }, { 580.f, 918.f }, "OPEN", UIOfferButton::Kind::CURRENCY, "icon_shiny_scale", 1),
-    m_openTen({ 360.f, 126.f }, { 980.f, 918.f }, "OPEN x10", UIOfferButton::Kind::CURRENCY, "icon_shiny_scale", 10),
+    // The offers centered in a row: OPEN, OPEN x10, and on a phone FREE (an ad) on their left
+    m_openOne(OFFER_SIZE, { offers_left() + (Platform::HAS_REWARDED_ADS ? AD_OFFER_WIDTH + OFFER_GAP : 0.f), OFFER_Y }, "OPEN", UIOfferButton::Kind::CURRENCY, "icon_shiny_scale", 1),
+    m_openTen(OFFER_SIZE, { offers_left() + (Platform::HAS_REWARDED_ADS ? AD_OFFER_WIDTH + OFFER_GAP : 0.f) + OFFER_SIZE.x + OFFER_GAP, OFFER_Y }, "OPEN x10", UIOfferButton::Kind::CURRENCY, "icon_shiny_scale", 10),
+    m_watchAd({ AD_OFFER_WIDTH, OFFER_SIZE.y }, { offers_left(), OFFER_Y }, "FREE", UIOfferButton::Kind::REWARDED_AD),
     m_text(UISkin::heavy_font())
 {
     m_openOne.set_text_size(46);
@@ -89,6 +100,10 @@ UIClamRoom::UIClamRoom(std::shared_ptr<DataLoader> dataLoader) :
     m_openOne.set_attention(true);
     m_openOne.set_callback([this]() { open(1); });
     m_openTen.set_callback([this]() { open(10); });
+    m_watchAd.set_text_size(46);
+    m_watchAd.set_click_sound("ui_click");
+    m_watchAd.set_visible(Platform::HAS_REWARDED_ADS);
+    m_watchAd.set_callback([this]() { if (m_onWatchAd) m_onWatchAd(); });
 }
 
 float UIClamRoom::random(float from, float to)
@@ -160,6 +175,11 @@ void UIClamRoom::set_scales_counter(std::shared_ptr<UIPlayerShellsInfo> scales)
 void UIClamRoom::set_on_storage(std::function<void()> onStorage)
 {
     m_onStorage = std::move(onStorage);
+}
+
+void UIClamRoom::set_on_watch_ad(std::function<void()> onWatchAd)
+{
+    m_onWatchAd = std::move(onWatchAd);
 }
 
 sf::Vector2f UIClamRoom::scales_source() const
@@ -292,6 +312,8 @@ void UIClamRoom::update(float deltaTime)
     const int scales = player ? player->shinyScales : 0;
     m_openOne.set_enabled(m_phase == Phase::IDLE && scales >= 1);
     m_openTen.set_enabled(m_phase == Phase::IDLE && scales >= 10);
+    m_watchAd.set_enabled(m_phase == Phase::IDLE && player && player->ads_left_today() > 0);
+    m_watchAd.update(deltaTime);
     m_openOne.update(deltaTime);
     m_openTen.update(deltaTime);
 
@@ -479,6 +501,18 @@ void UIClamRoom::render(sf::RenderWindow& window)
     // The offers, each with its price under it
     m_openOne.render(window);
     m_openTen.render(window);
+    if (Platform::HAS_REWARDED_ADS)
+    {
+        // What the ad gives, and how many are left today
+        m_watchAd.render(window);
+        auto adPlayer = m_dataLoader->get_player_data().lock();
+        const int left = adPlayer ? adPlayer->ads_left_today() : 0;
+        UISkin::style_text(m_text, 24, left > 0 ? sf::Color(170, 240, 225) : sf::Color(200, 190, 220));
+        m_text.setString(left > 0 ? "+1 Shiny Scale  " + std::to_string(left) + "/" + std::to_string(PlayerData::ADS_PER_DAY) : "Back tomorrow");
+        UISkin::set_text_anchor(m_text, { 0.5f, 0.f });
+        m_text.setPosition({ offers_left() + AD_OFFER_WIDTH / 2.f, OFFER_Y + OFFER_SIZE.y + 10.f });
+        window.draw(m_text);
+    }
 
     // STORAGE: the Clam Storage's chest, with how many fish wait there
     auto player = m_dataLoader->get_player_data().lock();
@@ -808,6 +842,7 @@ void UIClamRoom::handle_event(const sf::Event& event, const sf::RenderWindow& wi
     {
         m_openOne.handle_event(event, window);
         m_openTen.handle_event(event, window);
+        if (Platform::HAS_REWARDED_ADS) m_watchAd.handle_event(event, window);
 
         // STORAGE (the chest): grows under the mouse; a click dives into the clam
         if (const auto* moved = event.getIf<sf::Event::MouseMoved>())

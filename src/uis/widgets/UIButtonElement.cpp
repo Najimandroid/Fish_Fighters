@@ -13,6 +13,7 @@ namespace
     const sf::Color PRESSED_TINT{ 215, 215, 215 };
     const sf::Color DISABLED_TINT{ 165, 165, 170 };      // On the steel image: a flat grey
     const sf::Color DISABLED_TEXT{ 190, 190, 190 };
+    const sf::Color CORAL{ 242, 118, 158 }, CORAL_PRESSED{ 206, 96, 134 };   // Style::Coral
 
     const float ENTRANCE = 0.36f;                 // The pop-in
     const float BREATH = 0.025f;                  // The main action breathes this much (scale)
@@ -212,8 +213,28 @@ void UIButtonElement::render(sf::RenderWindow& window)
     const sf::FloatRect rect = get_visual_rect();
     // A soft shadow under it (pressed: it sinks onto it)
     const float drop = (m_isPressed ? 0.4f : 1.f) * UISkin::SHADOW_DROP * scale;
-    UISkin::draw_nine_slice(window, UISkin::BUTTON_STEEL, { rect.position + sf::Vector2f{ drop * UISkin::SHADOW_SHIFT / UISkin::SHADOW_DROP, drop }, rect.size }, CORNER_SCALE, UISkin::SHADOW_TINT);
-    UISkin::draw_nine_slice(window, isSteel ? UISkin::BUTTON_STEEL : UISkin::BUTTON_YELLOW, rect, CORNER_SCALE, tint);
+    const sf::Vector2f shadowOffset{ drop * UISkin::SHADOW_SHIFT / UISkin::SHADOW_DROP, drop };
+    if (m_style == Style::Coral && m_isEnabled)
+    {
+        // Coral: a rounded shape (no metal image), a pearly gloss on its top half
+        const float radius = std::min(rect.size.y * 0.34f, 36.f * scale);
+        sf::ConvexShape shape = UISkin::rounded_rect({ rect.position + shadowOffset, rect.size }, radius);
+        shape.setFillColor(UISkin::SHADOW_TINT);
+        window.draw(shape);
+        shape = UISkin::rounded_rect(rect, radius);
+        shape.setFillColor(m_isPressed ? CORAL_PRESSED : CORAL * m_tint);
+        shape.setOutlineThickness(5.f * scale);
+        shape.setOutlineColor(UISkin::OUTLINE);
+        window.draw(shape);
+        sf::ConvexShape gloss = UISkin::rounded_rect({ rect.position + sf::Vector2f{ 10.f, 7.f } * scale, { rect.size.x - 20.f * scale, rect.size.y * 0.4f } }, radius * 0.7f);
+        gloss.setFillColor(sf::Color(255, 255, 255, 72));
+        window.draw(gloss);
+    }
+    else
+    {
+        UISkin::draw_nine_slice(window, UISkin::BUTTON_STEEL, { rect.position + shadowOffset, rect.size }, CORNER_SCALE, UISkin::SHADOW_TINT);
+        UISkin::draw_nine_slice(window, isSteel ? UISkin::BUTTON_STEEL : UISkin::BUTTON_YELLOW, rect, CORNER_SCALE, tint);
+    }
     if (m_hasAttention && m_isEnabled && !isSteel && entrance_scale() >= 1.f) render_shine(window, rect);
 
     const sf::Color textColor = m_text.getFillColor();

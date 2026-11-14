@@ -59,6 +59,9 @@ public:
     // What happens once the view has dived into the clam (opens the Clam Storage)
     void set_on_storage(std::function<void()> onStorage);
 
+    // Phones: the FREE offer (a rewarded ad for a Shiny Scale, a few a day) calls this (UIManager plays the ad)
+    void set_on_watch_ad(std::function<void()> onWatchAd);
+
     // Coming back from the Clam Storage: the view zooms out of the open clam, which then snaps shut
     void enter_from_storage();
 
@@ -111,7 +114,9 @@ private:
     std::shared_ptr<DataLoader> m_dataLoader;
     UIOfferButton m_openOne;            // The offers, their price under them (1 and 10 Shiny Scales)
     UIOfferButton m_openTen;
+    UIOfferButton m_watchAd;            // Phones only: FREE for an ad (left of OPEN)
     std::function<void()> m_onStorage;
+    std::function<void()> m_onWatchAd;
     bool m_isStorageHovered = false;   // The chest icon (STORAGE) grows under the mouse
     bool m_hasCue = false;             // TO_STORAGE / FROM_STORAGE: its sound played (or the screen changed)
     sf::Text m_text;

@@ -25,6 +25,9 @@ public:
     UIOfferButton(sf::Vector2f size, sf::Vector2f position, const std::string& label, Kind kind,
         const std::string& costIcon = "", int cost = 0);
 
+    // The price shown (a negative one hides the cost row: MAX LEVEL)
+    void set_cost(int cost);
+
     void update(float deltaTime) override;
     void render(sf::RenderWindow& window) override;
 
@@ -32,4 +35,5 @@ private:
     Kind m_kind;
     std::string m_costIcon;
     sf::Text m_cost;
+    bool m_hasCost = true;
 };

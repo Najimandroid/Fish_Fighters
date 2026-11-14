@@ -63,6 +63,11 @@ void UIPlayerShellsInfo::update(float deltaTime)
     m_text.setPosition({ m_position.x + m_size.x - PADDING - m_trailingRoom, m_position.y + m_size.y / 2.f });
 }
 
+void UIPlayerShellsInfo::set_tint(sf::Color tint)
+{
+    m_tint = tint;
+}
+
 void UIPlayerShellsInfo::set_trailing_room(float room)
 {
     m_trailingRoom = std::max(0.f, room);
@@ -72,7 +77,7 @@ void UIPlayerShellsInfo::render(sf::RenderWindow& window)
 {
     if (!m_isVisible) return;
 
-    UISkin::draw_nine_slice(window, UISkin::PANEL_DARK, get_bounds(), 1.f);
+    UISkin::draw_nine_slice(window, UISkin::PANEL_DARK, get_bounds(), 1.f, m_tint);
     const float iconSize = ICON_SIZE * (1.f + 0.3f * m_pop);   // Pops when something lands in it
     const char* icon = m_currency == Currency::SHELLS ? "icon_shell" : m_currency == Currency::SHINY_SCALES ? "icon_shiny_scale" : "icon_fish_scale";
     UISkin::draw_fitted(window, UISkin::texture(icon),
