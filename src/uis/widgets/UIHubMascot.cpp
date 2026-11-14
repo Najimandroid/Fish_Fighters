@@ -17,7 +17,7 @@ namespace
     const float WALK_FRAME_SECONDS = 0.14f;
     const float HOP_SECONDS = 0.45f, HOP_HEIGHT = 70.f;
 
-    const float BUBBLE_LEFT = 652.f, BUBBLE_WIDTH = 470.f, BUBBLE_BOTTOM = 838.f;
+    const float BUBBLE_LEFT = 644.f, BUBBLE_WIDTH = 440.f, BUBBLE_BOTTOM = 838.f;   // Clear of the porthole's ring
     const float PADDING = 26.f, CORNER = 30.f, OUTLINE = 5.f;
     const sf::Vector2f TAIL_TIP{ 1012.f, 872.f };   // The bubble's tail points at the fish
     const unsigned int TEXT_SIZE = 30;
