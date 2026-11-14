@@ -495,7 +495,7 @@ void UIManager::generate_fish_tank_uis()
         add_ui_element(lockLabel);
     }
     else if (auto player = m_dataLoader->get_player_data().lock(); player && (player->shinyScales > 0 || !player->clamStorage.empty()))
-        add_ui_element(std::make_shared<UIBadge>(sf::Vector2f{ clamTile.position.x + clamTile.size.x - 14.f, clamTile.position.y + 12.f }, "!"));
+        add_ui_element(std::make_shared<UIBadge>(sf::Vector2f{ clamTile.position.x + clamTile.size.x - 36.f, clamTile.position.y + 36.f }, "!"));   // On the clam's shoulder
 
     // The School Rank (top right) with its "i", and its milestones reached since last time
     add_ui_element(std::make_shared<UISchoolRank>(m_dataLoader));

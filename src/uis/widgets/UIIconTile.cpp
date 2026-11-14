@@ -6,10 +6,8 @@
 
 namespace
 {
-    const float CORNER_SCALE = 0.7f;
-    const float LABEL_ROOM = 0.26f;          // The bottom part of the tile its name takes
+    const float LABEL_ROOM = 0.26f;          // The bottom part of the button its name sits on (over the picture's foot)
     const unsigned int LABEL_SIZE = 30;
-    const sf::Color DISABLED_TINT{ 165, 165, 170 };
 
     sf::Color faded(sf::Color color, std::uint8_t alpha) { color.a = static_cast<std::uint8_t>(color.a * alpha / 255); return color; }
 }
@@ -23,7 +21,6 @@ UIIconTile::UIIconTile(sf::Vector2f size, sf::Vector2f position, const std::stri
     unsigned int labelSize = LABEL_SIZE;
     set_text_size(labelSize);
     while (labelSize > 20 && m_text.getLocalBounds().size.x > size.x - 22.f) set_text_size(--labelSize);
-    set_style(Style::Secondary);
 
     // An image is fitted by what's drawn on it, not its transparent margins (read once)
     if (icon == Icon::TEXTURE)
@@ -59,18 +56,25 @@ void UIIconTile::render(sf::RenderWindow& window)
     const float scale = get_visual_scale();
     if (scale < 0.02f) return;
 
+    // No background: the picture stands on its own (its whole rectangle is still the button), a soft shadow under it
+    // like an object resting there, its name across its bottom
     const sf::FloatRect rect = get_visual_rect();
-    const float drop = (m_isPressed ? 0.4f : 1.f) * UISkin::SHADOW_DROP * scale;
-    UISkin::draw_nine_slice(window, UISkin::BUTTON_STEEL, { rect.position + sf::Vector2f{ 0.f, drop }, rect.size }, CORNER_SCALE, UISkin::SHADOW_TINT);
-    sf::Color tint = m_isEnabled ? m_tint : DISABLED_TINT;
-    if (m_isPressed) tint = tint * sf::Color(215, 215, 215);
-    UISkin::draw_nine_slice(window, UISkin::BUTTON_STEEL, rect, CORNER_SCALE, tint);
+    const float inset = std::min(rect.size.x, rect.size.y) * 0.06f;
+    const sf::FloatRect area{ { rect.position.x + inset, rect.position.y + inset },
+        { rect.size.x - 2.f * inset, rect.size.y * (1.f - LABEL_ROOM * 0.55f) - inset } };
 
-    // The picture in the part above the name (an image gets more of it: a wide clam would be tiny otherwise)
-    const float inset = std::min(rect.size.x, rect.size.y) * (m_icon == Icon::TEXTURE ? 0.08f : 0.14f);
-    const sf::FloatRect area{ { rect.position.x + inset, rect.position.y + inset * 0.8f },
-        { rect.size.x - 2.f * inset, rect.size.y * (1.f - LABEL_ROOM) - inset * 0.8f } };
-    draw_icon(window, area, scale, m_isEnabled ? 255 : 120);
+    const float shadowWidth = std::min(area.size.x, area.size.y * 1.4f) * 0.8f;
+    const float shadowY = area.position.y + area.size.y - area.size.y * 0.04f + (m_isPressed ? 0.f : UISkin::SHADOW_DROP * scale * 0.5f);
+    for (const float grow : { 1.f, 0.72f })
+    {
+        sf::CircleShape shadow(shadowWidth / 2.f * grow);
+        shadow.setScale({ 1.f, 0.2f });
+        shadow.setOrigin({ shadowWidth / 2.f * grow, shadowWidth / 2.f * grow });
+        shadow.setPosition({ area.position.x + area.size.x / 2.f, shadowY });
+        shadow.setFillColor(sf::Color(0, 0, 0, static_cast<std::uint8_t>((m_isEnabled ? 46 : 24))));
+        window.draw(shadow);
+    }
+    draw_icon(window, area, scale, !m_isEnabled ? 120 : m_isPressed ? 215 : 255);
 
     // The name, around the visual center (the tile scales around its middle)
     const sf::Vector2f center = rect.position + rect.size / 2.f;

@@ -8,7 +8,8 @@
  * UIIconTile
  * ----------
  * A square menu button that shows what it opens with a picture, its name small along its bottom (like the Cat Base's
- * Menu / Storage / Capsule icons): a raised steel tile with a shadow. For secondary destinations; the screen's main
+ * Menu / Storage / Capsule icons): no background, the picture stands on its own with a soft shadow under it, and its
+ * whole rectangle is the button (an easy target on a phone). For secondary destinations; the screen's main
  * actions stay big text buttons. The picture is an image (the clam) or one of a few drawn icons.
  *
  * Example usage:
