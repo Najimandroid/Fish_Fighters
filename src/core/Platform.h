@@ -29,6 +29,10 @@ namespace Platform
     inline constexpr bool IS_MOBILE = false;
 #endif
 
+    // Rewarded advertisements (free offers for watching an ad: phones only). The shop offers are ready for them
+    // (UIOfferButton::Kind::REWARDED_AD); they stay off until an ad SDK is added and this turns true on phones
+    inline constexpr bool HAS_REWARDED_ADS = false;
+
 #if defined(__ANDROID__)
     inline constexpr bool IS_ANDROID = true;
 #else

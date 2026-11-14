@@ -6,10 +6,9 @@
 namespace
 {
     const float SCREEN_WIDTH = 1920.f;
-    const float OVERHANG = 12.f;          // The bar starts above and beside the screen: only its bottom edge shows
-    const unsigned int TITLE_SIZE = 64;
+    const unsigned int TITLE_SIZE = 56;
+    const float BAND_BOTTOM = 104.f;       // The band's bottom edge (the screen's content starts under HEIGHT)
     const float TITLE_X = 40.f;
-    const float BAR_IMAGE_HEIGHT = 112.f;  // bar_metal.png: drawn at the scale that fits its height
 }
 
 UITitleBar::UITitleBar(const std::string& title) :
@@ -24,17 +23,55 @@ void UITitleBar::set_title(const std::string& title)
 {
     m_title.setString(title);
     UISkin::set_text_anchor(m_title, { 0.f, 0.5f });
-    m_title.setPosition({ TITLE_X, HEIGHT / 2.f - 4.f });
+    m_title.setPosition({ TITLE_X, BAND_BOTTOM / 2.f - 6.f });
 }
 
 void UITitleBar::render(sf::RenderWindow& window)
 {
     if (!m_isVisible) return;
 
-    // Across the whole screen, a phone's extra width too
+    // A plain steel band across the whole screen (the side frame covers its ends on a phone): lighter at the top,
+    // a bright bevel and a dark edge at the bottom, a shadow on the screen under it, two rivets at each end
     const sf::FloatRect screen = UISkin::screen_rect();
     const float left = std::min(0.f, screen.position.x), right = std::max(SCREEN_WIDTH, screen.position.x + screen.size.x);
-    const sf::FloatRect bar{ { left - OVERHANG, screen.position.y - OVERHANG }, { right - left + 2.f * OVERHANG, HEIGHT - screen.position.y + OVERHANG } };
-    UISkin::draw_nine_slice(window, UISkin::BAR_METAL, bar, bar.size.y / BAR_IMAGE_HEIGHT);
+    const float top = screen.position.y;
+    sf::VertexArray band(sf::PrimitiveType::TriangleStrip, 4);
+    band[0] = sf::Vertex{ { left, top }, sf::Color(82, 100, 126) };
+    band[1] = sf::Vertex{ { right, top }, sf::Color(82, 100, 126) };
+    band[2] = sf::Vertex{ { left, BAND_BOTTOM }, sf::Color(54, 68, 90) };
+    band[3] = sf::Vertex{ { right, BAND_BOTTOM }, sf::Color(54, 68, 90) };
+    window.draw(band);
+
+    sf::RectangleShape line({ right - left, 3.f });
+    line.setPosition({ left, BAND_BOTTOM - 9.f });
+    line.setFillColor(sf::Color(132, 152, 178));
+    window.draw(line);
+    line.setSize({ right - left, 5.f });
+    line.setPosition({ left, BAND_BOTTOM - 5.f });
+    line.setFillColor(UISkin::OUTLINE);
+    window.draw(line);
+    sf::VertexArray shadow(sf::PrimitiveType::TriangleStrip, 4);
+    shadow[0] = sf::Vertex{ { left, BAND_BOTTOM }, sf::Color(0, 0, 0, 90) };
+    shadow[1] = sf::Vertex{ { right, BAND_BOTTOM }, sf::Color(0, 0, 0, 90) };
+    shadow[2] = sf::Vertex{ { left, BAND_BOTTOM + 18.f }, sf::Color(0, 0, 0, 0) };
+    shadow[3] = sf::Vertex{ { right, BAND_BOTTOM + 18.f }, sf::Color(0, 0, 0, 0) };
+    window.draw(shadow);
+
+    sf::CircleShape rivet(6.f);
+    rivet.setOrigin({ 6.f, 6.f });
+    rivet.setFillColor(sf::Color(120, 138, 162));
+    rivet.setOutlineThickness(2.5f);
+    rivet.setOutlineColor(UISkin::OUTLINE);
+    for (const float x : { 14.f, 34.f, SCREEN_WIDTH - 34.f, SCREEN_WIDTH - 14.f })
+    {
+        rivet.setPosition({ x, BAND_BOTTOM - 24.f });
+        window.draw(rivet);
+    }
     window.draw(m_title);
+}
+
+sf::Vector2f UITitleBar::get_info_position() const
+{
+    const sf::FloatRect bounds = m_title.getGlobalBounds();
+    return { bounds.position.x + bounds.size.x + 46.f, BAND_BOTTOM / 2.f - 4.f };
 }

@@ -6,7 +6,7 @@
 
 namespace
 {
-    const float COVER = 0.35f;              // The water rising over the screen
+    const float COVER = UIBattleIntro::COVER_SECONDS;
     const float UNCOVER = 0.45f;            // The water sweeping up and away (the jingle's end)
     const float TITLE_IN = 0.2f;            // When the title pops in
     const float OFF = 400.f;                // How far past the screen the water's far edge stays
@@ -14,10 +14,12 @@ namespace
     float ease(float t) { return 0.5f - 0.5f * std::cos(3.14159265f * std::clamp(t, 0.f, 1.f)); }
 }
 
-UIBattleIntro::UIBattleIntro(const std::string& stageName, float duration) :
+UIBattleIntro::UIBattleIntro(const std::string& stageName, float duration, float startTime) :
     m_title(UISkin::heavy_font(), "GET READY FOR BATTLE!"),
     m_stageName(UISkin::heavy_font(), stageName),
-    m_duration(std::max(COVER + UNCOVER + 0.3f, duration))
+    m_time(std::max(0.f, startTime)),
+    // Always time to sweep away, even when the stage took longer to load than the jingle lasts
+    m_duration(std::max({ COVER + UNCOVER + 0.3f, duration, startTime + UNCOVER + 0.2f }))
 {
     UISkin::style_text(m_title, 96, UISkin::NUMBER);
     UISkin::set_text_anchor(m_title, { 0.5f, 0.5f });
@@ -45,6 +47,7 @@ void UIBattleIntro::render(sf::RenderWindow& window)
     if (m_time < COVER) top = (1080.f + wave) - (1080.f + 2.f * wave) * ease(m_time / COVER);
     if (leaving > 0.f) bottom = (1080.f + wave) - (1080.f + 2.f * wave) * ease(leaving / UNCOVER);
     UISkin::draw_water_band(window, top, bottom, m_time);
+    if (m_time >= COVER) m_hasCovered = true;
 
     // The title pops in (overshoots a little, settles), the stage's name under it; both rise and fade with the water
     if (m_time < TITLE_IN) return;

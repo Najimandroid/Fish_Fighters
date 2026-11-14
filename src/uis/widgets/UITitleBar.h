@@ -23,6 +23,9 @@ public:
 
     void set_title(const std::string& title);
 
+    // Where the screen's "i" goes: right of the title (UIInfoButton's center)
+    sf::Vector2f get_info_position() const;
+
     void update(float deltaTime) override {}
     void render(sf::RenderWindow& window) override;
 

@@ -91,6 +91,11 @@ set(PROJECT_SOURCES
     src/uis/widgets/UIToast.cpp
     src/uis/widgets/UIAmbience.cpp
     src/uis/widgets/UIHubMascot.cpp
+    src/uis/widgets/UIInfoButton.cpp
+    src/uis/widgets/UIInfoPanel.cpp
+    src/uis/widgets/UIIconTile.cpp
+    src/uis/widgets/UIOfferButton.cpp
+    src/uis/widgets/UIClamBackdrop.cpp
     src/uis/widgets/UIStageCash.cpp
     src/uis/widgets/UICashUp.cpp
     src/uis/widgets/UIBaseHealthInfo.cpp

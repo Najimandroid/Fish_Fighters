@@ -35,6 +35,10 @@
 #include "widgets/UIUpgradeIcon.h"
 #include "widgets/UIAmbience.h"
 #include "widgets/UIHubMascot.h"
+#include "widgets/UIInfoButton.h"
+#include "widgets/UIInfoPanel.h"
+#include "widgets/UIIconTile.h"
+#include "widgets/UIClamBackdrop.h"
 #include "UISkin.h"
 #include "../core/Platform.h"
 
@@ -110,6 +114,7 @@ std::pair<float, float> UIManager::reveal_band() const
 void UIManager::enter_menu_screen()
 {
     start_screen_reveal();
+    m_hasSideFrame = true;
     if (m_audio)
     {
         // Back from the Clam Room, its theme melts into the Fish Tank's where it is (both share their grid)
@@ -241,6 +246,10 @@ void UIManager::update_uis(float deltaTime)
         element->update(deltaTime);
     }
 
+    // A battle starting: the water covers the screen now, load it
+    if (m_pendingBattleStage >= 0 && m_battleCover && m_battleCover->has_covered_screen())
+        finish_battle_start();
+
     // An action an animation asked for when it ended (the zoom into the Clam Storage): after the loop, since it can
     // change the screen
     if (m_pendingAction)
@@ -257,7 +266,7 @@ void UIManager::render_uis(sf::RenderWindow& window, sf::View& uiView, sf::View&
 {
     if (m_revealTime < 0.f)
     {
-        render_list(window, m_uiElements, uiView, worldView);
+        render_list(window, m_uiElements, uiView, worldView, m_hasSideFrame);
         return;
     }
 
@@ -271,24 +280,32 @@ void UIManager::render_uis(sf::RenderWindow& window, sf::View& uiView, sf::View&
     {
         sf::View above = uiView;
         above.setScissor({ { 0.f, 0.f }, { 1.f, oldEnd } });
-        render_list(window, m_oldElements, above, worldView);
+        render_list(window, m_oldElements, above, worldView, false);
     }
     if (newStart < 0.999f)
     {
         sf::View below = uiView;
         below.setScissor({ { 0.f, newStart }, { 1.f, 1.f - newStart } });
-        render_list(window, m_uiElements, below, worldView);
+        render_list(window, m_uiElements, below, worldView, false);
     }
     window.setView(uiView);
     UISkin::draw_water_band(window, top, bottom, m_revealTime);
+    if (m_hasSideFrame) UISkin::draw_side_frame(window);   // The frame stays still while the wave passes
 }
 
 // Draws elements in order: the world-space ones in the world view, the others in uiView (which can carry a scissor)
-void UIManager::render_list(sf::RenderWindow& window, std::vector<std::shared_ptr<UIElement>>& elements, const sf::View& uiView, sf::View& worldView)
+void UIManager::render_list(sf::RenderWindow& window, std::vector<std::shared_ptr<UIElement>>& elements, const sf::View& uiView, sf::View& worldView,
+    bool withFrame)
 {
     window.setView(uiView);
+    bool isFramed = !withFrame;   // The side frame: over the screen, under an open window (dimmed with the rest)
     for (auto& element : elements)
     {
+        if (!isFramed && !element->isWorldSpaceUi && element->is_visible() && element->is_blocking_input())
+        {
+            UISkin::draw_side_frame(window);
+            isFramed = true;
+        }
         if (element->isWorldSpaceUi)
         {
             window.setView(worldView);
@@ -304,6 +321,7 @@ void UIManager::render_list(sf::RenderWindow& window, std::vector<std::shared_pt
             element->render(window);
         }
     }
+    if (!isFramed) UISkin::draw_side_frame(window);
 }
 
 /*
@@ -337,6 +355,7 @@ void UIManager::dim_letterbox_bars(sf::RenderWindow& window, const sf::View& uiV
 // Executes deferred actions after processing events
 void UIManager::handle_ui_events(const sf::Event& event, const sf::RenderWindow& window)
 {
+    if (m_pendingBattleStage >= 0) return;   // A battle is starting: the screen under the water takes no input
     // A modal window (the pause menu) gets the events alone; the last one added is the one on top
     auto blocking = std::find_if(m_uiElements.rbegin(), m_uiElements.rend(),
         [](const auto& uiElement) { return uiElement->is_visible() && uiElement->is_blocking_input(); });
@@ -406,68 +425,42 @@ void UIManager::generate_fish_tank_uis()
     UISkin::set_text_anchor(nextStage->get_text(), { 0.5f, 0.5f });
     nextStage->set_position({ columnX + columnWidth / 2.f, 190.f + 150.f - 24.f });
 
-    // Upgrade button switches UI to upgrade screen
-    auto upgradeButton = std::make_shared<UIButtonElement>(
-        sf::Vector2f{ columnWidth, 120.f },
-        sf::Vector2f{ columnX, 372.f },
-        "UPGRADE"
-    );
-    upgradeButton->set_text_size(52);
+    // The main actions stay big text buttons (BATTLE! above, yellow): UPGRADE and EQUIP
+    const float stackHeight = 104.f;
+    auto upgradeButton = std::make_shared<UIButtonElement>(sf::Vector2f{ columnWidth, stackHeight }, sf::Vector2f{ columnX, 366.f }, "UPGRADE");
+    upgradeButton->set_text_size(50);
     upgradeButton->set_style(UIButtonElement::Style::Secondary);
-    upgradeButton->set_callback([this]()
-        {
-            m_pendingAction = [this]() {
-                generate_upgrade_menu_uis();
-                };
-        });
+    upgradeButton->set_callback([this]() { m_pendingAction = [this]() { generate_upgrade_menu_uis(); }; });
 
-    // Equip button switches UI to equip screen
-    auto equipButton = std::make_shared<UIButtonElement>(
-        sf::Vector2f{ columnWidth, 120.f },
-        sf::Vector2f{ columnX, 524.f },
-        "EQUIP"
-    );
-    equipButton->set_text_size(52);
+    auto equipButton = std::make_shared<UIButtonElement>(sf::Vector2f{ columnWidth, stackHeight }, sf::Vector2f{ columnX, 494.f }, "EQUIP");
+    equipButton->set_text_size(50);
     equipButton->set_style(UIButtonElement::Style::Secondary);
-    equipButton->set_callback([this]()
-        {
-            m_pendingAction = [this]() {
-                generate_equip_menu_uis();
-                };
-        });
+    equipButton->set_callback([this]() { m_pendingAction = [this]() { generate_equip_menu_uis(); }; });
 
-    // Encyclopedia button: every fish and every enemy met
-    auto encyclopediaButton = std::make_shared<UIButtonElement>(
-        sf::Vector2f{ columnWidth, 120.f },
-        sf::Vector2f{ columnX, 676.f },
-        "ENCYCLOPEDIA"
-    );
-    encyclopediaButton->set_text_size(52);
-    encyclopediaButton->set_style(UIButtonElement::Style::Secondary);
-    encyclopediaButton->set_callback([this]()
-        {
-            m_pendingAction = [this]() {
-                generate_encyclopedia_uis();
-                };
-        });
+    // The rest are icon tiles in a row: the encyclopedia, the options, and on PC quit (phones don't quit apps).
+    // Two tiles share the row on a phone: wider, easier to tap
+    const int tileCount = Platform::IS_MOBILE ? 2 : 3;
+    const float tileGap = 25.f, tileY = 628.f, tileHeight = 170.f;
+    const float tileWidth = (columnWidth - tileGap * static_cast<float>(tileCount - 1)) / static_cast<float>(tileCount);
+    const auto tile_x = [&](int index) { return columnX + static_cast<float>(index) * (tileWidth + tileGap); };
 
-    // Options and Quit share the last row (Quit smaller, orange, and it asks first)
+    auto encyclopediaButton = std::make_shared<UIIconTile>(sf::Vector2f{ tileWidth, tileHeight }, sf::Vector2f{ tile_x(0), tileY },
+        "ENCYCLOPEDIA", UIIconTile::Icon::BOOK);
+    encyclopediaButton->set_callback([this]() { m_pendingAction = [this]() { generate_encyclopedia_uis(); }; });
+
     auto optionsMenu = make_options_menu();
-    auto optionsButton = make_options_button(optionsMenu, { Platform::IS_MOBILE ? columnWidth : 300.f, 96.f }, { columnX, 828.f }, 40);
-    optionsButton->set_style(UIButtonElement::Style::Secondary);
+    auto optionsButton = std::make_shared<UIIconTile>(sf::Vector2f{ tileWidth, tileHeight }, sf::Vector2f{ tile_x(1), tileY },
+        "OPTIONS", UIIconTile::Icon::GEAR);
+    std::weak_ptr<UIOptionsMenu> weakOptions = optionsMenu;
+    optionsButton->set_callback([weakOptions]() { if (auto menu = weakOptions.lock()) menu->open(); });
 
     // "!" on UPGRADE when a fish can be upgraded or unlocked with the shells there are
-    auto upgradeBadge = std::make_shared<UIBadge>(sf::Vector2f{ columnX + columnWidth - 14.f, 372.f + 12.f }, "!");
+    auto upgradeBadge = std::make_shared<UIBadge>(sf::Vector2f{ columnX + columnWidth - 14.f, 366.f + 12.f }, "!");
     upgradeBadge->set_visible(is_upgrade_available());
 
-    auto quitButton = std::make_shared<UIButtonElement>(
-        sf::Vector2f{ 230.f, 96.f },
-        sf::Vector2f{ columnX + columnWidth - 230.f, 828.f },
-        "QUIT"
-    );
-    quitButton->set_text_size(40);
-    quitButton->set_fill_color(sf::Color(255, 150, 130));
-    quitButton->set_visible(!Platform::IS_MOBILE);   // Phones don't quit apps
+    auto quitButton = std::make_shared<UIIconTile>(sf::Vector2f{ tileWidth, tileHeight }, sf::Vector2f{ tile_x(2), tileY },
+        "QUIT", UIIconTile::Icon::POWER);
+    quitButton->set_visible(!Platform::IS_MOBILE);
     auto quitDialog = make_quit_dialog(quitButton);
 
     add_ui_element(bg);
@@ -482,12 +475,12 @@ void UIManager::generate_fish_tank_uis()
     add_ui_element(nextStage);
     add_ui_element(upgradeBadge);
 
-    // The Clam Room, next to the tank (under the porthole). Locked (greyed, the stage that opens it written above)
-    // until the stage with the "clamRoom" reward is cleared
+    // The Clam Room: a tile with the clam under the porthole. Locked (greyed, the stage that opens it written under
+    // it) until the stage with the "clamRoom" reward is cleared
     const bool isClamRoomOpen = m_dataLoader->is_clam_room_open();
-    auto clamButton = std::make_shared<UIButtonElement>(sf::Vector2f{ 400.f, 96.f }, sf::Vector2f{ 1192.f, 860.f }, "CLAM ROOM");
-    clamButton->set_text_size(44);
-    clamButton->set_style(UIButtonElement::Style::Secondary);
+    const sf::FloatRect clamTile{ { 1388.f - 120.f, 826.f }, { 240.f, 168.f } };
+    auto clamButton = std::make_shared<UIIconTile>(clamTile.size, clamTile.position, "CLAM ROOM", UIIconTile::Icon::TEXTURE,
+        "assets/images/textures/ui/clam_closed.png");
     clamButton->set_enabled(isClamRoomOpen);
     clamButton->set_callback([this]() { m_pendingAction = [this]() { generate_clam_room_uis(); }; });
     add_ui_element(clamButton);
@@ -496,17 +489,21 @@ void UIManager::generate_fish_tank_uis()
         auto stage = m_dataLoader->get_stage_data(m_dataLoader->get_clam_room_stage());
         auto lockLabel = std::make_shared<UITextElement>(sf::Vector2f{ 400.f, 30.f }, sf::Vector2f{ 0.f, 0.f },
             stage ? "Clear \"" + stage->name + "\" to open" : "Locked", 26);
-        UISkin::style_text(lockLabel->get_text(), 26, UISkin::OUTLINE);
-        lockLabel->get_text().setOutlineThickness(0.f);
+        UISkin::style_text(lockLabel->get_text(), 26);
         UISkin::set_text_anchor(lockLabel->get_text(), { 0.5f, 0.5f });
-        lockLabel->set_position({ 1192.f + 200.f, 860.f - 24.f });
+        lockLabel->set_position({ clamTile.position.x + clamTile.size.x / 2.f, clamTile.position.y + clamTile.size.y + 30.f });
         add_ui_element(lockLabel);
     }
     else if (auto player = m_dataLoader->get_player_data().lock(); player && (player->shinyScales > 0 || !player->clamStorage.empty()))
-        add_ui_element(std::make_shared<UIBadge>(sf::Vector2f{ 1192.f + 400.f - 14.f, 860.f + 12.f }, "!"));
+        add_ui_element(std::make_shared<UIBadge>(sf::Vector2f{ clamTile.position.x + clamTile.size.x - 14.f, clamTile.position.y + 12.f }, "!"));
 
-    // The School Rank (top right), and its milestones reached since last time
+    // The School Rank (top right) with its "i", and its milestones reached since last time
     add_ui_element(std::make_shared<UISchoolRank>(m_dataLoader));
+    auto rankInfo = add_info_button({ 1330.f - 40.f, 170.f }, "School Rank",
+        "Your school's strength: every fish's level and extra levels, added up. It goes up each time you upgrade a fish "
+        "or use a fish from the Clam Storage.\n\n"
+        "Milestones give Shiny Scales, to open the giant clam: 1 at ranks 10, 25 and 50, 7 at rank 77, 1 at 100 and 125, "
+        "then 1 more every 25 ranks. The bar shows how far the next one is.");
     if (auto player = m_dataLoader->get_player_data().lock())
     {
         const int before = player->shinyScales;
@@ -519,6 +516,7 @@ void UIManager::generate_fish_tank_uis()
     add_ui_element(std::make_shared<UIToast>());
     add_ui_element(optionsMenu);  // Windows last: on top while open
     add_ui_element(quitDialog);
+    add_ui_element(rankInfo);
 }
 
 /*
@@ -580,6 +578,7 @@ void UIManager::generate_clam_room_uis(bool fromStorage)
     if (!fromStorage) start_screen_reveal();   // From the storage, the view zooms out of the clam instead
     else cancel_screen_reveal();
     m_uiElements.clear();
+    m_hasSideFrame = true;
     if (m_audio)
     {
         m_audio->play_music_in_sync(CLAM_MUSIC);
@@ -591,8 +590,7 @@ void UIManager::generate_clam_room_uis(bool fromStorage)
         m_dataLoader->save_progress();
     }
 
-    auto bg = std::make_shared<UITextureElement>(sf::Vector2f{ 1920.f, 1080.f }, sf::Vector2f{ 0.f, 0.f },
-        "assets/images/textures/backgrounds/menus/title.png");
+    auto bg = std::make_shared<UIClamBackdrop>();   // Plain: the clam is the show
     auto room = std::make_shared<UIClamRoom>(m_dataLoader);
     room->set_on_storage([this]() { m_pendingAction = [this]() { generate_clam_storage_uis(); }; });
     if (fromStorage) room->enter_from_storage();
@@ -605,13 +603,17 @@ void UIManager::generate_clam_room_uis(bool fromStorage)
 
     add_ui_element(bg);
     add_ui_element(room);
-    add_ui_element(std::make_shared<UITitleBar>("Clam Room"));
+    auto clamTitle = std::make_shared<UITitleBar>("Clam Room");
+    add_ui_element(clamTitle);
+    auto clamInfo = add_info_button(clamTitle->get_info_position(), "The giant clam",
+        "Feed the clam Shiny Scales: each one gives a random fish. OPEN uses 1 scale, OPEN x10 uses 10.\n\nEvery fish goes to the Clam Storage (the chest): use it for a fish you don't have yet, or to give a fish you have an extra level; or sell it.\n\nShiny Scales come from School Rank milestones. 10 Fish Scales make one: tap the + in the Shiny Scales counter.");
     const ClamCounters counters = add_clam_counters();
     room->set_scales_counter(counters.shinyScales);   // The scales fly out of it
     add_ui_element(std::make_shared<UIClamRoomOverlay>(room));   // What flies over the title bar
     add_ui_element(backButton);
     add_ui_element(std::make_shared<UIToast>());
     add_ui_element(counters.craftDialog);
+    add_ui_element(clamInfo);
 }
 
 /*
@@ -622,6 +624,7 @@ void UIManager::generate_clam_room_uis(bool fromStorage)
 void UIManager::generate_clam_storage_uis()
 {
     cancel_screen_reveal();   // The dive into the clam is its transition
+    m_hasSideFrame = true;
     m_uiElements.clear();
     if (m_audio) m_audio->play_music_in_sync(CLAM_INSIDE_MUSIC);
 
@@ -637,7 +640,10 @@ void UIManager::generate_clam_storage_uis()
         });
 
     add_ui_element(storage);
-    add_ui_element(std::make_shared<UITitleBar>("Clam Storage"));
+    auto storageTitle = std::make_shared<UITitleBar>("Clam Storage");
+    add_ui_element(storageTitle);
+    auto storageInfo = add_info_button(storageTitle->get_info_position(), "The Clam Storage",
+        "The fish out of the clam wait here. Tap one to pick it; tap others of the same kind to add them, or tick Select all.\n\nUSE: a fish you don't have yet joins your tank, and every other one gives that fish +1 extra level, up to +10.\n\nSELL: for shells, or for 1 Fish Scale each. 10 Fish Scales make a Shiny Scale (the + in its counter).");
     const ClamCounters counters = add_clam_counters();
     storage->set_counters(counters.shells, counters.fishScales);
     storage->set_flying_icons(flying);
@@ -647,6 +653,7 @@ void UIManager::generate_clam_storage_uis()
     add_ui_element(std::make_shared<UIToast>());
     add_ui_element(sellDialog);
     add_ui_element(counters.craftDialog);
+    add_ui_element(storageInfo);
 }
 
 void UIManager::generate_encyclopedia_uis()
@@ -664,7 +671,10 @@ void UIManager::generate_encyclopedia_uis()
     add_ui_element(titleBar);
     add_ui_element(shellsInfo);
     add_ui_element(backButton);
-    add_ui_element(encyclopedia);   // Last: its ability bubbles go over everything
+    auto info = add_info_button(titleBar->get_info_position(), "Encyclopedia",
+        "Every fish and every enemy of the game. The ones you haven't got or met yet are black shapes.\n\nPick one to see its stats and its abilities; the buttons on top sort them.");
+    add_ui_element(encyclopedia);   // Its ability bubbles go over everything (but its "i" window)
+    add_ui_element(info);
 }
 
 /*
@@ -702,6 +712,8 @@ void UIManager::generate_upgrade_menu_uis()
     add_ui_element(shellsInfo);
     add_ui_element(backButton);
     add_ui_element(std::make_shared<UIToast>());   // School Rank milestones reached by upgrading
+    add_ui_element(add_info_button(titleBar->get_info_position(), "Upgrading",
+        "Spend shells to raise a fish's level: more health and more attack. Each level costs more than the last; the price is on the card. A fish can reach level 30.\n\nExtra levels (the purple +1, +2...) come from the Clam Room: using a fish you already have from the Clam Storage gives it +1, up to +10, on top of its level.\n\nNew fish won in battle wait here to be unlocked."));
 }
 
 /*
@@ -729,6 +741,8 @@ void UIManager::generate_equip_menu_uis()
     add_ui_element(titleBar);
     add_ui_element(shellsInfo);
     add_ui_element(backButton);
+    add_ui_element(add_info_button(titleBar->get_info_position(), "Your lineup",
+        "Your lineup: the fish you can send into battle, up to 10.\n\nTap a fish (or drag it) to add it. Drag the fish in the lineup to change their order: their slot is their number key in battle. Drag one out of the lineup to remove it (right click works too on PC).\n\nThe price on each fish is what sending it costs in battle."));
 }
 
 /*
@@ -741,6 +755,7 @@ void UIManager::generate_equip_menu_uis()
 void UIManager::generate_battle_uis()
 {
     cancel_screen_reveal();   // UIBattleIntro is its transition
+    m_hasSideFrame = false;    // The battlefield fills the screen
 	m_uiElements.clear();
 
     std::string stageName;
@@ -856,7 +871,8 @@ void UIManager::generate_battle_uis()
     if (auto stage = m_stage.lock(); stage && UITutorial::is_wanted(*m_dataLoader, stage->get_current_uid()))
         add_ui_element(std::make_shared<UITutorial>(stage, cashUp));   // The first battle's hints, over the HUD
     if (m_battleIntroSeconds > 0.f)   // GET READY FOR BATTLE! while the jingle plays (once per battle start)
-        add_ui_element(std::make_shared<UIBattleIntro>(stageName, m_battleIntroSeconds));
+        add_ui_element(std::make_shared<UIBattleIntro>(stageName, m_battleIntroSeconds,
+            std::max(UIBattleIntro::COVER_SECONDS, m_jingleClock.getElapsedTime().asSeconds())));   // Where the jingle is
     m_battleIntroSeconds = 0.f;
     add_ui_element(pauseMenu); // On top, and the first to get the input
     add_ui_element(retreatDialog); // Over the pause menu while it asks
@@ -904,6 +920,8 @@ void UIManager::generate_chapter_map_uis()
     add_ui_element(shellsInfo);
     add_ui_element(battleButton);
     add_ui_element(backButton);
+    add_ui_element(add_info_button(titleBar->get_info_position(), "The chapter map",
+        "Pick a stage on the map, then BATTLE!.\n\nCleared stages are green, the next one is yellow; the grey ones open as you clear the stages before them. The panel shows the enemy base's health, the shells a win brings, and the enemies you'll meet."));
 }
 
 /*
@@ -913,12 +931,13 @@ void UIManager::generate_chapter_map_uis()
 void UIManager::start_battle(int stageUid)
 {
     auto stage = m_stage.lock();
-    if (!stage || !m_dataLoader->get_stage_data(stageUid)) return;
+    if (!stage || !m_dataLoader->get_stage_data(stageUid) || m_pendingBattleStage >= 0) return;
 
     // The map opens on this stage next time (until it's won for the first time)
     if (auto player = m_dataLoader->get_player_data().lock())
         player->lastStage = stageUid;
     if (m_setGameSpeedCallback) m_setGameSpeedCallback(GameSpeedState::NORMAL);
+    m_battleIntroSeconds = 2.4f;
     if (m_audio)
     {
         // The version ending on the tonic of the theme that follows it
@@ -927,6 +946,25 @@ void UIManager::start_battle(int stageUid)
         m_audio->play_jingle(jingle);
         m_battleIntroSeconds = m_audio->get_music_length(jingle);   // The battle start transition lasts as long
     }
+    m_jingleClock.restart();
+
+    // With the jingle: the water rises over this screen right away (the stage loads under it, finish_battle_start)
+    m_battleCover = std::make_shared<UIBattleIntro>(m_dataLoader->get_stage_data(stageUid)->name, m_battleIntroSeconds);
+    add_ui_element(m_battleCover);
+    m_pendingBattleStage = stageUid;
+}
+
+/*
+ * The screen is covered (the water and the title are on screen): the stage loads (it takes a moment, nothing moves
+ * meanwhile but nothing needs to), then the battle screen, whose intro starts at the jingle's current moment
+ */
+void UIManager::finish_battle_start()
+{
+    const int stageUid = m_pendingBattleStage;
+    m_pendingBattleStage = -1;
+    m_battleCover.reset();
+    auto stage = m_stage.lock();
+    if (!stage) return;
     stage->load(stageUid);   // Unloads the previous battle if any
     generate_battle_uis();
 }
@@ -1100,6 +1138,20 @@ bool UIManager::is_upgrade_available() const
         if (unit.level < UIUpgradeIcon::MAX_LEVEL && player->shells >= UIUpgradeSlider::calculate_upgrade_cost(*m_dataLoader, uid, unit.level))
             return true;
     return false;
+}
+
+/*
+ * An "i" that opens a help window (contextual explanations, like a feature's rules): the button is added now, the
+ * window is returned to be added last (a window: on top while open)
+ */
+std::shared_ptr<UIInfoPanel> UIManager::add_info_button(sf::Vector2f center, const std::string& title, const std::string& text)
+{
+    auto panel = std::make_shared<UIInfoPanel>(title, text);
+    auto button = std::make_shared<UIInfoButton>(center);
+    std::weak_ptr<UIInfoPanel> weakPanel = panel;
+    button->set_callback([weakPanel]() { if (auto panel = weakPanel.lock()) panel->open(); });
+    add_ui_element(button);
+    return panel;
 }
 
 /*

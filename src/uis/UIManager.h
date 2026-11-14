@@ -13,6 +13,8 @@ class UIButtonElement;
 class UIConfirmDialog;
 class UIPlayerShellsInfo;
 class UIOptionsMenu;
+class UIBattleIntro;
+class UIInfoPanel;
 class AudioManager;
 enum class GameSpeedState;
 
@@ -90,8 +92,14 @@ private:
     // The round back button of the menus (bottom left): runs onBack as a deferred action
     std::shared_ptr<UIRoundButton> make_back_button(std::function<void()> onBack);
 
-    // Starts a battle (the battle start jingle, the stage, the battle screen); run it as a deferred action
+    // Starts a battle: the jingle plays and the water rises over the screen the player is on at once (UIBattleIntro);
+    // the stage loads once a frame with the screen fully covered is up (finish_battle_start), so loading never looks
+    // like a frozen game, and the battle's intro carries on from where the jingle is. Run it as a deferred action
     void start_battle(int stageUid);
+    void finish_battle_start();
+    std::shared_ptr<UIBattleIntro> m_battleCover;   // The water over the screen being left
+    int m_pendingBattleStage = -1;                  // The stage loading under it (-1: none)
+    sf::Clock m_jingleClock;                        // Since the jingle started
 
     // Unloads the battle before going back to a menu
     void leave_battle();
@@ -119,6 +127,13 @@ private:
     };
     ClamCounters add_clam_counters();
 
+    // An "i" at center that explains something (its window is returned: add it last, it's a window)
+    std::shared_ptr<UIInfoPanel> add_info_button(sf::Vector2f center, const std::string& title, const std::string& text);
+
+    // The menus have the side frame on a screen wider than 16:9 (UISkin::draw_side_frame); the title screen and the
+    // battle don't
+    bool m_hasSideFrame = false;
+
     // The Options window (add it after the screen's other elements) and a button that opens it
     std::shared_ptr<UIOptionsMenu> make_options_menu();
     std::shared_ptr<UIButtonElement> make_options_button(const std::shared_ptr<UIOptionsMenu>& optionsMenu,
@@ -145,7 +160,8 @@ private:
     void start_screen_reveal();
     void cancel_screen_reveal();                                // A screen with its own transition (battle, storage)
     std::pair<float, float> reveal_band() const;                // The wave's top and bottom (UI y) now
-    void render_list(sf::RenderWindow& window, std::vector<std::shared_ptr<UIElement>>& elements, const sf::View& uiView, sf::View& worldView);
+    void render_list(sf::RenderWindow& window, std::vector<std::shared_ptr<UIElement>>& elements, const sf::View& uiView, sf::View& worldView,
+        bool withFrame);
 
 	std::function<void(GameSpeedState)> m_setGameSpeedCallback; // Callback to set game speed state
     std::function<GameSpeedState()> m_getGameSpeedCallback;     // Callback to get current game speed state

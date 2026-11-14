@@ -74,12 +74,12 @@ namespace
 
 UIClamRoom::UIClamRoom(std::shared_ptr<DataLoader> dataLoader) :
     m_dataLoader(std::move(dataLoader)),
-    m_openOne({ 360.f, 110.f }, { 580.f, 930.f }, "OPEN"),
-    m_openTen({ 360.f, 110.f }, { 980.f, 930.f }, "OPEN x10"),
+    m_openOne({ 360.f, 126.f }, { 580.f, 918.f }, "OPEN", UIOfferButton::Kind::CURRENCY, "icon_shiny_scale", 1),
+    m_openTen({ 360.f, 126.f }, { 980.f, 918.f }, "OPEN x10", UIOfferButton::Kind::CURRENCY, "icon_shiny_scale", 10),
     m_text(UISkin::heavy_font())
 {
-    m_openOne.set_text_size(48);
-    m_openTen.set_text_size(38);
+    m_openOne.set_text_size(46);
+    m_openTen.set_text_size(40);
     m_openTen.set_style(UIButtonElement::Style::Secondary);
     m_openOne.set_click_sound("");   // The scales make the sound
     m_openTen.set_click_sound("");
@@ -407,8 +407,7 @@ void UIClamRoom::render(sf::RenderWindow& window)
         window.setView(zoomed);
     }
 
-    // The room is dim and purple: something magic lives here
-    UISkin::fill_screen(window, sf::Color(40, 18, 70, 130));
+    // (The room's colors and its beam of light are UIClamBackdrop's, under this)
 
     // A soft magic glow behind the clam, breathing
     const float breath = 0.85f + 0.15f * std::sin(m_time * 1.6f);
@@ -473,16 +472,9 @@ void UIClamRoom::render(sf::RenderWindow& window)
         return;
     }
 
-    // The buttons, a Shiny Scale on each (what they cost)
+    // The offers, each with its price under it
     m_openOne.render(window);
     m_openTen.render(window);
-    const sf::Texture& scaleIcon = UISkin::texture("icon_shiny_scale");
-    for (UIButtonElement* button : { &m_openOne, &m_openTen })
-    {
-        const sf::FloatRect box = button->get_bounds();
-        UISkin::draw_fitted(window, scaleIcon, { { box.position.x + 14.f, box.position.y + box.size.y / 2.f - 24.f }, { 48.f, 48.f } },
-            button->is_enabled() ? sf::Color::White : sf::Color(255, 255, 255, 120));
-    }
 
     // STORAGE: the Clam Storage's chest, with how many fish wait there
     auto player = m_dataLoader->get_player_data().lock();

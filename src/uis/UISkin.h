@@ -116,6 +116,18 @@ namespace UISkin
     // A color over the whole screen (veils, flashes, fades)
     void fill_screen(sf::RenderTarget& target, sf::Color color);
 
+    // The menus' frame on a screen wider than 16:9 (a phone): steel hull pillars fill the extra width on both sides,
+    // so the menus stay a compact 16:9 instead of stretching (the battle has none: its field fills the screen)
+    void draw_side_frame(sf::RenderTarget& target);
+
+    // A rounded rectangle shape (bubbles, pills, vector icons)
+    sf::ConvexShape rounded_rect(const sf::FloatRect& rect, float radius);
+
+    // ----- Depth -----
+    // The soft shadow under a raised element (buttons, tiles): its own shape, dark, a little lower
+    inline constexpr float SHADOW_DROP = 6.f;
+    inline const sf::Color SHADOW_TINT{ 0, 0, 0, 75 };
+
     // ----- Transitions -----
     // A band of deep water across the screen from top to bottom (UI coordinates), solid (nothing shows through it):
     // wavy edges with a pale foam line, darker at the bottom, a few bubbles rising inside. The screen transitions

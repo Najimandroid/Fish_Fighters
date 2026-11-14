@@ -2,6 +2,7 @@
 
 #include "UIElement.h"
 #include "UIButtonElement.h"
+#include "UIOfferButton.h"
 
 #include <functional>
 #include <memory>
@@ -108,8 +109,8 @@ private:
     void render_scales(sf::RenderWindow& window);
 
     std::shared_ptr<DataLoader> m_dataLoader;
-    UIButtonElement m_openOne;
-    UIButtonElement m_openTen;
+    UIOfferButton m_openOne;            // The offers, their price under them (1 and 10 Shiny Scales)
+    UIOfferButton m_openTen;
     std::function<void()> m_onStorage;
     bool m_isStorageHovered = false;   // The chest icon (STORAGE) grows under the mouse
     bool m_hasCue = false;             // TO_STORAGE / FROM_STORAGE: its sound played (or the screen changed)

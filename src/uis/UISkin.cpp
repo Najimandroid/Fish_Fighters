@@ -341,6 +341,80 @@ void UISkin::fill_screen(sf::RenderTarget& target, sf::Color color)
     target.draw(fill);
 }
 
+/*
+ * Hull pillars on both sides of the 16:9 layout: darker outside, a bevel and a dark edge on the inside, a column of
+ * rivets, and a shadow they cast on the screen between them
+ */
+sf::ConvexShape UISkin::rounded_rect(const sf::FloatRect& rect, float radius)
+{
+    radius = std::min({ radius, rect.size.x / 2.f, rect.size.y / 2.f });
+    const int perCorner = 8;
+    sf::ConvexShape shape(perCorner * 4);
+    const sf::Vector2f centers[] = {
+        { rect.position.x + rect.size.x - radius, rect.position.y + radius },
+        { rect.position.x + rect.size.x - radius, rect.position.y + rect.size.y - radius },
+        { rect.position.x + radius, rect.position.y + rect.size.y - radius },
+        { rect.position.x + radius, rect.position.y + radius } };
+    for (int corner = 0; corner < 4; ++corner)
+        for (int i = 0; i < perCorner; ++i)
+        {
+            const float angle = (-90.f + 90.f * static_cast<float>(corner) + 90.f * static_cast<float>(i) / (perCorner - 1)) * 3.14159265f / 180.f;
+            shape.setPoint(static_cast<std::size_t>(corner * perCorner + i), centers[corner] + sf::Vector2f{ std::cos(angle), std::sin(angle) } * radius);
+        }
+    return shape;
+}
+
+void UISkin::draw_side_frame(sf::RenderTarget& target)
+{
+    const float side = -g_screen.position.x;   // The extra width on each side
+    if (side < 4.f) return;
+    const float top = g_screen.position.y, bottom = top + g_screen.size.y;
+    const sf::Color outer{ 30, 40, 56 }, inner{ 66, 84, 108 }, bevel{ 128, 148, 172 };
+
+    for (const bool isRight : { false, true })
+    {
+        const float outerX = isRight ? 1920.f + side : -side, innerX = isRight ? 1920.f : 0.f;
+        const float toInner = isRight ? -1.f : 1.f;   // Towards the layout
+
+        sf::VertexArray body(sf::PrimitiveType::TriangleStrip, 4);
+        body[0] = sf::Vertex{ { outerX, top }, outer };
+        body[1] = sf::Vertex{ { innerX, top }, inner };
+        body[2] = sf::Vertex{ { outerX, bottom }, outer };
+        body[3] = sf::Vertex{ { innerX, bottom }, inner };
+        target.draw(body);
+
+        // The bevel, then the dark edge, then the shadow on the layout
+        sf::RectangleShape line({ 4.f, bottom - top });
+        line.setFillColor(bevel);
+        line.setPosition({ innerX - toInner * 14.f - (isRight ? 0.f : 4.f), top });
+        target.draw(line);
+        line.setSize({ 6.f, bottom - top });
+        line.setFillColor(OUTLINE);
+        line.setPosition({ isRight ? innerX : innerX - 6.f, top });
+        target.draw(line);
+        sf::VertexArray shadow(sf::PrimitiveType::TriangleStrip, 4);
+        const float shadowEnd = innerX + toInner * 28.f;
+        shadow[0] = sf::Vertex{ { innerX, top }, sf::Color(0, 0, 0, 110) };
+        shadow[1] = sf::Vertex{ { shadowEnd, top }, sf::Color(0, 0, 0, 0) };
+        shadow[2] = sf::Vertex{ { innerX, bottom }, sf::Color(0, 0, 0, 110) };
+        shadow[3] = sf::Vertex{ { shadowEnd, bottom }, sf::Color(0, 0, 0, 0) };
+        target.draw(shadow);
+
+        // Rivets down the pillar
+        const float rivetX = innerX - toInner * std::min(46.f, side * 0.4f);
+        sf::CircleShape rivet(8.f);
+        rivet.setOrigin({ 8.f, 8.f });
+        rivet.setOutlineThickness(3.f);
+        rivet.setOutlineColor(OUTLINE);
+        for (float y = top + 70.f; y < bottom - 30.f; y += 150.f)
+        {
+            rivet.setFillColor(sf::Color(112, 130, 154));
+            rivet.setPosition({ rivetX, y });
+            target.draw(rivet);
+        }
+    }
+}
+
 void UISkin::draw_water_band(sf::RenderTarget& target, float top, float bottom, float time)
 {
     if (bottom - top < 1.f) return;

@@ -210,6 +210,9 @@ void UIButtonElement::render(sf::RenderWindow& window)
     const bool isSteel = !m_isEnabled || m_style == Style::Secondary;
 
     const sf::FloatRect rect = get_visual_rect();
+    // A soft shadow under it (pressed: it sinks onto it)
+    const float drop = (m_isPressed ? 0.4f : 1.f) * UISkin::SHADOW_DROP * scale;
+    UISkin::draw_nine_slice(window, UISkin::BUTTON_STEEL, { rect.position + sf::Vector2f{ 0.f, drop }, rect.size }, CORNER_SCALE, UISkin::SHADOW_TINT);
     UISkin::draw_nine_slice(window, isSteel ? UISkin::BUTTON_STEEL : UISkin::BUTTON_YELLOW, rect, CORNER_SCALE, tint);
     if (m_hasAttention && m_isEnabled && !isSteel && entrance_scale() >= 1.f) render_shine(window, rect);
 
