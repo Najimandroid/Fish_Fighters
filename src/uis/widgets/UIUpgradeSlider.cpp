@@ -188,6 +188,14 @@ void UIUpgradeSlider::update(float deltaTime)
 {
 	auto player = m_dataLoader->get_player_data().lock();
 
+	// Flung: the cards glide on and slow down, then land (move_to_index puts everything in place)
+	if (m_glide.isActive)
+	{
+		const bool isGliding = m_glide.step(deltaTime);
+		follow_drag(m_glide.position);
+		if (!isGliding) move_to_index(m_currentIndex, true);
+	}
+
 	for (int i = 0; i < static_cast<int>(m_upgradeIcons.size()); ++i)
 	{
 		auto& icon = m_upgradeIcons[i];
@@ -368,18 +376,29 @@ void UIUpgradeSlider::handle_event(const sf::Event& event, const sf::RenderWindo
 			move_to_index(m_currentIndex + 1);
 	}
 
-	// The cards: a swipe sideways moves by one card; a tap on a side card brings it to the middle (on release, so a
-	// swipe that starts on a card doesn't pick it). The arrows, drawn over the far cards, come first
+	// The cards: sliding sideways moves them with the finger (flung, they glide on; a tap catches them); a tap on a
+	// side card brings it to the middle (on release, so a swipe that starts on a card doesn't pick it). The arrows,
+	// drawn over the far cards, come first
 	const auto is_on_arrow = [this](sf::Vector2f point)
 		{
 			return (m_previousButton.is_visible() && m_previousButton.get_bounds().contains(point))
 				|| (m_nextButton.is_visible() && m_nextButton.get_bounds().contains(point));
 		};
-	if (const auto* mousePressed = event.getIf<sf::Event::MouseButtonPressed>())
+	if (const auto* mousePressed = event.getIf<sf::Event::MouseButtonPressed>(); mousePressed && mousePressed->button == sf::Mouse::Button::Left)
 	{
 		const sf::Vector2f mousePos = window.mapPixelToCoords(mousePressed->position);
-		if (mousePressed->button == sf::Mouse::Button::Left && mousePos.y < DESCRIPTION_PANEL.position.y && !is_on_arrow(mousePos))
+		const bool wasGliding = m_glide.isActive;
+		m_glide.isActive = false;
+		if (mousePos.y < DESCRIPTION_PANEL.position.y && !is_on_arrow(mousePos))
+		{
+			// Over the cards: a glide stops under the finger, which can slide them on from there
+			m_caughtGlide = wasGliding;
+			m_dragBase = drag_offset();
+			if (wasGliding) follow_drag(m_dragBase);
 			m_swipe.press(mousePos);
+		}
+		else if (wasGliding)
+			move_to_index(m_currentIndex, true);   // Elsewhere: they land on the selected card at once
 	}
 	else if (const auto* mouseMoved = event.getIf<sf::Event::MouseMoved>())
 	{
@@ -389,19 +408,20 @@ void UIUpgradeSlider::handle_event(const sf::Event& event, const sf::RenderWindo
 		if (m_swipe.isDown && (m_isFollowing || (std::abs(drag.x) > 12.f && std::abs(drag.x) > 1.4f * std::abs(drag.y))))
 		{
 			m_isFollowing = true;
-			follow_drag(drag.x);
+			follow_drag(m_dragBase + drag.x);
 		}
 	}
 	else if (const auto* mouseReleased = event.getIf<sf::Event::MouseButtonReleased>(); mouseReleased && m_swipe.isDown)
 	{
 		const sf::Vector2f mousePos = window.mapPixelToCoords(mouseReleased->position);
-		const float dragX = mousePos.x - m_swipe.start.x;
+		const float dragX = m_dragBase + mousePos.x - m_swipe.start.x;
 		m_swipe.release(mousePos);
-		if (m_isFollowing)
+		if (m_isFollowing || m_caughtGlide)
 		{
-			// Let go: they settle on the nearest card
+			// Let go (or a glide caught by a tap): flung, they glide on; else they settle on the nearest card
 			m_isFollowing = false;
-			move_to_index(snap_index(dragX), true);
+			release_slide(dragX, m_swipe.velocity.x);
+			m_caughtGlide = false;
 		}
 		else
 			for (int i = 0; i < static_cast<int>(m_upgradeIcons.size()); ++i)
@@ -438,18 +458,45 @@ void UIUpgradeSlider::follow_drag(float dragX)
  * Updates icon positions, sizes, and selection states.
  */
 
-// Where the cards settle when let go: the nearest one (a short flick still moves one card)
-int UIUpgradeSlider::snap_index(float dragX) const
+// Where the cards settle when let go slowly: the nearest one (a short flick from rest still moves one card)
+int UIUpgradeSlider::snap_index(float dragX, bool allowsFlick) const
 {
 	int target = static_cast<int>(std::lround(static_cast<float>(m_currentIndex) - dragX / ICON_SPACING));
-	if (target == m_currentIndex && std::abs(dragX) > UISwipe::DISTANCE) target += dragX < 0.f ? 1 : -1;
+	if (allowsFlick && target == m_currentIndex && std::abs(dragX) > UISwipe::DISTANCE) target += dragX < 0.f ? 1 : -1;
 	return std::clamp(target, 0, std::max(0, static_cast<int>(m_upgradeIcons.size()) - 1));
+}
+
+float UIUpgradeSlider::drag_offset() const
+{
+	if (m_upgradeIcons.empty()) return 0.f;
+	const auto& card = m_upgradeIcons[m_currentIndex];
+	return card->get_position().x + card->get_size().x / 2.f - 1920.f / 2.f;
+}
+
+/*
+ * Let go: flung (faster than UISwipe::GLIDE_SPEED), the cards glide on and slow down, landing on the card that speed
+ * carries them to; it's selected at once, so its name and price show while they glide. Slower, they settle on the
+ * nearest card
+ */
+void UIUpgradeSlider::release_slide(float dragX, float speed)
+{
+	const int last = static_cast<int>(m_upgradeIcons.size()) - 1;
+	if (std::abs(speed) <= UISwipe::GLIDE_SPEED || last < 0)
+	{
+		move_to_index(snap_index(dragX, !m_caughtGlide && std::abs(m_dragBase) < 20.f), true);
+		return;
+	}
+	const int target = std::clamp(UIGlide::landing(static_cast<float>(m_currentIndex), dragX, speed, ICON_SPACING), 0, last);
+	if (target != m_currentIndex) play_sound("ui_select");
+	m_glide.start(dragX + static_cast<float>(target - m_currentIndex) * ICON_SPACING, 0.f);   // Counted from the target
+	m_currentIndex = target;
 }
 
 void UIUpgradeSlider::move_to_index(int newIndex, bool force)
 {
 	if (newIndex < 0 || newIndex >= static_cast<int>(m_upgradeIcons.size()) || (newIndex == m_currentIndex && !force))
 		return;
+	m_glide.isActive = false;   // The arrows, the keys or a tap take over from a glide
 
 	if (newIndex != m_currentIndex) play_sound("ui_select");
 

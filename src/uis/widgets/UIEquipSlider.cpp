@@ -241,6 +241,14 @@ void UIEquipSlider::update(float deltaTime)
         m_lineupTitle.setString("LINEUP " + std::to_string(count) + "/" + std::to_string(m_slots.size()));
         UISkin::set_text_anchor(m_lineupTitle, { 0.5f, 0.5f });
     }
+    // Flung: the cards glide on and slow down, then land (move_to_index puts everything in place)
+    if (m_glide.isActive)
+    {
+        const bool isGliding = m_glide.step(deltaTime);
+        follow_drag(m_glide.position);
+        if (!isGliding) move_to_index(m_currentIndex, true);
+    }
+
     // Cards: tweens, and "IN USE" on the units already in the lineup
     auto player = m_dataLoader->get_player_data().lock();
     for (auto& icon : m_equipIcons)
@@ -388,25 +396,35 @@ void UIEquipSlider::handle_event(const sf::Event& event, const sf::RenderWindow&
         if (mousePressed->button == sf::Mouse::Button::Left)
         {
             sf::Vector2f mousePos = window.mapPixelToCoords(mousePressed->position);
+            const bool wasGliding = m_glide.isActive;
+            m_glide.isActive = false;
             m_dragFromSlot = -1;
             for (int i = 0; i < static_cast<int>(m_slots.size()); ++i)
                 if (m_slots[i].ghost && m_slots[i].bounds.contains(mousePos))
                     m_dragFromSlot = i;
 
+            // Pressed on a unit of the lineup or the current card -> start hold timer (not when the press only
+            // stops gliding cards: the card under the finger may not be the selected one yet)
             if (m_dragFromSlot >= 0
-                || (!m_equipIcons.empty() && m_equipIcons[m_currentIndex]->get_bounds().contains(mousePos)))
+                || (!wasGliding && !m_equipIcons.empty() && m_equipIcons[m_currentIndex]->get_bounds().contains(mousePos)))
             {
-                // Pressed on a unit of the lineup or the current card -> start hold timer
                 m_mouseDown = true;
                 m_mouseDownPos = mousePos;
                 m_holdClock.restart();
             }
-            // Over the cards (not the lineup, not the arrows drawn over the far cards): it may be a swipe; a tap on a
-            // side card picks it when released
+            // Over the cards (not the lineup, not the arrows drawn over the far cards): it may be a swipe, a glide
+            // stops under the finger; a tap on a side card picks it when released
             const bool isOnArrow = (m_previousButton.is_visible() && m_previousButton.get_bounds().contains(mousePos))
                 || (m_nextButton.is_visible() && m_nextButton.get_bounds().contains(mousePos));
             if (m_dragFromSlot < 0 && !isOnArrow && mousePos.y < lineup_panel_rect().position.y - 30.f)
+            {
+                m_caughtGlide = wasGliding;
+                m_dragBase = drag_offset();
+                if (wasGliding) follow_drag(m_dragBase);
                 m_swipe.press(mousePos);
+            }
+            else if (wasGliding)
+                move_to_index(m_currentIndex, true);   // Elsewhere: they land on the selected card at once
         }
     }
 
@@ -422,7 +440,7 @@ void UIEquipSlider::handle_event(const sf::Event& event, const sf::RenderWindow&
         if (m_swipe.isDown && !m_dragging && (m_isFollowing || (std::abs(drag.x) > 12.f && std::abs(drag.x) > 1.4f * std::abs(drag.y))))
         {
             m_isFollowing = true;
-            follow_drag(drag.x);
+            follow_drag(m_dragBase + drag.x);
         }
         if (m_mouseDown && !m_dragging)
         {
@@ -449,9 +467,10 @@ void UIEquipSlider::handle_event(const sf::Event& event, const sf::RenderWindow&
         if (mouseReleased->button == sf::Mouse::Button::Left)
         {
             const sf::Vector2f mousePos = window.mapPixelToCoords(mouseReleased->position);
-            const float dragX = mousePos.x - m_swipe.start.x;
+            const float dragX = m_dragBase + mousePos.x - m_swipe.start.x;
+            const bool wasSwiping = m_swipe.isDown;
             if (m_swipe.isDown) m_swipe.release(mousePos);
-            const bool wasFollowing = m_isFollowing;
+            const bool wasFollowing = m_isFollowing || (wasSwiping && m_caughtGlide);
             m_isFollowing = false;
             if (m_dragging && m_tempGhost && m_tempGhost->active)
             {
@@ -459,7 +478,8 @@ void UIEquipSlider::handle_event(const sf::Event& event, const sf::RenderWindow&
             }
             else if (wasFollowing)
             {
-                move_to_index(snap_index(dragX), true);   // Let go: they settle on the nearest card
+                // Let go (or a glide caught by a tap): flung, they glide on; else they settle on the nearest card
+                release_slide(dragX, m_swipe.velocity.x);
             }
             else if (m_mouseDown && !m_dragging && m_dragFromSlot < 0
                 && !m_equipIcons.empty() && m_equipIcons[m_currentIndex]->get_bounds().contains(mousePos))
@@ -479,6 +499,7 @@ void UIEquipSlider::handle_event(const sf::Event& event, const sf::RenderWindow&
             m_mouseDown = false;
             m_dragging = false;
             m_dragFromSlot = -1;
+            m_caughtGlide = false;
         }
     }
 
@@ -516,18 +537,44 @@ void UIEquipSlider::follow_drag(float dragX)
  * - Other icons tween to their new positions/sizes
  */
 
-// Where the cards settle when let go: the nearest one (a short flick still moves one card)
-int UIEquipSlider::snap_index(float dragX) const
+// Where the cards settle when let go slowly: the nearest one (a short flick from rest still moves one card)
+int UIEquipSlider::snap_index(float dragX, bool allowsFlick) const
 {
     int target = static_cast<int>(std::lround(static_cast<float>(m_currentIndex) - dragX / ICON_SPACING));
-    if (target == m_currentIndex && std::abs(dragX) > UISwipe::DISTANCE) target += dragX < 0.f ? 1 : -1;
+    if (allowsFlick && target == m_currentIndex && std::abs(dragX) > UISwipe::DISTANCE) target += dragX < 0.f ? 1 : -1;
     return std::clamp(target, 0, std::max(0, static_cast<int>(m_equipIcons.size()) - 1));
+}
+
+float UIEquipSlider::drag_offset() const
+{
+    if (m_equipIcons.empty()) return 0.f;
+    const auto& card = m_equipIcons[m_currentIndex];
+    return card->get_position().x + card->get_size().x / 2.f - 1920.f / 2.f;
+}
+
+/*
+ * Let go: flung (faster than UISwipe::GLIDE_SPEED), the cards glide on and slow down, landing on the card that speed
+ * carries them to (selected at once); slower, they settle on the nearest card
+ */
+void UIEquipSlider::release_slide(float dragX, float speed)
+{
+    const int last = static_cast<int>(m_equipIcons.size()) - 1;
+    if (std::abs(speed) <= UISwipe::GLIDE_SPEED || last < 0)
+    {
+        move_to_index(snap_index(dragX, !m_caughtGlide && std::abs(m_dragBase) < 20.f), true);
+        return;
+    }
+    const int target = std::clamp(UIGlide::landing(static_cast<float>(m_currentIndex), dragX, speed, ICON_SPACING), 0, last);
+    if (target != m_currentIndex) play_sound("ui_select");
+    m_glide.start(dragX + static_cast<float>(target - m_currentIndex) * ICON_SPACING, 0.f);   // Counted from the target
+    m_currentIndex = target;
 }
 
 void UIEquipSlider::move_to_index(int newIndex, bool force)
 {
     if (newIndex < 0 || newIndex >= static_cast<int>(m_equipIcons.size()) || (newIndex == m_currentIndex && !force))
         return;
+    m_glide.isActive = false;   // The arrows, the keys or a tap take over from a glide
 
     if (newIndex != m_currentIndex) play_sound("ui_select");
 

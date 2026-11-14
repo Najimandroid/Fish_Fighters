@@ -389,9 +389,18 @@ void UIChapterMap::update(float deltaTime)
         m_viewOffset = { ox, oy };
     }
 
-    // The names strip slides to the selected stage (while a finger holds it, it follows the finger instead)
+    // Flung: the strip and the map glide on and slow down, then land (select_stage puts the map in place)
+    if (m_glide.isActive)
+    {
+        const bool isGliding = m_glide.step(deltaTime);
+        follow_drag(m_glide.position);
+        if (!isGliding) select_stage(m_selectedStage);
+    }
+
+    // The names strip slides to the selected stage (while a finger holds it or it glides, it follows that instead)
     const int index = selected_index();
-    if (index >= 0 && !m_isFollowing) m_stripSlide += (static_cast<float>(index) - m_stripSlide) * std::min(1.f, deltaTime * 10.f);
+    if (index >= 0 && !m_isFollowing && !m_glide.isActive)
+        m_stripSlide += (static_cast<float>(index) - m_stripSlide) * std::min(1.f, deltaTime * 10.f);
 }
 
 void UIChapterMap::render(sf::RenderWindow& window)
@@ -507,6 +516,7 @@ void UIChapterMap::step_stage(int direction)
 {
     const int index = selected_index();
     if (index < 0) return;
+    m_glide.isActive = false;   // The keys take over from a glide
     for (int i = index + direction; i >= 0 && i < static_cast<int>(m_stageIcons.size()); i += direction)
         if (m_stageIcons[i].unlocked || m_stageIcons[i].completed)
         {
@@ -562,20 +572,39 @@ void UIChapterMap::follow_drag(float dragX)
     m_offsetTween.step(1);
 }
 
-// Where a slide settles when let go: the nearest playable stage (a short flick still moves one)
-int UIChapterMap::snap_index(float dragX) const
+int UIChapterMap::playable_near(int index) const
 {
     int first, last;
     playable_range(first, last);
     if (first < 0) return -1;
-
-    int target = static_cast<int>(std::lround(static_cast<float>(m_followFrom) - dragX / STRIP_SPACING));
-    if (target == m_followFrom && std::abs(dragX) > UISwipe::DISTANCE) target += dragX < 0.f ? 1 : -1;
-    target = std::clamp(target, first, last);
+    int target = std::clamp(index, first, last);
     // A locked stage between playable ones: the nearest playable one back towards where the slide started
     while (target != m_followFrom && !(m_stageIcons[target].unlocked || m_stageIcons[target].completed))
         target += target > m_followFrom ? -1 : 1;
     return target;
+}
+
+// Where a slow slide settles when let go: the nearest playable stage (a short flick from rest still moves one)
+int UIChapterMap::snap_index(float dragX, bool allowsFlick) const
+{
+    int target = static_cast<int>(std::lround(static_cast<float>(m_followFrom) - dragX / STRIP_SPACING));
+    if (allowsFlick && target == m_followFrom && std::abs(dragX) > UISwipe::DISTANCE) target += dragX < 0.f ? 1 : -1;
+    return playable_near(target);
+}
+
+/*
+ * Let go: flung (faster than UISwipe::GLIDE_SPEED), the strip and the map glide on and slow down, landing on the
+ * stage that speed carries them to (selected at once: its panel shows while they glide); slower, they settle on the
+ * nearest playable stage
+ */
+void UIChapterMap::release_slide(float dragX, float speed)
+{
+    const bool isFlung = std::abs(speed) > UISwipe::GLIDE_SPEED;
+    const int target = isFlung ? playable_near(UIGlide::landing(static_cast<float>(m_followFrom), dragX, speed, STRIP_SPACING))
+        : snap_index(dragX, !m_caughtGlide && std::abs(m_dragBase) < 20.f);
+    if (target < 0) return;
+    if (isFlung) m_glide.start(dragX, static_cast<float>(m_followFrom - target) * STRIP_SPACING);
+    select_stage(m_stageIcons[target].stageUID);
 }
 
 /*
@@ -610,8 +639,8 @@ void UIChapterMap::render_strip(sf::RenderWindow& window)
     band[3] = sf::Vertex{ { screen.position.x + screen.size.x, bottom }, sf::Color(8, 20, 34, 0) };
     window.draw(band);
 
-    // While sliding, the yellow tab is the one in the middle (where it will settle); the middle one is drawn last,
-    // over its neighbours
+    // While sliding or gliding, the yellow tab is the one in the middle; the middle one is drawn last, over its
+    // neighbours
     const int middle = std::clamp(static_cast<int>(std::lround(m_stripSlide)), 0, static_cast<int>(m_stageIcons.size()) - 1);
     std::vector<int> order;
     for (int i = 0; i < static_cast<int>(m_stageIcons.size()); ++i)
@@ -624,7 +653,7 @@ void UIChapterMap::render_strip(sf::RenderWindow& window)
         const StageIcon& icon = m_stageIcons[i];
         const sf::FloatRect tab = strip_tab_rect(i);
         if (tab.position.x > screen.position.x + screen.size.x || tab.position.x + tab.size.x < screen.position.x) continue;
-        const bool isSelected = m_isFollowing ? i == middle : icon.stageUID == m_selectedStage;
+        const bool isSelected = (m_isFollowing || m_glide.isActive) ? i == middle : icon.stageUID == m_selectedStage;
         const bool isPlayable = icon.unlocked || icon.completed;
         const float scale = tab.size.y / STRIP_TAB.y;
 
@@ -680,17 +709,25 @@ void UIChapterMap::render_strip(sf::RenderWindow& window)
 void UIChapterMap::handle_event(const sf::Event& event, const sf::RenderWindow& window)
 {
     // Sliding sideways (on the map or its strip) slides the strip and the map with the finger, through the playable
-    // stages, and settles on the nearest one when let go, like a stage select; a tap picks a stage (its tab in the
-    // strip or its marker on the map)
+    // stages, and settles on the nearest one when let go, like a stage select; flung, they glide on (a tap catches
+    // them). A tap picks a stage (its tab in the strip or its marker on the map)
     if (const auto* mouseButtonPressed = event.getIf<sf::Event::MouseButtonPressed>())
     {
         const sf::Vector2f point = window.mapPixelToCoords(mouseButtonPressed->position);
+        const bool wasGliding = m_glide.isActive && mouseButtonPressed->button == sf::Mouse::Button::Left;
+        if (wasGliding) m_glide.isActive = false;
         if (mouseButtonPressed->button == sf::Mouse::Button::Left && point.y > MAP_TOP && point.y < MAP_BOTTOM)
         {
+            // On the map: a glide stops under the finger, which can slide it on from there
             m_swipe.press(point);
             m_followFrom = std::max(0, selected_index());
+            m_dragBase = (static_cast<float>(m_followFrom) - m_stripSlide) * STRIP_SPACING;
+            m_caughtGlide = wasGliding;
+            if (wasGliding) follow_drag(m_dragBase);
             m_isFollowing = false;
         }
+        else if (wasGliding)
+            select_stage(m_selectedStage);   // Elsewhere (BATTLE!, the panel): it lands on the selected stage at once
     }
     else if (const auto* mouseMoved = event.getIf<sf::Event::MouseMoved>())
     {
@@ -700,19 +737,21 @@ void UIChapterMap::handle_event(const sf::Event& event, const sf::RenderWindow& 
             && (m_isFollowing || (std::abs(drag.x) > 12.f && std::abs(drag.x) > 1.4f * std::abs(drag.y))))
         {
             m_isFollowing = true;
-            follow_drag(drag.x);
+            follow_drag(m_dragBase + drag.x);
         }
     }
     else if (const auto* mouseButtonReleased = event.getIf<sf::Event::MouseButtonReleased>(); mouseButtonReleased && m_swipe.isDown)
     {
         const sf::Vector2f point = window.mapPixelToCoords(mouseButtonReleased->position);
-        const float dragX = point.x - m_swipe.start.x;
+        const float dragX = m_dragBase + point.x - m_swipe.start.x;
         m_swipe.release(point);
-        if (m_isFollowing)
+        if (m_isFollowing || m_caughtGlide)
         {
-            // Let go: the strip and the map settle on the nearest playable stage (back where they were if it's the same)
+            // Let go (or a glide caught by a tap): flung, the strip and the map glide on; else they settle on the
+            // nearest playable stage (back where they were if it's the same)
             m_isFollowing = false;
-            if (const int target = snap_index(dragX); target >= 0) select_stage(m_stageIcons[target].stageUID);
+            release_slide(dragX, m_swipe.velocity.x);
+            m_caughtGlide = false;
             return;
         }
         for (int i = 0; i < static_cast<int>(m_stageIcons.size()); ++i)
