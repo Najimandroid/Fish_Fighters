@@ -706,8 +706,7 @@ void UIManager::generate_encyclopedia_uis()
  */
 std::shared_ptr<UIRoundButton> UIManager::make_back_button(std::function<void()> onBack)
 {
-    const float size = 120.f;
-    auto backButton = std::make_shared<UIRoundButton>(size, sf::Vector2f{ 24.f, 1080.f - 24.f - size }, "icon_back");
+    auto backButton = std::make_shared<UIRoundButton>(UISkin::BACK_BUTTON.size.x, UISkin::BACK_BUTTON.position, "icon_back");
     backButton->set_click_sound("ui_back");
     backButton->set_callback([this, onBack]()
         {

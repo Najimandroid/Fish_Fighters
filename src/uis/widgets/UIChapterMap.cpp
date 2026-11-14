@@ -15,12 +15,14 @@ namespace
 
     // Info panel at the bottom, between the back button and the BATTLE button (UIManager)
     const sf::FloatRect INFO_PANEL{ { 180.f, 862.f }, { 1260.f, 190.f } };
-    const float MAP_TOP = 112.f, MAP_BOTTOM = INFO_PANEL.position.y - 6.f;   // Where a press can drag the map (not the bars)
+    // Right of the panel, under the map: the BATTLE! button (UIManager), which keeps its presses
+    const sf::FloatRect BATTLE_CORNER{ { INFO_PANEL.position.x + INFO_PANEL.size.x, INFO_PANEL.position.y - 20.f }, { 1000.f, 400.f } };
     // The stages' names along the top (tabs), under the title bar
     const float STRIP_Y = 124.f;
     const sf::Vector2f STRIP_TAB{ 330.f, 56.f };
-    const float STRIP_SPACING = STRIP_TAB.x + 40.f;   // From a tab's middle to the next one's: one stage of sliding
-    const float MIDDLE_TAB_SCALE = 1.16f;             // The tab in the middle is a bit bigger than the others
+    const float STRIP_SPACING = STRIP_TAB.x + 70.f;   // From a tab's middle to the next one's: one stage of sliding
+    const float MIDDLE_TAB_SCALE = 1.3f;              // The tab in the middle is bigger than the others
+    const float SIDE_TAB_FADE = 0.5f;                 // The others are see-through: the selected one stands out
 
     const float MARKER_SIZE = 66.f;
     const float SELECTED_MARKER_SIZE = 84.f;
@@ -622,8 +624,9 @@ sf::FloatRect UIChapterMap::strip_tab_rect(int index) const
 }
 
 /*
- * The stages' names along the top (like a stage select's tabs): the selected one in the middle, yellow; cleared ones
- * ticked; the next locked ones grey. Its neighbours show which way to slide
+ * The stages' names along the top (like a stage select's tabs): the selected one in the middle, bigger, yellow and
+ * lit; the others faded so the map shows through them (cleared ones ticked, the next locked ones grey). Its
+ * neighbours show which way to slide
  */
 void UIChapterMap::render_strip(sf::RenderWindow& window)
 {
@@ -632,7 +635,7 @@ void UIChapterMap::render_strip(sf::RenderWindow& window)
 
     // A soft dark band behind it, so the names read over any part of the map
     sf::VertexArray band(sf::PrimitiveType::TriangleStrip, 4);
-    const float top = STRIP_Y - 10.f, bottom = STRIP_Y + STRIP_TAB.y + 12.f;
+    const float top = UISkin::CONTENT_TOP, bottom = STRIP_Y + STRIP_TAB.y + 22.f;
     band[0] = sf::Vertex{ { screen.position.x, top }, sf::Color(8, 20, 34, 150) };
     band[1] = sf::Vertex{ { screen.position.x + screen.size.x, top }, sf::Color(8, 20, 34, 150) };
     band[2] = sf::Vertex{ { screen.position.x, bottom }, sf::Color(8, 20, 34, 0) };
@@ -656,14 +659,27 @@ void UIChapterMap::render_strip(sf::RenderWindow& window)
         const bool isSelected = (m_isFollowing || m_glide.isActive) ? i == middle : icon.stageUID == m_selectedStage;
         const bool isPlayable = icon.unlocked || icon.completed;
         const float scale = tab.size.y / STRIP_TAB.y;
+        const float lift = (scale - 1.f) / (MIDDLE_TAB_SCALE - 1.f);   // 0 away from the middle, 1 in it (sliding: between)
 
+        // The selected one solid, the others see-through (less so as they come to the middle)
+        const float fade = isSelected ? 1.f : SIDE_TAB_FADE + (1.f - SIDE_TAB_FADE) * 0.6f * lift;
+        const auto faded = [fade](sf::Color color) { color.a = static_cast<std::uint8_t>(color.a * fade); return color; };
+
+        // The selected one is lit: a soft yellow light round it
+        if (isSelected)
+        {
+            const sf::Vector2f spread{ 9.f, 9.f };
+            sf::ConvexShape glow = UISkin::rounded_rect({ tab.position - spread, tab.size + spread * 2.f }, 30.f);
+            glow.setFillColor(sf::Color(255, 232, 120, static_cast<std::uint8_t>(110.f * lift)));
+            window.draw(glow);
+        }
         sf::ConvexShape shape = UISkin::rounded_rect({ tab.position + sf::Vector2f{ UISkin::SHADOW_SHIFT, UISkin::SHADOW_DROP } * 0.6f, tab.size }, 20.f);
-        shape.setFillColor(UISkin::SHADOW_TINT);
+        shape.setFillColor(faded(UISkin::SHADOW_TINT));
         window.draw(shape);
         shape = UISkin::rounded_rect(tab, 20.f);
-        shape.setFillColor(isSelected ? UISkin::NUMBER : isPlayable ? sf::Color(26, 44, 64, 235) : sf::Color(58, 64, 74, 215));
-        shape.setOutlineThickness(4.f);
-        shape.setOutlineColor(UISkin::OUTLINE);
+        shape.setFillColor(isSelected ? UISkin::NUMBER : faded(isPlayable ? sf::Color(18, 32, 48, 235) : sf::Color(50, 56, 66, 220)));
+        shape.setOutlineThickness(isSelected ? 5.f : 3.f);
+        shape.setOutlineColor(faded(UISkin::OUTLINE));
         window.draw(shape);
 
         // Its name (fitted to the tab), "Locked" for the ones ahead
@@ -677,6 +693,8 @@ void UIChapterMap::render_strip(sf::RenderWindow& window)
         const float room = tab.size.x - (icon.completed ? 62.f : 28.f) * scale;
         while (size > smallest && name.getLocalBounds().size.x > room) UISkin::style_text(name, --size, name.getFillColor());
         if (isSelected) name.setOutlineThickness(0.f);
+        name.setFillColor(faded(name.getFillColor()));
+        name.setOutlineColor(faded(name.getOutlineColor()));
         UISkin::set_text_anchor(name, { 0.5f, 0.5f });
         name.setPosition({ tab.position.x + tab.size.x / 2.f + (icon.completed ? 16.f * scale : 0.f), tab.position.y + tab.size.y / 2.f - 2.f * scale });
         window.draw(name);
@@ -688,9 +706,9 @@ void UIChapterMap::render_strip(sf::RenderWindow& window)
             sf::CircleShape dot(12.f);
             dot.setOrigin({ 12.f, 12.f });
             dot.setPosition(c);
-            dot.setFillColor(sf::Color(96, 196, 96));
+            dot.setFillColor(faded(sf::Color(96, 196, 96)));
             dot.setOutlineThickness(3.f);
-            dot.setOutlineColor(UISkin::OUTLINE);
+            dot.setOutlineColor(faded(UISkin::OUTLINE));
             window.draw(dot);
             for (const auto& [from, to] : { std::pair{ sf::Vector2f{ -6.f, 0.f }, sf::Vector2f{ -2.f, 5.f } }, std::pair{ sf::Vector2f{ -2.f, 5.f }, sf::Vector2f{ 6.f, -5.f } } })
             {
@@ -699,7 +717,7 @@ void UIChapterMap::render_strip(sf::RenderWindow& window)
                 stroke.setOrigin({ 1.5f, 1.5f });
                 stroke.setPosition(c + from);
                 stroke.setRotation(sf::radians(std::atan2(delta.y, delta.x)));
-                stroke.setFillColor(sf::Color::White);
+                stroke.setFillColor(faded(sf::Color::White));
                 window.draw(stroke);
             }
         }
@@ -708,17 +726,17 @@ void UIChapterMap::render_strip(sf::RenderWindow& window)
 
 void UIChapterMap::handle_event(const sf::Event& event, const sf::RenderWindow& window)
 {
-    // Sliding sideways (on the map or its strip) slides the strip and the map with the finger, through the playable
-    // stages, and settles on the nearest one when let go, like a stage select; flung, they glide on (a tap catches
-    // them). A tap picks a stage (its tab in the strip or its marker on the map)
+    // Sliding sideways anywhere (the map, its strip, the panel; not the BATTLE! or back buttons) slides the strip and
+    // the map with the finger, through the playable stages, and settles on the nearest one when let go, like a stage
+    // select; flung, they glide on (a tap catches them). A tap picks a stage (its tab in the strip or its marker)
     if (const auto* mouseButtonPressed = event.getIf<sf::Event::MouseButtonPressed>())
     {
         const sf::Vector2f point = window.mapPixelToCoords(mouseButtonPressed->position);
         const bool wasGliding = m_glide.isActive && mouseButtonPressed->button == sf::Mouse::Button::Left;
         if (wasGliding) m_glide.isActive = false;
-        if (mouseButtonPressed->button == sf::Mouse::Button::Left && point.y > MAP_TOP && point.y < MAP_BOTTOM)
+        if (mouseButtonPressed->button == sf::Mouse::Button::Left && UISkin::is_slide_area(point) && !BATTLE_CORNER.contains(point))
         {
-            // On the map: a glide stops under the finger, which can slide it on from there
+            // A glide stops under the finger, which can slide it on from there
             m_swipe.press(point);
             m_followFrom = std::max(0, selected_index());
             m_dragBase = (static_cast<float>(m_followFrom) - m_stripSlide) * STRIP_SPACING;
@@ -760,6 +778,7 @@ void UIChapterMap::handle_event(const sf::Event& event, const sf::RenderWindow& 
                 if (m_stageIcons[i].unlocked || m_stageIcons[i].completed) select_stage(m_stageIcons[i].stageUID);
                 return;
             }
+        if (INFO_PANEL.contains(point)) return;   // The panel hides the map under it: no marker tapped through it
         const sf::Vector2f worldPos = point - m_viewOffset;
         for (auto& icon : m_stageIcons)
             if ((icon.unlocked || icon.completed) && icon.circle.getGlobalBounds().contains(worldPos))

@@ -116,6 +116,16 @@ namespace UISkin
     // A color over the whole screen (veils, flashes, fades)
     void fill_screen(sf::RenderTarget& target, sf::Color color);
 
+    // ----- Menu layout -----
+    // The menu screens have the title bar across the top (UITitleBar, its band down to CONTENT_TOP) and the round back
+    // button at the bottom left (UIManager::make_back_button, BACK_BUTTON)
+    inline constexpr float CONTENT_TOP = 104.f;
+    inline const sf::FloatRect BACK_BUTTON{ { 24.f, 1080.f - 24.f - 120.f }, { 120.f, 120.f } };
+
+    // A slide can start there (the carousels and the chapter map slide wherever the finger is, not only on their
+    // cards): under the title bar and off the back button. Each screen leaves out its own buttons too
+    bool is_slide_area(sf::Vector2f point);
+
     // The menus' frame on a screen wider than 16:9 (a phone): steel hull pillars fill the extra width on both sides,
     // so the menus stay a compact 16:9 instead of stretching (the battle has none: its field fills the screen)
     void draw_side_frame(sf::RenderTarget& target);

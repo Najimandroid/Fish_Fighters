@@ -412,11 +412,12 @@ void UIEquipSlider::handle_event(const sf::Event& event, const sf::RenderWindow&
                 m_mouseDownPos = mousePos;
                 m_holdClock.restart();
             }
-            // Over the cards (not the lineup, not the arrows drawn over the far cards): it may be a swipe, a glide
-            // stops under the finger; a tap on a side card picks it when released
+            // Anywhere on the screen, not only on the cards (not on a fish of the lineup, the arrows drawn over the far
+            // cards or the back button): it may be a slide of the cards, a glide stops under the finger; a tap on a
+            // side card picks it when released
             const bool isOnArrow = (m_previousButton.is_visible() && m_previousButton.get_bounds().contains(mousePos))
                 || (m_nextButton.is_visible() && m_nextButton.get_bounds().contains(mousePos));
-            if (m_dragFromSlot < 0 && !isOnArrow && mousePos.y < lineup_panel_rect().position.y - 30.f)
+            if (m_dragFromSlot < 0 && !isOnArrow && UISkin::is_slide_area(mousePos))
             {
                 m_caughtGlide = wasGliding;
                 m_dragBase = drag_offset();

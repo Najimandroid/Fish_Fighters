@@ -341,6 +341,13 @@ void UISkin::fill_screen(sf::RenderTarget& target, sf::Color color)
     target.draw(fill);
 }
 
+bool UISkin::is_slide_area(sf::Vector2f point)
+{
+    const sf::Vector2f margin{ 16.f, 16.f };   // A finger is wider than the mouse: a little room round the button
+    const sf::FloatRect back{ BACK_BUTTON.position - margin, BACK_BUTTON.size + margin * 2.f };
+    return point.y > CONTENT_TOP && !back.contains(point);
+}
+
 /*
  * Hull pillars on both sides of the 16:9 layout: darker outside, a bevel and a dark edge on the inside, a column of
  * rivets, and a shadow they cast on the screen between them

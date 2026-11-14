@@ -376,22 +376,27 @@ void UIUpgradeSlider::handle_event(const sf::Event& event, const sf::RenderWindo
 			move_to_index(m_currentIndex + 1);
 	}
 
-	// The cards: sliding sideways moves them with the finger (flung, they glide on; a tap catches them); a tap on a
-	// side card brings it to the middle (on release, so a swipe that starts on a card doesn't pick it). The arrows,
-	// drawn over the far cards, come first
+	// The cards: sliding sideways anywhere on the screen moves them with the finger, not only on them (flung, they
+	// glide on; a tap catches them); a tap on a side card brings it to the middle (on release, so a swipe that starts
+	// on a card doesn't pick it). The arrows (drawn over the far cards), the UPGRADE button and the back button keep
+	// their presses
 	const auto is_on_arrow = [this](sf::Vector2f point)
 		{
 			return (m_previousButton.is_visible() && m_previousButton.get_bounds().contains(point))
 				|| (m_nextButton.is_visible() && m_nextButton.get_bounds().contains(point));
+		};
+	const auto is_slide_area = [&](sf::Vector2f point)
+		{
+			return UISkin::is_slide_area(point) && !is_on_arrow(point) && !UPGRADE_BUTTON.contains(point);
 		};
 	if (const auto* mousePressed = event.getIf<sf::Event::MouseButtonPressed>(); mousePressed && mousePressed->button == sf::Mouse::Button::Left)
 	{
 		const sf::Vector2f mousePos = window.mapPixelToCoords(mousePressed->position);
 		const bool wasGliding = m_glide.isActive;
 		m_glide.isActive = false;
-		if (mousePos.y < DESCRIPTION_PANEL.position.y && !is_on_arrow(mousePos))
+		if (is_slide_area(mousePos))
 		{
-			// Over the cards: a glide stops under the finger, which can slide them on from there
+			// A glide stops under the finger, which can slide the cards on from there
 			m_caughtGlide = wasGliding;
 			m_dragBase = drag_offset();
 			if (wasGliding) follow_drag(m_dragBase);

@@ -7,7 +7,7 @@ namespace
 {
     const float SCREEN_WIDTH = 1920.f;
     const unsigned int TITLE_SIZE = 56;
-    const float BAND_BOTTOM = 104.f;       // The band's bottom edge (the screen's content starts under HEIGHT)
+    const float BAND_BOTTOM = UISkin::CONTENT_TOP;   // The band's bottom edge (the screen's content starts under it)
     const float TITLE_X = 40.f;
 }
 
