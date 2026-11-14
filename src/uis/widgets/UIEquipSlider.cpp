@@ -422,6 +422,12 @@ void UIEquipSlider::handle_event(const sf::Event& event, const sf::RenderWindow&
         // Start a drag once it has moved a little (a finger wobbles: not on the first pixels). From the current card,
         // sliding sideways is a swipe of the cards instead (a card goes down to the lineup)
         m_swipe.move(mousePos);
+        const sf::Vector2f drag = m_swipe.last - m_swipe.start;
+        if (m_swipe.isDown && !m_dragging && (m_isFollowing || (std::abs(drag.x) > 12.f && std::abs(drag.x) > 1.4f * std::abs(drag.y))))
+        {
+            m_isFollowing = true;
+            follow_drag(drag.x);
+        }
         if (m_mouseDown && !m_dragging)
         {
             float dx = mousePos.x - m_mouseDownPos.x;
@@ -447,16 +453,17 @@ void UIEquipSlider::handle_event(const sf::Event& event, const sf::RenderWindow&
         if (mouseReleased->button == sf::Mouse::Button::Left)
         {
             const sf::Vector2f mousePos = window.mapPixelToCoords(mouseReleased->position);
-            const int swipe = m_swipe.isDown ? m_swipe.release(mousePos) : 0;
+            const float dragX = mousePos.x - m_swipe.start.x;
+            if (m_swipe.isDown) m_swipe.release(mousePos);
+            const bool wasFollowing = m_isFollowing;
+            m_isFollowing = false;
             if (m_dragging && m_tempGhost && m_tempGhost->active)
             {
                 end_drag(mousePos);
             }
-            else if (swipe != 0)
+            else if (wasFollowing)
             {
-                // Swiped: the next card (slid left) or the previous one
-                const int newIndex = m_currentIndex - swipe;
-                if (newIndex >= 0 && newIndex < static_cast<int>(m_equipIcons.size())) move_to_index(newIndex);
+                move_to_index(snap_index(dragX), true);   // Let go: they settle on the nearest card
             }
             else if (m_mouseDown && !m_dragging && m_dragFromSlot < 0
                 && !m_equipIcons.empty() && m_equipIcons[m_currentIndex]->get_bounds().contains(mousePos))
@@ -497,12 +504,37 @@ void UIEquipSlider::handle_event(const sf::Event& event, const sf::RenderWindow&
  * - New center icon is larger and shifted slightly
  * - Other icons tween to their new positions/sizes
  */
-void UIEquipSlider::move_to_index(int newIndex)
+/*
+ * The cards follow a finger sliding them: each at its place plus how far it has slid (no glide while held)
+ */
+void UIEquipSlider::follow_drag(float dragX)
 {
-    if (newIndex < 0 || newIndex >= static_cast<int>(m_equipIcons.size()) || newIndex == m_currentIndex)
+    const float centerX = 1920.f / 2.0f - baseIconSize.x / 2.f;
+    for (int i = 0; i < static_cast<int>(m_equipIcons.size()); ++i)
+    {
+        auto& icon = m_equipIcons[i];
+        float x = centerX + (i - m_currentIndex) * ICON_SPACING + dragX;
+        if (i == m_currentIndex) x -= CENTER_OFFSET_X;
+        icon->tweenX = tweeny::from(x).to(x).during(1);
+        icon->tweenX.step(1);
+        icon->set_position({ x, icon->get_position().y });
+    }
+}
+
+// Where the cards settle when let go: the nearest one (a short flick still moves one card)
+int UIEquipSlider::snap_index(float dragX) const
+{
+    int target = static_cast<int>(std::lround(static_cast<float>(m_currentIndex) - dragX / ICON_SPACING));
+    if (target == m_currentIndex && std::abs(dragX) > UISwipe::DISTANCE) target += dragX < 0.f ? 1 : -1;
+    return std::clamp(target, 0, std::max(0, static_cast<int>(m_equipIcons.size()) - 1));
+}
+
+void UIEquipSlider::move_to_index(int newIndex, bool force)
+{
+    if (newIndex < 0 || newIndex >= static_cast<int>(m_equipIcons.size()) || (newIndex == m_currentIndex && !force))
         return;
 
-    play_sound("ui_select");
+    if (newIndex != m_currentIndex) play_sound("ui_select");
 
     sf::Vector2f screenCenter(1920.f / 2.0f - baseIconSize.x / 2.f, CARDS_BOTTOM);
 
@@ -711,75 +743,35 @@ void UIEquipSlider::end_drag(const sf::Vector2f& pos)
         return;
     }
 
-    // If released on any slot area
+    // Released on a slot: the fish goes there. On a taken slot it takes that place and the others move along one slot
+    // (full lineup: it replaces the fish there); a fish already in the lineup moves there; past the last fish, it goes
+    // at the end (the lineup has no gaps)
     if (targetSlot != -1)
     {
-        // Prevent duplicates: unit already equipped?
-        bool alreadyEquipped = false;
-        for (int j = 0; j < static_cast<int>(m_slots.size()); ++j)
+        if (auto player = m_dataLoader->get_player_data().lock())
         {
-            if (m_slots[j].ghost)
+            auto& lineup = player->equippedUnits;
+            std::vector<int> units;
+            for (int uid : lineup) if (uid >= 0) units.push_back(uid);
+            const int uid = m_tempGhost->uid;
+            const auto existing = std::find(units.begin(), units.end(), uid);
+            if (existing != units.end())
             {
-                auto s = std::dynamic_pointer_cast<UIEquipSlot>(m_slots[j].ghost);
-                if (s && s->get_uid() == m_tempGhost->uid)
-                {
-                    alreadyEquipped = true;
-                    break;
-                }
+                units.erase(existing);
+                units.insert(units.begin() + std::min(targetSlot, static_cast<int>(units.size())), uid);
             }
+            else if (targetSlot >= static_cast<int>(units.size())) units.push_back(uid);
+            else if (units.size() >= lineup.size()) units[targetSlot] = uid;     // Full: it replaces the fish there
+            else units.insert(units.begin() + targetSlot, uid);                    // Room left: the others move along
+            lineup.fill(-1);
+            for (size_t i = 0; i < units.size() && i < lineup.size(); ++i) lineup[i] = units[i];
+            play_sound("equip");
+            refresh_slots_after_unequip();   // Rebuilds the slots from the lineup
         }
-
-        // If not already equipped -> assign unit to the first available slot
-        if (!alreadyEquipped)
-        {
-            int finalSlot = -1;
-            for (int i = 0; i < static_cast<int>(m_slots.size()); ++i)
-            {
-                if (!m_slots[i].ghost)
-                {
-                    finalSlot = i;
-                    break;
-                }
-            }
-
-            if (finalSlot != -1)
-            {
-                if (auto player = m_dataLoader->get_player_data().lock())
-                {
-                    player->equip_unit(m_tempGhost->uid, finalSlot);
-                    play_sound("equip");
-
-                    auto slotGhost = std::make_shared<UIEquipSlot>(
-                        m_tempGhost->uid,
-                        m_tempGhost->cost,
-                        m_dataLoader->get_unit_icon_texture_path(m_tempGhost->uid, m_dataLoader->get_player_data().lock()->get_unit_form(m_tempGhost->uid)),
-                        finalSlot
-                    );
-
-                    slotGhost->set_position({ m_slots[finalSlot].bounds.position.x, m_slots[finalSlot].bounds.position.y });
-                    slotGhost->set_size({ m_slots[finalSlot].bounds.size.x, m_slots[finalSlot].bounds.size.y });
-
-                    // Define unequip callback
-                    slotGhost->set_callback([this](int slotIndex) 
-                        {
-                        if (auto player = m_dataLoader->get_player_data().lock()) {
-                            // Unequip the clicked slot
-                            player->unequip_unit(slotIndex);
-                            play_sound("unequip");
-
-                            // Refresh all slots and redraw ghosts in order
-                            refresh_slots_after_unequip();
-                        }
-                        });
-
-                    m_slots[finalSlot].ghost = slotGhost;
-                }
-            }
-        }
-
         m_tempGhost->active = false;
         return;
     }
+
 
     // If dropped in empty space -> shrink out animations
     m_tempGhost->scaleTween = tweeny::from(m_tempGhost->currentScale).to(0.f).during(12).via(tweeny::easing::quadraticIn);

@@ -381,13 +381,26 @@ void UIUpgradeSlider::handle_event(const sf::Event& event, const sf::RenderWindo
 	}
 	else if (const auto* mouseMoved = event.getIf<sf::Event::MouseMoved>())
 	{
+		// Sliding sideways: the cards follow the finger
 		m_swipe.move(window.mapPixelToCoords(mouseMoved->position));
+		const sf::Vector2f drag = m_swipe.last - m_swipe.start;
+		if (m_swipe.isDown && (m_isFollowing || (std::abs(drag.x) > 12.f && std::abs(drag.x) > 1.4f * std::abs(drag.y))))
+		{
+			m_isFollowing = true;
+			follow_drag(drag.x);
+		}
 	}
 	else if (const auto* mouseReleased = event.getIf<sf::Event::MouseButtonReleased>(); mouseReleased && m_swipe.isDown)
 	{
 		const sf::Vector2f mousePos = window.mapPixelToCoords(mouseReleased->position);
-		if (const int direction = m_swipe.release(mousePos))
-			move_to_index(m_currentIndex - direction);
+		const float dragX = mousePos.x - m_swipe.start.x;
+		m_swipe.release(mousePos);
+		if (m_isFollowing)
+		{
+			// Let go: they settle on the nearest card
+			m_isFollowing = false;
+			move_to_index(snap_index(dragX), true);
+		}
 		else
 			for (int i = 0; i < static_cast<int>(m_upgradeIcons.size()); ++i)
 				if (i != m_currentIndex && m_upgradeIcons[i]->get_bounds().contains(mousePos))
@@ -407,12 +420,37 @@ void UIUpgradeSlider::handle_event(const sf::Event& event, const sf::RenderWindo
  * Animates the slider to focus on a new icon index.
  * Updates icon positions, sizes, and selection states.
  */
-void UIUpgradeSlider::move_to_index(int newIndex)
+/*
+ * The cards follow a finger sliding them: each at its place plus how far it has slid (no glide while held)
+ */
+void UIUpgradeSlider::follow_drag(float dragX)
 {
-	if (newIndex < 0 || newIndex >= static_cast<int>(m_upgradeIcons.size()) || newIndex == m_currentIndex)
+	const float centerX = 1920.f / 2.0f - baseIconSize.x / 2.f;
+	for (int i = 0; i < static_cast<int>(m_upgradeIcons.size()); ++i)
+	{
+		auto& icon = m_upgradeIcons[i];
+		float x = centerX + (i - m_currentIndex) * ICON_SPACING + dragX;
+		if (i == m_currentIndex) x -= CENTER_OFFSET_X;
+		icon->tweenX = tweeny::from(x).to(x).during(1);
+		icon->tweenX.step(1);
+		icon->set_position({ x, icon->get_position().y });
+	}
+}
+
+// Where the cards settle when let go: the nearest one (a short flick still moves one card)
+int UIUpgradeSlider::snap_index(float dragX) const
+{
+	int target = static_cast<int>(std::lround(static_cast<float>(m_currentIndex) - dragX / ICON_SPACING));
+	if (target == m_currentIndex && std::abs(dragX) > UISwipe::DISTANCE) target += dragX < 0.f ? 1 : -1;
+	return std::clamp(target, 0, std::max(0, static_cast<int>(m_upgradeIcons.size()) - 1));
+}
+
+void UIUpgradeSlider::move_to_index(int newIndex, bool force)
+{
+	if (newIndex < 0 || newIndex >= static_cast<int>(m_upgradeIcons.size()) || (newIndex == m_currentIndex && !force))
 		return;
 
-	play_sound("ui_select");
+	if (newIndex != m_currentIndex) play_sound("ui_select");
 
 	const float centerX = 1920.f / 2.0f - baseIconSize.x / 2.f;
 

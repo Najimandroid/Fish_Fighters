@@ -32,7 +32,10 @@ public:
     void init_icons();
 
     // Moves slider to display unit at new index
-    void move_to_index(int newIndex);
+    // force: glide back to it even if it's the current one (after a drag)
+    void move_to_index(int newIndex, bool force = false);
+    void follow_drag(float dragX);       // The cards follow a finger sliding them
+    int snap_index(float dragX) const;   // Where they settle when let go
 
     // Calculate the upgrade cost of a unit given its UID and current level
     int calculate_upgrade_cost(int uid, int level);
@@ -54,6 +57,7 @@ private:
 
     UIOfferButton m_upgradeButton;    // UPGRADE! (UNLOCK!) with its price on it, in shells
     UISwipe m_swipe;                  // Swiping the cards sideways
+    bool m_isFollowing = false;       // The cards follow the finger
     UIRoundButton m_previousButton;   // Arrows on both sides of the cards
     UIRoundButton m_nextButton;
 

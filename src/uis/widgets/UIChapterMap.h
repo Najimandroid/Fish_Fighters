@@ -1,6 +1,7 @@
 #pragma once
 
 #include "UIPanel.h"
+#include "UISwipe.h"
 
 #include "../../core/DataLoader.h"
 
@@ -95,11 +96,13 @@ private:
     tweeny::tween<float, float> m_offsetTween;
     sf::Vector2f m_viewOffset{ 0.f, 0.f };      // current camera offset
 
-    // Dragging the map (UI coordinates)
-    bool m_isPressing = false;
-    bool m_isDraggingMap = false;
-    sf::Vector2f m_pressPoint;
-    sf::Vector2f m_pressOffset;
+    // Swiping steps through the playable stages; the names strip slides to the selected one
+    UISwipe m_swipe;
+    float m_stripSlide = 0.f;                    // The strip's position, in tabs (follows the selected index)
+    void step_stage(int direction);
+    int selected_index() const;
+    sf::FloatRect strip_tab_rect(int index) const;
+    void render_strip(sf::RenderWindow& window);
     sf::Vector2f m_targetOffset{ 0.f, 0.f };    // target camera offset
     float m_moveSpeed = 5.f;
 };

@@ -43,7 +43,10 @@ public:
     void init_icons();
 
     // Moves the slider focus to a specific index (animated)
-    void move_to_index(int newIndex);
+    // force: glide back to it even if it's the current one (after a drag)
+    void move_to_index(int newIndex, bool force = false);
+    void follow_drag(float dragX);       // The cards follow a finger sliding them
+    int snap_index(float dragX) const;   // Where they settle when let go
 
     // Refresh all equipped slots after an unequip action
     void refresh_slots_after_unequip();
@@ -137,6 +140,7 @@ private:
 
     // Drag state tracking
     UISwipe m_swipe;                  // Swiping the cards sideways
+    bool m_isFollowing = false;       // The cards follow the finger
     bool m_mouseDown = false;
     bool m_dragging = false;
     int m_dragFromSlot = -1;          // Lineup slot being dragged to another slot (-1: a card is dragged)

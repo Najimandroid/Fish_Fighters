@@ -16,7 +16,10 @@ namespace
     // Info panel at the bottom, between the back button and the BATTLE button (UIManager)
     const sf::FloatRect INFO_PANEL{ { 180.f, 862.f }, { 1260.f, 190.f } };
     const float MAP_TOP = 112.f, MAP_BOTTOM = INFO_PANEL.position.y - 6.f;   // Where a press can drag the map (not the bars)
-    const float DRAG_START = 14.f;   // A finger wobbles: a tap moves a few pixels
+    // The stages' names along the top (tabs), under the title bar
+    const float STRIP_Y = 124.f;
+    const sf::Vector2f STRIP_TAB{ 330.f, 56.f };
+    const float STRIP_GAP = 14.f;
 
     const float MARKER_SIZE = 66.f;
     const float SELECTED_MARKER_SIZE = 84.f;
@@ -384,6 +387,10 @@ void UIChapterMap::update(float deltaTime)
         auto [ox, oy] = m_offsetTween.step(1);
         m_viewOffset = { ox, oy };
     }
+
+    // The names strip slides to the selected stage
+    const int index = selected_index();
+    if (index >= 0) m_stripSlide += (static_cast<float>(index) - m_stripSlide) * std::min(1.f, deltaTime * 10.f);
 }
 
 void UIChapterMap::render(sf::RenderWindow& window)
@@ -453,6 +460,7 @@ void UIChapterMap::render(sf::RenderWindow& window)
         window.draw(m_clearedText);
 
     render_stage_enemies(window, player.get());
+    render_strip(window);
 }
 
 /*
@@ -491,79 +499,147 @@ void UIChapterMap::render_stage_enemies(sf::RenderWindow& window, const PlayerDa
     }
 }
 
+/*
+ * The next playable stage (direction +1) or the previous one (-1) from the one selected; nothing past the ends
+ */
+void UIChapterMap::step_stage(int direction)
+{
+    const int index = selected_index();
+    if (index < 0) return;
+    for (int i = index + direction; i >= 0 && i < static_cast<int>(m_stageIcons.size()); i += direction)
+        if (m_stageIcons[i].unlocked || m_stageIcons[i].completed)
+        {
+            select_stage(m_stageIcons[i].stageUID);
+            return;
+        }
+}
+
+int UIChapterMap::selected_index() const
+{
+    for (int i = 0; i < static_cast<int>(m_stageIcons.size()); ++i)
+        if (m_stageIcons[i].stageUID == m_selectedStage) return i;
+    return -1;
+}
+
+// The strip's tab of a stage (its slide follows the selection)
+sf::FloatRect UIChapterMap::strip_tab_rect(int index) const
+{
+    const float centerX = 960.f + (static_cast<float>(index) - m_stripSlide) * (STRIP_TAB.x + STRIP_GAP);
+    return { { centerX - STRIP_TAB.x / 2.f, STRIP_Y }, STRIP_TAB };
+}
+
+/*
+ * The stages' names along the top (like a stage select's tabs): the selected one in the middle, yellow; cleared ones
+ * ticked; the next locked ones grey. Its neighbours show which way to slide
+ */
+void UIChapterMap::render_strip(sf::RenderWindow& window)
+{
+    if (m_stageIcons.empty()) return;
+    const sf::FloatRect screen = UISkin::screen_rect();
+
+    // A soft dark band behind it, so the names read over any part of the map
+    sf::VertexArray band(sf::PrimitiveType::TriangleStrip, 4);
+    const float top = STRIP_Y - 10.f, bottom = STRIP_Y + STRIP_TAB.y + 12.f;
+    band[0] = sf::Vertex{ { screen.position.x, top }, sf::Color(8, 20, 34, 150) };
+    band[1] = sf::Vertex{ { screen.position.x + screen.size.x, top }, sf::Color(8, 20, 34, 150) };
+    band[2] = sf::Vertex{ { screen.position.x, bottom }, sf::Color(8, 20, 34, 0) };
+    band[3] = sf::Vertex{ { screen.position.x + screen.size.x, bottom }, sf::Color(8, 20, 34, 0) };
+    window.draw(band);
+
+    sf::Text name(UISkin::heavy_font());
+    for (int i = 0; i < static_cast<int>(m_stageIcons.size()); ++i)
+    {
+        const StageIcon& icon = m_stageIcons[i];
+        const sf::FloatRect tab = strip_tab_rect(i);
+        if (tab.position.x > screen.position.x + screen.size.x || tab.position.x + tab.size.x < screen.position.x) continue;
+        const bool isSelected = icon.stageUID == m_selectedStage;
+        const bool isPlayable = icon.unlocked || icon.completed;
+
+        sf::ConvexShape shape = UISkin::rounded_rect({ tab.position + sf::Vector2f{ UISkin::SHADOW_SHIFT, UISkin::SHADOW_DROP } * 0.6f, tab.size }, 20.f);
+        shape.setFillColor(UISkin::SHADOW_TINT);
+        window.draw(shape);
+        shape = UISkin::rounded_rect(tab, 20.f);
+        shape.setFillColor(isSelected ? UISkin::NUMBER : isPlayable ? sf::Color(26, 44, 64, 235) : sf::Color(58, 64, 74, 215));
+        shape.setOutlineThickness(4.f);
+        shape.setOutlineColor(UISkin::OUTLINE);
+        window.draw(shape);
+
+        // Its name (fitted to the tab), "Locked" for the ones ahead
+        std::string label = "Locked";
+        if (isPlayable)
+            if (auto stage = m_dataLoader->get_stage_data(icon.stageUID)) label = std::to_string(icon.number) + "  " + stage->name;
+        unsigned int size = 28;
+        UISkin::style_text(name, size, isSelected ? UISkin::OUTLINE : isPlayable ? UISkin::TEXT : sf::Color(170, 176, 186));
+        name.setString(label);
+        const float room = tab.size.x - (icon.completed ? 62.f : 28.f);
+        while (size > 20 && name.getLocalBounds().size.x > room) UISkin::style_text(name, --size, name.getFillColor());
+        if (isSelected) name.setOutlineThickness(0.f);
+        UISkin::set_text_anchor(name, { 0.5f, 0.5f });
+        name.setPosition({ tab.position.x + tab.size.x / 2.f + (icon.completed ? 16.f : 0.f), tab.position.y + tab.size.y / 2.f - 2.f });
+        window.draw(name);
+
+        // Cleared: a green tick at its left
+        if (icon.completed)
+        {
+            const sf::Vector2f c{ tab.position.x + 24.f, tab.position.y + tab.size.y / 2.f };
+            sf::CircleShape dot(12.f);
+            dot.setOrigin({ 12.f, 12.f });
+            dot.setPosition(c);
+            dot.setFillColor(sf::Color(96, 196, 96));
+            dot.setOutlineThickness(3.f);
+            dot.setOutlineColor(UISkin::OUTLINE);
+            window.draw(dot);
+            for (const auto& [from, to] : { std::pair{ sf::Vector2f{ -6.f, 0.f }, sf::Vector2f{ -2.f, 5.f } }, std::pair{ sf::Vector2f{ -2.f, 5.f }, sf::Vector2f{ 6.f, -5.f } } })
+            {
+                const sf::Vector2f delta = to - from;
+                sf::RectangleShape stroke({ std::hypot(delta.x, delta.y) + 3.f, 3.f });
+                stroke.setOrigin({ 1.5f, 1.5f });
+                stroke.setPosition(c + from);
+                stroke.setRotation(sf::radians(std::atan2(delta.y, delta.x)));
+                stroke.setFillColor(sf::Color::White);
+                window.draw(stroke);
+            }
+        }
+    }
+}
+
 void UIChapterMap::handle_event(const sf::Event& event, const sf::RenderWindow& window)
 {
-    // Dragging the map scrolls it (a finger or the mouse), within its edges; a tap (no drag) picks a stage
+    // A swipe sideways (on the map or its strip) steps to the next or the previous playable stage, like a stage
+    // select; a tap picks a stage (its tab in the strip or its marker on the map)
     if (const auto* mouseButtonPressed = event.getIf<sf::Event::MouseButtonPressed>())
     {
         const sf::Vector2f point = window.mapPixelToCoords(mouseButtonPressed->position);
         if (mouseButtonPressed->button == sf::Mouse::Button::Left && point.y > MAP_TOP && point.y < MAP_BOTTOM)
-        {
-            m_isPressing = true;
-            m_isDraggingMap = false;
-            m_pressPoint = point;
-            m_pressOffset = m_viewOffset;
-        }
+            m_swipe.press(point);
     }
-    else if (const auto* mouseMoved = event.getIf<sf::Event::MouseMoved>(); mouseMoved && m_isPressing)
+    else if (const auto* mouseMoved = event.getIf<sf::Event::MouseMoved>())
     {
-        const sf::Vector2f delta = window.mapPixelToCoords(mouseMoved->position) - m_pressPoint;
-        if (!m_isDraggingMap && std::hypot(delta.x, delta.y) > DRAG_START) m_isDraggingMap = true;
-        if (m_isDraggingMap)
-        {
-            m_viewOffset = clamp_to_map(m_pressOffset + delta, m_background.getGlobalBounds().size);
-            m_offsetTween = tweeny::from(m_viewOffset.x, m_viewOffset.y).to(m_viewOffset.x, m_viewOffset.y).during(1);   // No glide fighting the finger
-            m_offsetTween.step(1);
-        }
+        m_swipe.move(window.mapPixelToCoords(mouseMoved->position));
     }
-    else if (const auto* mouseButtonReleased = event.getIf<sf::Event::MouseButtonReleased>(); mouseButtonReleased && m_isPressing)
+    else if (const auto* mouseButtonReleased = event.getIf<sf::Event::MouseButtonReleased>(); mouseButtonReleased && m_swipe.isDown)
     {
-        m_isPressing = false;
-        if (!m_isDraggingMap && mouseButtonReleased->button == sf::Mouse::Button::Left)
+        const sf::Vector2f point = window.mapPixelToCoords(mouseButtonReleased->position);
+        if (const int direction = m_swipe.release(point))
         {
-            const sf::Vector2f worldPos = window.mapPixelToCoords(mouseButtonReleased->position) - m_viewOffset;
-            for (auto& icon : m_stageIcons)
-                if ((icon.unlocked || icon.completed) && icon.circle.getGlobalBounds().contains(worldPos))
-                    select_stage(icon.stageUID);
+            step_stage(-direction);   // Slid left: the next stage
+            return;
         }
-        m_isDraggingMap = false;
+        for (int i = 0; i < static_cast<int>(m_stageIcons.size()); ++i)
+            if (strip_tab_rect(i).contains(point))
+            {
+                if (m_stageIcons[i].unlocked || m_stageIcons[i].completed) select_stage(m_stageIcons[i].stageUID);
+                return;
+            }
+        const sf::Vector2f worldPos = point - m_viewOffset;
+        for (auto& icon : m_stageIcons)
+            if ((icon.unlocked || icon.completed) && icon.circle.getGlobalBounds().contains(worldPos))
+                select_stage(icon.stageUID);
     }
     else if (const auto* keyPressed = event.getIf<sf::Event::KeyPressed>())
     {
-        if (m_stageIcons.empty()) return;
-
-        // find current index
-        auto it = std::find_if(m_stageIcons.begin(), m_stageIcons.end(),
-            [&](const StageIcon& icon) { return icon.stageUID == m_selectedStage; });
-
-        if (it == m_stageIcons.end()) return;
-
-        int index = static_cast<int>(std::distance(m_stageIcons.begin(), it));
-
-        if (keyPressed->code == sf::Keyboard::Key::Right)
-        {
-            // move forward until an unlocked/completed stage
-            for (int i = index + 1; i < (int)m_stageIcons.size(); ++i)
-            {
-                if (m_stageIcons[i].unlocked || m_stageIcons[i].completed)
-                {
-                    select_stage(m_stageIcons[i].stageUID);
-                    break;
-                }
-            }
-        }
-        else if (keyPressed->code == sf::Keyboard::Key::Left)
-        {
-            // move backward until an unlocked/completed stage
-            for (int i = index - 1; i >= 0; --i)
-            {
-                if (m_stageIcons[i].unlocked || m_stageIcons[i].completed)
-                {
-                    select_stage(m_stageIcons[i].stageUID);
-                    break;
-                }
-            }
-        }
+        if (keyPressed->code == sf::Keyboard::Key::Right) step_stage(1);
+        else if (keyPressed->code == sf::Keyboard::Key::Left) step_stage(-1);
     }
 }
 
