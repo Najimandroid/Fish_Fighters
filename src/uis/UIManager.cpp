@@ -766,7 +766,7 @@ void UIManager::generate_equip_menu_uis()
     add_ui_element(shellsInfo);
     add_ui_element(backButton);
     add_ui_element(add_info_button(titleBar->get_info_position(), "Your lineup",
-        "Your lineup: the fish you can send into battle, up to 10.\n\nTap a fish (or drag it) to add it. Drag the fish in the lineup to change their order: their slot is their number key in battle. Drag one out of the lineup to remove it (right click works too on PC).\n\nThe price on each fish is what sending it costs in battle."));
+        "Your lineup: the fish you can send into battle, up to 10.\n\nTap a fish (or drag it) to add it. Drop a fish on one of the lineup to put it in that place: the others move along (when the lineup is full, it takes that fish's place). Drag the fish in the lineup the same way to change their order: their slot is their number key in battle. Drag one out of the lineup to remove it (right click works too on PC).\n\nThe price on each fish is what sending it costs in battle."));
 }
 
 /*
@@ -945,7 +945,7 @@ void UIManager::generate_chapter_map_uis()
     add_ui_element(battleButton);
     add_ui_element(backButton);
     add_ui_element(add_info_button(titleBar->get_info_position(), "The chapter map",
-        "Pick a stage on the map, then BATTLE!.\n\nCleared stages are green, the next one is yellow; the grey ones open as you clear the stages before them. The panel shows the enemy base's health, the shells a win brings, and the enemies you'll meet."));
+        "Pick a stage on the map (or its name at the top), then BATTLE!. Slide left or right to go through the stages.\n\nCleared stages are green, the next one is yellow; the grey ones open as you clear the stages before them. The panel shows the enemy base's health, the shells a win brings, and the enemies you'll meet."));
 }
 
 /*

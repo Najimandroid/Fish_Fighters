@@ -25,9 +25,11 @@ class DataLoader;
  *
  * Features:
  * - Displays available fish units as cards (UIEquipIcon), the selected one big in the middle.
- * - Allows dragging units into the lineup slots (drawn like the deploy slots in battle),
- *   and a unit of the lineup onto another slot to swap them.
- * - Animates slider movement when switching between icons (keys, arrows or a click on a side card).
+ * - Allows dragging units into the lineup slots (drawn like the deploy slots in battle): dropped on a taken slot,
+ *   a fish takes that place and the others move along one (a full lineup: it replaces the fish there); a unit of
+ *   the lineup dragged onto another slot moves there the same way.
+ * - Animates slider movement when switching between icons (keys, arrows or a click on a side card); a finger
+ *   sliding sideways moves the cards with it (the one passing the middle grows), and they settle on the nearest.
  * - Works with DataLoader to fetch unit textures and player data.
  */
 
@@ -135,7 +137,6 @@ private:
     UIRoundButton m_nextButton;
     UIPanel m_lineupPanel;
     sf::Text m_lineupTitle;           // "LINEUP"
-    sf::Text m_hint;                  // How to equip / remove
     sf::Text m_ghostCost;             // Deploy cost on the dragged unit
 
     // Drag state tracking

@@ -33,6 +33,23 @@ public:
     // Only the width counts: the height follows HEIGHT_RATIO
     void set_size(sf::Vector2f size) override;
 
+    // Puts the card there at once, tweens stopped: its middle at centerX, this wide (a carousel following a finger)
+    void place_at(float centerX, float width);
+
+    // How big a carousel's card is at slot (cards from the middle, fractional while sliding): centerScale in the
+    // middle, sideScale from one card away, growing smoothly in between
+    static float carousel_scale(float slot, float centerScale, float sideScale);
+
+    // The widest card of a carousel (drawn last, on top); -1 when there are none
+    template <typename Cards>
+    static int biggest(const Cards& cards)
+    {
+        int front = -1;
+        for (int i = 0; i < static_cast<int>(cards.size()); ++i)
+            if (front < 0 || cards[i]->get_size().x > cards[front]->get_size().x) front = i;
+        return front;
+    }
+
     // Plays the tweens
     void update(float deltaTime) override;
     void render(sf::RenderWindow& window) override;

@@ -435,7 +435,7 @@ void AudioManager::apply_settings(const Settings& settings)
     sf::Listener::setGlobalVolume(m_masterVolume * m_focusLevel);
     set_music_volume(MUSIC_REFERENCE * curve(settings.musicVolume));
     set_sound_volume(100.f * curve(settings.effectsVolume));
-    m_muteInBackground = settings.muteInBackground;
+    m_muteInBackground = Platform::IS_MOBILE || settings.muteInBackground;   // A phone's game always goes quiet behind other apps
 }
 
 void AudioManager::set_focus_muted(bool isUnfocused)

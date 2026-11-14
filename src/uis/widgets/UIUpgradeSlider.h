@@ -16,7 +16,8 @@ class DataLoader;
  * The Upgrade screen's carousel, like The Battle Cats' upgrade screen: unit cards in a row
  * (the selected one big in the middle), arrows on both sides, a big UPGRADE! button, and a panel
  * with the selected unit's name, description and abilities (UIAbilityList: hover one to see what it does).
- * Left / Right keys, the arrows or a click on a side card move it.
+ * Left / Right keys, the arrows or a click on a side card move it; a finger sliding sideways moves the cards with
+ * it (the one passing the middle grows), and they settle on the nearest when let go.
  * Works with DataLoader to fetch player data and unit info.
  */
 

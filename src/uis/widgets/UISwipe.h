@@ -7,12 +7,13 @@
 /*
  * UISwipe
  * -------
- * A horizontal swipe (a finger, or the mouse dragged): the carousels (Upgrade, Equip) move by one card when the
- * press slides far enough sideways; a short or mostly vertical move stays a tap (or a drag of a card down).
+ * A horizontal swipe (a finger, or the mouse dragged): the carousels (Upgrade, Equip) and the chapter map's strip
+ * follow it (last - start) once it slides sideways, then settle on the nearest card or stage; past DISTANCE, a quick
+ * flick moves at least one. A short or mostly vertical move stays a tap (or a drag of a card down).
  *
  * Example usage:
  *   pressed:  m_swipe.press(point);
- *   moved:    m_swipe.move(point);
+ *   moved:    m_swipe.move(point); follow(m_swipe.last.x - m_swipe.start.x);
  *   released: if (const int direction = m_swipe.release(point)) move_to_index(m_currentIndex - direction);
  */
 struct UISwipe

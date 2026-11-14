@@ -335,10 +335,12 @@ void UIUpgradeSlider::render_upgrade_info(sf::RenderWindow& window)
  */
 void UIUpgradeSlider::render(sf::RenderWindow& window)
 {
+	// The biggest card (the one in the middle, or passing it while sliding) on top
+	const int front = UIUnitCard::biggest(m_upgradeIcons);
 	for (int i = 0; i < static_cast<int>(m_upgradeIcons.size()); ++i)
-		if (i != m_currentIndex) m_upgradeIcons[i]->render(window);
-	if (!m_upgradeIcons.empty())
-		m_upgradeIcons[m_currentIndex]->render(window);
+		if (i != front) m_upgradeIcons[i]->render(window);
+	if (front >= 0)
+		m_upgradeIcons[front]->render(window);
 
 	m_previousButton.render(window);
 	m_nextButton.render(window);
@@ -417,25 +419,24 @@ void UIUpgradeSlider::handle_event(const sf::Event& event, const sf::RenderWindo
 }
 
 /*
- * Animates the slider to focus on a new icon index.
- * Updates icon positions, sizes, and selection states.
- */
-/*
- * The cards follow a finger sliding them: each at its place plus how far it has slid (no glide while held)
+ * The cards follow a finger sliding them: each at its place plus how far it has slid (no glide while held), the
+ * one passing the middle growing to the selected size and the one leaving it shrinking; the nearest is the
+ * highlighted one
  */
 void UIUpgradeSlider::follow_drag(float dragX)
 {
-	const float centerX = 1920.f / 2.0f - baseIconSize.x / 2.f;
 	for (int i = 0; i < static_cast<int>(m_upgradeIcons.size()); ++i)
 	{
-		auto& icon = m_upgradeIcons[i];
-		float x = centerX + (i - m_currentIndex) * ICON_SPACING + dragX;
-		if (i == m_currentIndex) x -= CENTER_OFFSET_X;
-		icon->tweenX = tweeny::from(x).to(x).during(1);
-		icon->tweenX.step(1);
-		icon->set_position({ x, icon->get_position().y });
+		const float slot = static_cast<float>(i - m_currentIndex) + dragX / ICON_SPACING;   // Cards from the middle
+		m_upgradeIcons[i]->place_at(1920.f / 2.f + slot * ICON_SPACING, baseIconSize.x * UIUnitCard::carousel_scale(slot, CENTER_SCALE, SIDE_SCALE));
+		m_upgradeIcons[i]->select(std::abs(slot) < 0.5f);
 	}
 }
+
+/*
+ * Animates the slider to focus on a new icon index.
+ * Updates icon positions, sizes, and selection states.
+ */
 
 // Where the cards settle when let go: the nearest one (a short flick still moves one card)
 int UIUpgradeSlider::snap_index(float dragX) const

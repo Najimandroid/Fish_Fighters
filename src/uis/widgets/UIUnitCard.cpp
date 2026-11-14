@@ -1,6 +1,8 @@
 #include "UIUnitCard.h"
 #include "../UISkin.h"
 
+#include <algorithm>
+#include <cmath>
 #include <iostream>
 
 namespace
@@ -67,6 +69,25 @@ void UIUnitCard::set_unit_name(const std::string& name)
 void UIUnitCard::set_size(sf::Vector2f size)
 {
     m_size = { size.x, size.x * HEIGHT_RATIO };
+}
+
+void UIUnitCard::place_at(float centerX, float width)
+{
+    const float left = centerX - width / 2.f;
+    tweenX = tweeny::from(left).to(left).during(1);
+    tweenX.step(1);
+    tweenWidth = tweeny::from(width).to(width).during(1);
+    tweenWidth.step(1);
+    tweenHeight = tweenWidth;
+    m_position.x = left;
+    set_size({ width, width });
+}
+
+float UIUnitCard::carousel_scale(float slot, float centerScale, float sideScale)
+{
+    const float closeness = std::max(0.f, 1.f - std::abs(slot));
+    const float eased = closeness * closeness * (3.f - 2.f * closeness);   // Smoothstep: no kink in the middle
+    return sideScale + (centerScale - sideScale) * eased;
 }
 
 void UIUnitCard::set_level_line(const std::string& text, sf::Color color)

@@ -17,7 +17,6 @@ namespace
     const float GHOST_SCALE = 1.5f;                      // The dragged unit is a slot this much bigger
     const float ARROW_SIZE = 96.f;
     const float ARROW_Y = 292.f;
-    const float HINT_Y = 562.f;
 
     sf::Vector2f lineup_size()
     {
@@ -45,7 +44,6 @@ UIEquipSlider::UIEquipSlider(std::shared_ptr<DataLoader> dataLoader)
     m_nextButton(ARROW_SIZE, { 1920.f - 36.f - ARROW_SIZE, ARROW_Y }, "icon_play"),
     m_lineupPanel(lineup_panel_rect().size, lineup_panel_rect().position, UISkin::PANEL_DARK, 1.2f),
     m_lineupTitle(UISkin::heavy_font(), "LINEUP"),
-    m_hint(UISkin::regular_font(), "Tap or drag a fish to add it   -   Drag in the lineup to reorder   -   Drag it out to remove"),
     m_ghostCost(UISkin::heavy_font())
 {
     if (!m_placeholderTexture.loadFromFile("assets/images/textures/icons/placeholder.png")) {
@@ -65,10 +63,6 @@ UIEquipSlider::UIEquipSlider(std::shared_ptr<DataLoader> dataLoader)
     UISkin::style_text(m_lineupTitle, 34, UISkin::TITLE);
     UISkin::set_text_anchor(m_lineupTitle, { 0.5f, 0.5f });
     m_lineupTitle.setPosition({ 960.f, panel.position.y + PANEL_TITLE_BAND / 2.f + 6.f });
-
-    UISkin::style_body_text(m_hint, 28);
-    UISkin::set_text_anchor(m_hint, { 0.5f, 0.5f });
-    m_hint.setPosition({ 960.f, HINT_Y });
 
     UISkin::style_text(m_ghostCost, 32, UISkin::NUMBER);
 
@@ -295,10 +289,12 @@ void UIEquipSlider::update(float deltaTime)
  */
 void UIEquipSlider::render(sf::RenderWindow& window)
 {
+    // The biggest card (the one in the middle, or passing it while sliding) on top
+    const int front = UIUnitCard::biggest(m_equipIcons);
     for (int i = 0; i < static_cast<int>(m_equipIcons.size()); ++i)
-        if (i != m_currentIndex) m_equipIcons[i]->render(window);
-    if (!m_equipIcons.empty())
-        m_equipIcons[m_currentIndex]->render(window);
+        if (i != front) m_equipIcons[i]->render(window);
+    if (front >= 0)
+        m_equipIcons[front]->render(window);
 
     m_previousButton.render(window);
     m_nextButton.render(window);
@@ -498,28 +494,27 @@ void UIEquipSlider::handle_event(const sf::Event& event, const sf::RenderWindow&
 }
 
 /*
+ * The cards follow a finger sliding them: each at its place plus how far it has slid (no glide while held), the
+ * one passing the middle growing to the selected size and the one leaving it shrinking; the nearest is the
+ * highlighted one
+ */
+void UIEquipSlider::follow_drag(float dragX)
+{
+    for (int i = 0; i < static_cast<int>(m_equipIcons.size()); ++i)
+    {
+        const float slot = static_cast<float>(i - m_currentIndex) + dragX / ICON_SPACING;   // Cards from the middle
+        m_equipIcons[i]->place_at(1920.f / 2.f + slot * ICON_SPACING, baseIconSize.x * UIUnitCard::carousel_scale(slot, CENTER_SCALE, SIDE_SCALE));
+        m_equipIcons[i]->select(std::abs(slot) < 0.5f);
+    }
+}
+
+/*
  * move_to_index
  * -------------
  * - Animates icons when the selection index changes
  * - New center icon is larger and shifted slightly
  * - Other icons tween to their new positions/sizes
  */
-/*
- * The cards follow a finger sliding them: each at its place plus how far it has slid (no glide while held)
- */
-void UIEquipSlider::follow_drag(float dragX)
-{
-    const float centerX = 1920.f / 2.0f - baseIconSize.x / 2.f;
-    for (int i = 0; i < static_cast<int>(m_equipIcons.size()); ++i)
-    {
-        auto& icon = m_equipIcons[i];
-        float x = centerX + (i - m_currentIndex) * ICON_SPACING + dragX;
-        if (i == m_currentIndex) x -= CENTER_OFFSET_X;
-        icon->tweenX = tweeny::from(x).to(x).during(1);
-        icon->tweenX.step(1);
-        icon->set_position({ x, icon->get_position().y });
-    }
-}
 
 // Where the cards settle when let go: the nearest one (a short flick still moves one card)
 int UIEquipSlider::snap_index(float dragX) const
@@ -712,14 +707,13 @@ void UIEquipSlider::end_drag(const sf::Vector2f& pos)
         }
     }
 
-    // A unit of the lineup: dropped on another slot, it swaps with the unit there (or moves to the
-    // end of the lineup on an empty slot, the lineup has no gaps); dropped out of the lineup panel, it leaves the
-    // lineup (the touch way to remove one; right click works too); in the panel between slots, it goes back
+    // A unit of the lineup dropped out of the lineup panel leaves the lineup (the touch way to remove one; right click
+    // works too); in the panel between slots or back on its own slot, it goes back. On another slot: below
     if (m_dragFromSlot >= 0)
     {
         auto player = m_dataLoader->get_player_data().lock();
-        if (player && targetSlot == -1 && !lineup_panel_rect().contains(pos)
-            && player->equippedUnits[m_dragFromSlot] == m_tempGhost->uid)
+        const bool isStillThere = player && player->equippedUnits[m_dragFromSlot] == m_tempGhost->uid;
+        if (isStillThere && targetSlot == -1 && !lineup_panel_rect().contains(pos))
         {
             player->unequip_unit(m_dragFromSlot);
             play_sound("unequip");
@@ -727,25 +721,16 @@ void UIEquipSlider::end_drag(const sf::Vector2f& pos)
             m_tempGhost->scaleTween = tweeny::from(m_tempGhost->currentScale).to(0.f).during(12).via(tweeny::easing::quadraticIn);
             return;
         }
-        if (player && targetSlot != -1 && targetSlot != m_dragFromSlot
-            && player->equippedUnits[m_dragFromSlot] == m_tempGhost->uid)
+        if (!isStillThere || targetSlot == -1 || targetSlot == m_dragFromSlot)
         {
-            auto& lineup = player->equippedUnits;
-            const int equippedCount = static_cast<int>(std::count_if(lineup.begin(), lineup.end(), [](int uid) { return uid >= 0; }));
-            if (targetSlot < equippedCount)
-                std::swap(lineup[m_dragFromSlot], lineup[targetSlot]);
-            else
-                std::rotate(lineup.begin() + m_dragFromSlot, lineup.begin() + m_dragFromSlot + 1, lineup.begin() + equippedCount);
-            play_sound("equip");
-            refresh_slots_after_unequip();
+            m_tempGhost->active = false;
+            return;
         }
-        m_tempGhost->active = false;
-        return;
     }
 
     // Released on a slot: the fish goes there. On a taken slot it takes that place and the others move along one slot
-    // (full lineup: it replaces the fish there); a fish already in the lineup moves there; past the last fish, it goes
-    // at the end (the lineup has no gaps)
+    // (full lineup: a new fish replaces the one there); a fish already in the lineup (a card IN USE, or one dragged
+    // from the lineup) moves there the same way; past the last fish, it goes at the end (the lineup has no gaps)
     if (targetSlot != -1)
     {
         if (auto player = m_dataLoader->get_player_data().lock())
