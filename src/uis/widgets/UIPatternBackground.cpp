@@ -1,4 +1,7 @@
 #include "UIPatternBackground.h"
+#include "../UISkin.h"
+
+#include <cmath>
 
 #include <iostream>
 
@@ -24,7 +27,13 @@ UIPatternBackground::UIPatternBackground(const std::string& patternName, sf::Col
 
 void UIPatternBackground::render(sf::RenderWindow& window)
 {
-    if (m_isVisible) window.draw(m_sprite);
+    if (!m_isVisible) return;
+    // The whole screen, a phone's extra width too (the pattern keeps its place under the layout)
+    const sf::FloatRect screen = UISkin::screen_rect();
+    const sf::Vector2i origin{ static_cast<int>(std::floor(screen.position.x)), static_cast<int>(std::floor(screen.position.y)) };
+    m_sprite.setTextureRect(sf::IntRect(origin, { static_cast<int>(std::ceil(screen.size.x)) + 2, static_cast<int>(std::ceil(screen.size.y)) + 2 }));
+    m_sprite.setPosition(sf::Vector2f(origin));
+    window.draw(m_sprite);
 }
 
 sf::FloatRect UIPatternBackground::get_bounds() const

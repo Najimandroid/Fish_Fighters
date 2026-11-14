@@ -5,6 +5,8 @@
 #include "UIButtonElement.h"
 #include "UIRoundButton.h"
 #include "UIPanel.h"
+#include "UISwipe.h"
+#include "UIAbilityList.h"
 
 #include "tweeny.h"
 
@@ -20,13 +22,17 @@ class DataLoader;
  * UIEquipSlider
  * ----------------
  * A horizontal slider UI that lets the player browse through their owned units
- * and equip them into a grid of 10 slots (2x5 layout), like The Battle Cats' Equip screen.
+ * and equip them into a grid of 10 slots (2x5 layout), like The Battle Cats' Organize screen: the lineup at the top
+ * with the selected fish's details beside it (its stats and abilities, like Unit Info), the cards at the bottom on a
+ * shelf with page dots.
  *
  * Features:
  * - Displays available fish units as cards (UIEquipIcon), the selected one big in the middle.
- * - Allows dragging units into the lineup slots (drawn like the deploy slots in battle),
- *   and a unit of the lineup onto another slot to swap them.
- * - Animates slider movement when switching between icons (keys, arrows or a click on a side card).
+ * - Allows dragging units into the lineup slots (drawn like the deploy slots in battle): dropped on a taken slot,
+ *   a fish takes that place and the others move along one (a full lineup: it replaces the fish there); a unit of
+ *   the lineup dragged onto another slot moves there the same way.
+ * - Animates slider movement when switching between icons (keys, arrows or a click on a side card); a finger
+ *   sliding sideways moves the cards with it (the one passing the middle grows), and they settle on the nearest.
  * - Works with DataLoader to fetch unit textures and player data.
  */
 
@@ -42,13 +48,23 @@ public:
     void init_icons();
 
     // Moves the slider focus to a specific index (animated)
-    void move_to_index(int newIndex);
+    // force: glide back to it even if it's the current one (after a drag)
+    void move_to_index(int newIndex, bool force = false);
+    void follow_drag(float dragX);       // The cards follow a finger sliding them
+    // Where they settle when let go slowly (allowsFlick: a short flick from rest still moves one card)
+    int snap_index(float dragX, bool allowsFlick = true) const;
+    void release_slide(float dragX, float speed);   // Let go: glides on when flung, else settles on the nearest
+    float drag_offset() const;           // Where the cards are now, as a drag from the selected one (0 at rest)
 
     // Refresh all equipped slots after an unequip action
     void refresh_slots_after_unequip();
 
     // Adds the selected card's fish to the first empty slot of the lineup (a click on it, or Enter)
     void add_selected_to_lineup();
+
+    // The selected fish (-1: none), and selecting one at once (coming from the Upgrade screen's shortcut)
+    int get_selected_uid() const;
+    void select_unit(int uid);
 
     // Standard UI loop methods
     void update(float deltaTime) override;
@@ -110,6 +126,9 @@ private:
     // The dragged unit
     void render_ghost(sf::RenderWindow& window);
 
+    // The selected fish's details beside the lineup: name, level, stats, abilities
+    void render_info(sf::RenderWindow& window);
+
 private:
 
     int m_currentIndex = 0; // Currently selected icon index
@@ -131,10 +150,17 @@ private:
     UIRoundButton m_nextButton;
     UIPanel m_lineupPanel;
     sf::Text m_lineupTitle;           // "LINEUP"
-    sf::Text m_hint;                  // How to equip / remove
     sf::Text m_ghostCost;             // Deploy cost on the dragged unit
+    UIPanel m_infoPanel;              // The selected fish's details
+    UIAbilityList m_abilities;        // Its abilities, at the bottom of the details
+    int m_describedUid = -1;          // The abilities shown are this fish's
 
     // Drag state tracking
+    UISwipe m_swipe;                  // Swiping the cards sideways
+    bool m_isFollowing = false;       // The cards follow the finger
+    UIGlide m_glide;                  // Flung: the cards glide on to the selected one (counted from it)
+    float m_dragBase = 0.f;           // Where the cards were when pressed (0 at rest; mid-glide when caught)
+    bool m_caughtGlide = false;       // The press stopped a glide: its release settles, it isn't a tap
     bool m_mouseDown = false;
     bool m_dragging = false;
     int m_dragFromSlot = -1;          // Lineup slot being dragged to another slot (-1: a card is dragged)
@@ -142,9 +168,9 @@ private:
     sf::Clock m_holdClock;
     static constexpr int HOLD_THRESHOLD_MS = 50; // Long press threshold
 
-    // Card layout: bottom-aligned on CARDS_BOTTOM, the selected card centered
+    // Card layout: bottom-aligned on CARDS_BOTTOM (the shelf's rail), the selected card centered
     const sf::Vector2f baseIconSize = { 250.0f, 250.0f };
-    const float CARDS_BOTTOM = 520.f;
+    const float CARDS_BOTTOM = 950.f;
     const float ICON_SPACING = 380.0f;
     const float CENTER_SCALE = 1.3f;
     const float SIDE_SCALE = 1.0f;

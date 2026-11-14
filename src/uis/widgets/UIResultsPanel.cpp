@@ -94,6 +94,7 @@ UIResultsPanel::UIResultsPanel(const BattleResult& result, const std::string& st
     m_primaryButton.set_text_size(m_actions.primaryLabel.size() > 10 ? 36 : 46);   // "RETURN TO MAP" fits
     m_primaryButton.set_callback(m_actions.primary);
     m_primaryButton.set_hotkey(sf::Keyboard::Key::Enter);
+    m_primaryButton.set_attention(true);
     m_secondaryButton.set_text_size(38);
     m_secondaryButton.set_style(UIButtonElement::Style::Secondary);
     m_secondaryButton.set_callback(m_actions.secondary);

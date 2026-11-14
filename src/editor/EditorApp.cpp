@@ -271,6 +271,11 @@ void EditorApp::draw_menu_bar()
             ImGui::SetItemTooltip("Saves, then rebuilds the game (code changes included) like Visual Studio would.\n"
                 "The build copies game_data, player.json included: the project's save replaces %s's progress.", build.name.c_str());
         }
+        if (ImGui::MenuItem("Install on phone (USB)", nullptr, false, !isBuilding)) install_on_phone(false);
+        ImGui::SetItemTooltip("Saves, builds the Android version and installs it on the phone plugged in with USB debugging on,\n"
+            "then starts it (it stays on the phone, to play anywhere). On a Xiaomi phone, tap Install on its prompt.");
+        if (ImGui::MenuItem("Install on phone (release)", nullptr, false, !isBuilding)) install_on_phone(true);
+        ImGui::SetItemTooltip("The same, optimized: smaller and faster, without debugging");
         if (ImGui::MenuItem("Build output", nullptr, &m_isBuildWindowOpen)) {}
         ImGui::Separator();
         if (ImGui::MenuItem("Save data..."))
@@ -548,6 +553,33 @@ void EditorApp::build_game(const GameBuilds::Build& build)
 }
 
 /*
+ * The phone version: the saved data built for Android, installed on the phone over USB (GameBuilder)
+ */
+void EditorApp::install_on_phone(bool isRelease)
+{
+    if (m_project.has_unsaved_changes())
+    {
+        m_project.commit_all();
+        validate();
+        if (!m_context.validation.isLoadedByGame)
+        {
+            m_context.notify("Not built: the game can't load the data (see Validation)", true);
+            return;
+        }
+        if (!save()) return;
+    }
+
+    std::string error;
+    if (!m_gameBuilder.start_phone_install(m_projectFolder, isRelease, error))
+    {
+        m_context.notify(error, true);
+        return;
+    }
+    m_isBuildWindowOpen = true;
+    m_context.notify("Building for the phone...");
+}
+
+/*
  * The output of the last build, following its end, with Play once it succeeded
  */
 void EditorApp::draw_build_window()
@@ -565,7 +597,7 @@ void EditorApp::draw_build_window()
         case GameBuilder::State::SUCCEEDED: ImGui::TextColored(ImVec4(0.45f, 0.9f, 0.6f, 1.f), "%s built", m_gameBuilder.get_build().name.c_str()); break;
         case GameBuilder::State::FAILED:    ImGui::TextColored(ImVec4(1.f, 0.45f, 0.4f, 1.f), "%s: the build failed", m_gameBuilder.get_build().name.c_str()); break;
         }
-        if (state == GameBuilder::State::SUCCEEDED)
+        if (state == GameBuilder::State::SUCCEEDED && !m_gameBuilder.get_build().folder.empty())   // Not the phone's
         {
             ImGui::SameLine();
             if (ImGui::SmallButton("Play")) launch_game(m_gameBuilder.get_build());

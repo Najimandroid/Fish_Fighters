@@ -3,9 +3,11 @@
 #include "../../core/DataLoader.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace
 {
+    const float ROLL_RATE = 7.f;          // How fast the digits roll to a new amount
     const unsigned int DIGITS_SIZE = 52;
     const float ICON_SIZE = 62.f;
     const float PADDING = 18.f;
@@ -33,18 +35,44 @@ void UIPlayerShellsInfo::update(float deltaTime)
     {
         const int amount = m_currency == Currency::SHELLS ? player->shells
             : m_currency == Currency::SHINY_SCALES ? player->shinyScales : player->fishScales;
-        m_text.setString(std::to_string(amount - m_heldBack));
+        const float target = static_cast<float>(amount - m_heldBack);
+
+        // The digits roll to a new amount instead of jumping (spent: they flash red on the way down)
+        if (m_shown < 0.f) m_shown = target;
+        else if (m_shown != target)
+        {
+            if (target < m_shown && m_spent <= 0.f) m_spent = 1.f;
+            m_shown += (target - m_shown) * std::min(1.f, deltaTime * ROLL_RATE);
+            if (std::abs(target - m_shown) < 0.5f) m_shown = target;
+        }
+        m_text.setString(std::to_string(static_cast<int>(std::lround(m_shown))));
     }
     m_pop = std::max(0.f, m_pop - deltaTime * 5.f);
+    m_spent = std::max(0.f, m_spent - deltaTime * 2.5f);
+    const sf::Color red{ 255, 120, 110 };
+    const auto mix = [this](std::uint8_t a, std::uint8_t b) { return static_cast<std::uint8_t>(a + (b - a) * m_spent); };
+    UISkin::set_text_color(m_text, { mix(UISkin::NUMBER.r, red.r), mix(UISkin::NUMBER.g, red.g), mix(UISkin::NUMBER.b, red.b) });
 
     const float textWidth = m_text.getLocalBounds().size.x;
     m_size = { std::max(MIN_PILL_WIDTH, textWidth + ICON_SIZE + 3.f * PADDING + m_trailingRoom), PILL_HEIGHT };
-    const float offset = m_currency == Currency::SHELLS ? OFFSET_X : m_currency == Currency::SHINY_SCALES ? SHINY_OFFSET_X : FISH_OFFSET_X;
-    m_position = { 1920.f - offset - m_size.x, OFFSET_Y };
+    const float offset = m_isInBottomBar ? OFFSET_X
+        : m_currency == Currency::SHELLS ? OFFSET_X : m_currency == Currency::SHINY_SCALES ? SHINY_OFFSET_X : FISH_OFFSET_X;
+    const float y = m_isInBottomBar ? UISkin::CONTENT_BOTTOM + (1080.f - UISkin::CONTENT_BOTTOM - PILL_HEIGHT) / 2.f + 2.f : OFFSET_Y;
+    m_position = { 1920.f - offset - m_size.x, y };
 
     // Digits on the right of the pill (left of a button there), vertically centered
     UISkin::set_text_anchor(m_text, { 1.f, 0.5f });
     m_text.setPosition({ m_position.x + m_size.x - PADDING - m_trailingRoom, m_position.y + m_size.y / 2.f });
+}
+
+void UIPlayerShellsInfo::set_tint(sf::Color tint)
+{
+    m_tint = tint;
+}
+
+void UIPlayerShellsInfo::place_in_bottom_bar()
+{
+    m_isInBottomBar = true;
 }
 
 void UIPlayerShellsInfo::set_trailing_room(float room)
@@ -56,7 +84,7 @@ void UIPlayerShellsInfo::render(sf::RenderWindow& window)
 {
     if (!m_isVisible) return;
 
-    UISkin::draw_nine_slice(window, UISkin::PANEL_DARK, get_bounds(), 1.f);
+    UISkin::draw_nine_slice(window, UISkin::PANEL_DARK, get_bounds(), 1.f, m_tint);
     const float iconSize = ICON_SIZE * (1.f + 0.3f * m_pop);   // Pops when something lands in it
     const char* icon = m_currency == Currency::SHELLS ? "icon_shell" : m_currency == Currency::SHINY_SCALES ? "icon_shiny_scale" : "icon_fish_scale";
     UISkin::draw_fitted(window, UISkin::texture(icon),

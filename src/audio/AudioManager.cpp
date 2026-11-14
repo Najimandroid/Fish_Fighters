@@ -1,5 +1,6 @@
 #include "AudioManager.h"
 
+#include "../core/Platform.h"
 #include "../external/nlohmann/json.hpp"
 
 #include <algorithm>
@@ -33,7 +34,7 @@ bool AudioManager::load()
  */
 bool AudioManager::load_music_list(const std::string& path)
 {
-    std::ifstream file(path);
+    auto file = Platform::open(path);
     if (!file)
     {
         std::cerr << "AudioManager: can't read " << path << "\n";
@@ -68,7 +69,7 @@ bool AudioManager::load_music_list(const std::string& path)
  */
 bool AudioManager::load_sound_list(const std::string& path)
 {
-    std::ifstream file(path);
+    auto file = Platform::open(path);
     if (!file)
     {
         std::cerr << "AudioManager: can't read " << path << "\n";
@@ -434,7 +435,7 @@ void AudioManager::apply_settings(const Settings& settings)
     sf::Listener::setGlobalVolume(m_masterVolume * m_focusLevel);
     set_music_volume(MUSIC_REFERENCE * curve(settings.musicVolume));
     set_sound_volume(100.f * curve(settings.effectsVolume));
-    m_muteInBackground = settings.muteInBackground;
+    m_muteInBackground = Platform::IS_MOBILE || settings.muteInBackground;   // A phone's game always goes quiet behind other apps
 }
 
 void AudioManager::set_focus_muted(bool isUnfocused)

@@ -17,7 +17,7 @@
 /*
  * AttackType enumerates the possible attack behaviors of a unit or enemy.
  */
-enum AttackType
+enum AttackType : int
 {
     SINGLE = 1,  // Single-target attack
     AREA         // Area-of-effect attack

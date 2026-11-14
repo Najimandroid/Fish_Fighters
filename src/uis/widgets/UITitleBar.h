@@ -19,9 +19,21 @@ public:
 
     static constexpr float HEIGHT = 112.f;
 
-    UITitleBar(const std::string& title);
+    // The band's material follows the screen's place: steel in the submarine, violet in the Clam Room, mother-of-pearl
+    // inside the clam (the Clam Storage)
+    enum class Material { STEEL, VIOLET, NACRE };
+
+    UITitleBar(const std::string& title, Material material = Material::STEEL);
+
+    // A material's colors: the band's top and bottom, its bevel, the rivets (pearls on mother-of-pearl). The bottom
+    // bar (UIBottomBar) is the same band
+    struct Look { sf::Color top, bottom, bevel, rivet; };
+    static Look look_of(Material material);
 
     void set_title(const std::string& title);
+
+    // Where the screen's "i" goes: right of the title (UIInfoButton's center)
+    sf::Vector2f get_info_position() const;
 
     void update(float deltaTime) override {}
     void render(sf::RenderWindow& window) override;
@@ -29,4 +41,5 @@ public:
 private:
 
     sf::Text m_title;
+    Material m_material = Material::STEEL;
 };

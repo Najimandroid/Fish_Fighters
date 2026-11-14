@@ -1,6 +1,7 @@
 #include "EntityPortraits.h"
 #include "UISkin.h"
 #include "../data/EntityData.h"
+#include "../core/Platform.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -17,7 +18,7 @@ namespace
     {
         static std::unordered_map<std::string, bool> known;
         auto it = known.find(path);
-        if (it == known.end()) it = known.emplace(path, std::filesystem::exists(path)).first;
+        if (it == known.end()) it = known.emplace(path, Platform::exists(path)).first;
         return it->second;
     }
 

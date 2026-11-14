@@ -9,15 +9,20 @@
 
 namespace
 {
-    // Lineup: the same slots as in battle, in a dark panel under the cards
+    // Lineup: the same slots as in battle, in a dark panel at the top (like The Battle Cats' Organize screen); the
+    // selected fish's details beside it; the cards under them on a shelf
     const float SLOT_SPACING = 12.f;
-    const float LINEUP_TOP = 670.f;                      // Top of the first row of slots
+    const float LINEUP_TOP = 186.f;                      // Top of the first row of slots
+    const float LINEUP_LEFT = 70.f;                      // The lineup panel's left edge
     const float PANEL_PADDING = 22.f;
     const float PANEL_TITLE_BAND = 52.f;                 // "LINEUP" above the slots
     const float GHOST_SCALE = 1.5f;                      // The dragged unit is a slot this much bigger
     const float ARROW_SIZE = 96.f;
-    const float ARROW_Y = 292.f;
-    const float HINT_Y = 562.f;
+    const float ARROW_Y = 700.f;
+    const float SHELF_TOP = 494.f;                       // The cards' shelf: from here down to the bottom bar
+    const float DOTS_Y = 528.f;                          // The page dots, at the top of the shelf
+    const unsigned int INFO_NAME_SIZE = 40;
+    const unsigned int INFO_STAT_SIZE = 30;
 
     sf::Vector2f lineup_size()
     {
@@ -28,7 +33,15 @@ namespace
     {
         const sf::Vector2f slots = lineup_size();
         const sf::Vector2f size{ slots.x + 2.f * PANEL_PADDING, slots.y + PANEL_PADDING + PANEL_TITLE_BAND };
-        return { { (1920.f - size.x) / 2.f, LINEUP_TOP - PANEL_TITLE_BAND }, size };
+        return { { LINEUP_LEFT, LINEUP_TOP - PANEL_TITLE_BAND }, size };
+    }
+
+    // The selected fish's details: right of the lineup, as tall
+    sf::FloatRect info_panel_rect()
+    {
+        const sf::FloatRect lineup = lineup_panel_rect();
+        const float left = lineup.position.x + lineup.size.x + 28.f;
+        return { { left, lineup.position.y }, { 1920.f - 60.f - left, lineup.size.y } };
     }
 }
 
@@ -45,8 +58,8 @@ UIEquipSlider::UIEquipSlider(std::shared_ptr<DataLoader> dataLoader)
     m_nextButton(ARROW_SIZE, { 1920.f - 36.f - ARROW_SIZE, ARROW_Y }, "icon_play"),
     m_lineupPanel(lineup_panel_rect().size, lineup_panel_rect().position, UISkin::PANEL_DARK, 1.2f),
     m_lineupTitle(UISkin::heavy_font(), "LINEUP"),
-    m_hint(UISkin::regular_font(), "Click or drag a fish to add it   -   Drag in the lineup to reorder   -   Right click to remove"),
-    m_ghostCost(UISkin::heavy_font())
+    m_ghostCost(UISkin::heavy_font()),
+    m_infoPanel(info_panel_rect().size, info_panel_rect().position, UISkin::PANEL_DARK, 1.2f)
 {
     if (!m_placeholderTexture.loadFromFile("assets/images/textures/icons/placeholder.png")) {
         std::cerr << "UIEquipSlider: failed to load placeholder texture\n";
@@ -64,11 +77,7 @@ UIEquipSlider::UIEquipSlider(std::shared_ptr<DataLoader> dataLoader)
     const sf::FloatRect panel = lineup_panel_rect();
     UISkin::style_text(m_lineupTitle, 34, UISkin::TITLE);
     UISkin::set_text_anchor(m_lineupTitle, { 0.5f, 0.5f });
-    m_lineupTitle.setPosition({ 960.f, panel.position.y + PANEL_TITLE_BAND / 2.f + 6.f });
-
-    UISkin::style_body_text(m_hint, 28);
-    UISkin::set_text_anchor(m_hint, { 0.5f, 0.5f });
-    m_hint.setPosition({ 960.f, HINT_Y });
+    m_lineupTitle.setPosition({ panel.position.x + panel.size.x / 2.f, panel.position.y + PANEL_TITLE_BAND / 2.f + 6.f });
 
     UISkin::style_text(m_ghostCost, 32, UISkin::NUMBER);
 
@@ -113,7 +122,7 @@ void UIEquipSlider::init_icons()
     const float spacingY = SLOT_SPACING;
 
     // Calculate starting position for grid
-    float startX = (1920.f - lineup_size().x) / 2.f;
+    float startX = LINEUP_LEFT + PANEL_PADDING;
     float startY = LINEUP_TOP;
 
     // Create slot rectangles
@@ -247,6 +256,14 @@ void UIEquipSlider::update(float deltaTime)
         m_lineupTitle.setString("LINEUP " + std::to_string(count) + "/" + std::to_string(m_slots.size()));
         UISkin::set_text_anchor(m_lineupTitle, { 0.5f, 0.5f });
     }
+    // Flung: the cards glide on and slow down, then land (move_to_index puts everything in place)
+    if (m_glide.isActive)
+    {
+        const bool isGliding = m_glide.step(deltaTime);
+        follow_drag(m_glide.position);
+        if (!isGliding) move_to_index(m_currentIndex, true);
+    }
+
     // Cards: tweens, and "IN USE" on the units already in the lineup
     auto player = m_dataLoader->get_player_data().lock();
     for (auto& icon : m_equipIcons)
@@ -295,14 +312,20 @@ void UIEquipSlider::update(float deltaTime)
  */
 void UIEquipSlider::render(sf::RenderWindow& window)
 {
+    // The shelf the cards stand on, the page dots (they follow a slide), then the cards: the biggest (the one in the
+    // middle, or passing it while sliding) on top
+    UIUnitCard::draw_shelf(window, SHELF_TOP, UISkin::CONTENT_BOTTOM, CARDS_BOTTOM);
+    UIUnitCard::draw_page_dots(window, { 960.f, DOTS_Y }, static_cast<int>(m_equipIcons.size()),
+        static_cast<float>(m_currentIndex) - drag_offset() / ICON_SPACING);
+    const int front = UIUnitCard::biggest(m_equipIcons);
     for (int i = 0; i < static_cast<int>(m_equipIcons.size()); ++i)
-        if (i != m_currentIndex) m_equipIcons[i]->render(window);
-    if (!m_equipIcons.empty())
-        m_equipIcons[m_currentIndex]->render(window);
+        if (i != front) m_equipIcons[i]->render(window);
+    if (front >= 0)
+        m_equipIcons[front]->render(window);
 
     m_previousButton.render(window);
     m_nextButton.render(window);
-    window.draw(m_hint);
+    // (How to add, reorder and remove fish is in the screen's "i", like the other screens: no line of text here)
 
     render_lineup(window);
 
@@ -313,6 +336,7 @@ void UIEquipSlider::render(sf::RenderWindow& window)
             m_slots[i].ghost->render(window);
     }
 
+    render_info(window);
     render_ghost(window);
 }
 
@@ -333,6 +357,75 @@ void UIEquipSlider::render_lineup(sf::RenderWindow& window)
         UISkin::draw_nine_slice(window, UISkin::SLOT, slot.bounds, 1.f, UISkin::EMPTY_SLOT_TINT);
         UISkin::draw_nine_slice(window, UISkin::SLOT_FRAME, slot.bounds, 1.f);
     }
+}
+
+/*
+ * render_info
+ * -----------
+ * The selected fish's details beside the lineup, like The Battle Cats' Unit Info: its name and level, what it does in
+ * battle at its level (health, attack, range, speed) and what sending it costs (price, cooldown), its abilities
+ */
+void UIEquipSlider::render_info(sf::RenderWindow& window)
+{
+    m_infoPanel.render(window);
+    auto player = m_dataLoader->get_player_data().lock();
+    const int uid = get_selected_uid();
+    auto data = player && uid >= 0 ? m_dataLoader->get_unit_data(uid, player->get_unit_form(uid)) : nullptr;
+    if (!data) return;
+
+    const sf::FloatRect panel = info_panel_rect();
+    auto drawText = [&window](const std::string& string, unsigned int size, sf::Color color, sf::Vector2f position, sf::Vector2f anchor)
+        {
+            sf::Text text(UISkin::heavy_font(), string);
+            UISkin::style_text(text, size, color);
+            UISkin::set_text_anchor(text, anchor);
+            text.setPosition(position);
+            window.draw(text);
+            return text.getGlobalBounds();
+        };
+
+    // Name, then the level (and the Clam Room's extra levels, in purple) on the right
+    const float left = panel.position.x + 34.f, right = panel.position.x + panel.size.x - 34.f;
+    float y = panel.position.y + 44.f;
+    drawText(data->name, INFO_NAME_SIZE, UISkin::NUMBER, { left, y }, { 0.f, 0.5f });
+    const int level = player->get_unit_level(uid), extra = player->get_unit_extra_levels(uid);
+    float levelLeft = right;
+    if (extra > 0) levelLeft = drawText("+" + std::to_string(extra), INFO_STAT_SIZE, UISkin::EXTRA, { right, y }, { 1.f, 0.5f }).position.x - 8.f;
+    drawText("LEVEL " + std::to_string(level), INFO_STAT_SIZE, UISkin::TEXT, { levelLeft, y }, { 1.f, 0.5f });
+
+    // Two columns of stats at its level: in battle, then what it costs
+    const float factor = PlayerData::stat_multiplier(std::max(1, level) + extra);
+    auto format = [](float value) { return std::to_string(static_cast<int>(std::lround(value))); };
+    auto format_seconds = [](float seconds)
+        {
+            const int tenths = static_cast<int>(std::lround(seconds * 10.f));
+            return std::to_string(tenths / 10) + (tenths % 10 ? "." + std::to_string(tenths % 10) : "") + "s";
+        };
+    const std::pair<std::string, std::string> rows[3][2] = {
+        { { "Health", format(data->health * factor) }, { "Cost", std::to_string(data->cost) + "$" } },
+        { { "Attack", format(data->attackPower * factor) }, { "Cooldown", format_seconds(data->cooldown) } },
+        { { "Range", format(data->attackRange) }, { "Speed", format(data->movementSpeed) } } };
+    const float columnWidth = (right - left - 40.f) / 2.f;
+    y += 64.f;
+    for (const auto& row : rows)
+    {
+        for (int column = 0; column < 2; ++column)
+        {
+            const float x = left + column * (columnWidth + 40.f);
+            drawText(row[column].first, INFO_STAT_SIZE, UISkin::TEXT, { x, y }, { 0.f, 0.5f });
+            drawText(row[column].second, INFO_STAT_SIZE, UISkin::NUMBER, { x + columnWidth, y }, { 1.f, 0.5f });
+        }
+        y += 46.f;
+    }
+
+    // Its abilities along the bottom (hover or tap one to see what it does)
+    if (uid != m_describedUid)
+    {
+        m_abilities.set_abilities(data->abilities);
+        m_describedUid = uid;
+    }
+    m_abilities.set_position({ left, y });
+    m_abilities.render(window);
 }
 
 /*
@@ -392,32 +485,36 @@ void UIEquipSlider::handle_event(const sf::Event& event, const sf::RenderWindow&
         if (mousePressed->button == sf::Mouse::Button::Left)
         {
             sf::Vector2f mousePos = window.mapPixelToCoords(mousePressed->position);
+            const bool wasGliding = m_glide.isActive;
+            m_glide.isActive = false;
             m_dragFromSlot = -1;
             for (int i = 0; i < static_cast<int>(m_slots.size()); ++i)
                 if (m_slots[i].ghost && m_slots[i].bounds.contains(mousePos))
                     m_dragFromSlot = i;
 
+            // Pressed on a unit of the lineup or the current card -> start hold timer (not when the press only
+            // stops gliding cards: the card under the finger may not be the selected one yet)
             if (m_dragFromSlot >= 0
-                || (!m_equipIcons.empty() && m_equipIcons[m_currentIndex]->get_bounds().contains(mousePos)))
+                || (!wasGliding && !m_equipIcons.empty() && m_equipIcons[m_currentIndex]->get_bounds().contains(mousePos)))
             {
-                // Pressed on a unit of the lineup or the current card -> start hold timer
                 m_mouseDown = true;
                 m_mouseDownPos = mousePos;
                 m_holdClock.restart();
             }
-            else if (!(m_previousButton.is_visible() && m_previousButton.get_bounds().contains(mousePos))
-                && !(m_nextButton.is_visible() && m_nextButton.get_bounds().contains(mousePos)))
+            // Anywhere on the screen, not only on the cards (not on a fish of the lineup, the arrows drawn over the far
+            // cards or the back button): it may be a slide of the cards, a glide stops under the finger; a tap on a
+            // side card picks it when released
+            const bool isOnArrow = (m_previousButton.is_visible() && m_previousButton.get_bounds().contains(mousePos))
+                || (m_nextButton.is_visible() && m_nextButton.get_bounds().contains(mousePos));
+            if (m_dragFromSlot < 0 && !isOnArrow && UISkin::is_slide_area(mousePos))
             {
-                // Pressed another icon -> switch selection (the arrows, drawn over the far cards, come first)
-                for (int i = 0; i < static_cast<int>(m_equipIcons.size()); ++i)
-                {
-                    if (i != m_currentIndex && m_equipIcons[i]->get_bounds().contains(mousePos))
-                    {
-                        move_to_index(i);
-                        break;
-                    }
-                }
+                m_caughtGlide = wasGliding;
+                m_dragBase = drag_offset();
+                if (wasGliding) follow_drag(m_dragBase);
+                m_swipe.press(mousePos);
             }
+            else if (wasGliding)
+                move_to_index(m_currentIndex, true);   // Elsewhere: they land on the selected card at once
         }
     }
 
@@ -426,13 +523,25 @@ void UIEquipSlider::handle_event(const sf::Event& event, const sf::RenderWindow&
     {
         sf::Vector2f mousePos = window.mapPixelToCoords(mouseMoved->position);
 
-        // Start drag if the mouse has moved more than a threshold
+        // Start a drag once it has moved a little (a finger wobbles: not on the first pixels). From the current card,
+        // sliding sideways is a swipe of the cards instead (a card goes down to the lineup)
+        m_swipe.move(mousePos);
+        const sf::Vector2f drag = m_swipe.last - m_swipe.start;
+        if (m_swipe.isDown && !m_dragging && (m_isFollowing || (std::abs(drag.x) > 12.f && std::abs(drag.x) > 1.4f * std::abs(drag.y))))
+        {
+            m_isFollowing = true;
+            follow_drag(m_dragBase + drag.x);
+        }
         if (m_mouseDown && !m_dragging)
         {
             float dx = mousePos.x - m_mouseDownPos.x;
             float dy = mousePos.y - m_mouseDownPos.y;
-            if (std::sqrt(dx * dx + dy * dy) > 5.f)
+            const bool isSideways = m_dragFromSlot < 0 && std::abs(dx) > 1.4f * std::abs(dy);
+            if (std::sqrt(dx * dx + dy * dy) > 12.f && !isSideways)
+            {
+                m_swipe.cancel();
                 begin_drag(mousePos);
+            }
         }
 
         // While dragging, move ghost with cursor
@@ -448,18 +557,39 @@ void UIEquipSlider::handle_event(const sf::Event& event, const sf::RenderWindow&
         if (mouseReleased->button == sf::Mouse::Button::Left)
         {
             const sf::Vector2f mousePos = window.mapPixelToCoords(mouseReleased->position);
+            const float dragX = m_dragBase + mousePos.x - m_swipe.start.x;
+            const bool wasSwiping = m_swipe.isDown;
+            if (m_swipe.isDown) m_swipe.release(mousePos);
+            const bool wasFollowing = m_isFollowing || (wasSwiping && m_caughtGlide);
+            m_isFollowing = false;
             if (m_dragging && m_tempGhost && m_tempGhost->active)
             {
                 end_drag(mousePos);
+            }
+            else if (wasFollowing)
+            {
+                // Let go (or a glide caught by a tap): flung, they glide on; else they settle on the nearest card
+                release_slide(dragX, m_swipe.velocity.x);
             }
             else if (m_mouseDown && !m_dragging && m_dragFromSlot < 0
                 && !m_equipIcons.empty() && m_equipIcons[m_currentIndex]->get_bounds().contains(mousePos))
             {
                 add_selected_to_lineup();   // A click, not a drag
             }
+            else if (!m_dragging && m_dragFromSlot < 0)
+            {
+                // A tap on a side card: it comes to the middle
+                for (int i = 0; i < static_cast<int>(m_equipIcons.size()); ++i)
+                    if (i != m_currentIndex && m_equipIcons[i]->get_bounds().contains(mousePos))
+                    {
+                        move_to_index(i);
+                        break;
+                    }
+            }
             m_mouseDown = false;
             m_dragging = false;
             m_dragFromSlot = -1;
+            m_caughtGlide = false;
         }
     }
 
@@ -472,6 +602,35 @@ void UIEquipSlider::handle_event(const sf::Event& event, const sf::RenderWindow&
 
     m_previousButton.handle_event(event, window);
     m_nextButton.handle_event(event, window);
+    m_abilities.handle_event(event, window);
+}
+
+int UIEquipSlider::get_selected_uid() const
+{
+    return m_equipIcons.empty() ? -1 : m_equipIcons[m_currentIndex]->get_uid();
+}
+
+void UIEquipSlider::select_unit(int uid)
+{
+    const auto found = std::find(m_availableEquips.begin(), m_availableEquips.end(), uid);
+    if (found == m_availableEquips.end()) return;
+    m_currentIndex = static_cast<int>(found - m_availableEquips.begin());
+    init_icons();   // Laid out round it at once
+}
+
+/*
+ * The cards follow a finger sliding them: each at its place plus how far it has slid (no glide while held), the
+ * one passing the middle growing to the selected size and the one leaving it shrinking; the nearest is the
+ * highlighted one
+ */
+void UIEquipSlider::follow_drag(float dragX)
+{
+    for (int i = 0; i < static_cast<int>(m_equipIcons.size()); ++i)
+    {
+        const float slot = static_cast<float>(i - m_currentIndex) + dragX / ICON_SPACING;   // Cards from the middle
+        m_equipIcons[i]->place_at(1920.f / 2.f + slot * ICON_SPACING, baseIconSize.x * UIUnitCard::carousel_scale(slot, CENTER_SCALE, SIDE_SCALE));
+        m_equipIcons[i]->select(std::abs(slot) < 0.5f);
+    }
 }
 
 /*
@@ -481,12 +640,47 @@ void UIEquipSlider::handle_event(const sf::Event& event, const sf::RenderWindow&
  * - New center icon is larger and shifted slightly
  * - Other icons tween to their new positions/sizes
  */
-void UIEquipSlider::move_to_index(int newIndex)
-{
-    if (newIndex < 0 || newIndex >= static_cast<int>(m_equipIcons.size()) || newIndex == m_currentIndex)
-        return;
 
-    play_sound("ui_select");
+// Where the cards settle when let go slowly: the nearest one (a short flick from rest still moves one card)
+int UIEquipSlider::snap_index(float dragX, bool allowsFlick) const
+{
+    int target = static_cast<int>(std::lround(static_cast<float>(m_currentIndex) - dragX / ICON_SPACING));
+    if (allowsFlick && target == m_currentIndex && std::abs(dragX) > UISwipe::DISTANCE) target += dragX < 0.f ? 1 : -1;
+    return std::clamp(target, 0, std::max(0, static_cast<int>(m_equipIcons.size()) - 1));
+}
+
+float UIEquipSlider::drag_offset() const
+{
+    if (m_equipIcons.empty()) return 0.f;
+    const auto& card = m_equipIcons[m_currentIndex];
+    return card->get_position().x + card->get_size().x / 2.f - 1920.f / 2.f;
+}
+
+/*
+ * Let go: flung (faster than UISwipe::GLIDE_SPEED), the cards glide on and slow down, landing on the card that speed
+ * carries them to (selected at once); slower, they settle on the nearest card
+ */
+void UIEquipSlider::release_slide(float dragX, float speed)
+{
+    const int last = static_cast<int>(m_equipIcons.size()) - 1;
+    if (std::abs(speed) <= UISwipe::GLIDE_SPEED || last < 0)
+    {
+        move_to_index(snap_index(dragX, !m_caughtGlide && std::abs(m_dragBase) < 20.f), true);
+        return;
+    }
+    const int target = std::clamp(UIGlide::landing(static_cast<float>(m_currentIndex), dragX, speed, ICON_SPACING), 0, last);
+    if (target != m_currentIndex) play_sound("ui_select");
+    m_glide.start(dragX + static_cast<float>(target - m_currentIndex) * ICON_SPACING, 0.f);   // Counted from the target
+    m_currentIndex = target;
+}
+
+void UIEquipSlider::move_to_index(int newIndex, bool force)
+{
+    if (newIndex < 0 || newIndex >= static_cast<int>(m_equipIcons.size()) || (newIndex == m_currentIndex && !force))
+        return;
+    m_glide.isActive = false;   // The arrows, the keys or a tap take over from a glide
+
+    if (newIndex != m_currentIndex) play_sound("ui_select");
 
     sf::Vector2f screenCenter(1920.f / 2.0f - baseIconSize.x / 2.f, CARDS_BOTTOM);
 
@@ -664,96 +858,56 @@ void UIEquipSlider::end_drag(const sf::Vector2f& pos)
         }
     }
 
-    // A unit of the lineup: dropped on another slot, it swaps with the unit there (or moves to the
-    // end of the lineup on an empty slot, the lineup has no gaps); anywhere else, it goes back
+    // A unit of the lineup dropped out of the lineup panel leaves the lineup (the touch way to remove one; right click
+    // works too); in the panel between slots or back on its own slot, it goes back. On another slot: below
     if (m_dragFromSlot >= 0)
     {
         auto player = m_dataLoader->get_player_data().lock();
-        if (player && targetSlot != -1 && targetSlot != m_dragFromSlot
-            && player->equippedUnits[m_dragFromSlot] == m_tempGhost->uid)
+        const bool isStillThere = player && player->equippedUnits[m_dragFromSlot] == m_tempGhost->uid;
+        if (isStillThere && targetSlot == -1 && !lineup_panel_rect().contains(pos))
         {
-            auto& lineup = player->equippedUnits;
-            const int equippedCount = static_cast<int>(std::count_if(lineup.begin(), lineup.end(), [](int uid) { return uid >= 0; }));
-            if (targetSlot < equippedCount)
-                std::swap(lineup[m_dragFromSlot], lineup[targetSlot]);
-            else
-                std::rotate(lineup.begin() + m_dragFromSlot, lineup.begin() + m_dragFromSlot + 1, lineup.begin() + equippedCount);
-            play_sound("equip");
+            player->unequip_unit(m_dragFromSlot);
+            play_sound("unequip");
             refresh_slots_after_unequip();
+            m_tempGhost->scaleTween = tweeny::from(m_tempGhost->currentScale).to(0.f).during(12).via(tweeny::easing::quadraticIn);
+            return;
         }
-        m_tempGhost->active = false;
-        return;
+        if (!isStillThere || targetSlot == -1 || targetSlot == m_dragFromSlot)
+        {
+            m_tempGhost->active = false;
+            return;
+        }
     }
 
-    // If released on any slot area
+    // Released on a slot: the fish goes there. On a taken slot it takes that place and the others move along one slot
+    // (full lineup: a new fish replaces the one there); a fish already in the lineup (a card IN USE, or one dragged
+    // from the lineup) moves there the same way; past the last fish, it goes at the end (the lineup has no gaps)
     if (targetSlot != -1)
     {
-        // Prevent duplicates: unit already equipped?
-        bool alreadyEquipped = false;
-        for (int j = 0; j < static_cast<int>(m_slots.size()); ++j)
+        if (auto player = m_dataLoader->get_player_data().lock())
         {
-            if (m_slots[j].ghost)
+            auto& lineup = player->equippedUnits;
+            std::vector<int> units;
+            for (int uid : lineup) if (uid >= 0) units.push_back(uid);
+            const int uid = m_tempGhost->uid;
+            const auto existing = std::find(units.begin(), units.end(), uid);
+            if (existing != units.end())
             {
-                auto s = std::dynamic_pointer_cast<UIEquipSlot>(m_slots[j].ghost);
-                if (s && s->get_uid() == m_tempGhost->uid)
-                {
-                    alreadyEquipped = true;
-                    break;
-                }
+                units.erase(existing);
+                units.insert(units.begin() + std::min(targetSlot, static_cast<int>(units.size())), uid);
             }
+            else if (targetSlot >= static_cast<int>(units.size())) units.push_back(uid);
+            else if (units.size() >= lineup.size()) units[targetSlot] = uid;     // Full: it replaces the fish there
+            else units.insert(units.begin() + targetSlot, uid);                    // Room left: the others move along
+            lineup.fill(-1);
+            for (size_t i = 0; i < units.size() && i < lineup.size(); ++i) lineup[i] = units[i];
+            play_sound("equip");
+            refresh_slots_after_unequip();   // Rebuilds the slots from the lineup
         }
-
-        // If not already equipped -> assign unit to the first available slot
-        if (!alreadyEquipped)
-        {
-            int finalSlot = -1;
-            for (int i = 0; i < static_cast<int>(m_slots.size()); ++i)
-            {
-                if (!m_slots[i].ghost)
-                {
-                    finalSlot = i;
-                    break;
-                }
-            }
-
-            if (finalSlot != -1)
-            {
-                if (auto player = m_dataLoader->get_player_data().lock())
-                {
-                    player->equip_unit(m_tempGhost->uid, finalSlot);
-                    play_sound("equip");
-
-                    auto slotGhost = std::make_shared<UIEquipSlot>(
-                        m_tempGhost->uid,
-                        m_tempGhost->cost,
-                        m_dataLoader->get_unit_icon_texture_path(m_tempGhost->uid, m_dataLoader->get_player_data().lock()->get_unit_form(m_tempGhost->uid)),
-                        finalSlot
-                    );
-
-                    slotGhost->set_position({ m_slots[finalSlot].bounds.position.x, m_slots[finalSlot].bounds.position.y });
-                    slotGhost->set_size({ m_slots[finalSlot].bounds.size.x, m_slots[finalSlot].bounds.size.y });
-
-                    // Define unequip callback
-                    slotGhost->set_callback([this](int slotIndex) 
-                        {
-                        if (auto player = m_dataLoader->get_player_data().lock()) {
-                            // Unequip the clicked slot
-                            player->unequip_unit(slotIndex);
-                            play_sound("unequip");
-
-                            // Refresh all slots and redraw ghosts in order
-                            refresh_slots_after_unequip();
-                        }
-                        });
-
-                    m_slots[finalSlot].ghost = slotGhost;
-                }
-            }
-        }
-
         m_tempGhost->active = false;
         return;
     }
+
 
     // If dropped in empty space -> shrink out animations
     m_tempGhost->scaleTween = tweeny::from(m_tempGhost->currentScale).to(0.f).during(12).via(tweeny::easing::quadraticIn);

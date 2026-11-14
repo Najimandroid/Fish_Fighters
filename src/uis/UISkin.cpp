@@ -1,6 +1,7 @@
 #include "UISkin.h"
 
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <memory>
 #include <unordered_map>
@@ -318,4 +319,155 @@ sf::FloatRect UISkin::slot_inner(const sf::FloatRect& rect, float cornerScale)
 {
     const float inset = SLOT_OUTLINE * cornerScale;
     return { rect.position + sf::Vector2f{ inset, inset }, rect.size - sf::Vector2f{ inset, inset } * 2.f };
+}
+
+/*
+ * The transitions' band of deep water: a triangle strip between two wavy edges, a foam line along each, and a few
+ * bubbles rising inside (only where they fit whole)
+ */
+namespace
+{
+    sf::FloatRect g_screen{ { 0.f, 0.f }, { 1920.f, 1080.f } };
+}
+
+sf::FloatRect UISkin::screen_rect() { return g_screen; }
+void UISkin::set_screen_rect(const sf::FloatRect& rect) { g_screen = rect; }
+
+void UISkin::fill_screen(sf::RenderTarget& target, sf::Color color)
+{
+    sf::RectangleShape fill(g_screen.size);
+    fill.setPosition(g_screen.position);
+    fill.setFillColor(color);
+    target.draw(fill);
+}
+
+bool UISkin::is_slide_area(sf::Vector2f point)
+{
+    const sf::Vector2f margin{ 16.f, 16.f };   // A finger is wider than the mouse: a little room round the button
+    const sf::FloatRect back{ BACK_BUTTON.position - margin, BACK_BUTTON.size + margin * 2.f };
+    return point.y > CONTENT_TOP && point.y < CONTENT_BOTTOM && !back.contains(point);
+}
+
+/*
+ * Hull pillars on both sides of the 16:9 layout: darker outside, a bevel and a dark edge on the inside, a column of
+ * rivets, and a shadow they cast on the screen between them
+ */
+sf::ConvexShape UISkin::rounded_rect(const sf::FloatRect& rect, float radius)
+{
+    radius = std::min({ radius, rect.size.x / 2.f, rect.size.y / 2.f });
+    const int perCorner = 8;
+    sf::ConvexShape shape(perCorner * 4);
+    const sf::Vector2f centers[] = {
+        { rect.position.x + rect.size.x - radius, rect.position.y + radius },
+        { rect.position.x + rect.size.x - radius, rect.position.y + rect.size.y - radius },
+        { rect.position.x + radius, rect.position.y + rect.size.y - radius },
+        { rect.position.x + radius, rect.position.y + radius } };
+    for (int corner = 0; corner < 4; ++corner)
+        for (int i = 0; i < perCorner; ++i)
+        {
+            const float angle = (-90.f + 90.f * static_cast<float>(corner) + 90.f * static_cast<float>(i) / (perCorner - 1)) * 3.14159265f / 180.f;
+            shape.setPoint(static_cast<std::size_t>(corner * perCorner + i), centers[corner] + sf::Vector2f{ std::cos(angle), std::sin(angle) } * radius);
+        }
+    return shape;
+}
+
+void UISkin::draw_side_frame(sf::RenderTarget& target)
+{
+    const float side = -g_screen.position.x;   // The extra width on each side
+    if (side < 4.f) return;
+    const float top = g_screen.position.y, bottom = top + g_screen.size.y;
+    const sf::Color outer{ 30, 40, 56 }, inner{ 66, 84, 108 }, bevel{ 128, 148, 172 };
+
+    for (const bool isRight : { false, true })
+    {
+        const float outerX = isRight ? 1920.f + side : -side, innerX = isRight ? 1920.f : 0.f;
+        const float toInner = isRight ? -1.f : 1.f;   // Towards the layout
+
+        sf::VertexArray body(sf::PrimitiveType::TriangleStrip, 4);
+        body[0] = sf::Vertex{ { outerX, top }, outer };
+        body[1] = sf::Vertex{ { innerX, top }, inner };
+        body[2] = sf::Vertex{ { outerX, bottom }, outer };
+        body[3] = sf::Vertex{ { innerX, bottom }, inner };
+        target.draw(body);
+
+        // The bevel, then the dark edge, then the shadow on the layout
+        sf::RectangleShape line({ 4.f, bottom - top });
+        line.setFillColor(bevel);
+        line.setPosition({ innerX - toInner * 14.f - (isRight ? 0.f : 4.f), top });
+        target.draw(line);
+        line.setSize({ 6.f, bottom - top });
+        line.setFillColor(OUTLINE);
+        line.setPosition({ isRight ? innerX : innerX - 6.f, top });
+        target.draw(line);
+        sf::VertexArray shadow(sf::PrimitiveType::TriangleStrip, 4);
+        const float shadowEnd = innerX + toInner * 28.f;
+        shadow[0] = sf::Vertex{ { innerX, top }, sf::Color(0, 0, 0, 110) };
+        shadow[1] = sf::Vertex{ { shadowEnd, top }, sf::Color(0, 0, 0, 0) };
+        shadow[2] = sf::Vertex{ { innerX, bottom }, sf::Color(0, 0, 0, 110) };
+        shadow[3] = sf::Vertex{ { shadowEnd, bottom }, sf::Color(0, 0, 0, 0) };
+        target.draw(shadow);
+
+        // Rivets down the pillar
+        const float rivetX = innerX - toInner * std::min(46.f, side * 0.4f);
+        sf::CircleShape rivet(8.f);
+        rivet.setOrigin({ 8.f, 8.f });
+        rivet.setOutlineThickness(3.f);
+        rivet.setOutlineColor(OUTLINE);
+        for (float y = top + 70.f; y < bottom - 30.f; y += 150.f)
+        {
+            rivet.setFillColor(sf::Color(112, 130, 154));
+            rivet.setPosition({ rivetX, y });
+            target.draw(rivet);
+        }
+    }
+}
+
+void UISkin::draw_water_band(sf::RenderTarget& target, float top, float bottom, float time)
+{
+    if (bottom - top < 1.f) return;
+    // Across the whole screen, a phone's extra width too (and down past a tablet's extra height)
+    const float left = g_screen.position.x, width = g_screen.size.x;
+    top = std::max(top, g_screen.position.y - WATER_WAVE * 3.f);
+    bottom = std::min(bottom, g_screen.position.y + g_screen.size.y + WATER_WAVE * 3.f);
+    if (bottom - top < 1.f) return;
+    const sf::Color upper{ 38, 104, 156 }, lower{ 14, 46, 86 };
+    const sf::Color foam{ 196, 236, 255, 210 };
+    const float step = 32.f, foamWidth = 7.f;
+    const auto top_edge = [&](float x) { return top + std::sin(x * 0.011f + time * 7.f) * WATER_WAVE * 0.7f + std::sin(x * 0.027f - time * 4.f) * WATER_WAVE * 0.3f; };
+    const auto bottom_edge = [&](float x) { return bottom + std::sin(x * 0.012f - time * 6.f + 1.3f) * WATER_WAVE * 0.7f + std::sin(x * 0.023f + time * 5.f) * WATER_WAVE * 0.3f; };
+
+    const int columns = static_cast<int>(width / step) + 2;
+    sf::VertexArray water(sf::PrimitiveType::TriangleStrip), topFoam(sf::PrimitiveType::TriangleStrip), bottomFoam(sf::PrimitiveType::TriangleStrip);
+    for (int i = 0; i <= columns; ++i)
+    {
+        const float x = left - step + static_cast<float>(i) * step;
+        const float a = top_edge(x), b = bottom_edge(x);
+        water.append({ { x, a }, upper });
+        water.append({ { x, b }, lower });
+        topFoam.append({ { x, a }, foam });
+        topFoam.append({ { x, a + foamWidth }, sf::Color(foam.r, foam.g, foam.b, 0) });
+        bottomFoam.append({ { x, b - foamWidth }, sf::Color(foam.r, foam.g, foam.b, 0) });
+        bottomFoam.append({ { x, b }, foam });
+    }
+    target.draw(water);
+    target.draw(topFoam);
+    target.draw(bottomFoam);
+
+    // A few bubbles rising through it (always the same ones, so they don't flicker)
+    const sf::Texture& bubble = texture("bubble");
+    const float textureSize = static_cast<float>(std::max(1u, bubble.getSize().x));
+    sf::Sprite sprite(bubble);
+    const float height = bottom - top;
+    for (int i = 0; i < 12; ++i)
+    {
+        const float size = 34.f + static_cast<float>((i * 37) % 50);
+        const float x = left + std::fmod(static_cast<float>(i * 389 + 120), width) + std::sin(time * 3.f + i) * 10.f;
+        const float speed = 260.f + static_cast<float>((i * 53) % 140);
+        const float y = bottom - std::fmod(time * speed + static_cast<float>(i) * 131.f, std::max(1.f, height));
+        if (y - size < top + WATER_WAVE + 8.f || y > bottom - WATER_WAVE - 8.f) continue;
+        sprite.setScale({ size / textureSize, size / textureSize });
+        sprite.setPosition({ x - size / 2.f, y - size });
+        sprite.setColor(sf::Color(255, 255, 255, 130));
+        target.draw(sprite);
+    }
 }

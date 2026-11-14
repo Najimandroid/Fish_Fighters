@@ -2,6 +2,7 @@
 #include "../core/DataLoader.h"
 #include <algorithm>
 #include <cmath>
+#include <ctime>
 #include <iostream>
 
 /*
@@ -123,6 +124,38 @@ int PlayerData::claim_school_rank_rewards()
     }
     shinyScales += given;
     return given;
+}
+
+namespace
+{
+    // Today, on the player's clock: YYYY-MM-DD
+    std::string today()
+    {
+        const std::time_t now = std::time(nullptr);
+        std::tm local{};
+#if defined(_WIN32)
+        localtime_s(&local, &now);
+#else
+        localtime_r(&now, &local);
+#endif
+        char text[16];
+        std::strftime(text, sizeof(text), "%Y-%m-%d", &local);
+        return text;
+    }
+}
+
+int PlayerData::ads_left_today() const
+{
+    return adsDay == today() ? std::max(0, ADS_PER_DAY - adsToday) : ADS_PER_DAY;
+}
+
+bool PlayerData::watch_ad()
+{
+    if (ads_left_today() <= 0) return false;
+    if (adsDay != today()) { adsDay = today(); adsToday = 0; }
+    adsToday += 1;
+    shinyScales += 1;
+    return true;
 }
 
 bool PlayerData::give_clam_room_gift()

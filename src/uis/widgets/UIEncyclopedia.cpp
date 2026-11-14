@@ -14,7 +14,7 @@ namespace
     // Layout
     // The grid stops above the back button (bottom left, 120 px + 24 px margin): 5 rows, scrolling
     const sf::FloatRect GRID_PANEL{ { 40.f, 232.f }, { 840.f, 656.f } };
-    const sf::FloatRect DETAIL_PANEL{ { 910.f, 232.f }, { 970.f, 818.f } };
+    const sf::FloatRect DETAIL_PANEL{ { 910.f, 232.f }, { 970.f, UISkin::CONTENT_BOTTOM - 16.f - 232.f } };   // Down to the bottom bar
     const sf::Vector2f SLOT_SIZE{ 150.f, 112.f };
     const float SLOT_GAP = 12.f;
     const int COLUMNS = 5;

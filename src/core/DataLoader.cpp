@@ -1,5 +1,6 @@
 #include "DataLoader.h"
 
+#include "Platform.h"
 #include "../external/nlohmann/json.hpp"
 
 #include <algorithm>
@@ -146,7 +147,7 @@ void DataLoader::report_error(const std::string& message)
     m_lastError = message;
 
     if (!m_isWritingErrorLog) return;
-    std::ofstream log(ERROR_LOG_PATH, std::ios::app);
+    std::ofstream log(Platform::writable(ERROR_LOG_PATH), std::ios::app);
     if (log) log << message << "\n";
 }
 
@@ -230,7 +231,7 @@ bool DataLoader::load_units(const std::string& path)
 {
     if (m_unitsLoaded) return false;
 
-    std::ifstream file(path);
+    auto file = Platform::open(path);
     if (!file) { std::cerr << "Failed to load units\n"; return false; }
 
     json j; file >> j;
@@ -307,7 +308,7 @@ bool DataLoader::load_enemies(const std::string& path)
 {
     if (m_enemiesLoaded) return false;
 
-    std::ifstream file(path);
+    auto file = Platform::open(path);
     if (!file) { std::cerr << "Failed to load enemies\n"; return false; }
 
     json j;
@@ -376,7 +377,7 @@ bool DataLoader::load_stages(const std::string& path)
 {
     if (m_stagesLoaded) return false;
 
-    std::ifstream file(path);
+    auto file = Platform::open(path);
     if (!file) { std::cerr << "Failed to load stages\n"; return false; }
 
     json j;
@@ -474,7 +475,7 @@ bool DataLoader::load_statuses(const std::string& path)
 {
     if (m_statusesLoaded) return false;
 
-    std::ifstream file(path);
+    auto file = Platform::open(path);
     if (!file) return false;
 
     json j;
@@ -522,7 +523,7 @@ bool DataLoader::load_backgrounds(const std::string& path)
 {
     m_backgroundsDatabase.clear();
 
-    std::ifstream file(path);
+    auto file = Platform::open(path);
     if (!file) return true; // Nothing customized
 
     json data;
@@ -558,8 +559,8 @@ bool DataLoader::load_backgrounds(const std::string& path)
  */
 bool DataLoader::load_chapters(const std::string& path)
 {
-    std::ifstream file(path);
-    if (!file.is_open()) return false;
+    auto file = Platform::open(path);
+    if (!file) return false;
 
     nlohmann::json data;
     file >> data;
@@ -603,7 +604,7 @@ bool DataLoader::load_player(const std::string& path)
 	m_playerData = std::make_shared<PlayerData>();
     m_playerData->equippedUnits.fill(-1);
 
-    std::ifstream file(path);
+    auto file = Platform::open(path);
     if (!file)
     {
         // First launch (or deleted save): start a new game with the first fish equipped
@@ -689,6 +690,8 @@ bool DataLoader::load_player(const std::string& path)
         m_playerData->schoolRankRewardsClaimed = progression.contains("schoolRankRewardsClaimed") ? read_int(progression, "schoolRankRewardsClaimed")
             : progression.contains("shoalRewardsClaimed") ? read_int(progression, "shoalRewardsClaimed") : 0;   // Its first name
         m_playerData->hasClamRoomGift = progression.contains("clamRoomGift") && progression.at("clamRoomGift").get<bool>();
+        m_playerData->adsDay = progression.contains("adsDay") ? progression.at("adsDay").get<std::string>() : "";
+        m_playerData->adsToday = progression.contains("adsToday") ? progression.at("adsToday").get<int>() : 0;
 
         // Enemies met in battle (missing in older saves)
         m_playerData->seenEnemies.clear();
@@ -779,6 +782,8 @@ bool DataLoader::save_player(const std::string& path)
     j["progression"]["lastStage"] = m_playerData->lastStage;
     j["progression"]["schoolRankRewardsClaimed"] = m_playerData->schoolRankRewardsClaimed;
     j["progression"]["clamRoomGift"] = m_playerData->hasClamRoomGift;
+    j["progression"]["adsDay"] = m_playerData->adsDay;
+    j["progression"]["adsToday"] = m_playerData->adsToday;
 
     // Enemies met in battle (sorted, so the file doesn't change order between saves)
     std::vector<int> seenEnemies(m_playerData->seenEnemies.begin(), m_playerData->seenEnemies.end());
@@ -787,7 +792,8 @@ bool DataLoader::save_player(const std::string& path)
 
     // Write to a temporary file first, then replace the save,
     // so a crash in the middle of writing can't corrupt player.json
-    const std::string tempPath = path + ".tmp";
+    const std::string savePath = Platform::writable(path);   // The app's storage on Android
+    const std::string tempPath = savePath + ".tmp";
     {
         std::ofstream file(tempPath, std::ios::trunc);
         if (!file)
@@ -806,7 +812,7 @@ bool DataLoader::save_player(const std::string& path)
     }
 
     std::error_code error;
-    std::filesystem::rename(tempPath, path, error);
+    std::filesystem::rename(tempPath, savePath, error);
     if (error)
     {
         report_error("Failed to replace " + path + ": " + error.message());
@@ -825,7 +831,7 @@ void DataLoader::load_settings()
 {
     m_settings = Settings{};
 
-    std::ifstream file(m_dataFolder + "settings.json");
+    auto file = Platform::open(m_dataFolder + "settings.json");
     if (!file) return;
 
     try
@@ -863,7 +869,7 @@ bool DataLoader::save_settings()
     j["audio"]["muteInBackground"] = m_settings.muteInBackground;
     j["display"]["fullscreen"] = m_settings.fullscreen;
 
-    std::ofstream file(m_dataFolder + "settings.json", std::ios::trunc);
+    std::ofstream file(Platform::writable(m_dataFolder + "settings.json"), std::ios::trunc);
     if (!file)
     {
         std::cerr << "Can't save the options to " << m_dataFolder << "settings.json\n";

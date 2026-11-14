@@ -1,6 +1,8 @@
 #include "UIUnitCard.h"
 #include "../UISkin.h"
 
+#include <algorithm>
+#include <cmath>
 #include <iostream>
 
 namespace
@@ -67,6 +69,85 @@ void UIUnitCard::set_unit_name(const std::string& name)
 void UIUnitCard::set_size(sf::Vector2f size)
 {
     m_size = { size.x, size.x * HEIGHT_RATIO };
+}
+
+void UIUnitCard::place_at(float centerX, float width)
+{
+    const float left = centerX - width / 2.f;
+    tweenX = tweeny::from(left).to(left).during(1);
+    tweenX.step(1);
+    tweenWidth = tweeny::from(width).to(width).during(1);
+    tweenWidth.step(1);
+    tweenHeight = tweenWidth;
+    m_position.x = left;
+    set_size({ width, width });
+}
+
+float UIUnitCard::carousel_scale(float slot, float centerScale, float sideScale)
+{
+    const float closeness = std::max(0.f, 1.f - std::abs(slot));
+    const float eased = closeness * closeness * (3.f - 2.f * closeness);   // Smoothstep: no kink in the middle
+    return sideScale + (centerScale - sideScale) * eased;
+}
+
+void UIUnitCard::draw_shelf(sf::RenderTarget& target, float top, float bottom, float floorY)
+{
+    const sf::FloatRect screen = UISkin::screen_rect();
+    const float left = std::min(0.f, screen.position.x), right = std::max(1920.f, screen.position.x + screen.size.x);
+
+    // The band: darker towards the rail, a faint light line along its top
+    sf::VertexArray band(sf::PrimitiveType::TriangleStrip, 4);
+    band[0] = sf::Vertex{ { left, top }, sf::Color(6, 16, 30, 70) };
+    band[1] = sf::Vertex{ { right, top }, sf::Color(6, 16, 30, 70) };
+    band[2] = sf::Vertex{ { left, bottom }, sf::Color(6, 16, 30, 150) };
+    band[3] = sf::Vertex{ { right, bottom }, sf::Color(6, 16, 30, 150) };
+    target.draw(band);
+    sf::RectangleShape line({ right - left, 3.f });
+    line.setPosition({ left, top });
+    line.setFillColor(sf::Color(170, 200, 230, 60));
+    target.draw(line);
+
+    // The rail: a steel bar with a bright top edge, dark outlines, a shadow under it
+    const float railHeight = 14.f;
+    sf::VertexArray rail(sf::PrimitiveType::TriangleStrip, 4);
+    rail[0] = sf::Vertex{ { left, floorY }, sf::Color(138, 156, 182) };
+    rail[1] = sf::Vertex{ { right, floorY }, sf::Color(138, 156, 182) };
+    rail[2] = sf::Vertex{ { left, floorY + railHeight }, sf::Color(62, 78, 102) };
+    rail[3] = sf::Vertex{ { right, floorY + railHeight }, sf::Color(62, 78, 102) };
+    target.draw(rail);
+    line.setSize({ right - left, 3.f });
+    for (const float y : { floorY - 2.f, floorY + railHeight - 1.f })
+    {
+        line.setPosition({ left, y });
+        line.setFillColor(UISkin::OUTLINE);
+        target.draw(line);
+    }
+    sf::VertexArray shadow(sf::PrimitiveType::TriangleStrip, 4);
+    shadow[0] = sf::Vertex{ { left, floorY + railHeight + 2.f }, sf::Color(0, 0, 0, 80) };
+    shadow[1] = sf::Vertex{ { right, floorY + railHeight + 2.f }, sf::Color(0, 0, 0, 80) };
+    shadow[2] = sf::Vertex{ { left, floorY + railHeight + 18.f }, sf::Color(0, 0, 0, 0) };
+    shadow[3] = sf::Vertex{ { right, floorY + railHeight + 18.f }, sf::Color(0, 0, 0, 0) };
+    target.draw(shadow);
+}
+
+void UIUnitCard::draw_page_dots(sf::RenderTarget& target, sf::Vector2f center, int count, float position)
+{
+    if (count < 2) return;
+    const float gap = count > 24 ? 26.f : 36.f;
+    const int current = std::clamp(static_cast<int>(std::lround(position)), 0, count - 1);
+    sf::CircleShape dot;
+    for (int i = 0; i < count; ++i)
+    {
+        const bool isCurrent = i == current;
+        const float radius = isCurrent ? 11.f : 8.f;
+        dot.setRadius(radius);
+        dot.setOrigin({ radius, radius });
+        dot.setPosition({ center.x + (static_cast<float>(i) - static_cast<float>(count - 1) / 2.f) * gap, center.y });
+        dot.setFillColor(isCurrent ? UISkin::NUMBER : sf::Color(16, 26, 40, 220));
+        dot.setOutlineThickness(3.f);
+        dot.setOutlineColor(isCurrent ? UISkin::OUTLINE : sf::Color(120, 140, 166, 200));
+        target.draw(dot);
+    }
 }
 
 void UIUnitCard::set_level_line(const std::string& text, sf::Color color)

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "UIPanel.h"
+#include "UISwipe.h"
 
 #include "../../core/DataLoader.h"
 
@@ -14,6 +15,8 @@
  * Shows the unlocked stages as round numbered markers on the map (yellow, green once cleared,
  * a white ring on the selected one) joined by dotted lines, and a panel with the selected stage:
  * its name, the enemy base's health, the rewards and its enemies (black until met, like The Battle Cats).
+ * A strip of the stages' names runs along the top (the one in the middle a bit bigger); sliding a finger sideways
+ * slides it and the map through the playable stages, and they settle on the nearest when let go.
  */
 
 class UIChapterMap : public UIElement
@@ -94,6 +97,27 @@ private:
 
     tweeny::tween<float, float> m_offsetTween;
     sf::Vector2f m_viewOffset{ 0.f, 0.f };      // current camera offset
+
+    // Sliding a finger sideways slides the names strip and the map with it, through the playable stages; let go, it
+    // settles on the nearest one (like the Upgrade cards)
+    UISwipe m_swipe;
+    float m_stripSlide = 0.f;                    // The strip's position, in tabs (follows the selected index)
+    bool m_isFollowing = false;                  // The strip and the map are following the finger
+    int m_followFrom = 0;                        // The selected index when the slide started
+    UIGlide m_glide;                             // Flung: they glide on to the selected stage (counted from m_followFrom)
+    float m_dragBase = 0.f;                      // Where the strip was when pressed (0 at rest; mid-glide when caught)
+    bool m_caughtGlide = false;                  // The press stopped a glide: its release settles, it isn't a tap
+    void step_stage(int direction);
+    int selected_index() const;
+    void playable_range(int& first, int& last) const;
+    int playable_near(int index) const;          // Kept among the playable stages (back towards m_followFrom)
+    sf::Vector2f offset_for(int index) const;   // The camera offset bringing that stage to the middle
+    void follow_drag(float dragX);
+    // Where a slow slide settles: the nearest playable stage (allowsFlick: a short flick from rest moves one)
+    int snap_index(float dragX, bool allowsFlick = true) const;
+    void release_slide(float dragX, float speed);   // Let go: glides on when flung, else settles on the nearest
+    sf::FloatRect strip_tab_rect(int index) const;
+    void render_strip(sf::RenderWindow& window);
     sf::Vector2f m_targetOffset{ 0.f, 0.f };    // target camera offset
     float m_moveSpeed = 5.f;
 };

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "widgets/UIElement.h"
+#include "widgets/UITitleBar.h"   // Its Material: the bottom bar matches the screen's title bar
 #include "../core/DataLoader.h"
 
 #include <SFML/Graphics.hpp>
@@ -13,6 +14,8 @@ class UIButtonElement;
 class UIConfirmDialog;
 class UIPlayerShellsInfo;
 class UIOptionsMenu;
+class UIBattleIntro;
+class UIInfoPanel;
 class AudioManager;
 enum class GameSpeedState;
 
@@ -62,8 +65,9 @@ public:
     // Generate specific UI layouts/screens
     void generate_title_uis();      // Title screen (the title theme), START goes to the Fish Tank
     void generate_fish_tank_uis();
-    void generate_upgrade_menu_uis();
-    void generate_equip_menu_uis();
+    // selectUid: the fish selected when the screen opens (the Equip <-> Upgrade shortcuts keep it); -1: as before
+    void generate_upgrade_menu_uis(int selectUid = -1);
+    void generate_equip_menu_uis(int selectUid = -1, bool isFromMap = false);   // From the map: back goes back to it
     void generate_encyclopedia_uis();
     void generate_clam_room_uis(bool fromStorage = false);   // The gacha: Shiny Scales into the giant clam, fish out
     void generate_clam_storage_uis();   // The fish out of the clam, to use or sell
@@ -90,8 +94,21 @@ private:
     // The round back button of the menus (bottom left): runs onBack as a deferred action
     std::shared_ptr<UIRoundButton> make_back_button(std::function<void()> onBack);
 
-    // Starts a battle (the battle start jingle, the stage, the battle screen); run it as a deferred action
+    // The bottom bar of a menu (UIBottomBar), the Shiny Scales at its right end (not where the title bar shows them:
+    // the Clam Room); add it after the screen's content, before its buttons (the back button sits on it)
+    void add_bottom_bar(UITitleBar::Material material = UITitleBar::Material::STEEL, bool showsScales = true);
+
+    // A shortcut on the bottom bar, right of the back button (Equip <-> Upgrade): runs onPress as a deferred action
+    std::shared_ptr<UIButtonElement> make_bar_button(const std::string& label, std::function<void()> onPress);
+
+    // Starts a battle: the jingle plays and the water rises over the screen the player is on at once (UIBattleIntro);
+    // the stage loads once a frame with the screen fully covered is up (finish_battle_start), so loading never looks
+    // like a frozen game, and the battle's intro carries on from where the jingle is. Run it as a deferred action
     void start_battle(int stageUid);
+    void finish_battle_start();
+    std::shared_ptr<UIBattleIntro> m_battleCover;   // The water over the screen being left
+    int m_pendingBattleStage = -1;                  // The stage loading under it (-1: none)
+    sf::Clock m_jingleClock;                        // Since the jingle started
 
     // Unloads the battle before going back to a menu
     void leave_battle();
@@ -99,6 +116,9 @@ private:
     // The hub: the stage the map opens on ("Stage 5 - Clam Leader"), and whether something can be upgraded
     std::string next_stage_label() const;
     bool is_upgrade_available() const;
+
+    // What the Fish (UIHubMascot) says in the Fish Tank: what's worth doing now first, then general tips
+    std::vector<std::string> hub_tips() const;
 
 
     // Darkens the bars around the 16:9 UI area while a modal window is open (screens that aren't 16:9)
@@ -116,6 +136,13 @@ private:
     };
     ClamCounters add_clam_counters();
 
+    // An "i" at center that explains something (its window is returned: add it last, it's a window)
+    std::shared_ptr<UIInfoPanel> add_info_button(sf::Vector2f center, const std::string& title, const std::string& text);
+
+    // The menus have the side frame on a screen wider than 16:9 (UISkin::draw_side_frame); the title screen and the
+    // battle don't
+    bool m_hasSideFrame = false;
+
     // The Options window (add it after the screen's other elements) and a button that opens it
     std::shared_ptr<UIOptionsMenu> make_options_menu();
     std::shared_ptr<UIButtonElement> make_options_button(const std::shared_ptr<UIOptionsMenu>& optionsMenu,
@@ -132,6 +159,18 @@ private:
     std::vector<std::shared_ptr<UIElement>> m_uiElements;       // All active UI elements
 
     std::function<void()> m_pendingAction;                      // Deferred action triggered by UI
+
+    // A new menu screen comes in with a wave: a band of water (UISkin::draw_water_band) sweeps up the screen, the
+    // old screen still drawn above it, the new one below it; each button pops in as the wave uncovers it.
+    // start_screen_reveal keeps the old screen's elements (drawn, not updated) until the wave is gone
+    std::vector<std::shared_ptr<UIElement>> m_oldElements;
+    float m_revealTime = -1.f;                                  // -1: no wave
+    bool m_needsEntrance = false;
+    void start_screen_reveal();
+    void cancel_screen_reveal();                                // A screen with its own transition (battle, storage)
+    std::pair<float, float> reveal_band() const;                // The wave's top and bottom (UI y) now
+    void render_list(sf::RenderWindow& window, std::vector<std::shared_ptr<UIElement>>& elements, const sf::View& uiView, sf::View& worldView,
+        bool withFrame);
 
 	std::function<void(GameSpeedState)> m_setGameSpeedCallback; // Callback to set game speed state
     std::function<GameSpeedState()> m_getGameSpeedCallback;     // Callback to get current game speed state

@@ -83,9 +83,7 @@ void UITitleScreen::draw_title_line(sf::RenderWindow& window, const char* text, 
 
 void UITitleScreen::render(sf::RenderWindow& window)
 {
-    sf::RectangleShape veil({ 1920.f, 1080.f });
-    veil.setFillColor(VEIL);
-    window.draw(veil);
+    UISkin::fill_screen(window, VEIL);
 
     // Bubbles, wobbling side to side
     sf::CircleShape circle;
@@ -108,7 +106,7 @@ void UITitleScreen::render(sf::RenderWindow& window)
     draw_title_line(window, "FIGHTERS", TITLE_BOTTOM_Y + bob, 210, bounce);
 
     // Blinking hint under the START button
-    sf::Text hint(UISkin::heavy_font(), "or press any key", 34);
+    sf::Text hint(UISkin::heavy_font(), "Tap START to dive in!", 34);
     UISkin::style_text(hint, 34, UISkin::TITLE);
     UISkin::set_text_anchor(hint, { 0.5f, 0.5f });
     hint.setPosition({ 960.f, 905.f });

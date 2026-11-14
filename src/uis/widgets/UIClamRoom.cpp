@@ -4,6 +4,7 @@
 #include "../../core/DataLoader.h"
 #include "../../data/BattlefieldLayout.h"
 #include "../../data/PlayerData.h"
+#include "../../core/Platform.h"
 
 #include <algorithm>
 #include <cmath>
@@ -17,7 +18,7 @@ namespace
     // The clam: its 300 x 300 canvas drawn 2.2 times bigger, standing on its base
     const float CLAM_SCALE = 2.2f;
     const sf::Vector2f CLAM_ORIGIN{ 150.f, 290.f };       // The base of the drawing in its canvas
-    const sf::Vector2f CLAM_BASE{ 960.f, 860.f };         // ...on screen
+    const sf::Vector2f CLAM_BASE{ 960.f, 800.f };         // ...on screen (the offers under it, above the bottom bar)
     const sf::Vector2f MOUTH_IN_CANVAS{ 150.f, 190.f };   // Where the fish come out (the open clam's inside)
     const sf::Vector2f SCALE_COUNTER{ 1430.f, 55.f };     // Where the scales fly from (the Shiny Scales pill)
 
@@ -32,14 +33,24 @@ namespace
     const float SHAKE_ONE = 0.45f, SHAKE_TEN = 0.8f;
     const float OPEN_POP = 0.45f;
     const float REVEAL_GAP = 0.18f;
-    const float CLOSE = 0.35f;
+    // The offers along the bottom (OPEN, OPEN x10; FREE for an ad on a phone), centered
+    const sf::Vector2f OFFER_SIZE{ 360.f, 126.f };
+    const float AD_OFFER_WIDTH = 300.f, OFFER_GAP = 30.f, OFFER_Y = UISkin::CONTENT_BOTTOM - 14.f - OFFER_SIZE.y;
+    float offers_left()
+    {
+        const float width = 2.f * OFFER_SIZE.x + OFFER_GAP + (Platform::HAS_REWARDED_ADS ? AD_OFFER_WIDTH + OFFER_GAP : 0.f);
+        return 960.f - width / 2.f;
+    }
+    const float CLOSE = 1.f;           // Closing: the bubbles go back into its mouth (CLOSE_INHALE), it shuts (CLOSE_SHUT)
+    const float CLOSE_INHALE = 0.58f;
+    const float CLOSE_SHUT = 0.64f;
 
 
     // The clam's shadow on the ground (like the fish and enemies): a bit wider than the closed shell, centered on its
     // bottom edge so half of it shows under it, drawn twice (the room is dark: one would hardly show)
     const float CLAM_SHADOW_WIDTH = 620.f;
     const float CLAM_SHADOW_HEIGHT = 175.f;
-    const float CLAM_SHADOW_Y = 856.f;
+    const float CLAM_SHADOW_Y = 796.f;
 
     // A poke tips the clam on the side clicked: that side is pressed down, the other side lifts; its bottom is round,
     // so it rocks almost in place (it rises by TAP_ROCK of a sharp edge's pivot); the middle makes it hop straight up
@@ -61,7 +72,7 @@ namespace
     const float WALK_FRAME_SECONDS = 0.12f;  // The fish swim in their bubbles (like in the Fish Tank)
 
     // STORAGE: the Clam Storage's chest as a button, its name small under it (bottom right)
-    const sf::FloatRect STORAGE_ICON{ { 1700.f, 880.f }, { 140.f, 120.f } };
+    const sf::FloatRect STORAGE_ICON{ { 1700.f, 830.f }, { 140.f, 120.f } };
 
     // Into the Clam Storage: the clam pops open (TO_STORAGE_OPEN), the view dives into its mouth from DIVE_START
     // (ZOOM_MAX times closer), going dark pink from INSIDE_FADE. Out: the view zooms out of the open clam (from
@@ -74,18 +85,25 @@ namespace
 
 UIClamRoom::UIClamRoom(std::shared_ptr<DataLoader> dataLoader) :
     m_dataLoader(std::move(dataLoader)),
-    m_openOne({ 360.f, 110.f }, { 580.f, 930.f }, "OPEN"),
-    m_openTen({ 360.f, 110.f }, { 980.f, 930.f }, "OPEN x10"),
+    // The offers centered in a row: OPEN, OPEN x10, and on a phone FREE (an ad) on their left
+    m_openOne(OFFER_SIZE, { offers_left() + (Platform::HAS_REWARDED_ADS ? AD_OFFER_WIDTH + OFFER_GAP : 0.f), OFFER_Y }, "OPEN", UIOfferButton::Kind::CURRENCY, "icon_shiny_scale", 1),
+    m_openTen(OFFER_SIZE, { offers_left() + (Platform::HAS_REWARDED_ADS ? AD_OFFER_WIDTH + OFFER_GAP : 0.f) + OFFER_SIZE.x + OFFER_GAP, OFFER_Y }, "OPEN x10", UIOfferButton::Kind::CURRENCY, "icon_shiny_scale", 10),
+    m_watchAd({ AD_OFFER_WIDTH, OFFER_SIZE.y }, { offers_left(), OFFER_Y }, "FREE", UIOfferButton::Kind::REWARDED_AD),
     m_text(UISkin::heavy_font())
 {
-    m_openOne.set_text_size(48);
-    m_openTen.set_text_size(38);
+    m_openOne.set_text_size(46);
+    m_openTen.set_text_size(40);
     m_openTen.set_style(UIButtonElement::Style::Secondary);
     m_openOne.set_click_sound("");   // The scales make the sound
     m_openTen.set_click_sound("");
     m_openOne.set_hotkey(sf::Keyboard::Key::Space);
+    m_openOne.set_attention(true);
     m_openOne.set_callback([this]() { open(1); });
     m_openTen.set_callback([this]() { open(10); });
+    m_watchAd.set_text_size(46);
+    m_watchAd.set_click_sound("ui_click");
+    m_watchAd.set_visible(Platform::HAS_REWARDED_ADS);
+    m_watchAd.set_callback([this]() { if (m_onWatchAd) m_onWatchAd(); });
 }
 
 float UIClamRoom::random(float from, float to)
@@ -157,6 +175,11 @@ void UIClamRoom::set_scales_counter(std::shared_ptr<UIPlayerShellsInfo> scales)
 void UIClamRoom::set_on_storage(std::function<void()> onStorage)
 {
     m_onStorage = std::move(onStorage);
+}
+
+void UIClamRoom::set_on_watch_ad(std::function<void()> onWatchAd)
+{
+    m_onWatchAd = std::move(onWatchAd);
 }
 
 sf::Vector2f UIClamRoom::scales_source() const
@@ -238,7 +261,8 @@ void UIClamRoom::close_clam()
     if (m_phase == Phase::REVEALED)
     {
         go_to(Phase::CLOSING);
-        play_sound("clam_hop", 1.1f);
+        m_hasShut = false;
+        play_sound("fish_blub", 0.75f);   // The bubbles being drawn back in (the hop sound when it shuts)
     }
 }
 
@@ -288,6 +312,8 @@ void UIClamRoom::update(float deltaTime)
     const int scales = player ? player->shinyScales : 0;
     m_openOne.set_enabled(m_phase == Phase::IDLE && scales >= 1);
     m_openTen.set_enabled(m_phase == Phase::IDLE && scales >= 10);
+    m_watchAd.set_enabled(m_phase == Phase::IDLE && player && player->ads_left_today() > 0);
+    m_watchAd.update(deltaTime);
     m_openOne.update(deltaTime);
     m_openTen.update(deltaTime);
 
@@ -349,6 +375,7 @@ void UIClamRoom::update(float deltaTime)
         break;
     }
     case Phase::CLOSING:
+        if (!m_hasShut && m_phaseTime >= CLOSE_SHUT) { m_hasShut = true; play_sound("clam_hop", 1.1f); }
         if (m_phaseTime >= CLOSE) { m_reveals.clear(); go_to(Phase::IDLE); }
         break;
     case Phase::TO_STORAGE:
@@ -406,10 +433,7 @@ void UIClamRoom::render(sf::RenderWindow& window)
         window.setView(zoomed);
     }
 
-    // The room is dim and purple: something magic lives here
-    sf::RectangleShape veil({ 1920.f, 1080.f });
-    veil.setFillColor(sf::Color(40, 18, 70, 130));
-    window.draw(veil);
+    // (The room's colors and its beam of light are UIClamBackdrop's, under this)
 
     // A soft magic glow behind the clam, breathing
     const float breath = 0.85f + 0.15f * std::sin(m_time * 1.6f);
@@ -461,9 +485,7 @@ void UIClamRoom::render(sf::RenderWindow& window)
     if (m_phase == Phase::OPENING || (m_phase == Phase::REVEALING && m_phaseTime < 0.3f))
     {
         const float t = m_phase == Phase::OPENING ? m_phaseTime : m_phaseTime + OPEN_POP * 0.5f;
-        sf::RectangleShape flash({ 1920.f, 1080.f });
-        flash.setFillColor(sf::Color(255, 250, 240, static_cast<std::uint8_t>(std::max(0.f, 180.f * (1.f - t / 0.5f)))));
-        window.draw(flash);
+        UISkin::fill_screen(window, sf::Color(255, 250, 240, static_cast<std::uint8_t>(std::max(0.f, 180.f * (1.f - t / 0.5f)))));
     }
 
     render_reveals(window);
@@ -472,21 +494,24 @@ void UIClamRoom::render(sf::RenderWindow& window)
     window.setView(baseView);
     if (is_transition())
     {
-        sf::RectangleShape inside({ 1920.f, 1080.f });
-        inside.setFillColor(sf::Color(INSIDE_PINK.r, INSIDE_PINK.g, INSIDE_PINK.b, static_cast<std::uint8_t>(255.f * inside_fade())));
-        window.draw(inside);
+        UISkin::fill_screen(window, sf::Color(INSIDE_PINK.r, INSIDE_PINK.g, INSIDE_PINK.b, static_cast<std::uint8_t>(255.f * inside_fade())));
         return;
     }
 
-    // The buttons, a Shiny Scale on each (what they cost)
+    // The offers, each with its price under it
     m_openOne.render(window);
     m_openTen.render(window);
-    const sf::Texture& scaleIcon = UISkin::texture("icon_shiny_scale");
-    for (UIButtonElement* button : { &m_openOne, &m_openTen })
+    if (Platform::HAS_REWARDED_ADS)
     {
-        const sf::FloatRect box = button->get_bounds();
-        UISkin::draw_fitted(window, scaleIcon, { { box.position.x + 14.f, box.position.y + box.size.y / 2.f - 24.f }, { 48.f, 48.f } },
-            button->is_enabled() ? sf::Color::White : sf::Color(255, 255, 255, 120));
+        // What the ad gives, and how many are left today
+        m_watchAd.render(window);
+        auto adPlayer = m_dataLoader->get_player_data().lock();
+        const int left = adPlayer ? adPlayer->ads_left_today() : 0;
+        UISkin::style_text(m_text, 24, left > 0 ? sf::Color(170, 240, 225) : sf::Color(200, 190, 220));
+        m_text.setString(left > 0 ? "+1 Shiny Scale  " + std::to_string(left) + "/" + std::to_string(PlayerData::ADS_PER_DAY) : "Back tomorrow");
+        UISkin::set_text_anchor(m_text, { 0.5f, 1.f });   // Above the button: the bottom bar is under it
+        m_text.setPosition({ offers_left() + AD_OFFER_WIDTH / 2.f, OFFER_Y - 10.f });
+        window.draw(m_text);
     }
 
     // STORAGE: the Clam Storage's chest, with how many fish wait there
@@ -500,7 +525,7 @@ void UIClamRoom::render(sf::RenderWindow& window)
     if (m_phase == Phase::IDLE)
         hint = player && player->shinyScales > 0 ? "Feed the giant clam a Shiny Scale..."
             : "No Shiny Scales: raise your School Rank, or craft one from Fish Scales (+)";
-    else if (m_phase == Phase::REVEALED) hint = "Click to continue: your fish wait in the Clam Storage";
+    else if (m_phase == Phase::REVEALED) hint = "Tap to continue: your fish wait in the Clam Storage";
     if (!hint.empty())
     {
         UISkin::style_text(m_text, 36, UISkin::TITLE);
@@ -517,7 +542,7 @@ void UIClamRoom::render(sf::RenderWindow& window)
 void UIClamRoom::render_clam(sf::RenderWindow& window)
 {
     const bool isOpen = m_phase == Phase::OPENING || m_phase == Phase::REVEALING || m_phase == Phase::REVEALED
-        || (m_phase == Phase::CLOSING && m_phaseTime < CLOSE * 0.5f)
+        || (m_phase == Phase::CLOSING && m_phaseTime < CLOSE_SHUT)   // Open until every bubble is back inside
         || (m_phase == Phase::TO_STORAGE && m_phaseTime >= TO_STORAGE_OPEN)
         || (m_phase == Phase::FROM_STORAGE && m_phaseTime < FROM_STORAGE_SHUT);
     const bool isEating = m_phase == Phase::FEEDING && m_phaseTime < scales_landed_time() + GULP_HOP;   // Half open
@@ -621,7 +646,8 @@ void UIClamRoom::render_clam(sf::RenderWindow& window)
         break;
     }
     case Phase::CLOSING:
-        jump = 10.f * std::sin(std::min(1.f, m_phaseTime / CLOSE) * PI);   // A little hop as it snaps shut
+        if (m_phaseTime > CLOSE_SHUT)   // A little hop as it snaps shut
+            jump = 10.f * std::sin(std::min(1.f, (m_phaseTime - CLOSE_SHUT) / (CLOSE - CLOSE_SHUT)) * PI);
         break;
     case Phase::TO_STORAGE:
         // A pop as it opens for us
@@ -706,23 +732,33 @@ void UIClamRoom::render_reveals(sf::RenderWindow& window)
 
     const sf::Texture& bubbleTexture = UISkin::texture("bubble");
     const float bubbleSize = static_cast<float>(std::max(1u, bubbleTexture.getSize().x));
-    const float closing = m_phase == Phase::CLOSING ? std::clamp(1.f - m_phaseTime / CLOSE, 0.f, 1.f) : 1.f;
+    const bool isClosing = m_phase == Phase::CLOSING;
     const float revealTime = m_phase == Phase::REVEALING ? m_phaseTime : 1000.f;
+    // Closing: one after the other, the bubbles drift back into the clam's mouth, shrinking as they go in
+    const float stagger = m_reveals.size() > 1 ? std::min(0.04f, 0.22f / static_cast<float>(m_reveals.size())) : 0.f;
+    const float inhale = CLOSE_INHALE - stagger * static_cast<float>(m_reveals.size());
 
-    for (const Reveal& reveal : m_reveals)
+    for (size_t index = 0; index < m_reveals.size(); ++index)
     {
+        const Reveal& reveal = m_reveals[index];
         const float t = std::clamp((revealTime - reveal.appearAt) / 0.45f, 0.f, 1.f);
         if (t <= 0.f) continue;
+        const float back = isClosing ? std::clamp((m_phaseTime - stagger * static_cast<float>(index)) / inhale, 0.f, 1.f) : 0.f;
+        const float pull = back * back * (3.f - 2.f * back);   // Eases in and out
+        if (back >= 1.f) continue;   // Inside
+        const float closing = 1.f - 0.8f * pull;                 // Its size on the way in
         const float grow = ease_out_back(t) * closing;
-        const float bob = std::sin(m_time * 2.4f + reveal.target.x * 0.01f) * 6.f;
-        const sf::Vector2f position = mouth() + (reveal.target - mouth()) * std::min(1.f, t * 1.2f) + sf::Vector2f{ 0.f, bob };
+        const float bob = std::sin(m_time * 2.4f + reveal.target.x * 0.01f) * 6.f * (1.f - pull);
+        const sf::Vector2f outside = mouth() + (reveal.target - mouth()) * std::min(1.f, t * 1.2f) + sf::Vector2f{ 0.f, bob };
+        const sf::Vector2f position = outside + (mouth() - outside) * pull;
 
         const float size = 200.f * reveal.scale * grow;
         sf::Sprite bubble(bubbleTexture);
         bubble.setOrigin({ bubbleSize / 2.f, bubbleSize / 2.f });
         bubble.setScale({ size * 1.15f / bubbleSize, size * 1.15f / bubbleSize });
         bubble.setPosition(position);
-        bubble.setColor(sf::Color(255, 255, 255, static_cast<std::uint8_t>(170 * closing)));
+        const float fade = back > 0.8f ? 1.f - (back - 0.8f) / 0.2f : 1.f;   // Gone as it enters
+        bubble.setColor(sf::Color(255, 255, 255, static_cast<std::uint8_t>(170 * fade)));
         window.draw(bubble);
 
         // The whole fish inside, swimming (its walking frames, as drawn on its sheet)
@@ -736,11 +772,11 @@ void UIClamRoom::render_reveals(sf::RenderWindow& window)
             fish.setOrigin(boxSize / 2.f);
             fish.setScale({ fit, fit });
             fish.setPosition(position);
-            fish.setColor(sf::Color(255, 255, 255, static_cast<std::uint8_t>(255 * closing)));
+            fish.setColor(sf::Color(255, 255, 255, static_cast<std::uint8_t>(255 * fade)));
             window.draw(fish);
         }
 
-        if (t < 1.f || closing < 1.f) continue;
+        if (t < 1.f || isClosing) continue;
 
         // Under the bubble: the name, the tag (NEW!, +1 EXTRA LEVEL, +n SHELLS), the level with its extra levels.
         // Smaller in the x10 grid, where each fish has a 240 px column
@@ -806,6 +842,7 @@ void UIClamRoom::handle_event(const sf::Event& event, const sf::RenderWindow& wi
     {
         m_openOne.handle_event(event, window);
         m_openTen.handle_event(event, window);
+        if (Platform::HAS_REWARDED_ADS) m_watchAd.handle_event(event, window);
 
         // STORAGE (the chest): grows under the mouse; a click dives into the clam
         if (const auto* moved = event.getIf<sf::Event::MouseMoved>())

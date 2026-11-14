@@ -14,9 +14,10 @@ class AudioManager;
  * UIOptionsMenu
  * -------------
  * The Options window, opened from the title screen, the Fish Tank and the pause menu:
- *   - Audio: Master / Music / Effects sliders (applied live), "Mute in background"
- *   - Display: fullscreen or a resizable window
- *   - Controls: the keys
+ *   - Audio: Master / Music / Effects sliders (applied live), "Mute in background" (not on phones: always muted)
+ *   - Display: fullscreen or a resizable window (not on phones: always full screen)
+ *   - Controls: the keys (on phones, the touch controls)
+ * On a phone the window is shorter and centered, without the rows it doesn't have
  * The choices go to DataLoader's Settings and are saved in settings.json when the window closes.
  * While open it takes every input event (is_blocking_input): add it after the other elements.
  */

@@ -8,8 +8,10 @@
 
 namespace
 {
-    const sf::FloatRect UPGRADE_BUTTON{ { 60.f, 690.f }, { 470.f, 140.f } };
-    const sf::FloatRect DESCRIPTION_PANEL{ { 570.f, 660.f }, { 1290.f, 396.f } };   // Down to the bottom: room for the abilities
+    const sf::FloatRect UPGRADE_BUTTON{ { 60.f, 700.f }, { 470.f, 140.f } };
+    const sf::FloatRect DESCRIPTION_PANEL{ { 570.f, 676.f }, { 1290.f, 308.f } };   // Down to the bottom bar: room for the abilities
+    const float SHELF_TOP = 116.f;     // The cards' shelf, under the title bar
+    const float DOTS_Y = 146.f;        // The page dots, at its top
     const float TEXT_PADDING = 50.f;
     const float ARROW_SIZE = 96.f;
     const float ARROW_Y = 412.f;
@@ -33,14 +35,15 @@ namespace
  */
 UIUpgradeSlider::UIUpgradeSlider(std::shared_ptr<DataLoader> dataLoader) :
 	m_dataLoader(dataLoader),
-	m_upgradeButton(UPGRADE_BUTTON.size, UPGRADE_BUTTON.position, "UPGRADE!"),
+	m_upgradeButton(UPGRADE_BUTTON.size, UPGRADE_BUTTON.position, "UPGRADE!", UIOfferButton::Kind::CURRENCY, "icon_shell", 0),
 	m_previousButton(ARROW_SIZE, { 36.f, ARROW_Y }, "icon_play"),
 	m_nextButton(ARROW_SIZE, { 1920.f - 36.f - ARROW_SIZE, ARROW_Y }, "icon_play"),
 	m_descriptionPanel(DESCRIPTION_PANEL.size, DESCRIPTION_PANEL.position, UISkin::PANEL_DARK, 1.2f),
 	m_unitName(UISkin::heavy_font()),
 	m_description(UISkin::regular_font())
 {
-	m_upgradeButton.set_text_size(60);
+	m_upgradeButton.set_text_size(54);
+	m_upgradeButton.set_attention(true);   // Breathes while there are enough shells (greyed: still)
 	m_upgradeButton.set_click_sound("");   // upgrade_selected plays "purchase" or "unlock"
 	m_upgradeButton.set_callback([this]() { upgrade_selected(); });
 
@@ -187,6 +190,14 @@ void UIUpgradeSlider::update(float deltaTime)
 {
 	auto player = m_dataLoader->get_player_data().lock();
 
+	// Flung: the cards glide on and slow down, then land (move_to_index puts everything in place)
+	if (m_glide.isActive)
+	{
+		const bool isGliding = m_glide.step(deltaTime);
+		follow_drag(m_glide.position);
+		if (!isGliding) move_to_index(m_currentIndex, true);
+	}
+
 	for (int i = 0; i < static_cast<int>(m_upgradeIcons.size()); ++i)
 	{
 		auto& icon = m_upgradeIcons[i];
@@ -217,6 +228,8 @@ void UIUpgradeSlider::update(float deltaTime)
 	const int level = player->get_unit_level(uid);
 	m_upgradeButton.set_text(level <= 0 ? "UNLOCK!" : "UPGRADE!");
 	m_upgradeButton.set_enabled(level < UIUpgradeIcon::MAX_LEVEL && player->shells >= calculate_upgrade_cost(uid, level));
+	m_upgradeButton.set_cost(level < UIUpgradeIcon::MAX_LEVEL ? calculate_upgrade_cost(uid, level) : -1);   // The price on the button
+	if (level >= UIUpgradeIcon::MAX_LEVEL) m_upgradeButton.set_text("MAX LEVEL");
 	m_upgradeButton.update(deltaTime);
 
 	// Name and description of the selected unit (wrapped to the panel)
@@ -294,9 +307,9 @@ void UIUpgradeSlider::render_upgrade_info(sf::RenderWindow& window)
 			return text.getGlobalBounds();
 		};
 
-	float y = DESCRIPTION_PANEL.position.y + 44.f;
+	float y = DESCRIPTION_PANEL.position.y + 42.f;
 	drawText(m_isMaxLevel ? "MAX LEVEL" : "NEXT LEVEL", 34, UISkin::TITLE, { STATS_X + 190.f, y }, { 0.5f, 0.5f });
-	y += 62.f;
+	y += 50.f;
 	for (const StatRow& row : m_statRows)
 	{
 		if (row.isExtra)
@@ -304,7 +317,7 @@ void UIUpgradeSlider::render_upgrade_info(sf::RenderWindow& window)
 			// The extra levels: purple, one value at the end of the row (no arrow: upgrading doesn't change them)
 			drawText(row.name, STAT_SIZE, UISkin::EXTRA, { STATS_X, y }, { 0.f, 0.5f });
 			drawText(row.next, STAT_SIZE, UISkin::EXTRA, { STATS_X + (m_isMaxLevel ? 250.f : 385.f), y }, { 1.f, 0.5f });
-			y += 48.f;
+			y += 43.f;
 			continue;
 		}
 		drawText(row.name, STAT_SIZE, UISkin::TEXT, { STATS_X, y }, { 0.f, 0.5f });
@@ -314,25 +327,17 @@ void UIUpgradeSlider::render_upgrade_info(sf::RenderWindow& window)
 			drawText(">", STAT_SIZE, UISkin::TITLE, { STATS_X + 285.f, y }, { 0.5f, 0.5f });
 			drawText(row.next, STAT_SIZE, row.isBetter ? BETTER : UISkin::TEXT, { STATS_X + 385.f, y }, { 1.f, 0.5f });
 		}
-		y += 48.f;
+		y += 43.f;
 	}
 	if (!m_evolutionLine.empty())
 		drawText(UISkin::wrap_text(m_evolutionLine, 28, 420.f), 28, UISkin::NUMBER, { STATS_X, y + 10.f }, { 0.f, 0.f });
 
-	// Under the button: the price, or what is missing
+	// The price is on the button; under it, what is missing
 	auto player = m_dataLoader->get_player_data().lock();
-	if (!player || m_upgradeIcons.empty()) return;
+	if (!player || m_upgradeIcons.empty() || m_isMaxLevel) return;
 	const float centerX = UPGRADE_BUTTON.position.x + UPGRADE_BUTTON.size.x / 2.f;
-	const float priceY = UPGRADE_BUTTON.position.y + UPGRADE_BUTTON.size.y + 46.f;
-	if (m_isMaxLevel)
-	{
-		drawText("MAX LEVEL", 40, UISkin::TITLE, { centerX, priceY }, { 0.5f, 0.5f });
-		return;
-	}
-	const sf::FloatRect price = drawText(std::to_string(m_cost), 44, UISkin::NUMBER, { centerX + 24.f, priceY }, { 0.5f, 0.5f });
-	UISkin::draw_fitted(window, UISkin::texture("icon_shell"), { { price.position.x - 62.f, priceY - 26.f }, { 52.f, 52.f } });
 	if (player->shells < m_cost)
-		drawText("Need " + std::to_string(m_cost - player->shells) + " more shells", 28, CORAL, { centerX, priceY + 50.f }, { 0.5f, 0.5f });
+		drawText("Need " + std::to_string(m_cost - player->shells) + " more shells", 28, CORAL, { centerX, UPGRADE_BUTTON.position.y + UPGRADE_BUTTON.size.y + 34.f }, { 0.5f, 0.5f });
 }
 
 /*
@@ -340,10 +345,16 @@ void UIUpgradeSlider::render_upgrade_info(sf::RenderWindow& window)
  */
 void UIUpgradeSlider::render(sf::RenderWindow& window)
 {
+	// The shelf the cards stand on, the page dots (they follow a slide), then the cards: the biggest (the one in the
+	// middle, or passing it while sliding) on top
+	UIUnitCard::draw_shelf(window, SHELF_TOP, CARDS_BOTTOM + 24.f, CARDS_BOTTOM);
+	UIUnitCard::draw_page_dots(window, { 960.f, DOTS_Y }, static_cast<int>(m_upgradeIcons.size()),
+		static_cast<float>(m_currentIndex) - drag_offset() / ICON_SPACING);
+	const int front = UIUnitCard::biggest(m_upgradeIcons);
 	for (int i = 0; i < static_cast<int>(m_upgradeIcons.size()); ++i)
-		if (i != m_currentIndex) m_upgradeIcons[i]->render(window);
-	if (!m_upgradeIcons.empty())
-		m_upgradeIcons[m_currentIndex]->render(window);
+		if (i != front) m_upgradeIcons[i]->render(window);
+	if (front >= 0)
+		m_upgradeIcons[front]->render(window);
 
 	m_previousButton.render(window);
 	m_nextButton.render(window);
@@ -371,25 +382,65 @@ void UIUpgradeSlider::handle_event(const sf::Event& event, const sf::RenderWindo
 			move_to_index(m_currentIndex + 1);
 	}
 
-	if (const auto* mousePressed = event.getIf<sf::Event::MouseButtonPressed>())
-	{
-		if (mousePressed->button == sf::Mouse::Button::Left)
+	// The cards: sliding sideways anywhere on the screen moves them with the finger, not only on them (flung, they
+	// glide on; a tap catches them); a tap on a side card brings it to the middle (on release, so a swipe that starts
+	// on a card doesn't pick it). The arrows (drawn over the far cards), the UPGRADE button and the back button keep
+	// their presses
+	const auto is_on_arrow = [this](sf::Vector2f point)
 		{
-			sf::Vector2f mousePos = window.mapPixelToCoords(mousePressed->position);
-
-			// The arrows are drawn over the far cards: they come first
-			const bool isOnArrow = (m_previousButton.is_visible() && m_previousButton.get_bounds().contains(mousePos))
-				|| (m_nextButton.is_visible() && m_nextButton.get_bounds().contains(mousePos));
-
-			for (int i = 0; i < static_cast<int>(m_upgradeIcons.size()) && !isOnArrow; ++i)
-			{
+			return (m_previousButton.is_visible() && m_previousButton.get_bounds().contains(point))
+				|| (m_nextButton.is_visible() && m_nextButton.get_bounds().contains(point));
+		};
+	const auto is_slide_area = [&](sf::Vector2f point)
+		{
+			return UISkin::is_slide_area(point) && !is_on_arrow(point) && !UPGRADE_BUTTON.contains(point);
+		};
+	if (const auto* mousePressed = event.getIf<sf::Event::MouseButtonPressed>(); mousePressed && mousePressed->button == sf::Mouse::Button::Left)
+	{
+		const sf::Vector2f mousePos = window.mapPixelToCoords(mousePressed->position);
+		const bool wasGliding = m_glide.isActive;
+		m_glide.isActive = false;
+		if (is_slide_area(mousePos))
+		{
+			// A glide stops under the finger, which can slide the cards on from there
+			m_caughtGlide = wasGliding;
+			m_dragBase = drag_offset();
+			if (wasGliding) follow_drag(m_dragBase);
+			m_swipe.press(mousePos);
+		}
+		else if (wasGliding)
+			move_to_index(m_currentIndex, true);   // Elsewhere: they land on the selected card at once
+	}
+	else if (const auto* mouseMoved = event.getIf<sf::Event::MouseMoved>())
+	{
+		// Sliding sideways: the cards follow the finger
+		m_swipe.move(window.mapPixelToCoords(mouseMoved->position));
+		const sf::Vector2f drag = m_swipe.last - m_swipe.start;
+		if (m_swipe.isDown && (m_isFollowing || (std::abs(drag.x) > 12.f && std::abs(drag.x) > 1.4f * std::abs(drag.y))))
+		{
+			m_isFollowing = true;
+			follow_drag(m_dragBase + drag.x);
+		}
+	}
+	else if (const auto* mouseReleased = event.getIf<sf::Event::MouseButtonReleased>(); mouseReleased && m_swipe.isDown)
+	{
+		const sf::Vector2f mousePos = window.mapPixelToCoords(mouseReleased->position);
+		const float dragX = m_dragBase + mousePos.x - m_swipe.start.x;
+		m_swipe.release(mousePos);
+		if (m_isFollowing || m_caughtGlide)
+		{
+			// Let go (or a glide caught by a tap): flung, they glide on; else they settle on the nearest card
+			m_isFollowing = false;
+			release_slide(dragX, m_swipe.velocity.x);
+			m_caughtGlide = false;
+		}
+		else
+			for (int i = 0; i < static_cast<int>(m_upgradeIcons.size()); ++i)
 				if (i != m_currentIndex && m_upgradeIcons[i]->get_bounds().contains(mousePos))
 				{
 					move_to_index(i);
 					break;
 				}
-			}
-		}
 	}
 
 	m_previousButton.handle_event(event, window);
@@ -399,15 +450,79 @@ void UIUpgradeSlider::handle_event(const sf::Event& event, const sf::RenderWindo
 }
 
 /*
+ * The cards follow a finger sliding them: each at its place plus how far it has slid (no glide while held), the
+ * one passing the middle growing to the selected size and the one leaving it shrinking; the nearest is the
+ * highlighted one
+ */
+void UIUpgradeSlider::follow_drag(float dragX)
+{
+	for (int i = 0; i < static_cast<int>(m_upgradeIcons.size()); ++i)
+	{
+		const float slot = static_cast<float>(i - m_currentIndex) + dragX / ICON_SPACING;   // Cards from the middle
+		m_upgradeIcons[i]->place_at(1920.f / 2.f + slot * ICON_SPACING, baseIconSize.x * UIUnitCard::carousel_scale(slot, CENTER_SCALE, SIDE_SCALE));
+		m_upgradeIcons[i]->select(std::abs(slot) < 0.5f);
+	}
+}
+
+/*
  * Animates the slider to focus on a new icon index.
  * Updates icon positions, sizes, and selection states.
  */
-void UIUpgradeSlider::move_to_index(int newIndex)
-{
-	if (newIndex < 0 || newIndex >= static_cast<int>(m_upgradeIcons.size()) || newIndex == m_currentIndex)
-		return;
 
-	play_sound("ui_select");
+// Where the cards settle when let go slowly: the nearest one (a short flick from rest still moves one card)
+int UIUpgradeSlider::snap_index(float dragX, bool allowsFlick) const
+{
+	int target = static_cast<int>(std::lround(static_cast<float>(m_currentIndex) - dragX / ICON_SPACING));
+	if (allowsFlick && target == m_currentIndex && std::abs(dragX) > UISwipe::DISTANCE) target += dragX < 0.f ? 1 : -1;
+	return std::clamp(target, 0, std::max(0, static_cast<int>(m_upgradeIcons.size()) - 1));
+}
+
+int UIUpgradeSlider::get_selected_uid() const
+{
+	return m_availableUpgrades.empty() ? -1 : m_availableUpgrades[m_currentIndex];
+}
+
+void UIUpgradeSlider::select_unit(int uid)
+{
+	const auto found = std::find(m_availableUpgrades.begin(), m_availableUpgrades.end(), uid);
+	if (found == m_availableUpgrades.end()) return;
+	m_currentIndex = static_cast<int>(found - m_availableUpgrades.begin());
+	init_icons();   // Laid out round it at once
+}
+
+float UIUpgradeSlider::drag_offset() const
+{
+	if (m_upgradeIcons.empty()) return 0.f;
+	const auto& card = m_upgradeIcons[m_currentIndex];
+	return card->get_position().x + card->get_size().x / 2.f - 1920.f / 2.f;
+}
+
+/*
+ * Let go: flung (faster than UISwipe::GLIDE_SPEED), the cards glide on and slow down, landing on the card that speed
+ * carries them to; it's selected at once, so its name and price show while they glide. Slower, they settle on the
+ * nearest card
+ */
+void UIUpgradeSlider::release_slide(float dragX, float speed)
+{
+	const int last = static_cast<int>(m_upgradeIcons.size()) - 1;
+	if (std::abs(speed) <= UISwipe::GLIDE_SPEED || last < 0)
+	{
+		move_to_index(snap_index(dragX, !m_caughtGlide && std::abs(m_dragBase) < 20.f), true);
+		return;
+	}
+	const int target = std::clamp(UIGlide::landing(static_cast<float>(m_currentIndex), dragX, speed, ICON_SPACING), 0, last);
+	if (target != m_currentIndex) play_sound("ui_select");
+	m_glide.start(dragX + static_cast<float>(target - m_currentIndex) * ICON_SPACING, 0.f);   // Counted from the target
+	m_currentIndex = target;
+}
+
+void UIUpgradeSlider::move_to_index(int newIndex, bool force)
+{
+	if (newIndex < 0 || newIndex >= static_cast<int>(m_upgradeIcons.size()) || (newIndex == m_currentIndex && !force))
+		return;
+	m_glide.isActive = false;   // The arrows, the keys or a tap take over from a glide
+
+	if (newIndex != m_currentIndex) play_sound("ui_select");
 
 	const float centerX = 1920.f / 2.0f - baseIconSize.x / 2.f;
 

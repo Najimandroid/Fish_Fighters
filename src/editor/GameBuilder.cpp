@@ -39,6 +39,26 @@ GameBuilder::~GameBuilder()
     if (m_thread.joinable()) m_thread.join();
 }
 
+bool GameBuilder::start_phone_install(const std::filesystem::path& projectFolder, bool isRelease, std::string& error)
+{
+    if (m_state == State::RUNNING) { error = "A build is already running"; return false; }
+    if (m_thread.joinable()) m_thread.join();
+
+    const fs::path tool = projectFolder / "tools" / "android" / "android.js";
+    if (!fs::exists(tool)) { error = "No " + tool.string(); return false; }
+
+    m_build = GameBuilds::Build{};
+    m_build.name = isRelease ? "Android Release (phone)" : "Android Debug (phone)";
+    {
+        std::lock_guard<std::mutex> lock(m_logMutex);
+        m_log = "Building " + m_build.name + ", then installing it on the phone (on a Xiaomi phone, tap Install on its prompt)...\n";
+    }
+    m_state = State::RUNNING;
+    // cmd /c ""node" "tool" all [release] 2>&1"
+    m_thread = std::thread(&GameBuilder::run, this, "\"node \"" + fs::path(tool).make_preferred().string() + "\" all" + (isRelease ? " release" : "") + " 2>&1\"");
+    return true;
+}
+
 bool GameBuilder::start(const GameBuilds::Build& build, std::string& error)
 {
     if (m_state == State::RUNNING) { error = "A build is already running"; return false; }

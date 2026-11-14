@@ -2,6 +2,8 @@
 
 #include "UIUpgradeIcon.h"
 #include "UIButtonElement.h"
+#include "UIOfferButton.h"
+#include "UISwipe.h"
 #include "UIRoundButton.h"
 #include "UIPanel.h"
 #include "UIAbilityList.h"
@@ -14,7 +16,8 @@ class DataLoader;
  * The Upgrade screen's carousel, like The Battle Cats' upgrade screen: unit cards in a row
  * (the selected one big in the middle), arrows on both sides, a big UPGRADE! button, and a panel
  * with the selected unit's name, description and abilities (UIAbilityList: hover one to see what it does).
- * Left / Right keys, the arrows or a click on a side card move it.
+ * Left / Right keys, the arrows or a click on a side card move it; a finger sliding sideways moves the cards with
+ * it (the one passing the middle grows), and they settle on the nearest when let go.
  * Works with DataLoader to fetch player data and unit info.
  */
 
@@ -30,7 +33,17 @@ public:
     void init_icons();
 
     // Moves slider to display unit at new index
-    void move_to_index(int newIndex);
+    // force: glide back to it even if it's the current one (after a drag)
+    void move_to_index(int newIndex, bool force = false);
+    void follow_drag(float dragX);       // The cards follow a finger sliding them
+    // Where they settle when let go slowly (allowsFlick: a short flick from rest still moves one card)
+    int snap_index(float dragX, bool allowsFlick = true) const;
+    void release_slide(float dragX, float speed);   // Let go: glides on when flung, else settles on the nearest
+    float drag_offset() const;           // Where the cards are now, as a drag from the selected one (0 at rest)
+
+    // The selected fish (-1: none), and selecting one at once (coming from the Equip screen's shortcut)
+    int get_selected_uid() const;
+    void select_unit(int uid);
 
     // Calculate the upgrade cost of a unit given its UID and current level
     int calculate_upgrade_cost(int uid, int level);
@@ -50,7 +63,12 @@ private:
     std::vector<int> m_availableUpgrades; // List of all unit UIDs to display
     std::vector<std::shared_ptr<UIUpgradeIcon>> m_upgradeIcons; // Icon objects for the slider
 
-    UIButtonElement m_upgradeButton;  // Button to upgrade selected unit
+    UIOfferButton m_upgradeButton;    // UPGRADE! (UNLOCK!) with its price on it, in shells
+    UISwipe m_swipe;                  // Swiping the cards sideways
+    bool m_isFollowing = false;       // The cards follow the finger
+    UIGlide m_glide;                  // Flung: the cards glide on to the selected one (counted from it)
+    float m_dragBase = 0.f;           // Where the cards were when pressed (0 at rest; mid-glide when caught)
+    bool m_caughtGlide = false;       // The press stopped a glide: its release settles, it isn't a tap
     UIRoundButton m_previousButton;   // Arrows on both sides of the cards
     UIRoundButton m_nextButton;
 

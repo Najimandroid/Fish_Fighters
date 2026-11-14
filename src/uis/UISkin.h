@@ -105,4 +105,46 @@ namespace UISkin
 
     // Inside of a SLOT drawn over rect: the part the outline doesn't cover
     sf::FloatRect slot_inner(const sf::FloatRect& rect, float cornerScale);
+
+    // ----- Screen shape -----
+    // The part of the UI coordinates the window shows: 1920 x 1080 on a 16:9 screen, wider on a phone (x from below 0
+    // to past 1920), taller on a 4:3 tablet. The layout stays in 1920 x 1080 (clear of a phone's camera cutout);
+    // backgrounds, bars, dims and transitions fill this. Game sets it with the views
+    sf::FloatRect screen_rect();
+    void set_screen_rect(const sf::FloatRect& rect);
+
+    // A color over the whole screen (veils, flashes, fades)
+    void fill_screen(sf::RenderTarget& target, sf::Color color);
+
+    // ----- Menu layout -----
+    // The menu screens have the title bar across the top (UITitleBar, its band down to CONTENT_TOP), the bottom bar
+    // across the bottom (UIBottomBar, from CONTENT_BOTTOM: shortcuts, future shop buttons, the Shiny Scales) and the
+    // round back button sitting on its left end (UIManager::make_back_button, BACK_BUTTON), like The Battle Cats' frame
+    inline constexpr float CONTENT_TOP = 104.f;
+    inline constexpr float CONTENT_BOTTOM = 1080.f - 84.f;
+    inline const sf::FloatRect BACK_BUTTON{ { 24.f, 1080.f - 24.f - 120.f }, { 120.f, 120.f } };
+
+    // A slide can start there (the carousels and the chapter map slide wherever the finger is, not only on their
+    // cards): between the title bar and the bottom bar, off the back button. Each screen leaves out its own buttons too
+    bool is_slide_area(sf::Vector2f point);
+
+    // The menus' frame on a screen wider than 16:9 (a phone): steel hull pillars fill the extra width on both sides,
+    // so the menus stay a compact 16:9 instead of stretching (the battle has none: its field fills the screen)
+    void draw_side_frame(sf::RenderTarget& target);
+
+    // A rounded rectangle shape (bubbles, pills, vector icons)
+    sf::ConvexShape rounded_rect(const sf::FloatRect& rect, float radius);
+
+    // ----- Depth -----
+    // The soft shadow under a raised element (buttons, tiles): its own shape, dark, a little lower
+    inline constexpr float SHADOW_DROP = 6.f;                     // Down...
+    inline constexpr float SHADOW_SHIFT = 4.f;                    // ...and a little to the right (light from the top left)
+    inline const sf::Color SHADOW_TINT{ 0, 0, 0, 75 };
+
+    // ----- Transitions -----
+    // A band of deep water across the screen from top to bottom (UI coordinates), solid (nothing shows through it):
+    // wavy edges with a pale foam line, darker at the bottom, a few bubbles rising inside. The screen transitions
+    // (a new menu screen, the battle start) sweep it over the screen
+    inline constexpr float WATER_WAVE = 18.f;     // How far its edges wave above and below top / bottom
+    void draw_water_band(sf::RenderTarget& target, float top, float bottom, float time);
 }

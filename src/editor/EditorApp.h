@@ -74,6 +74,7 @@ private:
 
     // Rebuilds the game in that build folder (saves first), the progress shows in the Build window
     void build_game(const GameBuilds::Build& build);
+    void install_on_phone(bool isRelease);   // Game > Install on phone: the Android version, over USB
     void draw_build_window();
 
 private:

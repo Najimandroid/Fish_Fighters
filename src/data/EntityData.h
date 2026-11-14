@@ -6,7 +6,7 @@
 #include "EntityType.h"
 #include "AbilityData.h"
 
-enum AttackType;
+enum AttackType : int;   // Defined in DataLoader.h (declared ahead with its type: standard C++, needed by Clang)
 
 /*
  * EntityData
