@@ -98,6 +98,7 @@ set(PROJECT_SOURCES
     src/uis/widgets/UIClamBackdrop.cpp
     src/uis/widgets/UIAdOverlay.cpp
     src/uis/widgets/UIChartBackground.cpp
+    src/uis/widgets/UIBottomBar.cpp
     src/uis/widgets/UIStageCash.cpp
     src/uis/widgets/UICashUp.cpp
     src/uis/widgets/UIBaseHealthInfo.cpp

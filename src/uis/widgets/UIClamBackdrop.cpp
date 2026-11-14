@@ -7,7 +7,7 @@ namespace
 {
     const sf::Color TOP{ 40, 30, 82 }, BOTTOM{ 12, 10, 34 };
     const sf::Color BEAM{ 200, 186, 255 };
-    const sf::Vector2f STAGE{ 960.f, 862.f };   // Under the clam (UIClamRoom's CLAM_BASE)
+    const sf::Vector2f STAGE{ 960.f, 802.f };   // Under the clam (UIClamRoom's CLAM_BASE)
 }
 
 UIClamBackdrop::UIClamBackdrop() :

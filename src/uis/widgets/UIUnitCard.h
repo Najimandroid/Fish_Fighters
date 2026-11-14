@@ -40,6 +40,14 @@ public:
     // middle, sideScale from one card away, growing smoothly in between
     static float carousel_scale(float slot, float centerScale, float sideScale);
 
+    // The carousels' display, like The Battle Cats' card band: a dark see-through band across the screen from top to
+    // bottom, a steel rail the cards stand on at floorY
+    static void draw_shelf(sf::RenderTarget& target, float top, float bottom, float floorY);
+
+    // A row of dots, one per card, the one at position (the selected one; fractional while sliding) bigger and lit,
+    // like The Battle Cats' page dots: where you are in the list
+    static void draw_page_dots(sf::RenderTarget& target, sf::Vector2f center, int count, float position);
+
     // The widest card of a carousel (drawn last, on top); -1 when there are none
     template <typename Cards>
     static int biggest(const Cards& cards)

@@ -13,8 +13,8 @@ namespace
     // The selected stage is brought to this point of the screen (between the title bar and the info panel)
     const sf::Vector2f VIEW_CENTER{ 960.f, 480.f };
 
-    // Info panel at the bottom, between the back button and the BATTLE button (UIManager)
-    const sf::FloatRect INFO_PANEL{ { 180.f, 862.f }, { 1260.f, 190.f } };
+    // Info panel at the bottom, above the bottom bar, between the back button and the BATTLE button (UIManager)
+    const sf::FloatRect INFO_PANEL{ { 180.f, UISkin::CONTENT_BOTTOM - 16.f - 190.f }, { 1260.f, 190.f } };
     // Right of the panel, under the map: the BATTLE! button (UIManager), which keeps its presses
     const sf::FloatRect BATTLE_CORNER{ { INFO_PANEL.position.x + INFO_PANEL.size.x, INFO_PANEL.position.y - 20.f }, { 1000.f, 400.f } };
     // The stages' names along the top (tabs), under the title bar

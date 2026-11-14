@@ -117,13 +117,15 @@ namespace UISkin
     void fill_screen(sf::RenderTarget& target, sf::Color color);
 
     // ----- Menu layout -----
-    // The menu screens have the title bar across the top (UITitleBar, its band down to CONTENT_TOP) and the round back
-    // button at the bottom left (UIManager::make_back_button, BACK_BUTTON)
+    // The menu screens have the title bar across the top (UITitleBar, its band down to CONTENT_TOP), the bottom bar
+    // across the bottom (UIBottomBar, from CONTENT_BOTTOM: shortcuts, future shop buttons, the Shiny Scales) and the
+    // round back button sitting on its left end (UIManager::make_back_button, BACK_BUTTON), like The Battle Cats' frame
     inline constexpr float CONTENT_TOP = 104.f;
+    inline constexpr float CONTENT_BOTTOM = 1080.f - 84.f;
     inline const sf::FloatRect BACK_BUTTON{ { 24.f, 1080.f - 24.f - 120.f }, { 120.f, 120.f } };
 
     // A slide can start there (the carousels and the chapter map slide wherever the finger is, not only on their
-    // cards): under the title bar and off the back button. Each screen leaves out its own buttons too
+    // cards): between the title bar and the bottom bar, off the back button. Each screen leaves out its own buttons too
     bool is_slide_area(sf::Vector2f point);
 
     // The menus' frame on a screen wider than 16:9 (a phone): steel hull pillars fill the extra width on both sides,

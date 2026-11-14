@@ -24,6 +24,7 @@
 #include "widgets/UIRoundButton.h"
 #include "widgets/UIPauseMenu.h"
 #include "widgets/UITitleBar.h"
+#include "widgets/UIBottomBar.h"
 #include "widgets/UIPatternBackground.h"
 #include "widgets/UIEncyclopedia.h"
 #include "widgets/UITitleScreen.h"
@@ -472,6 +473,7 @@ void UIManager::generate_fish_tank_uis()
     add_ui_element(std::make_shared<UIFishTank>(m_dataLoader));   // The lineup swims in the porthole
     add_ui_element(titleBar);
     add_ui_element(shellsInfo);
+    add_bottom_bar();   // The floor's front edge: the Fish and the clam stand on it (room for the shop later)
     add_ui_element(battleButton);
     add_ui_element(upgradeButton);
     add_ui_element(equipButton);
@@ -479,10 +481,10 @@ void UIManager::generate_fish_tank_uis()
     add_ui_element(nextStage);
     add_ui_element(upgradeBadge);
 
-    // The Clam Room: a tile with the clam under the porthole. Locked (greyed, the stage that opens it written under
-    // it) until the stage with the "clamRoom" reward is cleared
+    // The Clam Room: a tile with the clam under the porthole, standing on the bottom bar. Locked (greyed, the stage
+    // that opens it written under it) until the stage with the "clamRoom" reward is cleared
     const bool isClamRoomOpen = m_dataLoader->is_clam_room_open();
-    const sf::FloatRect clamTile{ { 1388.f - 120.f, 826.f }, { 240.f, 168.f } };
+    const sf::FloatRect clamTile{ { 1388.f - 120.f, UISkin::CONTENT_BOTTOM - 8.f - 168.f }, { 240.f, 168.f } };
     auto clamButton = std::make_shared<UIIconTile>(clamTile.size, clamTile.position, "CLAM ROOM", UIIconTile::Icon::TEXTURE,
         "assets/images/textures/ui/clam_closed.png");
     clamButton->set_enabled(isClamRoomOpen);
@@ -631,6 +633,7 @@ void UIManager::generate_clam_room_uis(bool fromStorage)
                     UIToast::show("+1 SHINY SCALE", "Thanks for watching!", "icon_shiny_scale");
                 });
         });
+    add_bottom_bar(UITitleBar::Material::VIOLET, false);   // The Shiny Scales are on the title bar here
     add_ui_element(std::make_shared<UIClamRoomOverlay>(room));   // What flies over the title bar
     add_ui_element(backButton);
     add_ui_element(std::make_shared<UIToast>());
@@ -694,6 +697,7 @@ void UIManager::generate_encyclopedia_uis()
     add_ui_element(std::make_shared<UIAmbience>());
     add_ui_element(titleBar);
     add_ui_element(shellsInfo);
+    add_bottom_bar();
     add_ui_element(backButton);
     auto info = add_info_button(titleBar->get_info_position(), "Encyclopedia",
         "Every fish and every enemy of the game. The ones you haven't got or met yet are black shapes.\n\nPick one to see its stats and its abilities; the buttons on top sort them.");
@@ -715,24 +719,55 @@ std::shared_ptr<UIRoundButton> UIManager::make_back_button(std::function<void()>
     return backButton;
 }
 
+void UIManager::add_bottom_bar(UITitleBar::Material material, bool showsScales)
+{
+    add_ui_element(std::make_shared<UIBottomBar>(material));
+    if (!showsScales) return;
+    auto scales = std::make_shared<UIPlayerShellsInfo>(m_dataLoader, UIPlayerShellsInfo::Currency::SHINY_SCALES);
+    scales->place_in_bottom_bar();
+    add_ui_element(scales);
+}
+
+std::shared_ptr<UIButtonElement> UIManager::make_bar_button(const std::string& label, std::function<void()> onPress)
+{
+    const sf::Vector2f size{ 260.f, 66.f };
+    const sf::Vector2f position{ UISkin::BACK_BUTTON.position.x + UISkin::BACK_BUTTON.size.x + 36.f,
+        UISkin::CONTENT_BOTTOM + (1080.f - UISkin::CONTENT_BOTTOM - size.y) / 2.f + 2.f };
+    auto button = std::make_shared<UIButtonElement>(size, position, label);
+    button->set_text_size(34);
+    button->set_style(UIButtonElement::Style::Secondary);
+    button->set_callback([this, onPress]() { m_pendingAction = onPress; });
+    return button;
+}
+
 /*
- * Generate the Upgrade screen: wave pattern, title bar, shells, the upgrade carousel, back to the Fish Tank
+ * Generate the Upgrade screen: wave pattern, title bar, shells, the upgrade carousel, the bottom bar (EQUIP with the
+ * same fish), back to the Fish Tank
  */
-void UIManager::generate_upgrade_menu_uis()
+void UIManager::generate_upgrade_menu_uis(int selectUid)
 {
     enter_menu_screen();
 
     auto bg = std::make_shared<UIPatternBackground>("pattern_hull");
     auto upgradeSlider = std::make_shared<UIUpgradeSlider>(m_dataLoader);
+    if (selectUid >= 0) upgradeSlider->select_unit(selectUid);
     auto titleBar = std::make_shared<UITitleBar>("Upgrade");
 	auto shellsInfo = std::make_shared<UIPlayerShellsInfo>(m_dataLoader);
     auto backButton = make_back_button([this]() { generate_fish_tank_uis(); });
+    std::weak_ptr<UIUpgradeSlider> weakSlider = upgradeSlider;
+    auto equipShortcut = make_bar_button("EQUIP", [this, weakSlider]()
+        {
+            const auto slider = weakSlider.lock();
+            generate_equip_menu_uis(slider ? slider->get_selected_uid() : -1);
+        });
 
     add_ui_element(bg);
     add_ui_element(std::make_shared<UIAmbience>());
     add_ui_element(upgradeSlider);
     add_ui_element(titleBar);
     add_ui_element(shellsInfo);
+    add_bottom_bar();
+    add_ui_element(equipShortcut);
     add_ui_element(backButton);
     add_ui_element(std::make_shared<UIToast>());   // School Rank milestones reached by upgrading
     add_ui_element(add_info_button(titleBar->get_info_position(), "Upgrading",
@@ -740,22 +775,31 @@ void UIManager::generate_upgrade_menu_uis()
 }
 
 /*
- * Generate the Equip screen: wave pattern, title bar, shells, the cards and the lineup,
- * back to the Fish Tank (saves the lineup)
+ * Generate the Equip screen: wave pattern, title bar, shells, the lineup and the cards, the bottom bar (UPGRADE with
+ * the same fish), back to the Fish Tank (both save the lineup)
  */
-void UIManager::generate_equip_menu_uis()
+void UIManager::generate_equip_menu_uis(int selectUid, bool isFromMap)
 {
     enter_menu_screen();
 
     auto bg = std::make_shared<UIPatternBackground>("pattern_hull");
     auto equipSlider = std::make_shared<UIEquipSlider>(m_dataLoader);
+    if (selectUid >= 0) equipSlider->select_unit(selectUid);
     auto titleBar = std::make_shared<UITitleBar>("Equip");
     auto shellsInfo = std::make_shared<UIPlayerShellsInfo>(m_dataLoader);
-    auto backButton = make_back_button([this]()
+    auto backButton = make_back_button([this, isFromMap]()
         {
-            // Save the loadout when leaving the equip menu
+            // Save the loadout when leaving the equip menu; back to the map when it came from there
             m_dataLoader->save_progress();
-            generate_fish_tank_uis();
+            if (isFromMap) generate_chapter_map_uis();
+            else generate_fish_tank_uis();
+        });
+    std::weak_ptr<UIEquipSlider> weakSlider = equipSlider;
+    auto upgradeShortcut = make_bar_button("UPGRADE", [this, weakSlider]()
+        {
+            m_dataLoader->save_progress();
+            const auto slider = weakSlider.lock();
+            generate_upgrade_menu_uis(slider ? slider->get_selected_uid() : -1);
         });
 
     add_ui_element(bg);
@@ -763,6 +807,8 @@ void UIManager::generate_equip_menu_uis()
     add_ui_element(equipSlider);
     add_ui_element(titleBar);
     add_ui_element(shellsInfo);
+    add_bottom_bar();
+    add_ui_element(upgradeShortcut);
     add_ui_element(backButton);
     add_ui_element(add_info_button(titleBar->get_info_position(), "Your lineup",
         "Your lineup: the fish you can send into battle, up to 10.\n\nTap a fish (or drag it) to add it. Drop a fish on one of the lineup to put it in that place: the others move along (when the lineup is full, it takes that fish's place). Drag the fish in the lineup the same way to change their order: their slot is their number key in battle. Drag one out of the lineup to remove it (right click works too on PC).\n\nThe price on each fish is what sending it costs in battle."));
@@ -915,7 +961,7 @@ void UIManager::generate_chapter_map_uis()
     // Battle button triggers stage load and switches UI
     auto battleButton = std::make_shared<UIButtonElement>(
         sf::Vector2f{ 420.f, 160.f },
-        sf::Vector2f{ 1470.f, 880.f },
+        sf::Vector2f{ 1470.f, UISkin::CONTENT_BOTTOM - 16.f - 172.f },   // Level with the stage panel, above the bottom bar
         "BATTLE!"
     );
     battleButton->set_text_size(66);
@@ -937,10 +983,13 @@ void UIManager::generate_chapter_map_uis()
     auto shellsInfo = std::make_shared<UIPlayerShellsInfo>(m_dataLoader);
 
     auto backButton = make_back_button([this]() { generate_fish_tank_uis(); });
+    auto equipShortcut = make_bar_button("EQUIP", [this]() { generate_equip_menu_uis(-1, true); });
 
     add_ui_element(chapterMap);
     add_ui_element(titleBar);
     add_ui_element(shellsInfo);
+    add_bottom_bar();
+    add_ui_element(equipShortcut);
     add_ui_element(battleButton);
     add_ui_element(backButton);
     add_ui_element(add_info_button(titleBar->get_info_position(), "The chapter map",

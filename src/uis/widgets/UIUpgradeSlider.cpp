@@ -8,8 +8,10 @@
 
 namespace
 {
-    const sf::FloatRect UPGRADE_BUTTON{ { 60.f, 690.f }, { 470.f, 140.f } };
-    const sf::FloatRect DESCRIPTION_PANEL{ { 570.f, 660.f }, { 1290.f, 396.f } };   // Down to the bottom: room for the abilities
+    const sf::FloatRect UPGRADE_BUTTON{ { 60.f, 700.f }, { 470.f, 140.f } };
+    const sf::FloatRect DESCRIPTION_PANEL{ { 570.f, 676.f }, { 1290.f, 308.f } };   // Down to the bottom bar: room for the abilities
+    const float SHELF_TOP = 116.f;     // The cards' shelf, under the title bar
+    const float DOTS_Y = 146.f;        // The page dots, at its top
     const float TEXT_PADDING = 50.f;
     const float ARROW_SIZE = 96.f;
     const float ARROW_Y = 412.f;
@@ -305,9 +307,9 @@ void UIUpgradeSlider::render_upgrade_info(sf::RenderWindow& window)
 			return text.getGlobalBounds();
 		};
 
-	float y = DESCRIPTION_PANEL.position.y + 44.f;
+	float y = DESCRIPTION_PANEL.position.y + 42.f;
 	drawText(m_isMaxLevel ? "MAX LEVEL" : "NEXT LEVEL", 34, UISkin::TITLE, { STATS_X + 190.f, y }, { 0.5f, 0.5f });
-	y += 62.f;
+	y += 50.f;
 	for (const StatRow& row : m_statRows)
 	{
 		if (row.isExtra)
@@ -315,7 +317,7 @@ void UIUpgradeSlider::render_upgrade_info(sf::RenderWindow& window)
 			// The extra levels: purple, one value at the end of the row (no arrow: upgrading doesn't change them)
 			drawText(row.name, STAT_SIZE, UISkin::EXTRA, { STATS_X, y }, { 0.f, 0.5f });
 			drawText(row.next, STAT_SIZE, UISkin::EXTRA, { STATS_X + (m_isMaxLevel ? 250.f : 385.f), y }, { 1.f, 0.5f });
-			y += 48.f;
+			y += 43.f;
 			continue;
 		}
 		drawText(row.name, STAT_SIZE, UISkin::TEXT, { STATS_X, y }, { 0.f, 0.5f });
@@ -325,7 +327,7 @@ void UIUpgradeSlider::render_upgrade_info(sf::RenderWindow& window)
 			drawText(">", STAT_SIZE, UISkin::TITLE, { STATS_X + 285.f, y }, { 0.5f, 0.5f });
 			drawText(row.next, STAT_SIZE, row.isBetter ? BETTER : UISkin::TEXT, { STATS_X + 385.f, y }, { 1.f, 0.5f });
 		}
-		y += 48.f;
+		y += 43.f;
 	}
 	if (!m_evolutionLine.empty())
 		drawText(UISkin::wrap_text(m_evolutionLine, 28, 420.f), 28, UISkin::NUMBER, { STATS_X, y + 10.f }, { 0.f, 0.f });
@@ -343,7 +345,11 @@ void UIUpgradeSlider::render_upgrade_info(sf::RenderWindow& window)
  */
 void UIUpgradeSlider::render(sf::RenderWindow& window)
 {
-	// The biggest card (the one in the middle, or passing it while sliding) on top
+	// The shelf the cards stand on, the page dots (they follow a slide), then the cards: the biggest (the one in the
+	// middle, or passing it while sliding) on top
+	UIUnitCard::draw_shelf(window, SHELF_TOP, CARDS_BOTTOM + 24.f, CARDS_BOTTOM);
+	UIUnitCard::draw_page_dots(window, { 960.f, DOTS_Y }, static_cast<int>(m_upgradeIcons.size()),
+		static_cast<float>(m_currentIndex) - drag_offset() / ICON_SPACING);
 	const int front = UIUnitCard::biggest(m_upgradeIcons);
 	for (int i = 0; i < static_cast<int>(m_upgradeIcons.size()); ++i)
 		if (i != front) m_upgradeIcons[i]->render(window);
@@ -469,6 +475,19 @@ int UIUpgradeSlider::snap_index(float dragX, bool allowsFlick) const
 	int target = static_cast<int>(std::lround(static_cast<float>(m_currentIndex) - dragX / ICON_SPACING));
 	if (allowsFlick && target == m_currentIndex && std::abs(dragX) > UISwipe::DISTANCE) target += dragX < 0.f ? 1 : -1;
 	return std::clamp(target, 0, std::max(0, static_cast<int>(m_upgradeIcons.size()) - 1));
+}
+
+int UIUpgradeSlider::get_selected_uid() const
+{
+	return m_availableUpgrades.empty() ? -1 : m_availableUpgrades[m_currentIndex];
+}
+
+void UIUpgradeSlider::select_unit(int uid)
+{
+	const auto found = std::find(m_availableUpgrades.begin(), m_availableUpgrades.end(), uid);
+	if (found == m_availableUpgrades.end()) return;
+	m_currentIndex = static_cast<int>(found - m_availableUpgrades.begin());
+	init_icons();   // Laid out round it at once
 }
 
 float UIUpgradeSlider::drag_offset() const

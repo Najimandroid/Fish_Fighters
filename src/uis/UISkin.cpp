@@ -345,7 +345,7 @@ bool UISkin::is_slide_area(sf::Vector2f point)
 {
     const sf::Vector2f margin{ 16.f, 16.f };   // A finger is wider than the mouse: a little room round the button
     const sf::FloatRect back{ BACK_BUTTON.position - margin, BACK_BUTTON.size + margin * 2.f };
-    return point.y > CONTENT_TOP && !back.contains(point);
+    return point.y > CONTENT_TOP && point.y < CONTENT_BOTTOM && !back.contains(point);
 }
 
 /*

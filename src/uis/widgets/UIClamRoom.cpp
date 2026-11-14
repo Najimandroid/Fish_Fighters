@@ -18,7 +18,7 @@ namespace
     // The clam: its 300 x 300 canvas drawn 2.2 times bigger, standing on its base
     const float CLAM_SCALE = 2.2f;
     const sf::Vector2f CLAM_ORIGIN{ 150.f, 290.f };       // The base of the drawing in its canvas
-    const sf::Vector2f CLAM_BASE{ 960.f, 860.f };         // ...on screen
+    const sf::Vector2f CLAM_BASE{ 960.f, 800.f };         // ...on screen (the offers under it, above the bottom bar)
     const sf::Vector2f MOUTH_IN_CANVAS{ 150.f, 190.f };   // Where the fish come out (the open clam's inside)
     const sf::Vector2f SCALE_COUNTER{ 1430.f, 55.f };     // Where the scales fly from (the Shiny Scales pill)
 
@@ -35,7 +35,7 @@ namespace
     const float REVEAL_GAP = 0.18f;
     // The offers along the bottom (OPEN, OPEN x10; FREE for an ad on a phone), centered
     const sf::Vector2f OFFER_SIZE{ 360.f, 126.f };
-    const float AD_OFFER_WIDTH = 300.f, OFFER_GAP = 30.f, OFFER_Y = 918.f;
+    const float AD_OFFER_WIDTH = 300.f, OFFER_GAP = 30.f, OFFER_Y = UISkin::CONTENT_BOTTOM - 14.f - OFFER_SIZE.y;
     float offers_left()
     {
         const float width = 2.f * OFFER_SIZE.x + OFFER_GAP + (Platform::HAS_REWARDED_ADS ? AD_OFFER_WIDTH + OFFER_GAP : 0.f);
@@ -50,7 +50,7 @@ namespace
     // bottom edge so half of it shows under it, drawn twice (the room is dark: one would hardly show)
     const float CLAM_SHADOW_WIDTH = 620.f;
     const float CLAM_SHADOW_HEIGHT = 175.f;
-    const float CLAM_SHADOW_Y = 856.f;
+    const float CLAM_SHADOW_Y = 796.f;
 
     // A poke tips the clam on the side clicked: that side is pressed down, the other side lifts; its bottom is round,
     // so it rocks almost in place (it rises by TAP_ROCK of a sharp edge's pivot); the middle makes it hop straight up
@@ -72,7 +72,7 @@ namespace
     const float WALK_FRAME_SECONDS = 0.12f;  // The fish swim in their bubbles (like in the Fish Tank)
 
     // STORAGE: the Clam Storage's chest as a button, its name small under it (bottom right)
-    const sf::FloatRect STORAGE_ICON{ { 1700.f, 880.f }, { 140.f, 120.f } };
+    const sf::FloatRect STORAGE_ICON{ { 1700.f, 830.f }, { 140.f, 120.f } };
 
     // Into the Clam Storage: the clam pops open (TO_STORAGE_OPEN), the view dives into its mouth from DIVE_START
     // (ZOOM_MAX times closer), going dark pink from INSIDE_FADE. Out: the view zooms out of the open clam (from
@@ -509,8 +509,8 @@ void UIClamRoom::render(sf::RenderWindow& window)
         const int left = adPlayer ? adPlayer->ads_left_today() : 0;
         UISkin::style_text(m_text, 24, left > 0 ? sf::Color(170, 240, 225) : sf::Color(200, 190, 220));
         m_text.setString(left > 0 ? "+1 Shiny Scale  " + std::to_string(left) + "/" + std::to_string(PlayerData::ADS_PER_DAY) : "Back tomorrow");
-        UISkin::set_text_anchor(m_text, { 0.5f, 0.f });
-        m_text.setPosition({ offers_left() + AD_OFFER_WIDTH / 2.f, OFFER_Y + OFFER_SIZE.y + 10.f });
+        UISkin::set_text_anchor(m_text, { 0.5f, 1.f });   // Above the button: the bottom bar is under it
+        m_text.setPosition({ offers_left() + AD_OFFER_WIDTH / 2.f, OFFER_Y - 10.f });
         window.draw(m_text);
     }
 

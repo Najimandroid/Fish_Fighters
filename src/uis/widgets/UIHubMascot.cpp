@@ -10,17 +10,17 @@
 namespace
 {
     const int FISH_UID = 1;                         // The Fish
-    const sf::Vector2f HOME{ 1040.f, 922.f };       // The fish's center
+    const sf::Vector2f HOME{ 1040.f, 912.f };       // The fish's center
     const sf::Vector2f FISH_BOX{ 190.f, 140.f };    // It fits in this
-    const float FLOOR_Y = 1000.f;                   // Its shadow
+    const float FLOOR_Y = 988.f;                    // Its shadow: on the floor, just above the bottom bar
     const float SHADOW_WIDTH = 150.f, SHADOW_HEIGHT = 34.f;
     const float WALK_FRAME_SECONDS = 0.14f;
     const float HOP_SECONDS = 0.4f, HOP_HEIGHT = 40.f;   // Stays under its bubble
 
     // Room around it: away from the buttons (they end at x 630) and the porthole's ring
-    const float BUBBLE_LEFT = 680.f, BUBBLE_WIDTH = 384.f, BUBBLE_BOTTOM = 784.f;
+    const float BUBBLE_LEFT = 680.f, BUBBLE_WIDTH = 384.f, BUBBLE_BOTTOM = 774.f;
     const float PADDING = 24.f, CORNER = 28.f, OUTLINE = 5.f;
-    const sf::Vector2f TAIL_TIP{ 1000.f, 828.f };   // The bubble's tail points at the fish's head
+    const sf::Vector2f TAIL_TIP{ 1000.f, 818.f };   // The bubble's tail points at the fish's head
     const unsigned int TEXT_SIZE = 28;
     const sf::Color PAPER{ 252, 253, 255 };
 

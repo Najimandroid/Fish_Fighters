@@ -6,6 +6,7 @@
 #include "UIRoundButton.h"
 #include "UIPanel.h"
 #include "UISwipe.h"
+#include "UIAbilityList.h"
 
 #include "tweeny.h"
 
@@ -21,7 +22,9 @@ class DataLoader;
  * UIEquipSlider
  * ----------------
  * A horizontal slider UI that lets the player browse through their owned units
- * and equip them into a grid of 10 slots (2x5 layout), like The Battle Cats' Equip screen.
+ * and equip them into a grid of 10 slots (2x5 layout), like The Battle Cats' Organize screen: the lineup at the top
+ * with the selected fish's details beside it (its stats and abilities, like Unit Info), the cards at the bottom on a
+ * shelf with page dots.
  *
  * Features:
  * - Displays available fish units as cards (UIEquipIcon), the selected one big in the middle.
@@ -58,6 +61,10 @@ public:
 
     // Adds the selected card's fish to the first empty slot of the lineup (a click on it, or Enter)
     void add_selected_to_lineup();
+
+    // The selected fish (-1: none), and selecting one at once (coming from the Upgrade screen's shortcut)
+    int get_selected_uid() const;
+    void select_unit(int uid);
 
     // Standard UI loop methods
     void update(float deltaTime) override;
@@ -119,6 +126,9 @@ private:
     // The dragged unit
     void render_ghost(sf::RenderWindow& window);
 
+    // The selected fish's details beside the lineup: name, level, stats, abilities
+    void render_info(sf::RenderWindow& window);
+
 private:
 
     int m_currentIndex = 0; // Currently selected icon index
@@ -141,6 +151,9 @@ private:
     UIPanel m_lineupPanel;
     sf::Text m_lineupTitle;           // "LINEUP"
     sf::Text m_ghostCost;             // Deploy cost on the dragged unit
+    UIPanel m_infoPanel;              // The selected fish's details
+    UIAbilityList m_abilities;        // Its abilities, at the bottom of the details
+    int m_describedUid = -1;          // The abilities shown are this fish's
 
     // Drag state tracking
     UISwipe m_swipe;                  // Swiping the cards sideways
@@ -155,9 +168,9 @@ private:
     sf::Clock m_holdClock;
     static constexpr int HOLD_THRESHOLD_MS = 50; // Long press threshold
 
-    // Card layout: bottom-aligned on CARDS_BOTTOM, the selected card centered
+    // Card layout: bottom-aligned on CARDS_BOTTOM (the shelf's rail), the selected card centered
     const sf::Vector2f baseIconSize = { 250.0f, 250.0f };
-    const float CARDS_BOTTOM = 520.f;
+    const float CARDS_BOTTOM = 950.f;
     const float ICON_SPACING = 380.0f;
     const float CENTER_SCALE = 1.3f;
     const float SIDE_SCALE = 1.0f;

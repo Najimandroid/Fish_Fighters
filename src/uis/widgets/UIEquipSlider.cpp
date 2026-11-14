@@ -9,14 +9,20 @@
 
 namespace
 {
-    // Lineup: the same slots as in battle, in a dark panel under the cards
+    // Lineup: the same slots as in battle, in a dark panel at the top (like The Battle Cats' Organize screen); the
+    // selected fish's details beside it; the cards under them on a shelf
     const float SLOT_SPACING = 12.f;
-    const float LINEUP_TOP = 670.f;                      // Top of the first row of slots
+    const float LINEUP_TOP = 186.f;                      // Top of the first row of slots
+    const float LINEUP_LEFT = 70.f;                      // The lineup panel's left edge
     const float PANEL_PADDING = 22.f;
     const float PANEL_TITLE_BAND = 52.f;                 // "LINEUP" above the slots
     const float GHOST_SCALE = 1.5f;                      // The dragged unit is a slot this much bigger
     const float ARROW_SIZE = 96.f;
-    const float ARROW_Y = 292.f;
+    const float ARROW_Y = 700.f;
+    const float SHELF_TOP = 494.f;                       // The cards' shelf: from here down to the bottom bar
+    const float DOTS_Y = 528.f;                          // The page dots, at the top of the shelf
+    const unsigned int INFO_NAME_SIZE = 40;
+    const unsigned int INFO_STAT_SIZE = 30;
 
     sf::Vector2f lineup_size()
     {
@@ -27,7 +33,15 @@ namespace
     {
         const sf::Vector2f slots = lineup_size();
         const sf::Vector2f size{ slots.x + 2.f * PANEL_PADDING, slots.y + PANEL_PADDING + PANEL_TITLE_BAND };
-        return { { (1920.f - size.x) / 2.f, LINEUP_TOP - PANEL_TITLE_BAND }, size };
+        return { { LINEUP_LEFT, LINEUP_TOP - PANEL_TITLE_BAND }, size };
+    }
+
+    // The selected fish's details: right of the lineup, as tall
+    sf::FloatRect info_panel_rect()
+    {
+        const sf::FloatRect lineup = lineup_panel_rect();
+        const float left = lineup.position.x + lineup.size.x + 28.f;
+        return { { left, lineup.position.y }, { 1920.f - 60.f - left, lineup.size.y } };
     }
 }
 
@@ -44,7 +58,8 @@ UIEquipSlider::UIEquipSlider(std::shared_ptr<DataLoader> dataLoader)
     m_nextButton(ARROW_SIZE, { 1920.f - 36.f - ARROW_SIZE, ARROW_Y }, "icon_play"),
     m_lineupPanel(lineup_panel_rect().size, lineup_panel_rect().position, UISkin::PANEL_DARK, 1.2f),
     m_lineupTitle(UISkin::heavy_font(), "LINEUP"),
-    m_ghostCost(UISkin::heavy_font())
+    m_ghostCost(UISkin::heavy_font()),
+    m_infoPanel(info_panel_rect().size, info_panel_rect().position, UISkin::PANEL_DARK, 1.2f)
 {
     if (!m_placeholderTexture.loadFromFile("assets/images/textures/icons/placeholder.png")) {
         std::cerr << "UIEquipSlider: failed to load placeholder texture\n";
@@ -62,7 +77,7 @@ UIEquipSlider::UIEquipSlider(std::shared_ptr<DataLoader> dataLoader)
     const sf::FloatRect panel = lineup_panel_rect();
     UISkin::style_text(m_lineupTitle, 34, UISkin::TITLE);
     UISkin::set_text_anchor(m_lineupTitle, { 0.5f, 0.5f });
-    m_lineupTitle.setPosition({ 960.f, panel.position.y + PANEL_TITLE_BAND / 2.f + 6.f });
+    m_lineupTitle.setPosition({ panel.position.x + panel.size.x / 2.f, panel.position.y + PANEL_TITLE_BAND / 2.f + 6.f });
 
     UISkin::style_text(m_ghostCost, 32, UISkin::NUMBER);
 
@@ -107,7 +122,7 @@ void UIEquipSlider::init_icons()
     const float spacingY = SLOT_SPACING;
 
     // Calculate starting position for grid
-    float startX = (1920.f - lineup_size().x) / 2.f;
+    float startX = LINEUP_LEFT + PANEL_PADDING;
     float startY = LINEUP_TOP;
 
     // Create slot rectangles
@@ -297,7 +312,11 @@ void UIEquipSlider::update(float deltaTime)
  */
 void UIEquipSlider::render(sf::RenderWindow& window)
 {
-    // The biggest card (the one in the middle, or passing it while sliding) on top
+    // The shelf the cards stand on, the page dots (they follow a slide), then the cards: the biggest (the one in the
+    // middle, or passing it while sliding) on top
+    UIUnitCard::draw_shelf(window, SHELF_TOP, UISkin::CONTENT_BOTTOM, CARDS_BOTTOM);
+    UIUnitCard::draw_page_dots(window, { 960.f, DOTS_Y }, static_cast<int>(m_equipIcons.size()),
+        static_cast<float>(m_currentIndex) - drag_offset() / ICON_SPACING);
     const int front = UIUnitCard::biggest(m_equipIcons);
     for (int i = 0; i < static_cast<int>(m_equipIcons.size()); ++i)
         if (i != front) m_equipIcons[i]->render(window);
@@ -317,6 +336,7 @@ void UIEquipSlider::render(sf::RenderWindow& window)
             m_slots[i].ghost->render(window);
     }
 
+    render_info(window);
     render_ghost(window);
 }
 
@@ -337,6 +357,75 @@ void UIEquipSlider::render_lineup(sf::RenderWindow& window)
         UISkin::draw_nine_slice(window, UISkin::SLOT, slot.bounds, 1.f, UISkin::EMPTY_SLOT_TINT);
         UISkin::draw_nine_slice(window, UISkin::SLOT_FRAME, slot.bounds, 1.f);
     }
+}
+
+/*
+ * render_info
+ * -----------
+ * The selected fish's details beside the lineup, like The Battle Cats' Unit Info: its name and level, what it does in
+ * battle at its level (health, attack, range, speed) and what sending it costs (price, cooldown), its abilities
+ */
+void UIEquipSlider::render_info(sf::RenderWindow& window)
+{
+    m_infoPanel.render(window);
+    auto player = m_dataLoader->get_player_data().lock();
+    const int uid = get_selected_uid();
+    auto data = player && uid >= 0 ? m_dataLoader->get_unit_data(uid, player->get_unit_form(uid)) : nullptr;
+    if (!data) return;
+
+    const sf::FloatRect panel = info_panel_rect();
+    auto drawText = [&window](const std::string& string, unsigned int size, sf::Color color, sf::Vector2f position, sf::Vector2f anchor)
+        {
+            sf::Text text(UISkin::heavy_font(), string);
+            UISkin::style_text(text, size, color);
+            UISkin::set_text_anchor(text, anchor);
+            text.setPosition(position);
+            window.draw(text);
+            return text.getGlobalBounds();
+        };
+
+    // Name, then the level (and the Clam Room's extra levels, in purple) on the right
+    const float left = panel.position.x + 34.f, right = panel.position.x + panel.size.x - 34.f;
+    float y = panel.position.y + 44.f;
+    drawText(data->name, INFO_NAME_SIZE, UISkin::NUMBER, { left, y }, { 0.f, 0.5f });
+    const int level = player->get_unit_level(uid), extra = player->get_unit_extra_levels(uid);
+    float levelLeft = right;
+    if (extra > 0) levelLeft = drawText("+" + std::to_string(extra), INFO_STAT_SIZE, UISkin::EXTRA, { right, y }, { 1.f, 0.5f }).position.x - 8.f;
+    drawText("LEVEL " + std::to_string(level), INFO_STAT_SIZE, UISkin::TEXT, { levelLeft, y }, { 1.f, 0.5f });
+
+    // Two columns of stats at its level: in battle, then what it costs
+    const float factor = PlayerData::stat_multiplier(std::max(1, level) + extra);
+    auto format = [](float value) { return std::to_string(static_cast<int>(std::lround(value))); };
+    auto format_seconds = [](float seconds)
+        {
+            const int tenths = static_cast<int>(std::lround(seconds * 10.f));
+            return std::to_string(tenths / 10) + (tenths % 10 ? "." + std::to_string(tenths % 10) : "") + "s";
+        };
+    const std::pair<std::string, std::string> rows[3][2] = {
+        { { "Health", format(data->health * factor) }, { "Cost", std::to_string(data->cost) + "$" } },
+        { { "Attack", format(data->attackPower * factor) }, { "Cooldown", format_seconds(data->cooldown) } },
+        { { "Range", format(data->attackRange) }, { "Speed", format(data->movementSpeed) } } };
+    const float columnWidth = (right - left - 40.f) / 2.f;
+    y += 64.f;
+    for (const auto& row : rows)
+    {
+        for (int column = 0; column < 2; ++column)
+        {
+            const float x = left + column * (columnWidth + 40.f);
+            drawText(row[column].first, INFO_STAT_SIZE, UISkin::TEXT, { x, y }, { 0.f, 0.5f });
+            drawText(row[column].second, INFO_STAT_SIZE, UISkin::NUMBER, { x + columnWidth, y }, { 1.f, 0.5f });
+        }
+        y += 46.f;
+    }
+
+    // Its abilities along the bottom (hover or tap one to see what it does)
+    if (uid != m_describedUid)
+    {
+        m_abilities.set_abilities(data->abilities);
+        m_describedUid = uid;
+    }
+    m_abilities.set_position({ left, y });
+    m_abilities.render(window);
 }
 
 /*
@@ -513,6 +602,20 @@ void UIEquipSlider::handle_event(const sf::Event& event, const sf::RenderWindow&
 
     m_previousButton.handle_event(event, window);
     m_nextButton.handle_event(event, window);
+    m_abilities.handle_event(event, window);
+}
+
+int UIEquipSlider::get_selected_uid() const
+{
+    return m_equipIcons.empty() ? -1 : m_equipIcons[m_currentIndex]->get_uid();
+}
+
+void UIEquipSlider::select_unit(int uid)
+{
+    const auto found = std::find(m_availableEquips.begin(), m_availableEquips.end(), uid);
+    if (found == m_availableEquips.end()) return;
+    m_currentIndex = static_cast<int>(found - m_availableEquips.begin());
+    init_icons();   // Laid out round it at once
 }
 
 /*

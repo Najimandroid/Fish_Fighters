@@ -55,8 +55,10 @@ void UIPlayerShellsInfo::update(float deltaTime)
 
     const float textWidth = m_text.getLocalBounds().size.x;
     m_size = { std::max(MIN_PILL_WIDTH, textWidth + ICON_SIZE + 3.f * PADDING + m_trailingRoom), PILL_HEIGHT };
-    const float offset = m_currency == Currency::SHELLS ? OFFSET_X : m_currency == Currency::SHINY_SCALES ? SHINY_OFFSET_X : FISH_OFFSET_X;
-    m_position = { 1920.f - offset - m_size.x, OFFSET_Y };
+    const float offset = m_isInBottomBar ? OFFSET_X
+        : m_currency == Currency::SHELLS ? OFFSET_X : m_currency == Currency::SHINY_SCALES ? SHINY_OFFSET_X : FISH_OFFSET_X;
+    const float y = m_isInBottomBar ? UISkin::CONTENT_BOTTOM + (1080.f - UISkin::CONTENT_BOTTOM - PILL_HEIGHT) / 2.f + 2.f : OFFSET_Y;
+    m_position = { 1920.f - offset - m_size.x, y };
 
     // Digits on the right of the pill (left of a button there), vertically centered
     UISkin::set_text_anchor(m_text, { 1.f, 0.5f });
@@ -66,6 +68,11 @@ void UIPlayerShellsInfo::update(float deltaTime)
 void UIPlayerShellsInfo::set_tint(sf::Color tint)
 {
     m_tint = tint;
+}
+
+void UIPlayerShellsInfo::place_in_bottom_bar()
+{
+    m_isInBottomBar = true;
 }
 
 void UIPlayerShellsInfo::set_trailing_room(float room)

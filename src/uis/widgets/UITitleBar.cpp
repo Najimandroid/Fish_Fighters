@@ -37,11 +37,7 @@ void UITitleBar::render(sf::RenderWindow& window)
     const float left = std::min(0.f, screen.position.x), right = std::max(SCREEN_WIDTH, screen.position.x + screen.size.x);
     const float top = screen.position.y;
     sf::VertexArray band(sf::PrimitiveType::TriangleStrip, 4);
-    // Its colors: top, bottom, the bevel, the rivets (pearls on mother-of-pearl)
-    struct Look { sf::Color top, bottom, bevel, rivet; };
-    const Look look = m_material == Material::NACRE ? Look{ { 150, 66, 118 }, { 96, 32, 78 }, { 226, 156, 204 }, { 255, 236, 248 } }
-        : m_material == Material::VIOLET ? Look{ { 78, 60, 126 }, { 46, 34, 86 }, { 152, 130, 204 }, { 132, 112, 182 } }
-        : Look{ { 82, 100, 126 }, { 54, 68, 90 }, { 132, 152, 178 }, { 120, 138, 162 } };
+    const Look look = look_of(m_material);
     band[0] = sf::Vertex{ { left, top }, look.top };
     band[1] = sf::Vertex{ { right, top }, look.top };
     band[2] = sf::Vertex{ { left, BAND_BOTTOM }, look.bottom };
@@ -74,6 +70,16 @@ void UITitleBar::render(sf::RenderWindow& window)
         window.draw(rivet);
     }
     window.draw(m_title);
+}
+
+UITitleBar::Look UITitleBar::look_of(Material material)
+{
+    switch (material)
+    {
+    case Material::NACRE: return { { 150, 66, 118 }, { 96, 32, 78 }, { 226, 156, 204 }, { 255, 236, 248 } };
+    case Material::VIOLET: return { { 78, 60, 126 }, { 46, 34, 86 }, { 152, 130, 204 }, { 132, 112, 182 } };
+    default: return { { 82, 100, 126 }, { 54, 68, 90 }, { 132, 152, 178 }, { 120, 138, 162 } };
+    }
 }
 
 sf::Vector2f UITitleBar::get_info_position() const

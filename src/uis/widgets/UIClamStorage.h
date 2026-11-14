@@ -3,6 +3,7 @@
 #include "UIElement.h"
 #include "UIButtonElement.h"
 #include "UIRoundButton.h"
+#include "UIBottomBar.h"
 
 #include <memory>
 #include <random>
@@ -84,7 +85,8 @@ private:
     UIButtonElement m_sellShells;
     UIButtonElement m_sellScales;
     UIRoundButton m_closeCard;        // The card's X
-    UIButtonElement m_useAll;         // Along the bottom, with the fish count
+    UIBottomBar m_bottomBar;          // Mother-of-pearl, drawn here: USE ALL / SELL ALL sit on it (like The Battle Cats' Storage)
+    UIButtonElement m_useAll;         // On the bottom bar, with the fish count
     UIButtonElement m_sellAll;
     sf::Text m_text;
 

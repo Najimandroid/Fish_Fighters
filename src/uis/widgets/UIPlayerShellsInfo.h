@@ -47,6 +47,9 @@ public:
     // Tints the dark pill (plum inside the clam)
     void set_tint(sf::Color tint);
 
+    // At the right end of the bottom bar (UIBottomBar) instead of the title bar, like The Battle Cats' Cat Food
+    void place_in_bottom_bar();
+
 private:
 
     std::shared_ptr<DataLoader> m_dataLoader; // Reference to DataLoader to access player info
@@ -57,6 +60,7 @@ private:
     float m_pop = 0.f;                        // 1 when something lands, back to 0
     float m_shown = -1.f;                     // The amount the digits show (rolls to the real one; -1: not yet)
     float m_spent = 0.f;                      // 1 when the amount goes down (the digits flash red), back to 0
+    bool m_isInBottomBar = false;
 
     const float OFFSET_Y = 18.f;      // Vertical padding from the top
     const float OFFSET_X = 24.f;      // Horizontal padding from the right

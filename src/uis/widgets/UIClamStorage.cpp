@@ -20,8 +20,8 @@ namespace
     // dimmed clam); USE ALL / SELL ALL and how many fish wait along the bottom
     const sf::FloatRect TANK{ { 40.f, 120.f }, { 1840.f, 810.f } };     // Where the fish swim
     const sf::FloatRect PANEL{ { 960.f - 265.f, 150.f }, { 530.f, 750.f } };   // The card of the kind picked
-    const sf::Vector2f BULK_SIZE{ 300.f, 92.f };
-    const float BULK_Y = 960.f;
+    const sf::Vector2f BULK_SIZE{ 280.f, 66.f };   // On the bottom bar
+    const float BULK_Y = UISkin::CONTENT_BOTTOM + (1080.f - UISkin::CONTENT_BOTTOM - BULK_SIZE.y) / 2.f + 2.f;
     const float PANEL_X = PANEL.position.x + 30.f, PANEL_CENTER = PANEL.position.x + PANEL.size.x / 2.f;
     const float TEXT_WIDTH = PANEL.size.x - 60.f;
     const sf::FloatRect CHECKBOX{ { PANEL_X, 488.f }, { 38.f, 38.f } };
@@ -49,6 +49,7 @@ UIClamStorage::UIClamStorage(std::shared_ptr<DataLoader> dataLoader) :
     m_sellShells({ 225.f, 80.f }, { PANEL_X, 772.f }, ""),
     m_sellScales({ 225.f, 80.f }, { PANEL_X + 245.f, 772.f }, ""),
     m_closeCard(84.f, PANEL.position + sf::Vector2f{ PANEL.size.x - 54.f, -30.f }, "icon_close"),
+    m_bottomBar(UITitleBar::Material::NACRE),
     m_useAll(BULK_SIZE, { 960.f - BULK_SIZE.x - 15.f, BULK_Y }, "USE ALL"),
     m_sellAll(BULK_SIZE, { 960.f + 15.f, BULK_Y }, "SELL ALL"),
     m_text(UISkin::heavy_font())
@@ -64,10 +65,10 @@ UIClamStorage::UIClamStorage(std::shared_ptr<DataLoader> dataLoader) :
     m_sellShells.set_callback([this]() { ask_sell(false); });
     m_closeCard.set_click_sound("ui_back");
     m_closeCard.set_callback([this]() { clear_selection(); });
-    m_useAll.set_text_size(40);
+    m_useAll.set_text_size(34);
     m_useAll.set_click_sound("");   // Its own sounds
     m_useAll.set_callback([this]() { use_all(); });
-    m_sellAll.set_text_size(40);
+    m_sellAll.set_text_size(34);
     m_sellAll.set_style(UIButtonElement::Style::Coral);
     m_sellAll.set_callback([this]() { ask_sell_all(); });
     m_sellScales.set_callback([this]() { ask_sell(true); });
@@ -461,7 +462,8 @@ void UIClamStorage::render(sf::RenderWindow& window)
             window.draw(scallop);
         }
 
-    // Along the bottom: USE ALL, SELL ALL, how many fish wait; under the title, what a tap does
+    // The bottom bar, on it USE ALL, SELL ALL and how many fish wait; under the title, what a tap does
+    m_bottomBar.render(window);
     if (!m_floaters.empty())
     {
         m_useAll.render(window);

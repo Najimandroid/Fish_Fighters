@@ -41,6 +41,10 @@ public:
     void release_slide(float dragX, float speed);   // Let go: glides on when flung, else settles on the nearest
     float drag_offset() const;           // Where the cards are now, as a drag from the selected one (0 at rest)
 
+    // The selected fish (-1: none), and selecting one at once (coming from the Equip screen's shortcut)
+    int get_selected_uid() const;
+    void select_unit(int uid);
+
     // Calculate the upgrade cost of a unit given its UID and current level
     int calculate_upgrade_cost(int uid, int level);
     static int calculate_upgrade_cost(const DataLoader& dataLoader, int uid, int level);
