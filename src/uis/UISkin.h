@@ -105,4 +105,21 @@ namespace UISkin
 
     // Inside of a SLOT drawn over rect: the part the outline doesn't cover
     sf::FloatRect slot_inner(const sf::FloatRect& rect, float cornerScale);
+
+    // ----- Screen shape -----
+    // The part of the UI coordinates the window shows: 1920 x 1080 on a 16:9 screen, wider on a phone (x from below 0
+    // to past 1920), taller on a 4:3 tablet. The layout stays in 1920 x 1080 (clear of a phone's camera cutout);
+    // backgrounds, bars, dims and transitions fill this. Game sets it with the views
+    sf::FloatRect screen_rect();
+    void set_screen_rect(const sf::FloatRect& rect);
+
+    // A color over the whole screen (veils, flashes, fades)
+    void fill_screen(sf::RenderTarget& target, sf::Color color);
+
+    // ----- Transitions -----
+    // A band of deep water across the screen from top to bottom (UI coordinates), solid (nothing shows through it):
+    // wavy edges with a pale foam line, darker at the bottom, a few bubbles rising inside. The screen transitions
+    // (a new menu screen, the battle start) sweep it over the screen
+    inline constexpr float WATER_WAVE = 18.f;     // How far its edges wave above and below top / bottom
+    void draw_water_band(sf::RenderTarget& target, float top, float bottom, float time);
 }

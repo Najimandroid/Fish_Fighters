@@ -4,9 +4,19 @@ project(Fish_Fighters)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# SFML
-set(SFML_DIR "${CMAKE_SOURCE_DIR}/external/SFML-3.0.0/lib/cmake/SFML")
-find_package(SFML 3 REQUIRED COMPONENTS Graphics Audio Window System)
+# Builds (CMakePresets.json): pc-debug (developer tools), pc-release, pc-mobile-preview (the PC game with the phone
+# layout, to test it), android-debug / android-release (tools/android/android.js builds, packages and installs them)
+
+# SFML: the prebuilt Windows one, or the one built for Android (node tools/android/android.js sfml)
+if(ANDROID)
+    set(SFML_DIR "${CMAKE_ANDROID_NDK}/sources/third_party/sfml/lib/${CMAKE_ANDROID_ARCH_ABI}/cmake/SFML")
+    find_package(SFML 3 REQUIRED COMPONENTS Graphics Audio Window System Main)
+else()
+    set(SFML_DIR "${CMAKE_SOURCE_DIR}/external/SFML-3.0.0/lib/cmake/SFML")
+    find_package(SFML 3 REQUIRED COMPONENTS Graphics Audio Window System)
+endif()
+
+option(FISH_MOBILE_PREVIEW "PC game with the phone layout and touch-style controls, to test them" OFF)
 
 # ---------------------------------------------------------------------
 # Source files grouped par cible
@@ -120,6 +130,33 @@ set(PROJECT_SOURCES
 )
 
 # ---------------------------------------------------------------------
+# fishcore: game data shared by the game and the editor
+# (JSON loading and validation, data structures, player save, image processing, what differs on the phone)
+# ---------------------------------------------------------------------
+add_library(fishcore STATIC
+    src/core/DataLoader.cpp
+    src/core/Platform.cpp
+    src/data/PlayerData.cpp
+    src/utils/ImageTools.cpp
+)
+target_include_directories(fishcore PUBLIC src/ external/SFML-3.0.0/include)
+target_link_libraries(fishcore PUBLIC SFML::Graphics SFML::System)
+
+# ---------------------------------------------------------------------
+# Android: the game is a shared library (libfishfighters.so) that Android's NativeActivity loads; SFML::Main starts
+# main() from it. No editor, no developer tools (they're ImGui windows). The rest of this file is the PC build
+# ---------------------------------------------------------------------
+if(ANDROID)
+    list(FILTER PROJECT_SOURCES EXCLUDE REGEX "src/(debug|tools)/")
+    add_library(fishfighters SHARED ${PROJECT_SOURCES})
+    target_include_directories(fishfighters PRIVATE external/tweeny/include src/)
+    target_link_libraries(fishfighters PRIVATE fishcore SFML::Graphics SFML::Audio SFML::Window SFML::System android log)
+    # ANativeActivity_onCreate (in SFML::Main) has to be kept in libfishfighters.so: Android starts the game with it
+    target_link_libraries(fishfighters PUBLIC -Wl,--whole-archive SFML::Main -Wl,--no-whole-archive)
+    return()
+endif()
+
+# ---------------------------------------------------------------------
 # ImGui Library
 # ---------------------------------------------------------------------
 add_library(imgui STATIC ${IMGUI_SOURCES})
@@ -129,18 +166,6 @@ target_include_directories(imgui PUBLIC external/imgui)
 add_library(imgui-sfml STATIC ${IMGUI_SFML_SOURCES})
 target_include_directories(imgui-sfml PUBLIC external/imgui-sfml external/imgui)
 target_link_libraries(imgui-sfml PUBLIC imgui SFML::Graphics SFML::Window SFML::System)
-
-# ---------------------------------------------------------------------
-# fishcore: game data shared by the game and the editor
-# (JSON loading and validation, data structures, player save, image processing)
-# ---------------------------------------------------------------------
-add_library(fishcore STATIC
-    src/core/DataLoader.cpp
-    src/data/PlayerData.cpp
-    src/utils/ImageTools.cpp
-)
-target_include_directories(fishcore PUBLIC src/ external/SFML-3.0.0/include)
-target_link_libraries(fishcore PUBLIC SFML::Graphics SFML::System)
 
 # ---------------------------------------------------------------------
 # Main executable
@@ -258,6 +283,9 @@ endif()
 # ---------------------------------------------------------------------
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_definitions(${PROJECT_NAME} PRIVATE DEBUG_MODE)
+endif()
+if(FISH_MOBILE_PREVIEW)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE FISH_MOBILE_PREVIEW)
 endif()
 
 # ---------------------------------------------------------------------

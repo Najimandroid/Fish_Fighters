@@ -1,4 +1,5 @@
 #include "UITextureElement.h"
+#include "../UISkin.h"
 #include <iostream>
 
 /*
@@ -35,10 +36,21 @@ UITextureElement::UITextureElement(sf::Vector2f size, sf::Vector2f position, con
  */
 void UITextureElement::render(sf::RenderWindow& window)
 {
-    if (m_isVisible)
-    {
-        window.draw(m_sprite);
-    }
+    if (!m_isVisible) return;
+    window.draw(m_sprite);
+
+    // A full-screen background on a wider screen (a phone): the sides show it mirrored, so its edges carry on
+    // seamlessly (the floor line, the wall) without stretching what the layout sits on
+    const sf::FloatRect screen = UISkin::screen_rect();
+    const bool isBackground = m_position == sf::Vector2f{ 0.f, 0.f } && m_size == sf::Vector2f{ 1920.f, 1080.f };
+    if (!isBackground || screen.size.x <= m_size.x + 1.f) return;
+    const sf::Vector2f scale = m_sprite.getScale();
+    sf::Sprite mirrored = m_sprite;
+    mirrored.setScale({ -scale.x, scale.y });
+    mirrored.setPosition({ 0.f, m_position.y });                    // Its right edge on the image's left edge
+    window.draw(mirrored);
+    mirrored.setPosition({ 2.f * m_size.x, m_position.y });         // Its left edge on the image's right edge
+    window.draw(mirrored);
 }
 
 /*

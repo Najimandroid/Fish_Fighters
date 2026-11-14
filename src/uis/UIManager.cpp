@@ -36,6 +36,7 @@
 #include "widgets/UIAmbience.h"
 #include "widgets/UIHubMascot.h"
 #include "UISkin.h"
+#include "../core/Platform.h"
 
 #include "../audio/AudioManager.h"
 
@@ -67,61 +68,47 @@ void UIManager::init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<Sta
         });
 }
 
+namespace
+{
+    const float REVEAL_SECONDS = 0.6f;     // The wave's sweep up the screen
+    const float REVEAL_BAND = 300.f;       // Its height
+
+    // How far the wave has gone (0 to 1) after t of the sweep: slow, fast, slow
+    float reveal_ease(float t) { return 0.5f - 0.5f * std::cos(3.14159265f * std::clamp(t, 0.f, 1.f)); }
+}
+
 /*
- * Clears the screen for a Fish Tank menu: the Fish Tank theme (it keeps playing from one menu to the next)
- * and a swish of water between the screens
- */
-/*
- * A new menu screen: under a wall of bubbles that rise away, its buttons popping in one after the other
+ * A new menu screen comes in with a wave: the screen being left is kept (drawn above the wave, no longer updated)
+ * while the new one is built, and appears under the wave as it sweeps up
  */
 void UIManager::start_screen_reveal()
 {
-    static std::mt19937 random{ std::random_device{}() };
-    auto between = [](float from, float to) { return std::uniform_real_distribution<float>(from, to)(random); };
-    m_revealBubbles.clear();
-    for (int row = 0; row < 8; ++row)
-        for (int column = 0; column < 12; ++column)
-        {
-            RevealBubble bubble;
-            bubble.position = { column * 172.f + between(-30.f, 30.f), row * 150.f + 60.f + between(-30.f, 30.f) };
-            bubble.radius = between(100.f, 150.f);
-            bubble.speed = between(1900.f, 2900.f);
-            bubble.delay = between(0.f, 0.07f);
-            m_revealBubbles.push_back(bubble);
-        }
+    m_oldElements = std::move(m_uiElements);
+    m_uiElements.clear();
     m_revealTime = 0.f;
     m_needsEntrance = true;
 }
 
-void UIManager::render_screen_reveal(sf::RenderWindow& window)
+void UIManager::cancel_screen_reveal()
 {
-    const float REVEAL = 0.5f;
-    if (m_revealTime < 0.f) return;
-    if (m_revealTime >= REVEAL) { m_revealTime = -1.f; return; }
-
-    // Deep water at first, gone fast, while the bubbles rise away faster and faster
-    sf::RectangleShape water({ 1920.f, 1080.f });
-    water.setFillColor(sf::Color(22, 58, 92, static_cast<std::uint8_t>(255.f * std::clamp(1.f - m_revealTime / 0.16f, 0.f, 1.f))));
-    window.draw(water);
-
-    const sf::Texture& texture = UISkin::texture("bubble");
-    const float textureSize = static_cast<float>(std::max(1u, texture.getSize().x));
-    sf::Sprite sprite(texture);
-    sprite.setOrigin({ textureSize / 2.f, textureSize / 2.f });
-    const float fade = std::clamp(1.f - (m_revealTime - 0.28f) / 0.22f, 0.f, 1.f);
-    for (const RevealBubble& bubble : m_revealBubbles)
-    {
-        const float t = std::max(0.f, m_revealTime - bubble.delay);
-        sprite.setPosition({ bubble.position.x, bubble.position.y - bubble.speed * t * (0.4f + t) });
-        sprite.setScale({ bubble.radius * 2.f / textureSize, bubble.radius * 2.f / textureSize });
-        sprite.setColor(sf::Color(255, 255, 255, static_cast<std::uint8_t>(255.f * fade)));
-        window.draw(sprite);
-    }
+    m_oldElements.clear();
+    m_revealTime = -1.f;
 }
 
+// From fully under the screen (the old screen) to fully over it (the new one)
+std::pair<float, float> UIManager::reveal_band() const
+{
+    const float travel = 1080.f + REVEAL_BAND + 2.f * UISkin::WATER_WAVE;
+    const float top = 1080.f + UISkin::WATER_WAVE - travel * reveal_ease(m_revealTime / REVEAL_SECONDS);
+    return { top, top + REVEAL_BAND };
+}
+
+/*
+ * Clears the screen for a Fish Tank menu: the Fish Tank theme (it keeps playing from one menu to the next)
+ * and a swish of water between the screens (the wave)
+ */
 void UIManager::enter_menu_screen()
 {
-    m_uiElements.clear();
     start_screen_reveal();
     if (m_audio)
     {
@@ -180,7 +167,8 @@ void UIManager::generate_title_uis()
     auto quitDialog = make_quit_dialog(quitButton);
 
     auto optionsMenu = make_options_menu();
-    auto optionsButton = make_options_button(optionsMenu, { 280.f, 90.f }, { 290.f, 1080.f - 30.f - 90.f }, 38);
+    quitButton->set_visible(!Platform::IS_MOBILE);   // Phones don't quit apps (the back key leaves)
+    auto optionsButton = make_options_button(optionsMenu, { 280.f, 90.f }, { Platform::IS_MOBILE ? 30.f : 290.f, 1080.f - 30.f - 90.f }, 38);
     optionsButton->set_style(UIButtonElement::Style::Secondary);   // START is the only yellow one
 
     add_ui_element(bg);
@@ -218,7 +206,7 @@ void UIManager::add_ui_element(std::shared_ptr<UIElement> element)
 // Update all UI elements (called each frame)
 void UIManager::update_uis(float deltaTime)
 {
-    // A screen just built under the bubbles: its buttons pop in one after the other
+    // A screen just built: each button pops in as the wave uncovers it (no wave, the title: one after the other)
     if (m_needsEntrance)
     {
         m_needsEntrance = false;
@@ -226,11 +214,27 @@ void UIManager::update_uis(float deltaTime)
         for (auto& element : m_uiElements)
             if (auto button = std::dynamic_pointer_cast<UIButtonElement>(element); button && button->is_visible())
             {
-                button->set_entrance(delay);
-                delay += 0.045f;
+                if (m_revealTime >= 0.f)
+                {
+                    // When the wave's bottom passes the button's middle (inverse of reveal_ease)
+                    const sf::FloatRect bounds = button->get_bounds();
+                    const float middle = bounds.position.y + bounds.size.y / 2.f;
+                    const float travel = 1080.f + REVEAL_BAND + 2.f * UISkin::WATER_WAVE;
+                    const float progress = std::clamp((1080.f + UISkin::WATER_WAVE + REVEAL_BAND - middle) / travel, 0.f, 1.f);
+                    button->set_entrance(std::acos(1.f - 2.f * progress) / 3.14159265f * REVEAL_SECONDS - m_revealTime - 0.03f);
+                }
+                else
+                {
+                    button->set_entrance(delay);
+                    delay += 0.045f;
+                }
             }
     }
-    if (m_revealTime >= 0.f) m_revealTime += deltaTime;
+    if (m_revealTime >= 0.f)
+    {
+        m_revealTime += deltaTime;
+        if (m_revealTime >= REVEAL_SECONDS) cancel_screen_reveal();   // The wave is gone, and the old screen with it
+    }
 
     for (auto& element : m_uiElements)
     {
@@ -251,7 +255,39 @@ void UIManager::update_uis(float deltaTime)
 // Handles world-space vs screen-space rendering by switching the view as needed
 void UIManager::render_uis(sf::RenderWindow& window, sf::View& uiView, sf::View& worldView)
 {
-    for (auto& element : m_uiElements)
+    if (m_revealTime < 0.f)
+    {
+        render_list(window, m_uiElements, uiView, worldView);
+        return;
+    }
+
+    // The wave sweeping up: the old screen above it, the new one below it (each clipped to its part of the window
+    // with a scissor rectangle, down to the wave's lowest dips), the water over both
+    const auto [top, bottom] = reveal_band();
+    const float height = static_cast<float>(std::max(1u, window.getSize().y));
+    const auto row = [&](float y) { return std::clamp(static_cast<float>(window.mapCoordsToPixel({ 0.f, y }, uiView).y) / height, 0.f, 1.f); };
+    const float oldEnd = row(top + UISkin::WATER_WAVE), newStart = row(bottom - UISkin::WATER_WAVE);
+    if (oldEnd > 0.001f)
+    {
+        sf::View above = uiView;
+        above.setScissor({ { 0.f, 0.f }, { 1.f, oldEnd } });
+        render_list(window, m_oldElements, above, worldView);
+    }
+    if (newStart < 0.999f)
+    {
+        sf::View below = uiView;
+        below.setScissor({ { 0.f, newStart }, { 1.f, 1.f - newStart } });
+        render_list(window, m_uiElements, below, worldView);
+    }
+    window.setView(uiView);
+    UISkin::draw_water_band(window, top, bottom, m_revealTime);
+}
+
+// Draws elements in order: the world-space ones in the world view, the others in uiView (which can carry a scissor)
+void UIManager::render_list(sf::RenderWindow& window, std::vector<std::shared_ptr<UIElement>>& elements, const sf::View& uiView, sf::View& worldView)
+{
+    window.setView(uiView);
+    for (auto& element : elements)
     {
         if (element->isWorldSpaceUi)
         {
@@ -268,28 +304,24 @@ void UIManager::render_uis(sf::RenderWindow& window, sf::View& uiView, sf::View&
             element->render(window);
         }
     }
-    render_screen_reveal(window);   // Over everything: the bubbles a new screen opens under
 }
 
 /*
- * Darkens the parts of the window outside the UI view (the bars on screens that aren't 16:9),
- * like the modal windows darken the screen
+ * Darkens what the screen shows outside the 1920 x 1080 layout (a phone's sides, a tablet's top and bottom),
+ * like the modal windows darken the layout itself
  */
 void UIManager::dim_letterbox_bars(sf::RenderWindow& window, const sf::View& uiView) const
 {
-    const sf::Vector2f size = static_cast<sf::Vector2f>(window.getSize());
-    const sf::FloatRect area{ { uiView.getViewport().position.x * size.x, uiView.getViewport().position.y * size.y },
-        { uiView.getViewport().size.x * size.x, uiView.getViewport().size.y * size.y } };
-    if (area.size.x >= size.x - 1.f && area.size.y >= size.y - 1.f) return;   // 16:9: no bars
-
-    window.setView(sf::View(sf::FloatRect{ { 0.f, 0.f }, size }));
+    const sf::FloatRect screen = UISkin::screen_rect();
+    const float right = screen.position.x + screen.size.x, bottom = screen.position.y + screen.size.y;
+    window.setView(uiView);
     sf::RectangleShape bar;
     bar.setFillColor(sf::Color(0, 0, 0, 150));
     const sf::FloatRect bars[] = {
-        { { 0.f, 0.f }, { area.position.x, size.y } },                                        // Left
-        { { area.position.x + area.size.x, 0.f }, { size.x - area.position.x - area.size.x, size.y } },   // Right
-        { { area.position.x, 0.f }, { area.size.x, area.position.y } },                       // Top
-        { { area.position.x, area.position.y + area.size.y }, { area.size.x, size.y - area.position.y - area.size.y } } // Bottom
+        { screen.position, { -screen.position.x, screen.size.y } },                   // Left
+        { { 1920.f, screen.position.y }, { right - 1920.f, screen.size.y } },          // Right
+        { { 0.f, screen.position.y }, { 1920.f, -screen.position.y } },               // Top
+        { { 0.f, 1080.f }, { 1920.f, bottom - 1080.f } }                              // Bottom
     };
     for (const sf::FloatRect& rect : bars)
     {
@@ -421,7 +453,7 @@ void UIManager::generate_fish_tank_uis()
 
     // Options and Quit share the last row (Quit smaller, orange, and it asks first)
     auto optionsMenu = make_options_menu();
-    auto optionsButton = make_options_button(optionsMenu, { 300.f, 96.f }, { columnX, 828.f }, 40);
+    auto optionsButton = make_options_button(optionsMenu, { Platform::IS_MOBILE ? columnWidth : 300.f, 96.f }, { columnX, 828.f }, 40);
     optionsButton->set_style(UIButtonElement::Style::Secondary);
 
     // "!" on UPGRADE when a fish can be upgraded or unlocked with the shells there are
@@ -435,6 +467,7 @@ void UIManager::generate_fish_tank_uis()
     );
     quitButton->set_text_size(40);
     quitButton->set_fill_color(sf::Color(255, 150, 130));
+    quitButton->set_visible(!Platform::IS_MOBILE);   // Phones don't quit apps
     auto quitDialog = make_quit_dialog(quitButton);
 
     add_ui_element(bg);
@@ -544,8 +577,9 @@ UIManager::ClamCounters UIManager::add_clam_counters()
  */
 void UIManager::generate_clam_room_uis(bool fromStorage)
 {
-    m_uiElements.clear();
     if (!fromStorage) start_screen_reveal();   // From the storage, the view zooms out of the clam instead
+    else cancel_screen_reveal();
+    m_uiElements.clear();
     if (m_audio)
     {
         m_audio->play_music_in_sync(CLAM_MUSIC);
@@ -587,6 +621,7 @@ void UIManager::generate_clam_room_uis(bool fromStorage)
  */
 void UIManager::generate_clam_storage_uis()
 {
+    cancel_screen_reveal();   // The dive into the clam is its transition
     m_uiElements.clear();
     if (m_audio) m_audio->play_music_in_sync(CLAM_INSIDE_MUSIC);
 
@@ -705,6 +740,7 @@ void UIManager::generate_equip_menu_uis()
  */
 void UIManager::generate_battle_uis()
 {
+    cancel_screen_reveal();   // UIBattleIntro is its transition
 	m_uiElements.clear();
 
     std::string stageName;
@@ -1023,30 +1059,31 @@ std::vector<std::string> UIManager::hub_tips() const
     auto player = m_dataLoader->get_player_data().lock();
     if (!player) return tips;
 
+    // Short: two or three lines in the bubble
     if (m_dataLoader->is_clam_room_open() && player->shinyScales > 0)
-        tips.push_back("The giant clam looks hungry... We have " + std::to_string(player->shinyScales)
-            + (player->shinyScales == 1 ? " Shiny Scale" : " Shiny Scales") + " to feed it!");
+        tips.push_back("The clam looks hungry! We have " + std::to_string(player->shinyScales)
+            + (player->shinyScales == 1 ? " Shiny Scale." : " Shiny Scales."));
     int stored = 0;
     for (const auto& [uid, count] : player->clamStorage) stored += count;
     if (stored > 0)
-        tips.push_back(std::to_string(stored) + (stored == 1 ? " fish is" : " fish are") + " waiting in the Clam Storage. Let's go meet them!");
+        tips.push_back(std::to_string(stored) + (stored == 1 ? " fish waits" : " fish wait") + " in the Clam Storage!");
     if (is_upgrade_available())
-        tips.push_back("We have enough shells to train someone. Try UPGRADE!");
+        tips.push_back("We can afford an upgrade. Try UPGRADE!");
     const int rank = player->get_school_rank();
     for (int i = 0; i < 200; ++i)
         if (const auto milestone = PlayerData::school_rank_milestone(i); milestone.power > rank)
         {
             tips.push_back("School Rank " + std::to_string(milestone.power) + " gives " + std::to_string(milestone.shinyScales)
-                + (milestone.shinyScales == 1 ? " Shiny Scale" : " Shiny Scales") + ". Every level we gain counts!");
+                + (milestone.shinyScales == 1 ? " Shiny Scale!" : " Shiny Scales!"));
             break;
         }
     if (const std::string next = next_stage_label(); !next.empty())
-        tips.push_back("Next up: " + next + ". I'm ready when you are!");
+        tips.push_back("Next: " + next + ". Ready?");
 
     tips.push_back("Tap a fish in the porthole to say hi!");
-    tips.push_back("In battle, upgrade your wallet early: it earns shells faster.");
-    tips.push_back("Mix cheap fish to stall with strong fish to hit hard.");
-    tips.push_back("Lost a battle? Upgrade a few fish and try again!");
+    tips.push_back("In battle, upgrade your wallet early!");
+    tips.push_back("Cheap fish stall, strong fish hit hard.");
+    tips.push_back("Lost? Upgrade a few fish and try again!");
     tips.push_back("The Encyclopedia knows every enemy we've met.");
     return tips;
 }

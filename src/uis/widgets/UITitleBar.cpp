@@ -1,6 +1,8 @@
 #include "UITitleBar.h"
 #include "../UISkin.h"
 
+#include <algorithm>
+
 namespace
 {
     const float SCREEN_WIDTH = 1920.f;
@@ -29,7 +31,10 @@ void UITitleBar::render(sf::RenderWindow& window)
 {
     if (!m_isVisible) return;
 
-    const sf::FloatRect bar{ { -OVERHANG, -OVERHANG }, { SCREEN_WIDTH + 2.f * OVERHANG, HEIGHT + OVERHANG } };
+    // Across the whole screen, a phone's extra width too
+    const sf::FloatRect screen = UISkin::screen_rect();
+    const float left = std::min(0.f, screen.position.x), right = std::max(SCREEN_WIDTH, screen.position.x + screen.size.x);
+    const sf::FloatRect bar{ { left - OVERHANG, screen.position.y - OVERHANG }, { right - left + 2.f * OVERHANG, HEIGHT - screen.position.y + OVERHANG } };
     UISkin::draw_nine_slice(window, UISkin::BAR_METAL, bar, bar.size.y / BAR_IMAGE_HEIGHT);
     window.draw(m_title);
 }

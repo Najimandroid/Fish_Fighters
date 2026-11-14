@@ -49,7 +49,7 @@ float UIButtonElement::entrance_scale() const
     const float t = (clock_seconds() - m_entranceStart) / ENTRANCE;
     if (t <= 0.f) return 0.f;
     if (t >= 1.f) return 1.f;
-    return 0.5f + 0.5f * ease_out_back(t);   // From half its size, a little past full, back
+    return 0.8f + 0.2f * ease_out_back(t);   // From 80% of its size, a touch past full, back (a light pop)
 }
 
 /*
@@ -71,9 +71,13 @@ void UIButtonElement::render_shine(sf::RenderWindow& window, const sf::FloatRect
     const sf::Vector2i bottomRight = window.mapCoordsToPixel(inner.position + inner.size, base);
     const sf::Vector2f target(window.getSize());
     if (target.x <= 0.f || target.y <= 0.f || bottomRight.x <= topLeft.x || bottomRight.y <= topLeft.y) return;
+    // Inside the view's own scissor too (a screen transition clips the screens)
+    const sf::FloatRect button{ { static_cast<float>(topLeft.x) / target.x, static_cast<float>(topLeft.y) / target.y },
+        { static_cast<float>(bottomRight.x - topLeft.x) / target.x, static_cast<float>(bottomRight.y - topLeft.y) / target.y } };
+    const std::optional<sf::FloatRect> visible = button.findIntersection(base.getScissor());
+    if (!visible || visible->size.x <= 0.f || visible->size.y <= 0.f) return;
     sf::View clipped = base;
-    clipped.setScissor({ { static_cast<float>(topLeft.x) / target.x, static_cast<float>(topLeft.y) / target.y },
-        { static_cast<float>(bottomRight.x - topLeft.x) / target.x, static_cast<float>(bottomRight.y - topLeft.y) / target.y } });
+    clipped.setScissor(*visible);
     window.setView(clipped);
 
     const float slant = rect.size.y * 0.6f;

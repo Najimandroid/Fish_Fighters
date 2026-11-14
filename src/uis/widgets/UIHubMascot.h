@@ -33,6 +33,7 @@ public:
 
 private:
     void next_tip();
+    void render_bubble(sf::RenderWindow& window);
     sf::FloatRect bubble_rect() const;
     sf::Vector2f fish_center() const;
 

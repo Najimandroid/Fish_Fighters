@@ -83,9 +83,7 @@ void UITitleScreen::draw_title_line(sf::RenderWindow& window, const char* text, 
 
 void UITitleScreen::render(sf::RenderWindow& window)
 {
-    sf::RectangleShape veil({ 1920.f, 1080.f });
-    veil.setFillColor(VEIL);
-    window.draw(veil);
+    UISkin::fill_screen(window, VEIL);
 
     // Bubbles, wobbling side to side
     sf::CircleShape circle;

@@ -408,9 +408,7 @@ void UIClamRoom::render(sf::RenderWindow& window)
     }
 
     // The room is dim and purple: something magic lives here
-    sf::RectangleShape veil({ 1920.f, 1080.f });
-    veil.setFillColor(sf::Color(40, 18, 70, 130));
-    window.draw(veil);
+    UISkin::fill_screen(window, sf::Color(40, 18, 70, 130));
 
     // A soft magic glow behind the clam, breathing
     const float breath = 0.85f + 0.15f * std::sin(m_time * 1.6f);
@@ -462,9 +460,7 @@ void UIClamRoom::render(sf::RenderWindow& window)
     if (m_phase == Phase::OPENING || (m_phase == Phase::REVEALING && m_phaseTime < 0.3f))
     {
         const float t = m_phase == Phase::OPENING ? m_phaseTime : m_phaseTime + OPEN_POP * 0.5f;
-        sf::RectangleShape flash({ 1920.f, 1080.f });
-        flash.setFillColor(sf::Color(255, 250, 240, static_cast<std::uint8_t>(std::max(0.f, 180.f * (1.f - t / 0.5f)))));
-        window.draw(flash);
+        UISkin::fill_screen(window, sf::Color(255, 250, 240, static_cast<std::uint8_t>(std::max(0.f, 180.f * (1.f - t / 0.5f)))));
     }
 
     render_reveals(window);
@@ -473,9 +469,7 @@ void UIClamRoom::render(sf::RenderWindow& window)
     window.setView(baseView);
     if (is_transition())
     {
-        sf::RectangleShape inside({ 1920.f, 1080.f });
-        inside.setFillColor(sf::Color(INSIDE_PINK.r, INSIDE_PINK.g, INSIDE_PINK.b, static_cast<std::uint8_t>(255.f * inside_fade())));
-        window.draw(inside);
+        UISkin::fill_screen(window, sf::Color(INSIDE_PINK.r, INSIDE_PINK.g, INSIDE_PINK.b, static_cast<std::uint8_t>(255.f * inside_fade())));
         return;
     }
 

@@ -1,4 +1,5 @@
 #include "UIAmbience.h"
+#include "../UISkin.h"
 
 #include <cmath>
 
@@ -29,7 +30,9 @@ void UIAmbience::update(float deltaTime)
     {
         speck.position.y -= speck.speed * deltaTime;
         speck.position.x += std::sin(m_time * 0.7f + speck.phase) * 6.f * deltaTime;
-        if (speck.position.y < -10.f) speck.position = { std::uniform_real_distribution<float>(0.f, 1920.f)(m_random), 1090.f };
+        const sf::FloatRect screen = UISkin::screen_rect();
+        if (speck.position.y < screen.position.y - 10.f)
+            speck.position = { std::uniform_real_distribution<float>(screen.position.x, screen.position.x + screen.size.x)(m_random), screen.position.y + screen.size.y + 10.f };
     }
 }
 
@@ -45,7 +48,8 @@ void UIAmbience::render(sf::RenderWindow& window)
         for (int i = 0; i < SHAFTS; ++i)
         {
             const float phase = static_cast<float>(i) * 1.9f;
-            const float x = 180.f + 400.f * static_cast<float>(i) + std::sin(m_time * 0.13f + phase) * 70.f;
+            const sf::FloatRect screen = UISkin::screen_rect();   // Spread over a phone's extra width too
+            const float x = screen.position.x + screen.size.x * (0.1f + 0.21f * static_cast<float>(i)) + std::sin(m_time * 0.13f + phase) * 70.f;
             const float topWidth = 90.f + 50.f * static_cast<float>(i % 2);
             const float alpha = SHAFT_ALPHA * (0.6f + 0.4f * std::sin(m_time * 0.5f + phase * 1.3f));
             const sf::Color top(LIGHT.r, LIGHT.g, LIGHT.b, static_cast<std::uint8_t>(alpha));
@@ -80,7 +84,8 @@ void UIAmbience::render(sf::RenderWindow& window)
         const float angle = static_cast<float>(i) / segments * 6.2831853f;
         const sf::Vector2f direction{ std::cos(angle), std::sin(angle) };
         ring[i * 2] = sf::Vertex{ center + sf::Vector2f{ direction.x * 760.f, direction.y * 400.f }, sf::Color(DARK.r, DARK.g, DARK.b, 0) };
-        ring[i * 2 + 1] = sf::Vertex{ center + sf::Vector2f{ direction.x * 1380.f, direction.y * 820.f },
+        const float wide = UISkin::screen_rect().size.x / 1920.f;   // Past a phone's corners too
+        ring[i * 2 + 1] = sf::Vertex{ center + sf::Vector2f{ direction.x * 1380.f * wide, direction.y * 820.f },
             sf::Color(DARK.r, DARK.g, DARK.b, static_cast<std::uint8_t>(VIGNETTE_ALPHA)) };
     }
     window.draw(ring);

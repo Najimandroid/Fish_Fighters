@@ -1,0 +1,125 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 25,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "base",
+            "hidden": true,
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/out/build/${presetName}"
+        },
+        {
+            "name": "pc-debug",
+            "displayName": "PC Debug",
+            "description": "The PC game with the developer tools (F1)",
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_COMPILER": "cl.exe",
+                "CMAKE_C_COMPILER": "cl.exe"
+            },
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
+            "toolset": {
+                "value": "host=x64",
+                "strategy": "external"
+            }
+        },
+        {
+            "name": "pc-release",
+            "displayName": "PC Release",
+            "description": "The PC game as players get it",
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_CXX_COMPILER": "cl.exe",
+                "CMAKE_C_COMPILER": "cl.exe"
+            },
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
+            "toolset": {
+                "value": "host=x64",
+                "strategy": "external"
+            }
+        },
+        {
+            "name": "pc-mobile-preview",
+            "displayName": "PC Mobile Preview",
+            "description": "The PC game with the phone layout and touch-style controls, to test them without a phone",
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "FISH_MOBILE_PREVIEW": "ON",
+                "CMAKE_CXX_COMPILER": "cl.exe",
+                "CMAKE_C_COMPILER": "cl.exe"
+            },
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
+            "toolset": {
+                "value": "host=x64",
+                "strategy": "external"
+            }
+        },
+        {
+            "name": "android-base",
+            "hidden": true,
+            "inherits": "base",
+            "toolchainFile": "$env{ANDROID_NDK}/build/cmake/android.toolchain.cmake",
+            "cacheVariables": {
+                "ANDROID_ABI": "arm64-v8a",
+                "ANDROID_PLATFORM": "android-26",
+                "ANDROID_STL": "c++_shared"
+            }
+        },
+        {
+            "name": "android-debug",
+            "displayName": "Android Debug",
+            "description": "The phone game, debuggable (build it with: node tools/android/android.js all)",
+            "inherits": "android-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "android-release",
+            "displayName": "Android Release",
+            "description": "The phone game, optimized (node tools/android/android.js all release)",
+            "inherits": "android-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "pc-debug",
+            "configurePreset": "pc-debug"
+        },
+        {
+            "name": "pc-release",
+            "configurePreset": "pc-release"
+        },
+        {
+            "name": "pc-mobile-preview",
+            "configurePreset": "pc-mobile-preview"
+        },
+        {
+            "name": "android-debug",
+            "configurePreset": "android-debug"
+        },
+        {
+            "name": "android-release",
+            "configurePreset": "android-release"
+        }
+    ]
+}

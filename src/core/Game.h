@@ -48,6 +48,11 @@ public:
     // Polls and processes all window events
     void poll_events();
 
+    // On a phone a finger is the mouse: the first finger down moves the mouse there and presses the left button,
+    // moving it moves the mouse, lifting it releases the button and moves the mouse away (no hover left behind).
+    // Other events are passed on as they are
+    static std::vector<sf::Event> touch_as_mouse(const sf::Event& event);
+
     // Handles window resizing
     void resize_window(sf::Vector2u newSize);
 

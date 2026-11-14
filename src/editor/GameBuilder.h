@@ -32,6 +32,10 @@ public:
     // Starts building (false if a build is already running or the folder can't be built)
     bool start(const GameBuilds::Build& build, std::string& error);
 
+    // The phone version: builds the Android game, packages it and installs it on the phone plugged in over USB, then
+    // starts it (node tools/android/android.js all [release]; Node.js and the Android tools needed)
+    bool start_phone_install(const std::filesystem::path& projectFolder, bool isRelease, std::string& error);
+
     State get_state() const;
     const GameBuilds::Build& get_build() const;
 

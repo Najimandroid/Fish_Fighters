@@ -136,14 +136,16 @@ private:
 
     std::function<void()> m_pendingAction;                      // Deferred action triggered by UI
 
-    // A new menu screen opens under a wall of bubbles rising away (REVEAL seconds), its buttons popping in one
-    // after the other (set on the first update after it's built)
-    struct RevealBubble { sf::Vector2f position; float radius = 100.f; float speed = 2000.f; float delay = 0.f; };
-    std::vector<RevealBubble> m_revealBubbles;
-    float m_revealTime = -1.f;                                  // -1: no reveal
+    // A new menu screen comes in with a wave: a band of water (UISkin::draw_water_band) sweeps up the screen, the
+    // old screen still drawn above it, the new one below it; each button pops in as the wave uncovers it.
+    // start_screen_reveal keeps the old screen's elements (drawn, not updated) until the wave is gone
+    std::vector<std::shared_ptr<UIElement>> m_oldElements;
+    float m_revealTime = -1.f;                                  // -1: no wave
     bool m_needsEntrance = false;
     void start_screen_reveal();
-    void render_screen_reveal(sf::RenderWindow& window);
+    void cancel_screen_reveal();                                // A screen with its own transition (battle, storage)
+    std::pair<float, float> reveal_band() const;                // The wave's top and bottom (UI y) now
+    void render_list(sf::RenderWindow& window, std::vector<std::shared_ptr<UIElement>>& elements, const sf::View& uiView, sf::View& worldView);
 
 	std::function<void(GameSpeedState)> m_setGameSpeedCallback; // Callback to set game speed state
     std::function<GameSpeedState()> m_getGameSpeedCallback;     // Callback to get current game speed state

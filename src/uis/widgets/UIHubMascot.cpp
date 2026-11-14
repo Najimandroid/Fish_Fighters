@@ -15,12 +15,13 @@ namespace
     const float FLOOR_Y = 1000.f;                   // Its shadow
     const float SHADOW_WIDTH = 150.f, SHADOW_HEIGHT = 34.f;
     const float WALK_FRAME_SECONDS = 0.14f;
-    const float HOP_SECONDS = 0.45f, HOP_HEIGHT = 70.f;
+    const float HOP_SECONDS = 0.4f, HOP_HEIGHT = 40.f;   // Stays under its bubble
 
-    const float BUBBLE_LEFT = 644.f, BUBBLE_WIDTH = 440.f, BUBBLE_BOTTOM = 838.f;   // Clear of the porthole's ring
-    const float PADDING = 26.f, CORNER = 30.f, OUTLINE = 5.f;
-    const sf::Vector2f TAIL_TIP{ 1012.f, 872.f };   // The bubble's tail points at the fish
-    const unsigned int TEXT_SIZE = 30;
+    // Room around it: away from the buttons (they end at x 630) and the porthole's ring
+    const float BUBBLE_LEFT = 680.f, BUBBLE_WIDTH = 384.f, BUBBLE_BOTTOM = 784.f;
+    const float PADDING = 24.f, CORNER = 28.f, OUTLINE = 5.f;
+    const sf::Vector2f TAIL_TIP{ 1000.f, 828.f };   // The bubble's tail points at the fish's head
+    const unsigned int TEXT_SIZE = 28;
     const sf::Color PAPER{ 252, 253, 255 };
 
     const float CHARS_PER_SECOND = 42.f;
@@ -123,6 +124,8 @@ void UIHubMascot::render(sf::RenderWindow& window)
         window.draw(shadow);
     }
 
+    render_bubble(window);   // Before the fish: it's always in front of its bubble
+
     // The fish, swimming on the spot (the sheets face left: towards the bubble and the menu)
     if (auto player = m_dataLoader->get_player_data().lock())
         if (auto data = m_dataLoader->get_unit_data(FISH_UID, player->get_unit_form(FISH_UID)); data && !data->texture.empty())
@@ -147,7 +150,11 @@ void UIHubMascot::render(sf::RenderWindow& window)
             }
         }
 
-    // The speech bubble: pops out of its tail, types the tip, fades away
+}
+
+// The speech bubble: pops out of its tail, types the tip, fades away
+void UIHubMascot::render_bubble(sf::RenderWindow& window)
+{
     if (m_tips.empty() || m_tipTime < 0.f) return;
     const float typing = static_cast<float>(m_wrapped.size()) / CHARS_PER_SECOND;
     const float fadeStart = typing + HOLD_SECONDS;

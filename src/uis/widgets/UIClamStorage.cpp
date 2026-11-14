@@ -354,10 +354,12 @@ void UIClamStorage::render(sf::RenderWindow& window)
 
     // Inside the clam: a dark pink gradient, pearly glows drifting slowly
     sf::VertexArray inside(sf::PrimitiveType::TriangleStrip, 4);
-    inside[0] = sf::Vertex{ { 0.f, 0.f }, INSIDE_TOP };
-    inside[1] = sf::Vertex{ { 1920.f, 0.f }, INSIDE_TOP };
-    inside[2] = sf::Vertex{ { 0.f, 1080.f }, INSIDE_BOTTOM };
-    inside[3] = sf::Vertex{ { 1920.f, 1080.f }, INSIDE_BOTTOM };
+    const sf::FloatRect screen = UISkin::screen_rect();   // A phone's extra width too
+    const float left = screen.position.x, right = left + screen.size.x, top = screen.position.y, bottom = top + screen.size.y;
+    inside[0] = sf::Vertex{ { left, top }, INSIDE_TOP };
+    inside[1] = sf::Vertex{ { right, top }, INSIDE_TOP };
+    inside[2] = sf::Vertex{ { left, bottom }, INSIDE_BOTTOM };
+    inside[3] = sf::Vertex{ { right, bottom }, INSIDE_BOTTOM };
     window.draw(inside);
     for (int glow = 0; glow < 4; ++glow)
     {
@@ -419,9 +421,7 @@ void UIClamStorage::render(sf::RenderWindow& window)
     // Coming in from the dive into the clam: out of its dark pink
     if (m_time < FADE_IN)
     {
-        sf::RectangleShape fade({ 1920.f, 1080.f });
-        fade.setFillColor(sf::Color(INSIDE_PINK.r, INSIDE_PINK.g, INSIDE_PINK.b, static_cast<std::uint8_t>(255.f * (1.f - m_time / FADE_IN))));
-        window.draw(fade);
+        UISkin::fill_screen(window, sf::Color(INSIDE_PINK.r, INSIDE_PINK.g, INSIDE_PINK.b, static_cast<std::uint8_t>(255.f * (1.f - m_time / FADE_IN))));
     }
 }
 

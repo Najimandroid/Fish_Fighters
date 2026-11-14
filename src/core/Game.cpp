@@ -1,7 +1,10 @@
 #include "Game.h"
+#include "Platform.h"
+#include "../uis/UISkin.h"
 
 #include <algorithm>
 #include <iostream>
+#include <vector>
 
 namespace
 {
@@ -100,10 +103,16 @@ void Game::update_viewports()
     const sf::Vector2f window = static_cast<sf::Vector2f>(m_window.getSize());
     if (window.x <= 0.f || window.y <= 0.f) return;
 
+    // The UI fills the window: its 1920 x 1080 layout in the middle, a wider screen (a phone) showing more on the sides,
+    // a taller one (a tablet) more above and below; backgrounds and bars fill that (UISkin::screen_rect)
     const sf::Vector2f logical = static_cast<sf::Vector2f>(m_logicalResolution);
-    const float scale = std::min(window.x / logical.x, window.y / logical.y);
-    const sf::Vector2f fraction{ logical.x * scale / window.x, logical.y * scale / window.y };
-    m_uiCamera.setViewport(sf::FloatRect{ (sf::Vector2f{ 1.f, 1.f } - fraction) / 2.f, fraction });
+    sf::Vector2f shown = logical;
+    if (window.x / window.y > logical.x / logical.y) shown.x = logical.y * window.x / window.y;
+    else shown.y = logical.x * window.y / window.x;
+    m_uiCamera.setSize(shown);
+    m_uiCamera.setCenter(logical / 2.f);
+    m_uiCamera.setViewport(sf::FloatRect{ { 0.f, 0.f }, { 1.f, 1.f } });
+    UISkin::set_screen_rect({ logical / 2.f - shown / 2.f, shown });
 
     // The stage camera's height carries its zoom; its width follows the window
     const float height = m_stageCamera.getSize().y;
@@ -201,9 +210,32 @@ void Game::terminate()
 /*
  * Process all pending events from the window
  */
+std::vector<sf::Event> Game::touch_as_mouse(const sf::Event& event)
+{
+    const auto left = sf::Mouse::Button::Left;
+    if (const auto* down = event.getIf<sf::Event::TouchBegan>())
+    {
+        if (down->finger != 0) return {};
+        return { sf::Event::MouseMoved{ down->position }, sf::Event::MouseButtonPressed{ left, down->position } };
+    }
+    if (const auto* moved = event.getIf<sf::Event::TouchMoved>())
+    {
+        if (moved->finger != 0) return {};
+        return { sf::Event::MouseMoved{ moved->position } };
+    }
+    if (const auto* up = event.getIf<sf::Event::TouchEnded>())
+    {
+        if (up->finger != 0) return {};
+        return { sf::Event::MouseButtonReleased{ left, up->position }, sf::Event::MouseMoved{ { -100000, -100000 } } };
+    }
+    return { event };
+}
+
 void Game::poll_events()
 {
-    while (const auto event = m_window.pollEvent()) {
+    while (const auto polled = m_window.pollEvent())
+    for (const sf::Event& input : touch_as_mouse(*polled)) {
+        const sf::Event* event = &input;
 
         // Window close event
         if (event->is<sf::Event::Closed>())
@@ -364,6 +396,14 @@ void Game::poll_events()
 void Game::create_window(bool fullscreen)
 {
     const sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
+    if constexpr (Platform::IS_ANDROID)
+    {
+        // The phone's whole screen, always
+        m_window.create(desktop, "Fish Fighters", sf::State::Fullscreen);
+        m_window.setFramerateLimit(m_frameRate);
+        update_viewports();
+        return;
+    }
     if (fullscreen)
     {
         m_window.create(desktop, "Fish Fighters", sf::Style::None);

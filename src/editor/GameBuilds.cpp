@@ -23,7 +23,8 @@ namespace GameBuilds
         for (const auto& entry : fs::directory_iterator(projectFolder / "out" / "build", error))
         {
             if (entry.is_directory() && fs::exists(entry.path() / GAME_EXECUTABLE))
-                builds.push_back({ entry.path().filename().string(), entry.path() });
+                if (entry.path().filename().string().rfind("android-", 0) != 0)   // The phone builds have no game to start here
+                    builds.push_back({ entry.path().filename().string(), entry.path() });
         }
         std::sort(builds.begin(), builds.end(), [](const Build& a, const Build& b) { return a.name < b.name; });
         return builds;
