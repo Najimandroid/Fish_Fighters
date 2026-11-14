@@ -1,5 +1,7 @@
 #include "UITextureElement.h"
 #include "../UISkin.h"
+
+#include <algorithm>
 #include <iostream>
 
 /*
@@ -39,18 +41,34 @@ void UITextureElement::render(sf::RenderWindow& window)
     if (!m_isVisible) return;
     window.draw(m_sprite);
 
-    // A full-screen background on a wider screen (a phone): the sides show it mirrored, so its edges carry on
-    // seamlessly (the floor line, the wall) without stretching what the layout sits on
+    // A full-screen background on a wider screen (a phone): each side carries on with the image's edge strip,
+    // mirrored, then straight, then mirrored... so the wall and the floor line run on seamlessly (only the edge:
+    // what's further in, like the hub's porthole, never shows up twice)
     const sf::FloatRect screen = UISkin::screen_rect();
     const bool isBackground = m_position == sf::Vector2f{ 0.f, 0.f } && m_size == sf::Vector2f{ 1920.f, 1080.f };
     if (!isBackground || screen.size.x <= m_size.x + 1.f) return;
+
+    const float EDGE = 150.f;   // On screen: the strip of each edge that's only wall and floor
+    const sf::IntRect source = m_sprite.getTextureRect();
     const sf::Vector2f scale = m_sprite.getScale();
-    sf::Sprite mirrored = m_sprite;
-    mirrored.setScale({ -scale.x, scale.y });
-    mirrored.setPosition({ 0.f, m_position.y });                    // Its right edge on the image's left edge
-    window.draw(mirrored);
-    mirrored.setPosition({ 2.f * m_size.x, m_position.y });         // Its left edge on the image's right edge
-    window.draw(mirrored);
+    const int edge = std::max(1, static_cast<int>(EDGE / scale.x));
+    for (const bool isRight : { false, true })
+    {
+        const sf::IntRect strip = isRight
+            ? sf::IntRect{ { source.position.x + source.size.x - edge, source.position.y }, { edge, source.size.y } }
+            : sf::IntRect{ source.position, { edge, source.size.y } };
+        sf::Sprite piece(m_texture, strip);
+        const float width = edge * scale.x;
+        const float extra = isRight ? screen.position.x + screen.size.x - m_size.x : -screen.position.x;
+        for (int i = 0; i * width < extra; ++i)
+        {
+            const bool isMirrored = i % 2 == 0;   // The first copy mirrored: it meets the image at its own edge
+            const float start = isRight ? m_size.x + i * width : -(i + 1) * width;   // The copy's left side
+            piece.setScale({ isMirrored ? -scale.x : scale.x, scale.y });
+            piece.setPosition({ isMirrored ? start + width : start, m_position.y });
+            window.draw(piece);
+        }
+    }
 }
 
 /*

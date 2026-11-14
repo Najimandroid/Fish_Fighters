@@ -22,13 +22,18 @@ namespace
     const int LOCKED_SHOWN = 2;                      // How many locked stages ahead the map shows
     const std::uint8_t LOCKED_PATH_ALPHA = 100;      // Their path is faint
 
-    // Keeps the map covering the whole screen (no black past its edges)
+    // Keeps the map covering the whole screen, a phone's extra width too (no black past its edges); a map smaller
+    // than the screen stays centered
+    float clamp_axis(float offset, float mapSize, float screenStart, float screenSize)
+    {
+        const float lowest = screenStart + screenSize - mapSize, highest = screenStart;
+        return lowest > highest ? (lowest + highest) / 2.f : std::clamp(offset, lowest, highest);
+    }
     sf::Vector2f clamp_to_map(sf::Vector2f offset, sf::Vector2f mapSize)
     {
-        return {
-            std::clamp(offset.x, std::min(0.f, 1920.f - mapSize.x), 0.f),
-            std::clamp(offset.y, std::min(0.f, 1080.f - mapSize.y), 0.f)
-        };
+        const sf::FloatRect screen = UISkin::screen_rect();
+        return { clamp_axis(offset.x, mapSize.x, screen.position.x, screen.size.x),
+                 clamp_axis(offset.y, mapSize.y, screen.position.y, screen.size.y) };
     }
 }
 
