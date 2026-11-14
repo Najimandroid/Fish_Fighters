@@ -125,7 +125,8 @@ namespace UISkin
 
     // ----- Depth -----
     // The soft shadow under a raised element (buttons, tiles): its own shape, dark, a little lower
-    inline constexpr float SHADOW_DROP = 6.f;
+    inline constexpr float SHADOW_DROP = 6.f;                     // Down...
+    inline constexpr float SHADOW_SHIFT = 4.f;                    // ...and a little to the right (light from the top left)
     inline const sf::Color SHADOW_TINT{ 0, 0, 0, 75 };
 
     // ----- Transitions -----

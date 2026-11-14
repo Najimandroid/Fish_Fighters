@@ -68,7 +68,7 @@ void UIRoundButton::render(sf::RenderWindow& window)
     // The round image fills its whole texture; a soft shadow under it first
     const sf::Vector2f buttonSize(m_button.getTexture().getSize());
     m_button.setScale({ rect.size.x / buttonSize.x, rect.size.y / buttonSize.y });
-    m_button.setPosition(rect.position + sf::Vector2f{ 0.f, (m_isPressed ? 0.4f : 1.f) * UISkin::SHADOW_DROP * rect.size.x / 100.f });
+    m_button.setPosition(rect.position + sf::Vector2f{ UISkin::SHADOW_SHIFT, UISkin::SHADOW_DROP } * ((m_isPressed ? 0.4f : 1.f) * rect.size.x / 100.f));
     m_button.setColor(UISkin::SHADOW_TINT);
     window.draw(m_button);
     m_button.setPosition(rect.position);

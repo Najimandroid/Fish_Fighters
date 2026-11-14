@@ -18,6 +18,7 @@
 #include <memory>
 #include <string>
 #include <random>
+#include <future>
 
 /*
  * Stage class
@@ -61,6 +62,11 @@ public:
 
     // Load a stage by its unique ID
     void load(int uid);
+
+    // Reads the stage's background on a worker thread ahead of load() (decoding it and making it seamless is the slow
+    // part, seconds on a phone): the screen keeps animating meanwhile (the battle start's water). load() takes it
+    void prepare(int uid);
+    bool is_prepared() const;   // Nothing left to read (or nothing was asked)
 
     // Unload the current stage and clear all entities
     void unload();
@@ -277,6 +283,9 @@ private:
 
     // The background image, made seamless when backgrounds.json asks for it (the file isn't changed)
     void load_background_texture(const BackgroundData& background);
+    static sf::Image read_background(const BackgroundData& background);   // Decoded and made seamless (any thread)
+    int m_preparedUid = -1;
+    std::future<sf::Image> m_preparedBackground;   // prepare()'s work
 
     // Background copies along the stage (any image size), ground row from backgrounds.json (-1 = template ratio)
     void init_background(float groundRow);

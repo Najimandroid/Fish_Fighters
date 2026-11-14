@@ -56,24 +56,17 @@ void UIIconTile::render(sf::RenderWindow& window)
     const float scale = get_visual_scale();
     if (scale < 0.02f) return;
 
-    // No background: the picture stands on its own (its whole rectangle is still the button), a soft shadow under it
-    // like an object resting there, its name across its bottom
+    // No background: the picture stands on its own (its whole rectangle is still the button), its name across its foot
     const sf::FloatRect rect = get_visual_rect();
     const float inset = std::min(rect.size.x, rect.size.y) * 0.06f;
     const sf::FloatRect area{ { rect.position.x + inset, rect.position.y + inset },
         { rect.size.x - 2.f * inset, rect.size.y * (1.f - LABEL_ROOM * 0.55f) - inset } };
 
-    const float shadowWidth = std::min(area.size.x, area.size.y * 1.4f) * 0.8f;
-    const float shadowY = area.position.y + area.size.y - area.size.y * 0.04f + (m_isPressed ? 0.f : UISkin::SHADOW_DROP * scale * 0.5f);
-    for (const float grow : { 1.f, 0.72f })
-    {
-        sf::CircleShape shadow(shadowWidth / 2.f * grow);
-        shadow.setScale({ 1.f, 0.2f });
-        shadow.setOrigin({ shadowWidth / 2.f * grow, shadowWidth / 2.f * grow });
-        shadow.setPosition({ area.position.x + area.size.x / 2.f, shadowY });
-        shadow.setFillColor(sf::Color(0, 0, 0, static_cast<std::uint8_t>((m_isEnabled ? 46 : 24))));
-        window.draw(shadow);
-    }
+    // Its shadow: the picture's own silhouette in translucent black, a little down and to the right, crisp (like the
+    // Cat Base's icons); pressed, the picture sinks onto it
+    const sf::Color shadowColor(0, 0, 0, m_isEnabled ? 85 : 40);
+    const sf::Vector2f shadowOffset = sf::Vector2f{ 4.f, 6.f } * scale * (m_isPressed ? 0.35f : 1.f);
+    draw_icon(window, { area.position + shadowOffset, area.size }, scale, 255, &shadowColor);
     draw_icon(window, area, scale, !m_isEnabled ? 120 : m_isPressed ? 215 : 255);
 
     // The name, around the visual center (the tile scales around its middle)
@@ -92,17 +85,19 @@ void UIIconTile::render(sf::RenderWindow& window)
 /*
  * The pictures, drawn in the game's style (thick dark outlines, flat colors) inside area
  */
-void UIIconTile::draw_icon(sf::RenderWindow& window, const sf::FloatRect& area, float scale, std::uint8_t alpha) const
+void UIIconTile::draw_icon(sf::RenderWindow& window, const sf::FloatRect& area, float scale, std::uint8_t alpha, const sf::Color* silhouette) const
 {
     const float side = std::min(area.size.x, area.size.y);
     const sf::Vector2f c = area.position + area.size / 2.f;
     const float outline = 5.f * scale;
-    const sf::Color dark = faded(UISkin::OUTLINE, alpha);
+    // Every color, or the silhouette's (the shadow: the same shapes in translucent black)
+    const auto paint = [&](sf::Color color) { return silhouette ? *silhouette : faded(color, alpha); };
+    const sf::Color dark = paint(UISkin::OUTLINE);
 
     switch (m_icon)
     {
     case Icon::TEXTURE:
-        UISkin::draw_fitted(window, UISkin::texture_file(m_texturePath), m_source, area, sf::Color(255, 255, 255, alpha));
+        UISkin::draw_fitted(window, UISkin::texture_file(m_texturePath), m_source, area, paint(sf::Color::White));
         break;
 
     case Icon::BOOK:
@@ -111,19 +106,19 @@ void UIIconTile::draw_icon(sf::RenderWindow& window, const sf::FloatRect& area, 
         const sf::Vector2f size{ side * 0.66f, side * 0.84f };
         const sf::FloatRect pages{ c - size / 2.f + sf::Vector2f{ side * 0.06f, 0.f }, size };
         sf::ConvexShape back = UISkin::rounded_rect(pages, side * 0.06f);
-        back.setFillColor(faded(sf::Color(248, 244, 232), alpha));
+        back.setFillColor(paint(sf::Color(248, 244, 232)));
         back.setOutlineThickness(outline);
         back.setOutlineColor(dark);
         window.draw(back);
         const sf::FloatRect coverRect{ c - size / 2.f - sf::Vector2f{ side * 0.04f, side * 0.03f }, size - sf::Vector2f{ side * 0.04f, 0.f } };
         sf::ConvexShape cover = UISkin::rounded_rect(coverRect, side * 0.06f);
-        cover.setFillColor(faded(sf::Color(222, 88, 76), alpha));
+        cover.setFillColor(paint(sf::Color(222, 88, 76)));
         cover.setOutlineThickness(outline);
         cover.setOutlineColor(dark);
         window.draw(cover);
         sf::RectangleShape spine({ side * 0.08f, coverRect.size.y - outline });
         spine.setPosition(coverRect.position + sf::Vector2f{ side * 0.05f, outline / 2.f });
-        spine.setFillColor(faded(sf::Color(170, 56, 50), alpha));
+        spine.setFillColor(paint(sf::Color(170, 56, 50)));
         window.draw(spine);
         // The fish: an oval body and a tail
         const sf::Vector2f fish = coverRect.position + coverRect.size / 2.f + sf::Vector2f{ side * 0.04f, 0.f };
@@ -131,14 +126,14 @@ void UIIconTile::draw_icon(sf::RenderWindow& window, const sf::FloatRect& area, 
         body.setScale({ 1.f, 0.7f });
         body.setOrigin({ side * 0.12f, side * 0.12f });
         body.setPosition(fish);
-        body.setFillColor(faded(UISkin::NUMBER, alpha));
+        body.setFillColor(paint(UISkin::NUMBER));
         body.setOutlineThickness(outline * 0.8f);
         body.setOutlineColor(dark);
         sf::ConvexShape tail(3);
         tail.setPoint(0, fish + sf::Vector2f{ side * 0.09f, 0.f });
         tail.setPoint(1, fish + sf::Vector2f{ side * 0.2f, -side * 0.08f });
         tail.setPoint(2, fish + sf::Vector2f{ side * 0.2f, side * 0.08f });
-        tail.setFillColor(faded(UISkin::NUMBER, alpha));
+        tail.setFillColor(paint(UISkin::NUMBER));
         tail.setOutlineThickness(outline * 0.8f);
         tail.setOutlineColor(dark);
         window.draw(tail);
@@ -158,14 +153,14 @@ void UIIconTile::draw_icon(sf::RenderWindow& window, const sf::FloatRect& area, 
             const float radius = (i % perTooth == 1 || i % perTooth == 2) ? outer : inner;
             gear.setPoint(static_cast<std::size_t>(i), c + sf::Vector2f{ std::cos(angle), std::sin(angle) } * radius);
         }
-        gear.setFillColor(faded(sf::Color(200, 210, 224), alpha));
+        gear.setFillColor(paint(sf::Color(200, 210, 224)));
         gear.setOutlineThickness(outline);
         gear.setOutlineColor(dark);
         window.draw(gear);
         sf::CircleShape hole(side * 0.13f);
         hole.setOrigin({ side * 0.13f, side * 0.13f });
         hole.setPosition(c);
-        hole.setFillColor(faded(sf::Color(64, 80, 104), alpha));
+        hole.setFillColor(paint(sf::Color(64, 80, 104)));
         hole.setOutlineThickness(outline);
         hole.setOutlineColor(dark);
         window.draw(hole);
@@ -179,7 +174,7 @@ void UIIconTile::draw_icon(sf::RenderWindow& window, const sf::FloatRect& area, 
         for (const bool isOutline : { true, false })
         {
             const float thickness = side * 0.11f + (isOutline ? outline * 2.f : 0.f);
-            const sf::Color color = isOutline ? dark : faded(sf::Color(255, 140, 118), alpha);
+            const sf::Color color = isOutline ? dark : paint(sf::Color(255, 140, 118));
             sf::VertexArray ring(sf::PrimitiveType::TriangleStrip);
             for (int i = 0; i <= 40; ++i)
             {

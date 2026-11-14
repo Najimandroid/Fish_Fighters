@@ -32,7 +32,9 @@ namespace
     const float SHAKE_ONE = 0.45f, SHAKE_TEN = 0.8f;
     const float OPEN_POP = 0.45f;
     const float REVEAL_GAP = 0.18f;
-    const float CLOSE = 0.35f;
+    const float CLOSE = 1.f;           // Closing: the bubbles go back into its mouth (CLOSE_INHALE), it shuts (CLOSE_SHUT)
+    const float CLOSE_INHALE = 0.58f;
+    const float CLOSE_SHUT = 0.64f;
 
 
     // The clam's shadow on the ground (like the fish and enemies): a bit wider than the closed shell, centered on its
@@ -239,7 +241,8 @@ void UIClamRoom::close_clam()
     if (m_phase == Phase::REVEALED)
     {
         go_to(Phase::CLOSING);
-        play_sound("clam_hop", 1.1f);
+        m_hasShut = false;
+        play_sound("fish_blub", 0.75f);   // The bubbles being drawn back in (the hop sound when it shuts)
     }
 }
 
@@ -350,6 +353,7 @@ void UIClamRoom::update(float deltaTime)
         break;
     }
     case Phase::CLOSING:
+        if (!m_hasShut && m_phaseTime >= CLOSE_SHUT) { m_hasShut = true; play_sound("clam_hop", 1.1f); }
         if (m_phaseTime >= CLOSE) { m_reveals.clear(); go_to(Phase::IDLE); }
         break;
     case Phase::TO_STORAGE:
@@ -504,7 +508,7 @@ void UIClamRoom::render(sf::RenderWindow& window)
 void UIClamRoom::render_clam(sf::RenderWindow& window)
 {
     const bool isOpen = m_phase == Phase::OPENING || m_phase == Phase::REVEALING || m_phase == Phase::REVEALED
-        || (m_phase == Phase::CLOSING && m_phaseTime < CLOSE * 0.5f)
+        || (m_phase == Phase::CLOSING && m_phaseTime < CLOSE_SHUT)   // Open until every bubble is back inside
         || (m_phase == Phase::TO_STORAGE && m_phaseTime >= TO_STORAGE_OPEN)
         || (m_phase == Phase::FROM_STORAGE && m_phaseTime < FROM_STORAGE_SHUT);
     const bool isEating = m_phase == Phase::FEEDING && m_phaseTime < scales_landed_time() + GULP_HOP;   // Half open
@@ -608,7 +612,8 @@ void UIClamRoom::render_clam(sf::RenderWindow& window)
         break;
     }
     case Phase::CLOSING:
-        jump = 10.f * std::sin(std::min(1.f, m_phaseTime / CLOSE) * PI);   // A little hop as it snaps shut
+        if (m_phaseTime > CLOSE_SHUT)   // A little hop as it snaps shut
+            jump = 10.f * std::sin(std::min(1.f, (m_phaseTime - CLOSE_SHUT) / (CLOSE - CLOSE_SHUT)) * PI);
         break;
     case Phase::TO_STORAGE:
         // A pop as it opens for us
@@ -693,23 +698,33 @@ void UIClamRoom::render_reveals(sf::RenderWindow& window)
 
     const sf::Texture& bubbleTexture = UISkin::texture("bubble");
     const float bubbleSize = static_cast<float>(std::max(1u, bubbleTexture.getSize().x));
-    const float closing = m_phase == Phase::CLOSING ? std::clamp(1.f - m_phaseTime / CLOSE, 0.f, 1.f) : 1.f;
+    const bool isClosing = m_phase == Phase::CLOSING;
     const float revealTime = m_phase == Phase::REVEALING ? m_phaseTime : 1000.f;
+    // Closing: one after the other, the bubbles drift back into the clam's mouth, shrinking as they go in
+    const float stagger = m_reveals.size() > 1 ? std::min(0.04f, 0.22f / static_cast<float>(m_reveals.size())) : 0.f;
+    const float inhale = CLOSE_INHALE - stagger * static_cast<float>(m_reveals.size());
 
-    for (const Reveal& reveal : m_reveals)
+    for (size_t index = 0; index < m_reveals.size(); ++index)
     {
+        const Reveal& reveal = m_reveals[index];
         const float t = std::clamp((revealTime - reveal.appearAt) / 0.45f, 0.f, 1.f);
         if (t <= 0.f) continue;
+        const float back = isClosing ? std::clamp((m_phaseTime - stagger * static_cast<float>(index)) / inhale, 0.f, 1.f) : 0.f;
+        const float pull = back * back * (3.f - 2.f * back);   // Eases in and out
+        if (back >= 1.f) continue;   // Inside
+        const float closing = 1.f - 0.8f * pull;                 // Its size on the way in
         const float grow = ease_out_back(t) * closing;
-        const float bob = std::sin(m_time * 2.4f + reveal.target.x * 0.01f) * 6.f;
-        const sf::Vector2f position = mouth() + (reveal.target - mouth()) * std::min(1.f, t * 1.2f) + sf::Vector2f{ 0.f, bob };
+        const float bob = std::sin(m_time * 2.4f + reveal.target.x * 0.01f) * 6.f * (1.f - pull);
+        const sf::Vector2f outside = mouth() + (reveal.target - mouth()) * std::min(1.f, t * 1.2f) + sf::Vector2f{ 0.f, bob };
+        const sf::Vector2f position = outside + (mouth() - outside) * pull;
 
         const float size = 200.f * reveal.scale * grow;
         sf::Sprite bubble(bubbleTexture);
         bubble.setOrigin({ bubbleSize / 2.f, bubbleSize / 2.f });
         bubble.setScale({ size * 1.15f / bubbleSize, size * 1.15f / bubbleSize });
         bubble.setPosition(position);
-        bubble.setColor(sf::Color(255, 255, 255, static_cast<std::uint8_t>(170 * closing)));
+        const float fade = back > 0.8f ? 1.f - (back - 0.8f) / 0.2f : 1.f;   // Gone as it enters
+        bubble.setColor(sf::Color(255, 255, 255, static_cast<std::uint8_t>(170 * fade)));
         window.draw(bubble);
 
         // The whole fish inside, swimming (its walking frames, as drawn on its sheet)
@@ -723,11 +738,11 @@ void UIClamRoom::render_reveals(sf::RenderWindow& window)
             fish.setOrigin(boxSize / 2.f);
             fish.setScale({ fit, fit });
             fish.setPosition(position);
-            fish.setColor(sf::Color(255, 255, 255, static_cast<std::uint8_t>(255 * closing)));
+            fish.setColor(sf::Color(255, 255, 255, static_cast<std::uint8_t>(255 * fade)));
             window.draw(fish);
         }
 
-        if (t < 1.f || closing < 1.f) continue;
+        if (t < 1.f || isClosing) continue;
 
         // Under the bubble: the name, the tag (NEW!, +1 EXTRA LEVEL, +n SHELLS), the level with its extra levels.
         // Smaller in the x10 grid, where each fish has a 240 px column

@@ -28,7 +28,7 @@ void UIInfoButton::render(sf::RenderWindow& window)
     circle.setOrigin({ radius, radius });
     const sf::Vector2f center = rect.position + rect.size / 2.f;
 
-    circle.setPosition(center + sf::Vector2f{ 0.f, (m_isPressed ? 0.4f : 1.f) * UISkin::SHADOW_DROP * 0.7f * scale });
+    circle.setPosition(center + sf::Vector2f{ UISkin::SHADOW_SHIFT, UISkin::SHADOW_DROP } * ((m_isPressed ? 0.4f : 1.f) * 0.7f * scale));
     circle.setFillColor(UISkin::SHADOW_TINT);
     window.draw(circle);
 

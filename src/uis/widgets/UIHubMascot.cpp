@@ -166,24 +166,23 @@ void UIHubMascot::render_bubble(sf::RenderWindow& window)
     states.transform.translate(TAIL_TIP).scale({ pop, pop }).translate(-TAIL_TIP);
     const auto with_alpha = [alpha](sf::Color color) { color.a = static_cast<std::uint8_t>(color.a * alpha); return color; };
 
+    // One shape: the rounded rectangle with the tail's three points in its bottom edge (right to left, like the
+    // edge runs), so a single outline goes round the bubble and both sides of its tail
     const sf::FloatRect rect = bubble_rect();
-    const float tailX = TAIL_TIP.x - 34.f;
-    sf::ConvexShape tail(3);
-    tail.setPoint(0, { tailX - 26.f, rect.position.y + rect.size.y - 6.f });
-    tail.setPoint(1, { tailX + 18.f, rect.position.y + rect.size.y - 6.f });
-    tail.setPoint(2, TAIL_TIP);
-    tail.setFillColor(with_alpha(PAPER));
-    tail.setOutlineThickness(OUTLINE);
-    tail.setOutlineColor(with_alpha(UISkin::OUTLINE));
-    window.draw(tail, states);
-
-    sf::ConvexShape body = rounded_rect(rect, CORNER);
-    body.setFillColor(with_alpha(PAPER));
-    body.setOutlineThickness(OUTLINE);
-    body.setOutlineColor(with_alpha(UISkin::OUTLINE));
-    window.draw(body, states);
-    tail.setOutlineThickness(0.f);   // Over the bubble's outline: the tail comes out of it
-    window.draw(tail, states);
+    const float tailX = TAIL_TIP.x - 34.f, bottom = rect.position.y + rect.size.y;
+    const sf::ConvexShape box = rounded_rect(rect, CORNER);
+    const std::size_t half = box.getPointCount() / 2;   // The top right and bottom right corners come first
+    sf::ConvexShape bubble(box.getPointCount() + 3);
+    std::size_t point = 0;
+    for (std::size_t i = 0; i < half; ++i) bubble.setPoint(point++, box.getPoint(i));
+    bubble.setPoint(point++, { tailX + 18.f, bottom });
+    bubble.setPoint(point++, TAIL_TIP);
+    bubble.setPoint(point++, { tailX - 26.f, bottom });
+    for (std::size_t i = half; i < box.getPointCount(); ++i) bubble.setPoint(point++, box.getPoint(i));
+    bubble.setFillColor(with_alpha(PAPER));
+    bubble.setOutlineThickness(OUTLINE);
+    bubble.setOutlineColor(with_alpha(UISkin::OUTLINE));
+    window.draw(bubble, states);
 
     const std::size_t shown = std::min(m_wrapped.size(), static_cast<std::size_t>(std::max(0.f, m_tipTime) * CHARS_PER_SECOND));
     m_text.setString(m_wrapped.substr(0, shown));

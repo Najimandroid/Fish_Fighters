@@ -8,7 +8,7 @@
  * UIIconTile
  * ----------
  * A square menu button that shows what it opens with a picture, its name small along its bottom (like the Cat Base's
- * Menu / Storage / Capsule icons): no background, the picture stands on its own with a soft shadow under it, and its
+ * Menu / Storage / Capsule icons): no background, the picture stands on its own with its silhouette as a crisp shadow, and its
  * whole rectangle is the button (an easy target on a phone). For secondary destinations; the screen's main
  * actions stay big text buttons. The picture is an image (the clam) or one of a few drawn icons.
  *
@@ -27,7 +27,8 @@ public:
     void render(sf::RenderWindow& window) override;
 
 private:
-    void draw_icon(sf::RenderWindow& window, const sf::FloatRect& area, float scale, std::uint8_t alpha) const;
+    // silhouette: draw every shape in that one color (the shadow)
+    void draw_icon(sf::RenderWindow& window, const sf::FloatRect& area, float scale, std::uint8_t alpha, const sf::Color* silhouette = nullptr) const;
 
     Icon m_icon;
     std::string m_texturePath;

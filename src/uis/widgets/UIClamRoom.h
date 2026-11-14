@@ -128,6 +128,7 @@ private:
     float m_tapSide = 0.f;        // Where it was poked: -1 its left edge, 0 its middle, 1 its right edge
     bool m_hasTapLanded = true;   // Its thud played
     std::vector<Reveal> m_reveals;
+    bool m_hasShut = false;             // Closing: it has snapped shut (its sound played)
     std::vector<Bubble> m_bubbles;
     std::weak_ptr<UIPlayerShellsInfo> m_scalesInfo;
     std::mt19937 m_random{ std::random_device{}() };

@@ -74,6 +74,7 @@ void UIManager::init(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<Sta
 
 namespace
 {
+    const float HOLD_UNTIL_REPLACED = 3600.f;   // A battle start's cover: never sweeps away by itself
     const float REVEAL_SECONDS = 0.6f;     // The wave's sweep up the screen
     const float REVEAL_BAND = 300.f;       // Its height
 
@@ -246,8 +247,9 @@ void UIManager::update_uis(float deltaTime)
         element->update(deltaTime);
     }
 
-    // A battle starting: the water covers the screen now, load it
-    if (m_pendingBattleStage >= 0 && m_battleCover && m_battleCover->has_covered_screen())
+    // A battle starting: once the water covers the screen and the background has been read, load the rest
+    auto loadingStage = m_stage.lock();
+    if (m_pendingBattleStage >= 0 && m_battleCover && m_battleCover->has_covered_screen() && (!loadingStage || loadingStage->is_prepared()))
         finish_battle_start();
 
     // An action an animation asked for when it ended (the zoom into the Clam Storage): after the loop, since it can
@@ -949,9 +951,11 @@ void UIManager::start_battle(int stageUid)
     m_jingleClock.restart();
 
     // With the jingle: the water rises over this screen right away (the stage loads under it, finish_battle_start)
-    m_battleCover = std::make_shared<UIBattleIntro>(m_dataLoader->get_stage_data(stageUid)->name, m_battleIntroSeconds);
+    // It holds covered (its bubbles rising) as long as loading takes: the battle screen's own intro sweeps the water away
+    m_battleCover = std::make_shared<UIBattleIntro>(m_dataLoader->get_stage_data(stageUid)->name, HOLD_UNTIL_REPLACED);
     add_ui_element(m_battleCover);
     m_pendingBattleStage = stageUid;
+    stage->prepare(stageUid);   // The slow reading happens on a worker thread while the water rises and the bubbles go up
 }
 
 /*

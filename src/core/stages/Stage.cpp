@@ -11,6 +11,7 @@
 #include "../../audio/AudioManager.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <iostream>
@@ -783,17 +784,44 @@ void Stage::spawn_bases(float health, float playerBaseHealth, const std::string&
 * With a seamless overlap (backgrounds.json), its edges are blended so the copies join without a seam
 * (the file itself isn't changed). The rows don't move, so the ground row stays valid.
 */
-void Stage::load_background_texture(const BackgroundData& background)
+sf::Image Stage::read_background(const BackgroundData& background)
 {
 	sf::Image image;
 	if (!image.loadFromFile(background.texture))
 	{
 		std::cerr << "Stage: can't load the background " << background.texture << "\n";
-		return;
+		return image;
 	}
-
 	if (background.seamlessOverlap > 0)
 		image = ImageTools::make_seamless(image, static_cast<unsigned>(background.seamlessOverlap));
+	return image;
+}
+
+/*
+ * The battle start reads the background on a worker thread while its water covers the screen (the screen keeps
+ * animating: the main thread isn't blocked by the decoding and the seamless blending)
+ */
+void Stage::prepare(int uid)
+{
+	auto stageJson = m_dataLoader->get_stage_data(uid);
+	if (!stageJson) return;
+	const BackgroundData background = m_dataLoader->get_background_data(stageJson->backgroundTexture);
+	m_preparedUid = uid;
+	m_preparedBackground = std::async(std::launch::async, [background]() { return read_background(background); });
+}
+
+bool Stage::is_prepared() const
+{
+	return !m_preparedBackground.valid() || m_preparedBackground.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+}
+
+void Stage::load_background_texture(const BackgroundData& background)
+{
+	// Read ahead by prepare() (it waits if that isn't done yet), else read now
+	const bool isPrepared = m_preparedUid == m_uid && m_preparedBackground.valid();
+	const sf::Image image = isPrepared ? m_preparedBackground.get() : read_background(background);
+	m_preparedUid = -1;
+	if (image.getSize().x == 0 || image.getSize().y == 0) return;
 
 	if (!m_backgroundTexture.loadFromImage(image))
 		std::cerr << "Stage: can't create the background texture of " << background.texture << "\n";
