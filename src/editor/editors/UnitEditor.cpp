@@ -66,12 +66,13 @@ namespace
     // ==================
     // Tabs
     // ==================
-    void general_tab(EditorContext& ctx, int uid, ordered_json& form)
+    void general_tab(EditorContext& ctx, int uid, ordered_json& unit, ordered_json& form)
     {
         if (begin_properties("General"))
         {
             text_field(ctx, UNITS_FILE, "Name", form, "name");
             text_field(ctx, UNITS_FILE, "Description", form, "description", "Shown in the equip and upgrade menus.", true);
+            rarity_field(ctx, UNITS_FILE, unit);   // Shared by every form
             end_properties();
         }
 
@@ -123,7 +124,6 @@ namespace
             int_field(ctx, UNITS_FILE, "Max level", form, "maxLevel", 0, 999, "...to this one. The next form starts at max level + 1.", 0.1f);
             int_field(ctx, UNITS_FILE, "Upgrade base cost", unit, "baseUpgradeCost", 0, 100000000,
                 "Shells for the first upgrade, later upgrades cost more. Shared by every form.");
-            rarity_field(ctx, UNITS_FILE, unit);
             end_properties();
         }
 
@@ -274,7 +274,7 @@ namespace UnitEditor
                     ImGui::PopID();
                     ImGui::EndTabItem();
                 };
-            tab("General", [&]() { general_tab(ctx, uid, form); });
+            tab("General", [&]() { general_tab(ctx, uid, *unit, form); });
             tab("Combat", [&]() { combat_tab(ctx, form); });
             tab("Deployment", [&]() { deployment_tab(ctx, *unit, form); });
             tab("Appearance", [&]() { appearance_tab(ctx, uid, form, formIndex); });

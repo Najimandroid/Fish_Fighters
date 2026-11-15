@@ -14,6 +14,7 @@ namespace
 UIAdOverlay::UIAdOverlay() :
     UIElement({ 1920.f, 1080.f }, { 0.f, 0.f })
 {
+    set_z(Z_OVERLAY);
     m_isVisible = false;
 }
 

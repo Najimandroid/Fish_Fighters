@@ -18,9 +18,15 @@ enum class Rarity
     COUNT   // Not a rarity: keep it last
 };
 
-// The giant clam only gives fish this rare or rarer. While no fish is (no Rare fish exist yet), it gives every fish:
-// the Normal ones. The first Rare fish added to units.json makes it give the Rare and Super Rare fish only, by itself
+// The giant clam only gives fish this rare or rarer (while no fish is, it gives every fish)
 inline constexpr Rarity CLAM_MIN_RARITY = Rarity::RARE;
+
+// How often the clam picks each rarity (then one of its fish at random): Super Rare is rarer than Rare. Only the
+// rarities that have fish count (no Super Rare fish yet: always a Rare one)
+inline constexpr int clam_weight(Rarity rarity)
+{
+    return rarity == Rarity::RARE ? 80 : rarity == Rarity::SUPER_RARE ? 20 : 0;
+}
 
 // units.json's word for it
 inline const char* rarity_key(Rarity rarity)

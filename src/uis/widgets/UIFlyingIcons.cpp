@@ -14,6 +14,7 @@ namespace
 UIFlyingIcons::UIFlyingIcons() :
     UIElement({ 0.f, 0.f }, { 0.f, 0.f })
 {
+    set_z(Z_FLYING);
 }
 
 float UIFlyingIcons::random(float from, float to)

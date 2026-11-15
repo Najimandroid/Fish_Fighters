@@ -93,7 +93,7 @@ set(PROJECT_SOURCES
     src/uis/widgets/UIHubMascot.cpp
     src/uis/widgets/UIInfoButton.cpp
     src/uis/widgets/UIInfoPanel.cpp
-    src/uis/widgets/UIShopMenu.cpp
+    src/uis/widgets/UIPearlShop.cpp
     src/uis/widgets/UIIconTile.cpp
     src/uis/widgets/UIOfferButton.cpp
     src/uis/widgets/UIClamBackdrop.cpp

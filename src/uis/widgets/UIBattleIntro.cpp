@@ -21,6 +21,7 @@ UIBattleIntro::UIBattleIntro(const std::string& stageName, float duration, float
     // Always time to sweep away, even when the stage took longer to load than the jingle lasts
     m_duration(std::max({ COVER + UNCOVER + 0.3f, duration, startTime + UNCOVER + 0.2f }))
 {
+    set_z(Z_OVERLAY);
     UISkin::style_text(m_title, 96, UISkin::NUMBER);
     UISkin::set_text_anchor(m_title, { 0.5f, 0.5f });
     m_title.setPosition({ 960.f, 480.f });

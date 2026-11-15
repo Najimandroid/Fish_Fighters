@@ -27,7 +27,28 @@ namespace
 
     const float MARKER_SIZE = 66.f;
     const float SELECTED_MARKER_SIZE = 84.f;
-    const sf::Color CLEARED_TINT{ 150, 235, 150 };   // Turns the yellow marker green
+    const sf::Color CLEARED_TINT{ 120, 230, 120 };   // The CLEARED! text
+
+    // The cleared stages' marker: the yellow one's drawing made green (each pixel's brightness kept), its shine and
+    // outline with it. A tint can only darken the yellow into olive
+    const sf::Texture& cleared_marker_texture()
+    {
+        static sf::Texture texture;
+        static bool isMade = false;
+        if (isMade) return texture;
+        isMade = true;
+        sf::Image image = UISkin::texture("button_round").copyToImage();
+        for (unsigned int y = 0; y < image.getSize().y; ++y)
+            for (unsigned int x = 0; x < image.getSize().x; ++x)
+            {
+                const sf::Color pixel = image.getPixel({ x, y });
+                const float light = 0.3f * pixel.r + 0.59f * pixel.g + 0.11f * pixel.b;
+                const auto channel = [](float value) { return static_cast<std::uint8_t>(std::clamp(value, 0.f, 255.f)); };
+                image.setPixel({ x, y }, sf::Color(channel(light * 0.42f), channel(light * 1.18f), channel(light * 0.38f), pixel.a));
+            }
+        if (texture.loadFromImage(image)) texture.setSmooth(true);
+        return texture;
+    }
     const sf::Color LOCKED_TINT{ 150, 156, 166 };    // Grey disc: what comes next, not playable yet
     const int LOCKED_SHOWN = 2;                      // How many locked stages ahead the map shows
     const std::uint8_t LOCKED_PATH_ALPHA = 100;      // Their path is faint
@@ -35,10 +56,9 @@ namespace
     // The Fish on the map
     const int WALKER_UID = 1;                        // The Fish
     const sf::Vector2f WALKER_BOX{ 118.f, 88.f };    // Its picture fits in this
-    const float WALK_SPEED = 380.f;                  // Pixels per second, at least
-    const float WALK_MAX_SECONDS = 1.4f;             // A long walk goes quicker so it never takes longer
-    const float WALK_FRAME_SECONDS = 0.09f;
-    const float WALK_HOP = 9.f;                      // A little hop each step
+    const float WALK_SPEED = 800.f;                  // Pixels per second, at least
+    const float WALK_MAX_SECONDS = 0.8f;             // A long walk goes quicker so it never takes longer
+    const float WALK_FRAME_SECONDS = 0.07f;
 
     // Keeps the map covering the part of the screen it shows in: between the title bar and the bottom bar, inside the
     // 16:9 layout (a phone's extra width is behind the side pillars, so a stage brought there would be hidden: the
@@ -483,8 +503,8 @@ void UIChapterMap::update_walker(float deltaTime)
 }
 
 /*
- * The Fish on its marker: idle, its first frame breathing (a slow squash); walking, its walk frames with a hop on
- * each step. Facing where it goes, a soft shadow under it
+ * The Fish on its marker: idle, its first frame, still; walking, its walk frames (no bobbing). Facing where it goes,
+ * a soft shadow under it
  */
 void UIChapterMap::render_walker(sf::RenderWindow& window, const sf::RenderStates& states)
 {
@@ -498,8 +518,7 @@ void UIChapterMap::render_walker(sf::RenderWindow& window, const sf::RenderState
 
     const bool isWalking = !m_walkPath.empty();
     const int frame = isWalking ? static_cast<int>(m_walkTime / WALK_FRAME_SECONDS) % std::max(1, frames.count) : 0;
-    const float hop = isWalking ? std::abs(std::sin(m_walkTime * 3.14159265f / (WALK_FRAME_SECONDS * 2.f))) * WALK_HOP : 0.f;
-    const float breath = isWalking ? 0.f : std::sin(m_walkerTime * 2.6f);
+
     const sf::Vector2f boxSize(frames.box.size);
     const float fit = std::min(WALKER_BOX.x / boxSize.x, WALKER_BOX.y / boxSize.y);
     const sf::Vector2f feet = m_walkerPosition + sf::Vector2f{ 0.f, boxSize.y * fit * 0.5f };   // Centered on the marker: on top of it
@@ -510,16 +529,15 @@ void UIChapterMap::render_walker(sf::RenderWindow& window, const sf::RenderState
     {
         sf::Sprite shadow(shadowTexture);
         shadow.setOrigin(shadowSize / 2.f);
-        const float shrink = 1.f - 0.25f * hop / WALK_HOP;
-        shadow.setScale({ boxSize.x * fit * 0.8f * shrink / shadowSize.x, 22.f * shrink / shadowSize.y });
+        shadow.setScale({ boxSize.x * fit * 0.8f / shadowSize.x, 22.f / shadowSize.y });
         shadow.setPosition(feet + sf::Vector2f{ 0.f, 4.f });
         window.draw(shadow, states);
     }
 
     sf::Sprite fish(UISkin::texture_file(data->texture), { { frame * frames.frameWidth + frames.box.position.x, frames.box.position.y }, frames.box.size });
     fish.setOrigin({ boxSize.x / 2.f, boxSize.y });   // Its feet
-    fish.setScale({ fit * (1.f - 0.03f * breath) * (m_walkerFacesRight ? -1.f : 1.f), fit * (1.f + 0.04f * breath) });
-    fish.setPosition(feet - sf::Vector2f{ 0.f, hop });
+    fish.setScale({ fit * (m_walkerFacesRight ? -1.f : 1.f), fit });   // Steady: no bobbing
+    fish.setPosition(feet);
     window.draw(fish, states);
 }
 
@@ -566,9 +584,9 @@ void UIChapterMap::render(sf::RenderWindow& window)
             draw_padlock(window, states, center, size);
             continue;
         }
-        m_marker.setColor(icon.completed ? CLEARED_TINT : sf::Color::White);
+        // Cleared: bright green (no check mark: the green says it)
+        m_marker.setTexture(icon.completed ? cleared_marker_texture() : UISkin::texture("button_round"));
         window.draw(m_marker, states);
-        if (icon.completed) draw_check(window, states, center + sf::Vector2f{ size * 0.36f, -size * 0.36f });
 
         m_markerNumber.setString(std::to_string(icon.number));
         m_markerNumber.setScale({ size / SELECTED_MARKER_SIZE, size / SELECTED_MARKER_SIZE });

@@ -196,15 +196,34 @@ void UIClamRoom::open(int count)
     auto player = m_dataLoader->get_player_data().lock();
     if (m_phase != Phase::IDLE || !player) return;
 
-    // The fish it gives: the Rare and Super Rare ones (CLAM_MIN_RARITY); while there are none, every fish
-    std::set<int> uids, rareUids;
+    // The fish it gives: the Rare and Super Rare ones (CLAM_MIN_RARITY), by rarity (clam_weight: Super Rare is rarer);
+    // while there are none, every fish
+    std::map<Rarity, std::set<int>> byRarity;
+    std::set<int> every;
     for (const auto& [key, data] : m_dataLoader->get_units_database())
     {
-        uids.insert(key.first);
-        if (data && data->rarity >= CLAM_MIN_RARITY) rareUids.insert(key.first);
+        every.insert(key.first);
+        if (data && key.second == 0 && data->rarity >= CLAM_MIN_RARITY) byRarity[data->rarity].insert(key.first);
     }
-    const std::vector<int> pool = rareUids.empty() ? std::vector<int>(uids.begin(), uids.end()) : std::vector<int>(rareUids.begin(), rareUids.end());
-    if (pool.empty()) return;
+    if (every.empty()) return;
+    int totalWeight = 0;
+    for (const auto& [rarity, uids] : byRarity) totalWeight += clam_weight(rarity);
+    const auto pick_fish = [&]() {
+        if (totalWeight <= 0)
+        {
+            const std::vector<int> pool(every.begin(), every.end());
+            return pool[std::uniform_int_distribution<size_t>(0, pool.size() - 1)(m_random)];
+        }
+        int roll = std::uniform_int_distribution<int>(0, totalWeight - 1)(m_random);
+        for (const auto& [rarity, uids] : byRarity)
+        {
+            roll -= clam_weight(rarity);
+            if (roll >= 0) continue;
+            const std::vector<int> pool(uids.begin(), uids.end());
+            return pool[std::uniform_int_distribution<size_t>(0, pool.size() - 1)(m_random)];
+        }
+        return *byRarity.begin()->second.begin();
+    };
     if (!player->spend_shiny_scales(count))
     {
         play_sound("ui_error");
@@ -214,7 +233,7 @@ void UIClamRoom::open(int count)
     m_reveals.clear();
     for (int i = 0; i < count; ++i)
     {
-        const int uid = pool[std::uniform_int_distribution<size_t>(0, pool.size() - 1)(m_random)];
+        const int uid = pick_fish();
         const PlayerData::FishReward reward = player->receive_fish(uid);   // Into the Clam Storage
 
         Reveal reveal;

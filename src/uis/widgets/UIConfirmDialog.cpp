@@ -25,6 +25,7 @@ UIConfirmDialog::UIConfirmDialog(const std::string& question, const std::string&
     m_confirmButton(BUTTON_SIZE, { SCREEN_SIZE.x / 2.f - BUTTON_GAP / 2.f - BUTTON_SIZE.x, BUTTON_Y }, confirmLabel),
     m_cancelButton(BUTTON_SIZE, { SCREEN_SIZE.x / 2.f + BUTTON_GAP / 2.f, BUTTON_Y }, cancelLabel)
 {
+    set_z(Z_WINDOW);
     m_dim.setFillColor(sf::Color(0, 0, 0, 150));
 
     UISkin::style_text(m_question, QUESTION_SIZE);

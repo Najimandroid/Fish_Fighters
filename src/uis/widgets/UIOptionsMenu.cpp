@@ -43,6 +43,7 @@ UIOptionsMenu::UIOptionsMenu(std::shared_ptr<DataLoader> dataLoader, std::shared
     m_fullscreenButton({ 320.f, 80.f }, { LEFT, TOP + 525.f }, "FULLSCREEN"),
     m_windowedButton({ 320.f, 80.f }, { LEFT + 350.f, TOP + 525.f }, "WINDOWED")
 {
+    set_z(Z_WINDOW);
     m_dim.setFillColor(sf::Color(0, 0, 0, 150));
 
     // Static texts

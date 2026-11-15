@@ -119,6 +119,13 @@ void AttackState::perform(float deltaTime)
                 target.take_damage(result);
                 stage->get_combat_log().record(*entity, target, result, stage->get_elapsed_time());
                 statusManager.apply_on_hit_abilities(*entity, target, stage->get_elapsed_time());
+                // Thorns: the target stings back
+                const DamageResult sting = damageCalculator.thorns(target, *entity);
+                if (sting.finalDamage > 0.f)
+                {
+                    entity->take_damage(sting);
+                    stage->get_combat_log().record(target, *entity, sting, stage->get_elapsed_time());
+                }
                 ++hitCount;
                 if (dynamic_cast<BattleBase*>(&target)) hasHitBase = true;
             };

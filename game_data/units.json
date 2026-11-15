@@ -329,5 +329,47 @@
                 "attackSound": "attack_zap"
             }
         ]
+    },
+    "UID_7": {
+        "UID": 7,
+        "baseUpgradeCost": 600,
+        "rarity": "RARE",
+        "forms": [
+            {
+                "form": 0,
+                "minLevel": 0,
+                "maxLevel": 9,
+                "name": "Pufferfish",
+                "description": "He looks harmless... until you poke him.\nThen he puffs up into a ball of spikes!\nEvery enemy that hits him gets stung back.",
+                "cost": 200,
+                "cooldown": 3,
+                "health": 25,
+                "attackPower": 10,
+                "attackRange": 30,
+                "attackType": 2,
+                "attackFrequency": 1,
+                "foreswing": 0.2,
+                "backswing": 0.7,
+                "damageZone": [
+                    0,
+                    35
+                ],
+                "movementSpeed": 10,
+                "knockbackCount": 2,
+                "texture": "assets/images/textures/units/pufferfishSheet.png",
+                "frameCount": 15,
+                "knockbackFrameIndex": 4,
+                "abilities": [
+                    {
+                        "type": "THORNS",
+                        "targetTypes": [
+                            4
+                        ],
+                        "value": 0.05
+                    }
+                ],
+                "attackSound": "attack_heavy"
+            }
+        ]
     }
 }

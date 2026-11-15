@@ -74,6 +74,7 @@ namespace AbilityGlossary
         case AbilityType::WEAKEN_ATTACK:     return "Weakens";
         case AbilityType::PARALYZE_ATTACK:   return "Paralyzes";
         case AbilityType::SLOW_ATTACK:       return "Slows";
+        case AbilityType::THORNS:            return "Thorns against";
         default:                             return "";
         }
     }
@@ -121,6 +122,8 @@ namespace AbilityGlossary
             return "Takes x" + number(DamageCalculator::RESISTANT_MULTIPLIER) + " damage from " + targets + ".";
         case AbilityType::WEAKEN_ATTACK:
             return "Each hit has a " + chance + " to lower the attack of " + targets + " to x" + number(ability.value) + " for " + duration + ".";
+        case AbilityType::THORNS:
+            return "Hitting it hurts: " + targets + " that hit it take " + number(ability.value * 100.f) + "% of its max health in damage.";
         case AbilityType::PARALYZE_ATTACK:
             return "Each hit has a " + chance + " to stop " + targets + " (no moving, no attacking) for " + duration + ".";
         case AbilityType::SLOW_ATTACK:

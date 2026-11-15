@@ -43,7 +43,7 @@
 #include "widgets/UIIconTile.h"
 #include "widgets/UIClamBackdrop.h"
 #include "widgets/UIAdOverlay.h"
-#include "widgets/UIShopMenu.h"
+#include "widgets/UIPearlShop.h"
 #include "widgets/UIChartBackground.h"
 #include "UISkin.h"
 #include "../core/Platform.h"
@@ -236,10 +236,10 @@ void UIManager::add_ui_element(std::shared_ptr<UIElement> element)
     if (std::dynamic_pointer_cast<UITitleBar>(element) || std::dynamic_pointer_cast<UIBottomBar>(element)
         || std::dynamic_pointer_cast<UIPlayerShellsInfo>(element))
         element->set_frame(true);
-    // Under the topmost ones (the Pearl Shop): they stay over everything on their screen
-    const auto topmost = std::find_if(m_uiElements.begin(), m_uiElements.end(), [](const auto& e) { return e->is_topmost(); });
-    if (element->is_topmost() || topmost == m_uiElements.end()) m_uiElements.push_back(element);
-    else m_uiElements.insert(topmost, element);
+    if (element->is_frame() && element->get_z() == UIElement::Z_CONTENT) element->set_z(UIElement::Z_FRAME);
+    // Kept sorted by depth: after everything as deep or less deep (the order they're added in among equals)
+    const auto above = std::find_if(m_uiElements.begin(), m_uiElements.end(), [&](const auto& e) { return e->get_z() > element->get_z(); });
+    m_uiElements.insert(above, element);
 }
 
 // A menu screen: its title bar is part of its frame
@@ -488,6 +488,7 @@ sf::Event UIManager::shifted_event(const sf::Event& event, const sf::RenderWindo
  */
 void UIManager::generate_fish_tank_uis()
 {
+    m_screenAgain = [this]() { generate_fish_tank_uis(); };   // The Pearl Shop's back button comes back here
     enter_menu_screen();
 
     auto bg = std::make_shared<UITextureElement>(
@@ -544,12 +545,12 @@ void UIManager::generate_fish_tank_uis()
     const auto tile_x = [&](int index) { return columnX + static_cast<float>(index) * (tileWidth + tileGap); };
 
     auto encyclopediaButton = std::make_shared<UIIconTile>(sf::Vector2f{ tileWidth, tileHeight }, sf::Vector2f{ tile_x(0), tileY },
-        "ENCYCLOPEDIA", UIIconTile::Icon::BOOK);
+        "ENCYCLOPEDIA", UIIconTile::Icon::TEXTURE, "assets/images/textures/ui/icon_encyclopedia.png");
     encyclopediaButton->set_callback([this]() { m_pendingAction = [this]() { generate_encyclopedia_uis(); }; });
 
     auto optionsMenu = make_options_menu();
     auto optionsButton = std::make_shared<UIIconTile>(sf::Vector2f{ tileWidth, tileHeight }, sf::Vector2f{ tile_x(1), tileY },
-        "OPTIONS", UIIconTile::Icon::GEAR);
+        "OPTIONS", UIIconTile::Icon::TEXTURE, "assets/images/textures/ui/icon_settings.png");
     std::weak_ptr<UIOptionsMenu> weakOptions = optionsMenu;
     optionsButton->set_callback([weakOptions]() { if (auto menu = weakOptions.lock()) menu->open(); });
 
@@ -620,13 +621,13 @@ void UIManager::generate_fish_tank_uis()
     add_ui_element(std::make_shared<UISchoolRank>(m_dataLoader));
     auto rankInfo = add_info_button({ 1330.f - 40.f, 170.f }, "School Rank",
         "# What it is\n"
-        "Your school's strength: the *levels* of all your fish added up, their *extra levels* included. It goes up each time you upgrade a fish or use a fish from the Clam Storage.\n"
+        "Your school's strength: the {yellow|levels} of all your fish added up, their {purple|extra levels} included. It goes up each time you upgrade a fish or use a fish from the {pink|Clam Storage}.\n"
         "\n"
         "# Rewards\n"
-        "Milestones give *Shiny Scales*, to feed the giant clam:\n"
-        "- *1* at ranks 10, 25 and 50\n"
-        "- *7* at rank 77\n"
-        "- *1* at ranks 100 and 125, then *1* more every 25 ranks\n"
+        "Milestones give {cyan|Shiny Scales}, to feed the giant clam:\n"
+        "- {cyan|1} at ranks 10, 25 and 50\n"
+        "- {cyan|7} at rank 77\n"
+        "- {cyan|1} at ranks 100 and 125, then {cyan|1} more every 25 ranks\n"
         "The bar shows how close the next milestone is.");
     if (auto player = m_dataLoader->get_player_data().lock())
     {
@@ -700,6 +701,7 @@ UIManager::ClamCounters UIManager::add_clam_counters()
  */
 void UIManager::generate_clam_room_uis(bool fromStorage)
 {
+    m_screenAgain = [this]() { generate_clam_room_uis(false); };   // The Pearl Shop's back button comes back here
     if (!fromStorage) start_screen_reveal();   // From the storage, the view zooms out of the clam instead
     else cancel_screen_reveal();
     m_uiElements.clear();
@@ -733,24 +735,26 @@ void UIManager::generate_clam_room_uis(bool fromStorage)
     auto clamInfo = add_info_button(clamTitle->get_info_position(), "The giant clam",
 std::string(Platform::IS_MOBILE
             ? "# Opening it\n"
-              "Feed the clam *Shiny Scales*: each one gives a *random fish*. *OPEN* uses 1 scale, *OPEN x10* uses 10.\n"
+              "Feed the clam {cyan|Shiny Scales}: each one gives a random {rare|Rare} fish or, more rarely, a {superrare|Super Rare} one. {yellow|OPEN} uses 1 scale, {yellow|OPEN x10} uses 10.\n"
               "\n"
               "# Your new fish\n"
-              "They all go to the *Clam Storage* (the chest on the right). There, *use* a fish: a new one joins your tank, one you already have gets *+1 extra level*. Or *sell* it.\n"
+              "They all go to the {pink|Clam Storage} (the chest on the right). There, {green|use} a fish: a new one joins your tank, one you already have gets {purple|+1 extra level}. Or {red|sell} it.\n"
               "\n"
               "# Getting Shiny Scales\n"
-              "- *School Rank* milestones (the bar in the Fish Tank)\n"
-              "- *10 Fish Scales* make one: tap the *+* on the Shiny Scales counter\n"
-              "- A free one for watching a short video, up to *3* a day"
+              "- {blue|School Rank} milestones (the bar in the Fish Tank)\n"
+              "- {cyan|10 Fish Scales} make one: tap the {yellow|+} on the Shiny Scales counter\n"
+              "- The {pink|Pearl Shop}: the {yellow|+} on the Pearls counter\n"
+              "- A free one for watching a short video, up to {green|3} a day"
             : "# Opening it\n"
-              "Feed the clam *Shiny Scales*: each one gives a *random fish*. *OPEN* uses 1 scale, *OPEN x10* uses 10.\n"
+              "Feed the clam {cyan|Shiny Scales}: each one gives a random {rare|Rare} fish or, more rarely, a {superrare|Super Rare} one. {yellow|OPEN} uses 1 scale, {yellow|OPEN x10} uses 10.\n"
               "\n"
               "# Your new fish\n"
-              "They all go to the *Clam Storage* (the chest on the right). There, *use* a fish: a new one joins your tank, one you already have gets *+1 extra level*. Or *sell* it.\n"
+              "They all go to the {pink|Clam Storage} (the chest on the right). There, {green|use} a fish: a new one joins your tank, one you already have gets {purple|+1 extra level}. Or {red|sell} it.\n"
               "\n"
               "# Getting Shiny Scales\n"
-              "- *School Rank* milestones (the bar in the Fish Tank)\n"
-              "- *10 Fish Scales* make one: tap the *+* on the Shiny Scales counter"));
+              "- {blue|School Rank} milestones (the bar in the Fish Tank)\n"
+              "- {cyan|10 Fish Scales} make one: tap the {yellow|+} on the Shiny Scales counter\n"
+              "- The {pink|Pearl Shop}: the {yellow|+} on the Pearls counter"));
     const ClamCounters counters = add_clam_counters();
     room->set_scales_counter(counters.shinyScales);   // The scales fly out of it
     for (const auto& pill : { counters.shells, counters.shinyScales, counters.fishScales }) pill->set_tint(sf::Color(206, 186, 255));   // Violet room
@@ -808,15 +812,15 @@ void UIManager::generate_clam_storage_uis()
     add_ui_element(storageTitle);
     auto storageInfo = add_info_button(storageTitle->get_info_position(), "The Clam Storage",
         "# Picking fish\n"
-        "The fish out of the clam wait here. Tap one to pick it; tap others of the same kind to add them, or tick *Select all*.\n"
+        "The fish out of the clam wait here. Tap one to pick it; tap others of the same kind to add them, or tick {yellow|Select all}.\n"
         "\n"
         "# Use\n"
-        "A fish you don't have yet *joins your tank*. Every other one gives that fish *+1 extra level*, up to *+10*.\n"
+        "A fish you don't have yet {green|joins your tank}. Every other one gives that fish {purple|+1 extra level}, up to {purple|+10}.\n"
         "\n"
         "# Sell\n"
-        "For *shells*, or for *1 Fish Scale* each. *10 Fish Scales* make a Shiny Scale (the *+* on its counter).\n"
+        "For {orange|shells}, or for {cyan|1 Fish Scale} each. {cyan|10 Fish Scales} make a Shiny Scale (the {yellow|+} on its counter).\n"
         "\n"
-        "*USE ALL* and *SELL ALL* on the bottom bar do it for every fish here at once.");
+        "{green|USE ALL} and {red|SELL ALL} on the bottom bar do it for every fish here at once.");
     const ClamCounters counters = add_clam_counters();
     for (const auto& pill : { counters.shells, counters.shinyScales, counters.fishScales }) pill->set_tint(sf::Color(255, 168, 214));   // Plum, in the clam
     storage->set_counters(counters.shells, counters.fishScales);
@@ -833,6 +837,7 @@ void UIManager::generate_clam_storage_uis()
 
 void UIManager::generate_encyclopedia_uis()
 {
+    m_screenAgain = [this]() { generate_encyclopedia_uis(); };   // The Pearl Shop's back button comes back here
     enter_menu_screen();
 
     auto bg = std::make_shared<UIChartBackground>();   // The field guide's own place: a research chart
@@ -850,41 +855,71 @@ void UIManager::generate_encyclopedia_uis()
     auto info = add_info_button(titleBar->get_info_position(), "Encyclopedia",
 std::string(Platform::IS_MOBILE
             ? "# The books\n"
-              "*FISH*: every fish of the game. *ENEMIES*: every enemy. The ones you haven't got or met yet are *black shapes*. Their *No.* is the order you meet them in.\n"
+              "{blue|FISH}: every fish of the game, one category per rarity: {white|NORMAL}, {rare|RARE} and {superrare|SUPER RARE}. {blue|ENEMIES}: every enemy. The ones you haven't got or met yet are {gray|black shapes}. Their {yellow|No.} is the order you meet them in.\n"
               "\n"
               "# A fish or an enemy\n"
-              "Pick one to see its *description*, its *stats* and its *abilities* (tap an ability to read what it does). A fish's *FORM* buttons show its evolutions: the ones it hasn't reached stay *???*.\n"
+              "Pick one to see it walk, tap it to see it attack. Under it: its description, stats and abilities. A fish's {yellow|FORM} buttons show its evolutions: the ones it hasn't reached stay {gray|???}. The first look at a new fish gives {pink|10 Pearls} (the ones marked {red|NEW}).\n"
+              "\n"
+              "# Types\n"
+              "An enemy's types are written under its name:\n"
+              "- {crustacean|Crustacean}: crabs, shrimps and their cousins\n"
+              "- {shelled|Shelled}: snails, clams, anything in a hard shell\n"
+              "- {jelly|Jelly}: jellyfish and anemones, they sting\n"
+              "Fish abilities aim at types: a fish {strong|strong against} {shelled|Shelled} enemies hits them twice as hard. {yellow|All Enemies} means every enemy, whatever its types.\n"
+              "\n"
+              "# Abilities\n"
+              "Tap an ability to read exactly what it does.\n"
+              "- {strong|Strong against}: deals {green|x2} damage to those types\n"
+              "- {resistant|Resistant to}: takes only {green|x0.5} damage from them\n"
+              "- {weaken|Weakens}: its hits can lower their attack for a while\n"
+              "- {paralyze|Paralyzes}: its hits can stop them for a moment\n"
+              "- {thorns|Thorns}: whoever hits it takes part of its health back as damage\n"
               "\n"
               "# The stats\n"
-              "- *Health*: the damage it takes before it's beaten\n"
-              "- *Attack*: the damage of each hit\n"
-              "- *Attack rate*: the seconds between two attacks\n"
-              "- *Range*: how far its attacks reach\n"
-              "- *Speed*: how fast it moves\n"
-              "- *Knockbacks*: how many times it's pushed back as it loses health\n"
-              "- *Targets*: *Single* hits one foe, *Area* hits every foe in range\n"
-              "- *Cost* and *Cooldown* (fish): the cash sending it costs in battle, and the seconds before you can send another\n"
+              "- {yellow|Health}: the damage it takes before it's beaten\n"
+              "- {yellow|Attack}: the damage of each hit\n"
+              "- {yellow|Attack rate}: the seconds between two attacks\n"
+              "- {yellow|Range}: how far its attacks reach\n"
+              "- {yellow|Speed}: how fast it moves\n"
+              "- {yellow|Knockbacks}: how many times it's pushed back as it loses health\n"
+              "- {yellow|Targets}: {white|Single} hits one foe, {white|Area} hits every foe in range\n"
+              "- {yellow|Cost} and {yellow|Cooldown} (fish): the cash sending it costs in battle, and the seconds before you can send another\n"
               "\n"
               "# Sorting\n"
-              "The *Sort* pill picks the order (number, name, health, attack, range or speed); the arrow next to it turns it around. Slide the grid up and down to see more."
+              "The {blue|Sort} pill picks the order; the arrow next to it turns it around. Slide the grid up and down to see more."
             : "# The books\n"
-              "*FISH*: every fish of the game. *ENEMIES*: every enemy. The ones you haven't got or met yet are *black shapes*. Their *No.* is the order you meet them in.\n"
+              "{blue|FISH}: every fish of the game, one category per rarity: {white|NORMAL}, {rare|RARE} and {superrare|SUPER RARE}. {blue|ENEMIES}: every enemy. The ones you haven't got or met yet are {gray|black shapes}. Their {yellow|No.} is the order you meet them in.\n"
               "\n"
               "# A fish or an enemy\n"
-              "Pick one to see its *description*, its *stats* and its *abilities* (click an ability to read what it does). A fish's *FORM* buttons show its evolutions: the ones it hasn't reached stay *???*.\n"
+              "Pick one to see it walk, click it to see it attack. Under it: its description, stats and abilities. A fish's {yellow|FORM} buttons show its evolutions: the ones it hasn't reached stay {gray|???}. The first look at a new fish gives {pink|10 Pearls} (the ones marked {red|NEW}).\n"
+              "\n"
+              "# Types\n"
+              "An enemy's types are written under its name:\n"
+              "- {crustacean|Crustacean}: crabs, shrimps and their cousins\n"
+              "- {shelled|Shelled}: snails, clams, anything in a hard shell\n"
+              "- {jelly|Jelly}: jellyfish and anemones, they sting\n"
+              "Fish abilities aim at types: a fish {strong|strong against} {shelled|Shelled} enemies hits them twice as hard. {yellow|All Enemies} means every enemy, whatever its types.\n"
+              "\n"
+              "# Abilities\n"
+              "Click an ability to read exactly what it does.\n"
+              "- {strong|Strong against}: deals {green|x2} damage to those types\n"
+              "- {resistant|Resistant to}: takes only {green|x0.5} damage from them\n"
+              "- {weaken|Weakens}: its hits can lower their attack for a while\n"
+              "- {paralyze|Paralyzes}: its hits can stop them for a moment\n"
+              "- {thorns|Thorns}: whoever hits it takes part of its health back as damage\n"
               "\n"
               "# The stats\n"
-              "- *Health*: the damage it takes before it's beaten\n"
-              "- *Attack*: the damage of each hit\n"
-              "- *Attack rate*: the seconds between two attacks\n"
-              "- *Range*: how far its attacks reach\n"
-              "- *Speed*: how fast it moves\n"
-              "- *Knockbacks*: how many times it's pushed back as it loses health\n"
-              "- *Targets*: *Single* hits one foe, *Area* hits every foe in range\n"
-              "- *Cost* and *Cooldown* (fish): the cash sending it costs in battle, and the seconds before you can send another\n"
+              "- {yellow|Health}: the damage it takes before it's beaten\n"
+              "- {yellow|Attack}: the damage of each hit\n"
+              "- {yellow|Attack rate}: the seconds between two attacks\n"
+              "- {yellow|Range}: how far its attacks reach\n"
+              "- {yellow|Speed}: how fast it moves\n"
+              "- {yellow|Knockbacks}: how many times it's pushed back as it loses health\n"
+              "- {yellow|Targets}: {white|Single} hits one foe, {white|Area} hits every foe in range\n"
+              "- {yellow|Cost} and {yellow|Cooldown} (fish): the cash sending it costs in battle, and the seconds before you can send another\n"
               "\n"
               "# Sorting\n"
-              "The *Sort* pill picks the order (number, name, health, attack, range or speed); the arrow next to it turns it around. Slide the grid up and down to see more."));
+              "The {blue|Sort} pill picks the order; the arrow next to it turns it around. Slide the grid up and down to see more."));
     add_ui_element(encyclopedia);   // Its ability bubbles go over everything (but its "i" window)
     add_ui_element(info);
 }
@@ -904,7 +939,7 @@ std::shared_ptr<UIRoundButton> UIManager::make_back_button(std::function<void()>
     return backButton;
 }
 
-void UIManager::add_bottom_bar(UITitleBar::Material material, bool showsScales, bool hasBackButton)
+void UIManager::add_bottom_bar(UITitleBar::Material material, bool showsScales, bool hasBackButton, bool showsPearls)
 {
     add_ui_element(std::make_shared<UIBottomBar>(material, hasBackButton));
     if (showsScales)
@@ -914,22 +949,64 @@ void UIManager::add_bottom_bar(UITitleBar::Material material, bool showsScales, 
         add_ui_element(scales);
     }
 
-    // The Pearls (the rare currency), left of the Shiny Scales: the + on their counter opens the Pearl Shop, over
-    // everything on the screen
+    // The Pearls (the rare currency), left of the Shiny Scales: the + on their counter opens the Pearl Shop screen,
+    // whose back button builds this screen again
+    if (!showsPearls) return;
     const float pearlsOffset = showsScales ? 380.f : 40.f;
     auto pearls = std::make_shared<UIPlayerShellsInfo>(m_dataLoader, UIPlayerShellsInfo::Currency::PEARLS);
     pearls->place_in_bottom_bar(pearlsOffset);
     pearls->set_trailing_room(58.f);
     add_ui_element(pearls);
-    auto shop = std::make_shared<UIShopMenu>(m_dataLoader);
-    shop->set_topmost(true);
     auto plus = std::make_shared<UIButtonElement>(sf::Vector2f{ 50.f, 50.f },
         sf::Vector2f{ 1920.f - pearlsOffset - 12.f - 50.f, UISkin::BOTTOM_BAR_MIDDLE - 25.f }, "+");
     plus->set_text_size(40);
     plus->set_frame(true);   // On the bottom bar
-    plus->set_callback([weakShop = std::weak_ptr<UIShopMenu>(shop)]() { if (auto menu = weakShop.lock()) menu->open(); });
+    plus->set_callback([this, back = m_screenAgain]() { m_pendingAction = [this, back]() { generate_shop_uis(back); }; });
     add_ui_element(plus);
+}
+
+/*
+ * The Pearl Shop, its own screen like The Battle Cats' cat food shop: the nacre title bar with the Pearls, Shiny
+ * Scales and shells, the offers (UIPearlShop), the bottom bar and the back button to the screen it was opened from
+ */
+void UIManager::generate_shop_uis(std::function<void()> back)
+{
+    enter_menu_screen();
+    if (!back) back = [this]() { generate_fish_tank_uis(); };
+
+    auto confirm = std::make_shared<UIConfirmDialog>("", "", "BUY", "CANCEL");
+    confirm->set_confirm_tint(sf::Color::White);   // A purchase: yellow
+    confirm->set_confirm_sound("");
+    auto adOverlay = std::make_shared<UIAdOverlay>();
+    auto shop = std::make_shared<UIPearlShop>(m_dataLoader, confirm, adOverlay);
+    auto titleBar = std::make_shared<UITitleBar>("Pearl Shop", UITitleBar::Material::NACRE);
+
+    add_ui_element(std::make_shared<UIPatternBackground>("pattern_hull"));
+    add_ui_element(std::make_shared<UIAmbience>());
     add_ui_element(shop);
+    add_ui_element(titleBar);
+    add_ui_element(std::make_shared<UIPlayerShellsInfo>(m_dataLoader));
+    add_ui_element(std::make_shared<UIPlayerShellsInfo>(m_dataLoader, UIPlayerShellsInfo::Currency::SHINY_SCALES));
+    add_ui_element(std::make_shared<UIPlayerShellsInfo>(m_dataLoader, UIPlayerShellsInfo::Currency::PEARLS));
+    add_bottom_bar(UITitleBar::Material::NACRE, false, true, false);
+    add_ui_element(make_back_button(back));
+    add_ui_element(add_info_button(titleBar->get_info_position(), "The Pearl Shop",
+std::string(Platform::IS_MOBILE
+            ? "# Pearls\n"
+              "{pink|Pearls} are the rare currency. The first look at a new fish in the {blue|Encyclopedia} gives {pink|10 Pearls}; a short video gives {pink|5}, up to {green|3} times a day.\n"
+              "\n"
+              "# What they buy\n"
+              "- {cyan|Shiny Scales}, to feed the giant clam: {pink|25 Pearls} each, or {pink|225} for {green|10} (one free)\n"
+              "- Pearl packs for real money: {gray|coming soon}"
+            : "# Pearls\n"
+              "{pink|Pearls} are the rare currency. The first look at a new fish in the {blue|Encyclopedia} gives {pink|10 Pearls}. On phones, a short video gives {pink|5}, up to {green|3} times a day.\n"
+              "\n"
+              "# What they buy\n"
+              "- {cyan|Shiny Scales}, to feed the giant clam: {pink|25 Pearls} each, or {pink|225} for {green|10} (one free)\n"
+              "- Pearl packs for real money: {gray|coming soon}")));
+    add_ui_element(std::make_shared<UIToast>());
+    add_ui_element(confirm);
+    add_ui_element(adOverlay);
 }
 
 std::shared_ptr<UIButtonElement> UIManager::make_bar_button(const std::string& label, std::function<void()> onPress)
@@ -951,6 +1028,7 @@ std::shared_ptr<UIButtonElement> UIManager::make_bar_button(const std::string& l
  */
 void UIManager::generate_upgrade_menu_uis(int selectUid)
 {
+    m_screenAgain = [this, selectUid]() { generate_upgrade_menu_uis(selectUid); };   // The Pearl Shop's back button comes back here
     enter_menu_screen();
 
     auto bg = std::make_shared<UIPatternBackground>("pattern_hull");
@@ -977,22 +1055,22 @@ void UIManager::generate_upgrade_menu_uis(int selectUid)
     add_ui_element(std::make_shared<UIToast>());   // School Rank milestones reached by upgrading
     add_ui_element(add_info_button(titleBar->get_info_position(), "Upgrading",
         "# Fish\n"
-        "Spend *shells* to raise a fish's level: *more health and attack*. Each level costs more than the last: the price is on the card and on *UPGRADE!*. A fish goes up to *level 30*, and *evolves* at levels 10 and 30.\n"
+        "Spend {orange|shells} to raise a fish's level: {green|more health and attack}. Each level costs more than the last: the price is on the card and on {yellow|UPGRADE!}. A fish goes up to {yellow|level 30}, and {blue|evolves} at levels 10 and 30.\n"
         "\n"
-        "*Extra levels* (the purple +1, +2...) come from the Clam Room: using a fish you already have from the Clam Storage gives it +1, up to +10, on top of its level.\n"
+        "{purple|Extra levels} (the purple +1, +2...) come from the Clam Room: using a fish you already have from the Clam Storage gives it +1, up to +10, on top of its level.\n"
         "\n"
-        "New fish won in battle wait here: *UNLOCK!* them to send them into battle.\n"
+        "New fish won in battle wait here: {yellow|UNLOCK!} them to send them into battle.\n"
         "\n"
         "# Categories\n"
         "The cards at the left end open groups of cards:\n"
-        "- *BASE*: the base upgrades\n"
-        "- *RARE* and *SUPER RARE*: the clam's rarer fish, once you have one\n"
-        "*NORMAL* brings you back to your fish.\n"
+        "- {yellow|BASE}: the base upgrades\n"
+        "- {rare|RARE} and {superrare|SUPER RARE}: the clam's rarer fish, once you have one\n"
+        "{white|NORMAL} brings you back to your fish.\n"
         "\n"
         "# Base upgrades\n"
-        "- *Base Health*: your fish bowl gets *15%* more health in every stage, for each level\n"
-        "- *Wallet Up*: your wallet starts every stage *10%* bigger and fills up *10%* faster, for each level\n"
-        "Both go up to *level 10*."));
+        "- {green|Base Health}: your fish bowl's health goes up by {green|15%} of its first health for each level\n"
+        "- {green|Wallet Up}: your wallet starts every stage {green|10%} bigger and fills up {green|10%} faster for each level\n"
+        "Both go up to {yellow|level 10}."));
 }
 
 /*
@@ -1001,6 +1079,7 @@ void UIManager::generate_upgrade_menu_uis(int selectUid)
  */
 void UIManager::generate_equip_menu_uis(int selectUid, bool isFromMap)
 {
+    m_screenAgain = [this, selectUid, isFromMap]() { generate_equip_menu_uis(selectUid, isFromMap); };   // The Pearl Shop's back button comes back here
     enter_menu_screen();
 
     auto bg = std::make_shared<UIPatternBackground>("pattern_hull");
@@ -1034,21 +1113,21 @@ void UIManager::generate_equip_menu_uis(int selectUid, bool isFromMap)
     add_ui_element(add_info_button(titleBar->get_info_position(), "Your lineup",
 std::string(Platform::IS_MOBILE
             ? "# Your lineup\n"
-              "The fish you can send into battle, up to *10*. The price on each one is the *cash* sending it costs in battle.\n"
+              "The fish you can send into battle, up to {yellow|10}. The price on each one is the {orange|cash} sending it costs in battle.\n"
               "\n"
               "# Changing it\n"
-              "- *Tap* a fish on the shelf (or drag it up) to add it\n"
-              "- Drop a fish *on a lineup slot* to put it there: the others move along (a full lineup: it takes that fish's place)\n"
-              "- Drag the lineup's fish the same way to *change their order*\n"
-              "- Drag one *out of the lineup* to remove it"
+              "- {green|Tap} a fish on the shelf (or drag it up) to add it\n"
+              "- Drop a fish {yellow|on a lineup slot} to put it there: the others move along (a full lineup: it takes that fish's place)\n"
+              "- Drag the lineup's fish the same way to {yellow|change their order}\n"
+              "- Drag one {red|out of the lineup} to remove it"
             : "# Your lineup\n"
-              "The fish you can send into battle, up to *10*. The price on each one is the *cash* sending it costs in battle. In battle, a fish's slot is also its *key*: 1 to 0.\n"
+              "The fish you can send into battle, up to {yellow|10}. The price on each one is the {orange|cash} sending it costs in battle. In battle, a fish's slot is also its {yellow|key}: 1 to 0.\n"
               "\n"
               "# Changing it\n"
-              "- *Click* a fish on the shelf (or drag it up) to add it\n"
-              "- Drop a fish *on a lineup slot* to put it there: the others move along (a full lineup: it takes that fish's place)\n"
-              "- Drag the lineup's fish the same way to *change their order*\n"
-              "- Drag one *out of the lineup*, or right click it, to remove it")));
+              "- {green|Click} a fish on the shelf (or drag it up) to add it\n"
+              "- Drop a fish {yellow|on a lineup slot} to put it there: the others move along (a full lineup: it takes that fish's place)\n"
+              "- Drag the lineup's fish the same way to {yellow|change their order}\n"
+              "- Drag one {red|out of the lineup}, or right click it, to remove it")));
 }
 
 /*
@@ -1205,6 +1284,7 @@ void UIManager::generate_battle_uis()
  */
 void UIManager::generate_chapter_map_uis()
 {
+    m_screenAgain = [this]() { generate_chapter_map_uis(); };   // The Pearl Shop's back button comes back here
     enter_menu_screen();
 
     auto chapterMap = std::make_shared<UIChapterMap>(m_dataLoader);
@@ -1246,13 +1326,13 @@ void UIManager::generate_chapter_map_uis()
     add_ui_element(backButton);
     add_ui_element(add_info_button(titleBar->get_info_position(), "The chapter map",
         "# Picking a stage\n"
-        "Pick a stage on the map, or its name in the strip at the top, then *BATTLE!*. Slide left or right anywhere to go through the stages: a quick flick goes further.\n"
+        "Pick a stage on the map, or its name in the strip at the top, then {yellow|BATTLE!}. Slide left or right anywhere to go through the stages: a quick flick goes further.\n"
         "\n"
         "# The map\n"
-        "*Green*: cleared. *Yellow*: the next one to play. *Grey*, with a padlock: they open as you clear the stages before them. The Fish walks to the stage you pick.\n"
+        "{green|Green}: cleared. {yellow|Yellow}: the next one to play. {gray|Grey}, with a padlock: they open as you clear the stages before them. The Fish walks to the stage you pick.\n"
         "\n"
         "# The panel\n"
-        "The *enemy base's health*, the *shells* a win brings, and the *enemies* you'll meet (black until you've met them)."));
+        "The {red|enemy base's health}, the {orange|shells} a win brings, and the {blue|enemies} you'll meet (black until you've met them)."));
 }
 
 /*

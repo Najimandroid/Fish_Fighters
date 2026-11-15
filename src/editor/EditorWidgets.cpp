@@ -30,6 +30,7 @@ namespace
         case AbilityType::PARALYZE_ATTACK:   return "Paralyze on hit";
         case AbilityType::SLOW_ATTACK:       return "Slow on hit";
         case AbilityType::WEAKEN_ATTACK:     return "Weaken on hit";
+        case AbilityType::THORNS:            return "Thorns";
         default:                             return "None";
         }
     }
@@ -48,6 +49,7 @@ namespace
         case AbilityType::PARALYZE_ATTACK:  return "Hits can paralyze the target: it stops until the status ends (it can still be knocked back).";
         case AbilityType::SLOW_ATTACK:      return "Hits can slow the target. (The effect isn't implemented in the game yet.)";
         case AbilityType::WEAKEN_ATTACK:    return "Hits can weaken the target: its attack is multiplied by the value.";
+        case AbilityType::THORNS:           return "Attackers of the target types that hit it take a share of its max health (the value, 5% = 0.05) in damage.";
         default:                            return "";
         }
     }
@@ -807,6 +809,7 @@ namespace EditorWidgets
                                 ability.erase("value");
                                 ability.erase("chance");
                                 ability.erase("duration");
+                                if (option == AbilityType::THORNS) ability["value"] = 0.05;   // 5% of its max health
                             }
                             ctx.commit(file);
                             type = option;
@@ -849,6 +852,18 @@ namespace EditorWidgets
                         ImGui::PopID();
                     };
 
+                if (type == AbilityType::THORNS)   // Its share of max health, shown as a percentage
+                {
+                    ImGui::TableSetColumnIndex(2);
+                    ImGui::SetNextItemWidth(-FLT_MIN);
+                    ImGui::PushID("value");
+                    float percent = static_cast<float>(read_number(ability, "value", 0.05)) * 100.f;
+                    if (ImGui::DragFloat("##number", &percent, 0.1f, 0.1f, 100.f, "%.1f%%", ImGuiSliderFlags_AlwaysClamp))
+                        ability["value"] = number_value(percent / 100.f);
+                    commit_when_done(ctx, file);
+                    ImGui::SetItemTooltip("Share of its max health dealt back to an attacker that hits it");
+                    ImGui::PopID();
+                }
                 if (is_on_hit(type))
                 {
                     if (type != AbilityType::PARALYZE_ATTACK)

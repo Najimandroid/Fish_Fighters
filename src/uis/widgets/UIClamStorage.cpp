@@ -449,8 +449,8 @@ void UIClamStorage::render(sf::RenderWindow& window)
         window.draw(m_text);
     }
 
-    // The shell's white lips: scallops under the title bar and along the bottom (the clam's rim around us)
-    for (const auto& [y, radius, spacing] : { std::tuple{ 92.f, 54.f, 104.f }, std::tuple{ bottom + 34.f, 74.f, 132.f } })
+    // The shell's white lip along the bottom (the clam's rim; none under the title bar)
+    for (const auto& [y, radius, spacing] : { std::tuple{ bottom + 34.f, 74.f, 132.f } })
         for (float x = screen.position.x - 20.f; x < screen.position.x + screen.size.x + 40.f; x += spacing)
         {
             sf::CircleShape scallop(radius);
@@ -468,7 +468,7 @@ void UIClamStorage::render(sf::RenderWindow& window)
         UISkin::style_text(m_text, 26, sf::Color(255, 214, 238));
         m_text.setString("Tap a fish to use or sell it");
         UISkin::set_text_anchor(m_text, { 0.5f, 0.5f });
-        m_text.setPosition({ 960.f, 182.f });   // Under the shell's rim
+        m_text.setPosition({ 960.f, 156.f });   // Under the title bar
         window.draw(m_text);
     }
 

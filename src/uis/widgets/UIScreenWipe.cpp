@@ -7,6 +7,7 @@ UIScreenWipe::UIScreenWipe(std::function<void()> onCovered) :
     UIElement({ 1920.f, 1080.f }, { 0.f, 0.f }),
     m_onCovered(std::move(onCovered))
 {
+    set_z(Z_OVERLAY);
 }
 
 float UIScreenWipe::progress(float t)

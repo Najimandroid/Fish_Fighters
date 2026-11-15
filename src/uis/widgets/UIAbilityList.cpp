@@ -70,6 +70,7 @@ sf::Color UIAbilityList::ability_color(AbilityType type)
     case AbilityType::WEAKEN_ATTACK:     return { 210, 160, 255 };
     case AbilityType::PARALYZE_ATTACK:   return { 255, 226, 80 };
     case AbilityType::SLOW_ATTACK:       return { 130, 230, 255 };
+    case AbilityType::THORNS:            return { 150, 230, 110 };
     default:                             return UISkin::TEXT;
     }
 }

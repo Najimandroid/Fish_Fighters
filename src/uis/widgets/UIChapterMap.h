@@ -84,7 +84,7 @@ private:
     sf::Texture m_backgroundTexture;
 
     // Markers and the info panel
-    sf::Sprite m_marker;            // button_round, tinted per stage
+    sf::Sprite m_marker;            // button_round (green once cleared)
     sf::Text m_markerNumber;
     sf::CircleShape m_selectionRing;
     UIPanel m_infoPanel;
@@ -118,8 +118,8 @@ private:
     void release_slide(float dragX, float speed);   // Let go: glides on when flung, else settles on the nearest
     sf::FloatRect strip_tab_rect(int index) const;
     void render_strip(sf::RenderWindow& window);
-    // The Fish stands on the selected stage's marker, breathing; another stage picked, it walks there along the path
-    // (through the markers between, its walk frames), then idles again
+    // The Fish sits on the selected stage's marker, still; another stage picked, it swims there quickly along the path
+    // (through the markers between, its walk frames), then stops
     std::vector<sf::Vector2f> m_walkPath;       // The markers still to reach (map coordinates)
     sf::Vector2f m_walkerPosition{ 0.f, 0.f };  // Where it stands on the map
     bool m_hasWalkerPlace = false;              // Placed at once on the first selection

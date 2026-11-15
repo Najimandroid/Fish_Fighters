@@ -14,9 +14,11 @@
  * Add it after the screen's other elements (a window: on top, the only one getting input while open).
  *
  * The text is laid out with a little markup:
- *   # Title          a section title (yellow, bigger), with room above it
+ *   # Title          a section title (light blue, bigger), with room above it
  *   - item           a bullet point (wrapped lines keep its indent)
  *   *words*          important words, highlighted in yellow
+ *   {name|words}     words in a colour: yellow, green, red, blue, cyan, pink, purple, orange, gray, white, rare,
+ *                    superrare, and the types' and abilities' own (crustacean, shelled, jelly, strong, weaken...)
  *   (empty line)     a paragraph gap
  * Too long for the screen, it scrolls: a finger drags it, the mouse wheel rolls it, a bar on the right shows where.
  *
@@ -59,4 +61,5 @@ private:
     bool m_isDragging = false;          // A finger dragging the text
     float m_dragStartY = 0.f, m_dragStartScroll = 0.f;
     bool m_hasDragged = false;
+    bool m_isPressOutside = false;      // The press was outside the panel (with no slide, its release closes it)
 };

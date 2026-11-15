@@ -22,8 +22,12 @@ namespace
     const sf::Vector2f SLOT_SIZE{ 150.f, 112.f };
     const float SLOT_GAP = 12.f;
     const int COLUMNS = 5;
-    const float GRID_TOP_PADDING = std::floor((GRID_PANEL.size.y - (5.f * SLOT_SIZE.y + 4.f * SLOT_GAP)) / 2.f);
-    const sf::Vector2f GRID_ORIGIN{ GRID_PANEL.position.x + 21.f, GRID_PANEL.position.y + GRID_TOP_PADDING };
+    const float GRID_ROWS_HEIGHT = 5.f * SLOT_SIZE.y + 4.f * SLOT_GAP;
+    const float CHIPS_BAND = 72.f;                        // The fish book's rarity chips, at the top of the grid panel
+    const sf::Vector2f CHIP_SIZE{ 250.f, 52.f };
+    const float CHIP_GAP = 12.f;
+    const char* RARITY_CHIPS[] = { "NORMAL", "RARE", "SUPER RARE" };
+    const float FRAME_SECONDS = 0.1f;                     // As in battle (BattleEntity::timeUntilNextFrame)
     const float SLOT_FRAME_SCALE = SLOT_SIZE.y / 124.f;   // Slots look like the deploy slots (124 px tall)
 
     const sf::FloatRect PORTRAIT{ { DETAIL_PANEL.position.x + 40.f, DETAIL_PANEL.position.y + 40.f }, { 360.f, 270.f } };
@@ -65,6 +69,16 @@ UIEncyclopedia::UIEncyclopedia(std::shared_ptr<DataLoader> dataLoader, Book book
     m_fishTab.set_text_size(40);
     m_enemiesTab.set_text_size(40);
     m_fishTab.set_callback([this]() { open_book(Book::FISH); });
+
+    // The fish book's rarity chips
+    const float chipsLeft = GRID_PANEL.position.x + (GRID_PANEL.size.x - 3.f * CHIP_SIZE.x - 2.f * CHIP_GAP) / 2.f;
+    for (int i = 0; i < 3; ++i)
+    {
+        auto chip = std::make_unique<UIButtonElement>(CHIP_SIZE, sf::Vector2f{ chipsLeft + i * (CHIP_SIZE.x + CHIP_GAP), GRID_PANEL.position.y + 14.f }, RARITY_CHIPS[i]);
+        chip->set_text_size(28);
+        chip->set_callback([this, i]() { m_pendingRarity = i; });
+        m_rarityChips.push_back(std::move(chip));
+    }
     m_enemiesTab.set_callback([this]() { open_book(Book::ENEMIES); });
 
     // The sort pill opens its list, the arrow next to it reverses the order
@@ -84,6 +98,23 @@ UIEncyclopedia::UIEncyclopedia(std::shared_ptr<DataLoader> dataLoader, Book book
     m_text.setLineSpacing(1.1f);
 
     open_book(book);
+}
+
+void UIEncyclopedia::open_rarity(Rarity rarity)
+{
+    m_rarity = rarity;
+    m_scrollRow = 0;
+    build_entries();
+    sort_entries();
+    select(m_entries.empty() ? -1 : 0);
+    refresh_buttons();
+}
+
+// The first slot: under the rarity chips in the fish book, the five rows centered in what's left
+sf::Vector2f UIEncyclopedia::grid_origin() const
+{
+    const float band = m_book == Book::FISH ? CHIPS_BAND : 0.f;
+    return { GRID_PANEL.position.x + 21.f, GRID_PANEL.position.y + band + std::floor((GRID_PANEL.size.y - band - GRID_ROWS_HEIGHT) / 2.f) };
 }
 
 void UIEncyclopedia::open_book(Book book)
@@ -113,6 +144,8 @@ void UIEncyclopedia::build_entries()
 
         for (int uid : uids)
         {
+            // Only the fish of the rarity open
+            if (auto first = m_dataLoader->get_unit_data(uid, 0); !first || first->rarity != m_rarity) continue;
             Entry entry;
             entry.uid = uid;
             entry.number = number_of(uid);
@@ -242,6 +275,8 @@ void UIEncyclopedia::sort_entries()
 void UIEncyclopedia::select(int index)
 {
     m_selected = index;
+    m_attackTime = -1.f;
+    m_animTime = 0.f;
     m_detailScroll = 0.f;
     discover_selected();
     if (index >= 0 && index < static_cast<int>(m_entries.size()) && m_entries[index].isKnown)
@@ -320,6 +355,8 @@ void UIEncyclopedia::refresh_buttons()
     m_fishTab.set_style(m_book == Book::FISH ? UIButtonElement::Style::Primary : UIButtonElement::Style::Secondary);
     m_enemiesTab.set_style(m_book == Book::ENEMIES ? UIButtonElement::Style::Primary : UIButtonElement::Style::Secondary);
 
+    for (int i = 0; i < static_cast<int>(m_rarityChips.size()); ++i)
+        m_rarityChips[i]->set_style(i == static_cast<int>(m_rarity) ? UIButtonElement::Style::Primary : UIButtonElement::Style::Secondary);
     m_sortPill.set_text(std::string("Sort: ") + SORT_NAMES[static_cast<int>(m_sortKey)]);
     m_sortDirection.set_label(m_isDescending ? sf::String(U"\u25BC") : sf::String(U"\u25B2"));
 }
@@ -338,7 +375,8 @@ sf::FloatRect UIEncyclopedia::slot_rect(int index) const
 {
     const int column = index % COLUMNS;
     const int row = index / COLUMNS - m_scrollRow;
-    return { { GRID_ORIGIN.x + column * (SLOT_SIZE.x + SLOT_GAP), GRID_ORIGIN.y + row * (SLOT_SIZE.y + SLOT_GAP) }, SLOT_SIZE };
+    const sf::Vector2f origin = grid_origin();
+    return { { origin.x + column * (SLOT_SIZE.x + SLOT_GAP), origin.y + row * (SLOT_SIZE.y + SLOT_GAP) }, SLOT_SIZE };
 }
 
 void UIEncyclopedia::update(float deltaTime)
@@ -348,8 +386,60 @@ void UIEncyclopedia::update(float deltaTime)
     m_sortPill.update(deltaTime);
     m_sortDirection.update(deltaTime);
     m_rewardTime = std::max(0.f, m_rewardTime - deltaTime);
+    for (auto& chip : m_rarityChips) chip->update(deltaTime);
+    if (m_pendingRarity >= 0) { open_rarity(static_cast<Rarity>(m_pendingRarity)); m_pendingRarity = -1; }
+
+    // The portrait: walking, or its attack (its hit sound once the foreswing is over), then walking again
+    m_animTime += deltaTime;
+    if (m_attackTime >= 0.f && m_selected >= 0 && m_selected < static_cast<int>(m_entries.size()))
+    {
+        const EntityData& data = *m_entries[m_selected].data;
+        m_attackTime += deltaTime;
+        if (!m_hasPlayedHit && m_attackTime >= data.foreswingTime)
+        {
+            m_hasPlayedHit = true;
+            play_sound(data.attackSound.empty() ? "attack_slap" : data.attackSound);
+        }
+        if (m_attackTime >= std::max(data.foreswingTime + data.backswingTime, attack_frames_seconds(data))) m_attackTime = -1.f;
+    }
     for (auto& button : m_formButtons) button->update(deltaTime);
     if (m_pendingForm >= 0) { show_form(m_pendingForm); m_pendingForm = -1; }   // Not from inside a button's callback
+}
+
+float UIEncyclopedia::attack_frames_seconds(const EntityData& data)
+{
+    return static_cast<float>(std::max(0, data.frameCount - data.knockbackFrameIndex - 1)) * FRAME_SECONDS;
+}
+
+/*
+ * The selected one in its sheet's frames, like in battle: the walk frames (before the knockback frame) in a loop, or
+ * the attack frames (after it) once; all frames at one scale (UISkin::sheet_box), standing on the slot's bottom.
+ * Not unlocked or not met: all black. A sheet that can't be read: its icon
+ */
+void UIEncyclopedia::render_animation(sf::RenderWindow& window, const Entry& entry, const sf::FloatRect& area)
+{
+    const EntityData& data = *entry.data;
+    const sf::Texture& sheet = UISkin::texture_file(data.texture);
+    if (data.texture.empty() || sheet.getSize().x == 0 || data.frameCount < 1)
+    {
+        render_portrait(window, entry, area);
+        return;
+    }
+    const int frameWidth = static_cast<int>(sheet.getSize().x) / data.frameCount;
+    const int walkFrames = std::clamp(data.knockbackFrameIndex, 1, data.frameCount);
+    int frame = static_cast<int>(m_animTime / FRAME_SECONDS) % walkFrames;
+    if (m_attackTime >= 0.f && m_attackTime < attack_frames_seconds(data))
+        frame = std::min(data.frameCount - 1, data.knockbackFrameIndex + 1 + static_cast<int>(m_attackTime / FRAME_SECONDS));
+
+    const sf::IntRect box = UISkin::sheet_box(data.texture, data.frameCount);
+    sf::Sprite sprite(sheet, { { frame * frameWidth + box.position.x, box.position.y }, box.size });
+    const sf::Vector2f boxSize(box.size);
+    const float fit = std::min(area.size.x * 0.86f / boxSize.x, area.size.y * 0.8f / boxSize.y);
+    sprite.setOrigin({ boxSize.x / 2.f, boxSize.y });
+    sprite.setScale({ fit, fit });
+    sprite.setPosition({ area.position.x + area.size.x / 2.f, area.position.y + area.size.y * 0.9f });
+    sprite.setColor(entry.isKnown ? sf::Color::White : sf::Color::Black);
+    window.draw(sprite);
 }
 
 void UIEncyclopedia::render_portrait(sf::RenderWindow& window, const Entry& entry, const sf::FloatRect& area)
@@ -382,6 +472,38 @@ void UIEncyclopedia::render_tab(sf::RenderWindow& window, const UIButtonElement&
 void UIEncyclopedia::render_grid(sf::RenderWindow& window)
 {
     m_gridPanel.render(window);
+
+    // The fish book: its rarity chips (a dot on the ones with a fish not looked at yet: its Pearls), an empty one says so
+    if (m_book == Book::FISH)
+    {
+        auto player = m_dataLoader->get_player_data().lock();
+        for (int i = 0; i < static_cast<int>(m_rarityChips.size()); ++i)
+        {
+            m_rarityChips[i]->render(window);
+            bool hasNew = false;
+            if (player)
+                for (const auto& [uid, unit] : player->ownedUnits)
+                    if (auto data = m_dataLoader->get_unit_data(uid, 0); data && static_cast<int>(data->rarity) == i && !player->is_fish_discovered(uid))
+                        hasNew = true;
+            if (!hasNew) continue;
+            const sf::FloatRect chip = m_rarityChips[i]->get_bounds();
+            sf::CircleShape dot(11.f);
+            dot.setOrigin({ 11.f, 11.f });
+            dot.setPosition({ chip.position.x + chip.size.x - 8.f, chip.position.y + 6.f });
+            dot.setFillColor(sf::Color(255, 96, 120));
+            dot.setOutlineThickness(3.f);
+            dot.setOutlineColor(UISkin::OUTLINE);
+            window.draw(dot);
+        }
+        if (m_entries.empty())
+        {
+            UISkin::style_body_text(m_text, 30, sf::Color(180, 190, 205));
+            m_text.setString(std::string("No ") + rarity_name(m_rarity) + " fish yet.");
+            UISkin::set_text_anchor(m_text, { 0.5f, 0.5f });
+            m_text.setPosition({ GRID_PANEL.position.x + GRID_PANEL.size.x / 2.f, GRID_PANEL.position.y + GRID_PANEL.size.y / 2.f });
+            window.draw(m_text);
+        }
+    }
 
     const int first = m_scrollRow * COLUMNS;
     const int last = std::min(static_cast<int>(m_entries.size()), first + visible_rows() * COLUMNS);
@@ -436,7 +558,7 @@ void UIEncyclopedia::render_details(sf::RenderWindow& window)
 
     // Portrait
     UISkin::draw_nine_slice(window, UISkin::SLOT, PORTRAIT, 2.f);
-    render_portrait(window, entry, UISkin::slot_inner(PORTRAIT, 2.f));
+    render_animation(window, entry, UISkin::slot_inner(PORTRAIT, 2.f));
     UISkin::draw_nine_slice(window, UISkin::SLOT_FRAME, PORTRAIT, 2.f);
 
     auto drawText = [&](const std::string& text, sf::Vector2f position, unsigned int size, sf::Color color, sf::Vector2f anchor = { 0.f, 0.5f },
@@ -672,7 +794,17 @@ void UIEncyclopedia::handle_event(const sf::Event& event, const sf::RenderWindow
     m_enemiesTab.handle_event(event, window);
     m_sortPill.handle_event(event, window);
     m_sortDirection.handle_event(event, window);
+    if (m_book == Book::FISH)
+        for (auto& chip : m_rarityChips) chip->handle_event(event, window);
     for (auto& button : m_formButtons) button->handle_event(event, window);
+
+    // A tap on the portrait: its attack, once the last one is over
+    if (const auto* released = event.getIf<sf::Event::MouseButtonReleased>(); released && m_attackTime < 0.f
+        && m_selected >= 0 && m_selected < static_cast<int>(m_entries.size()) && PORTRAIT.contains(window.mapPixelToCoords(released->position)))
+    {
+        m_attackTime = 0.f;
+        m_hasPlayedHit = false;
+    }
     m_abilities.handle_event(event, window);
 
     // The details under the portrait: dragged up and down (or the wheel) when they don't fit

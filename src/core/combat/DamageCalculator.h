@@ -42,4 +42,9 @@ public:
 
     // Calculates the damage `attacker` deals to `target` with one hit
     DamageResult calculate(const BattleEntity& attacker, const BattleEntity& target) const;
+
+    // THORNS: what `owner`, just hit by `attacker`, deals back to it (its ability's value x its max health; none
+    // without the ability or when the attacker isn't of its target types). baseDamage: the max health,
+    // attackMultiplier: the share
+    DamageResult thorns(const BattleEntity& owner, const BattleEntity& attacker) const;
 };

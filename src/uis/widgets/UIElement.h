@@ -59,10 +59,16 @@ public:
     void set_frame(bool isFrame) { m_isFrame = isFrame; }
     bool is_frame() const { return m_isFrame; }
 
-    // Stays over everything on its screen, even the elements added after it (UIManager::add_ui_element puts those
-    // under it): the Pearl Shop, added with the bottom bar
-    void set_topmost(bool isTopmost) { m_isTopmost = isTopmost; }
-    bool is_topmost() const { return m_isTopmost; }
+    // Its depth on the screen: UIManager keeps the elements sorted by it (the ones added later on top among equals), so
+    // the frame stays over the content (the back button over a list) and the windows over both, whatever the order
+    // they're added in. The frame gets Z_FRAME when added; windows and overlays set theirs
+    static constexpr int Z_CONTENT = 0;    // The screen itself
+    static constexpr int Z_FRAME = 10;     // The bars, their counters and buttons, the back button
+    static constexpr int Z_FLYING = 20;    // What flies over the bars (scales into a counter)
+    static constexpr int Z_WINDOW = 100;   // Popups and dialogs (pause, options, info, confirmations, results)
+    static constexpr int Z_OVERLAY = 200;  // Over everything (toasts, an ad, the transitions' water and wipe)
+    void set_z(int z) { m_z = z; }
+    int get_z() const { return m_z; }
 
     // The battle HUD's corners: on a screen wider than 16:9 (a phone) the element goes to the screen's far left or
     // right instead of the layout's edge. UIManager draws it and passes it the input shifted (screen_shift)
@@ -89,7 +95,7 @@ protected:
 
     bool m_isVisible = true; // Whether the element should be drawn
     bool m_isFrame = false;  // Stays still while the menu screens change (set_frame)
-    bool m_isTopmost = false;
+    int m_z = Z_CONTENT;
     ScreenAnchor m_screenAnchor = ScreenAnchor::NONE;
 
 private:

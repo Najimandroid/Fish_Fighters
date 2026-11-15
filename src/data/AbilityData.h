@@ -11,8 +11,10 @@
  * Abilities give boosts towards a certain target. For example, a resistance or a damage boost.
  *
  * Two kinds:
- *  - Passive (STRONG_AGAINST, RESISTANT_AGAINST): read by the DamageCalculator
+ *  - Passive (STRONG_AGAINST, RESISTANT_AGAINST, THORNS): read by the DamageCalculator
  *  - On hit (PARALYZE_ATTACK, SLOW_ATTACK, WEAKEN_ATTACK): inflict a status through the StatusManager
+ * THORNS: an attacker of the target types that hits the entity takes "value" x the entity's max health back
+ * (0.05: 5%), e.g. { "type": "THORNS", "targetTypes": [ 4 ], "value": 0.05 } (4: ALL_ENEMIES)
  *
  * In the JSON (units.json forms and enemies.json), for example:
  *   "abilities": [
@@ -31,6 +33,8 @@ enum class AbilityType
     SLOW_ATTACK,
     WEAKEN_ATTACK,
 
+    THORNS,     // Hitting it hurts: the attacker takes a share of its max health
+
     COUNT // Not an ability: keep it last (used to list every ability type)
 };
 
@@ -44,6 +48,7 @@ inline const char* to_string(AbilityType type)
     case AbilityType::PARALYZE_ATTACK:    return "PARALYZE_ATTACK";
     case AbilityType::SLOW_ATTACK:        return "SLOW_ATTACK";
     case AbilityType::WEAKEN_ATTACK: return "WEAKEN_ATTACK";
+    case AbilityType::THORNS:             return "THORNS";
     default:                              return "NONE";
     }
 }
@@ -62,7 +67,7 @@ struct AbilityData
 
     std::vector<EntityType> targetTypes; // Applies if the other entity has any of these types (empty = applies to nothing)
 
-    float value = 0.f;      // On hit only: strength of the status (e.g. 0.5 = attack x0.5 for WEAKEN)
+    float value = 0.f;      // On hit: strength of the status (e.g. 0.5 = attack x0.5 for WEAKEN); THORNS: share of max health (0.05)
 
     float chance = 100.f;   // On hit only: chance in % to inflict the status
 

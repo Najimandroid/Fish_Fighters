@@ -50,6 +50,9 @@ namespace UISkin
     struct SwimFrames { sf::IntRect box; int frameWidth = 0; int count = 1; };
     const SwimFrames& swim_frames(const std::string& sheetPath, int frameCount, int knockbackFrameIndex);
 
+    // The box (inside one frame) that every frame's drawing fits in: the whole animation drawn at one scale, in place
+    sf::IntRect sheet_box(const std::string& sheetPath, int frameCount);
+
     // ----- 9-slice -----
     // An image cut in 3 x 3: the corners keep their shape, the edges and the middle stretch
     struct NineSlice

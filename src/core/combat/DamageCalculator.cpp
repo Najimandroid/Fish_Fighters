@@ -64,3 +64,23 @@ DamageResult DamageCalculator::calculate(const BattleEntity& attacker, const Bat
 
     return result;
 }
+
+// ==================
+// Thorns
+// ==================
+DamageResult DamageCalculator::thorns(const BattleEntity& owner, const BattleEntity& attacker) const
+{
+    DamageResult result;
+    if (!owner.data || !attacker.data) return result;   // Bases have no abilities, and no types to be targeted by
+
+    float share = 0.f;   // The strongest matching one, never stacked
+    for (const AbilityData& ability : owner.data->abilities)
+        if (ability.type == AbilityType::THORNS && has_any_type(*attacker.data, ability.targetTypes))
+            share = std::max(share, ability.value);
+    if (share <= 0.f) return result;   // No thorns for this attacker
+    result.attackMultiplier = share;
+
+    result.baseDamage = static_cast<float>(owner.data->health) * owner.magnification.x;   // Its max health
+    result.finalDamage = result.baseDamage * result.attackMultiplier;
+    return result;
+}

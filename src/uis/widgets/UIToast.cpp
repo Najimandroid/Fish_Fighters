@@ -17,6 +17,7 @@ namespace
 UIToast::UIToast() :
     UIElement({ 0.f, 0.f }, { 0.f, 0.f })
 {
+    set_z(Z_OVERLAY);
 }
 
 UIToast::State& UIToast::state()

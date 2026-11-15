@@ -148,7 +148,7 @@ private:
 class UIClamRoomOverlay : public UIElement
 {
 public:
-    explicit UIClamRoomOverlay(std::weak_ptr<UIClamRoom> room) : m_room(std::move(room)) {}
+    explicit UIClamRoomOverlay(std::weak_ptr<UIClamRoom> room) : m_room(std::move(room)) { set_z(Z_FLYING); }   // Over the bars
     void update(float) override {}
     void render(sf::RenderWindow& window) override { if (auto room = m_room.lock()) room->render_overlay(window); }
 

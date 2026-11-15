@@ -96,7 +96,11 @@ private:
 
     // The bottom bar of a menu (UIBottomBar), the Shiny Scales at its right end (not where the title bar shows them:
     // the Clam Room); add it after the screen's content, before its buttons (the back button sits on it)
-    void add_bottom_bar(UITitleBar::Material material = UITitleBar::Material::STEEL, bool showsScales = true, bool hasBackButton = true);
+    void add_bottom_bar(UITitleBar::Material material = UITitleBar::Material::STEEL, bool showsScales = true, bool hasBackButton = true,
+        bool showsPearls = true);
+    // The Pearl Shop screen (the + on the Pearls counter); back: the screen to build again when leaving it
+    void generate_shop_uis(std::function<void()> back);
+    std::function<void()> m_screenAgain;   // How to build the menu screen shown again (set by each one)
 
     // A shortcut on the bottom bar, right of the back button (Equip <-> Upgrade): runs onPress as a deferred action
     std::shared_ptr<UIButtonElement> make_bar_button(const std::string& label, std::function<void()> onPress);

@@ -130,6 +130,8 @@ namespace
                 if (ability.type != AbilityType::PARALYZE_ATTACK && ability.value <= 0.f)
                     throw std::runtime_error(name + " needs a \"value\" above 0 (e.g. 0.5 for x0.5)");
             }
+            if (ability.type == AbilityType::THORNS && (ability.value <= 0.f || ability.value > 1.f))
+                throw std::runtime_error("THORNS needs a \"value\" between 0 and 1 (its share of max health, e.g. 0.05 for 5%)");
 
             abilities.push_back(ability);
         }

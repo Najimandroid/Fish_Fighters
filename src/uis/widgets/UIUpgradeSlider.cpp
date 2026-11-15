@@ -3,6 +3,7 @@
 #include "../UISkin.h"
 #include "../../core/DataLoader.h"
 #include "../../core/stages/Stage.h"
+#include "../../data/StageData.h"
 
 #include <algorithm>
 #include <cmath>
@@ -41,10 +42,6 @@ namespace
         return upgrade == PlayerData::BaseUpgrade::HEALTH ? "Base Health" : "Wallet Up";
     }
 
-    std::string percent(float factor)
-    {
-        return "+" + std::to_string(static_cast<int>(std::lround((factor - 1.f) * 100.f))) + "%";
-    }
 }
 
 /*
@@ -436,7 +433,7 @@ void UIUpgradeSlider::update(float deltaTime)
 			const bool isHealth = static_cast<PlayerData::BaseUpgrade>(entry.id) == PlayerData::BaseUpgrade::HEALTH;
 			name = base_upgrade_name(static_cast<PlayerData::BaseUpgrade>(entry.id));
 			description = isHealth
-				? "Your fish bowl gets 15% more health in every stage, for each level."
+				? "Your fish bowl has more health in every stage: +15% of its first health for each level."
 				: "Your wallet starts every stage 10% bigger and fills up 10% faster, for each level. The WALLET upgrades of the battle add to it.";
 		}
 		else
@@ -486,8 +483,11 @@ void UIUpgradeSlider::describe_base(PlayerData::BaseUpgrade upgrade, int level)
 	m_cost = PlayerData::base_upgrade_cost(level);
 	const int next = m_isMaxLevel ? level : level + 1;
 	m_statRows.push_back({ "Level", std::to_string(level), std::to_string(next), next > level });
-	if (upgrade == PlayerData::BaseUpgrade::HEALTH)
-		m_statRows.push_back({ "Health", percent(PlayerData::base_health_factor(level)), percent(PlayerData::base_health_factor(next)), !m_isMaxLevel });
+	if (upgrade == PlayerData::BaseUpgrade::HEALTH)   // The bowl's health in a stage (they all start it at StageData's default)
+	{
+		const float bowl = StageData{}.playerBaseHealth;
+		m_statRows.push_back({ "Health", format_stat(bowl * PlayerData::base_health_factor(level)), format_stat(bowl * PlayerData::base_health_factor(next)), !m_isMaxLevel });
+	}
 	else
 	{
 		const float now = PlayerData::wallet_factor(level), then = PlayerData::wallet_factor(next);

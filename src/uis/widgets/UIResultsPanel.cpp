@@ -91,6 +91,7 @@ UIResultsPanel::UIResultsPanel(const BattleResult& result, const std::string& st
     m_secondaryButton(SECONDARY_SIZE, { ROW_LEFT + PRIMARY_SIZE.x + BUTTON_GAP, row_y(m_panel) + (PRIMARY_SIZE.y - SECONDARY_SIZE.y) / 2.f }, m_actions.secondaryLabel),
     m_backButton(ROUND_SIZE, { ROW_LEFT + PRIMARY_SIZE.x + SECONDARY_SIZE.x + 2.f * BUTTON_GAP, row_y(m_panel) + (PRIMARY_SIZE.y - ROUND_SIZE) / 2.f }, "icon_back")
 {
+    set_z(Z_WINDOW);
     m_primaryButton.set_text_size(m_actions.primaryLabel.size() > 10 ? 36 : 46);   // "RETURN TO MAP" fits
     m_primaryButton.set_callback(m_actions.primary);
     m_primaryButton.set_hotkey(sf::Keyboard::Key::Enter);

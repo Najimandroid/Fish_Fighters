@@ -21,6 +21,7 @@ UIPauseMenu::UIPauseMenu(const std::string& stageName) :
     m_optionsButton(BUTTON_SIZE, { BUTTON_X, PANEL_POSITION.y + 312.f }, "OPTIONS"),
     m_retreatButton(BUTTON_SIZE, { BUTTON_X, PANEL_POSITION.y + PANEL_SIZE.y - FOOTER + (FOOTER - BUTTON_SIZE.y) / 2.f }, "RETREAT")
 {
+    set_z(Z_WINDOW);
     m_dim.setFillColor(sf::Color(0, 0, 0, 150));
 
     UISkin::style_text(m_stageName, 36, UISkin::NUMBER);

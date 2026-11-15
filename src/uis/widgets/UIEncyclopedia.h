@@ -3,6 +3,7 @@
 #include "UIButtonElement.h"
 #include "UIPanel.h"
 #include "UIAbilityList.h"
+#include "../../data/Rarity.h"
 
 #include <map>
 #include <memory>
@@ -57,6 +58,21 @@ private:
 
     void build_entries();
     std::map<int, int> encounter_numbers() const;   // UID -> No. of the book open
+
+    // Fish: one category per rarity, chips at the top of the grid (the grid shows that rarity's fish)
+    Rarity m_rarity = Rarity::NORMAL;
+    std::vector<std::unique_ptr<UIButtonElement>> m_rarityChips;
+    int m_pendingRarity = -1;                        // Clicked, opened at the next update
+    void open_rarity(Rarity rarity);
+    sf::Vector2f grid_origin() const;                // The first slot (under the chips in the fish book)
+
+    // The portrait: the selected one walking; a tap on it plays its attack (again once that attack is over: its
+    // foreswing and backswing). Not unlocked or not met: the same, all black
+    float m_animTime = 0.f;
+    float m_attackTime = -1.f;                       // Since the attack started (-1: walking)
+    bool m_hasPlayedHit = false;
+    static float attack_frames_seconds(const EntityData& data);   // How long its attack frames take
+    void render_animation(sf::RenderWindow& window, const Entry& entry, const sf::FloatRect& area);
     void sort_entries();
     void select(int index);
 
