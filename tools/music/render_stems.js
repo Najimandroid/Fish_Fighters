@@ -121,6 +121,39 @@ function renderTheremin(events, tempo) {
     return out;
 }
 
+// A synth vibraphone (the encyclopedia's lab, doubling the Fish Tank's vibraphone so the two blend): a mallet's
+// envelope (a quick strike, a long ring, the damper at the note's end) and a vibraphone's motor tremolo, made of sines:
+// the bar's fundamental and its 4th partial (the two octaves up a vibraphone bar is tuned to), an FM shimmer on the
+// strike that fades into an almost pure tone (a little of it kept, slowly breathing), two voices a few cents apart
+// spread left and right (a slow chorus), and a pitch settling from a few cents above in the first moment (the
+// synth's blip). Each note's sound depends only on its own time, so both body copies are identical.
+// events: [[seconds, frequency, beats, velocity]]
+function renderSynthVibes(events, tempo) {
+    const spb = 60 / tempo, RING = 1.3, DAMP = 0.12, TREMOLO_HZ = 5.2, TREMOLO = 0.22;
+    const end = Math.max(0, ...events.map(e => e[0] + e[2] * spb)) + 1;
+    const out = new Float32Array(Math.ceil(end * RATE) * 2);
+    for (const [start, frequency, beats, velocity] of events) {
+        const length = beats * spb, first = Math.round(start * RATE), frames = Math.round((length + DAMP) * RATE);
+        const amplitude = Math.pow(velocity / 127, 1.5) * 0.3, strike = 0.5 + 1.4 * velocity / 127;
+        [-0.0025, 0.0025].forEach((detune, side) => {
+            let phase = 0, partial = 0, modulator = 0;
+            for (let i = 0; i < frames; i++) {
+                const t = i / RATE;
+                const f = frequency * (1 + detune) * (1 + 0.004 * Math.exp(-t / 0.012));
+                phase += 2 * Math.PI * f / RATE;
+                partial += 2 * Math.PI * f * 4 / RATE;
+                modulator += 2 * Math.PI * f / RATE;
+                const index = strike * Math.exp(-t / 0.08) + 0.12 + 0.08 * Math.sin(2 * Math.PI * 0.7 * t);
+                const tone = Math.sin(phase + index * Math.sin(modulator)) + 0.3 * Math.exp(-t / 0.35) * Math.sin(partial);
+                const envelope = Math.min(1, t / 0.003) * Math.exp(-t / RING) * (t > length ? Math.max(0, 1 - (t - length) / DAMP) : 1);
+                const tremolo = 1 - TREMOLO * (0.5 - 0.5 * Math.cos(2 * Math.PI * TREMOLO_HZ * t));
+                out[(first + i) * 2 + side] += tone * amplitude * envelope * tremolo;
+            }
+        });
+    }
+    return out;
+}
+
 // Electric zaps (jellyfish): crackles (sparse clicks through a band-pass), a clipped mains-like buzz and a falling
 // "zzap" whine, all fading out. Each zap draws its randomness from its own seed, so both body copies are identical.
 // events: [[seconds, velocity, duration (seconds), seed, pan (-1..1)]]
@@ -332,6 +365,7 @@ for (const song of fs.readdirSync(STEMS_MIDI)) {
             : stem.synth === "chant" ? renderChant(stem.events)
             : stem.synth === "wobble" ? renderWobble(stem.events)
             : stem.synth === "theremin" ? renderTheremin(stem.events, stem.tempo)
+            : stem.synth === "synthvibes" ? renderSynthVibes(stem.events, stem.tempo)
             : render(font, stem, RATE);
         const wet = applyEffects(dry, stem);
         const group = groups.get(stem.group) || { parts: [], samples: new Float32Array(0) };

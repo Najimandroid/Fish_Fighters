@@ -59,8 +59,8 @@
         "file": "assets/audios/music/theme_base.ogg",
         "sampleRate": 48000,
         "key": "Bb",
-        "loopStart": 4320000,
-        "loopLength": 4114286
+        "loopStart": 5142857,
+        "loopLength": 4937143
     },
     "theme_clam": {
         "title": "Pearl Chamber",
@@ -68,8 +68,8 @@
         "file": "assets/audios/music/theme_clam.ogg",
         "sampleRate": 48000,
         "key": "Bb",
-        "loopStart": 4320000,
-        "loopLength": 4114286
+        "loopStart": 5142857,
+        "loopLength": 4937143
     },
     "theme_clam_inside": {
         "title": "Pearl Chamber (Inside)",
@@ -77,8 +77,8 @@
         "file": "assets/audios/music/theme_clam_inside.ogg",
         "sampleRate": 48000,
         "key": "Bb",
-        "loopStart": 4320000,
-        "loopLength": 4114286
+        "loopStart": 5142857,
+        "loopLength": 4937143
     },
     "theme_map": {
         "title": "Fish Tank (Battle Stations)",
@@ -86,8 +86,8 @@
         "file": "assets/audios/music/theme_map.ogg",
         "sampleRate": 48000,
         "key": "Bb",
-        "loopStart": 4320000,
-        "loopLength": 4114286
+        "loopStart": 5142857,
+        "loopLength": 4937143
     },
     "theme_lab": {
         "title": "Fish Tank (Lab)",
@@ -95,8 +95,8 @@
         "file": "assets/audios/music/theme_lab.ogg",
         "sampleRate": 48000,
         "key": "Bb",
-        "loopStart": 4320000,
-        "loopLength": 4114286
+        "loopStart": 5142857,
+        "loopLength": 4937143
     },
     "theme_shop": {
         "title": "Pearl Shop",
@@ -104,8 +104,8 @@
         "file": "assets/audios/music/theme_shop.ogg",
         "sampleRate": 48000,
         "key": "Bb",
-        "loopStart": 4320000,
-        "loopLength": 4114286
+        "loopStart": 5142857,
+        "loopLength": 4937143
     },
     "theme_shanty": {
         "title": "Sunken Galleon",
@@ -331,5 +331,59 @@
         "key": "A",
         "loopStart": 3565715,
         "loopLength": 3291429
+    },
+    "theme_base_v1": {
+        "title": "Fish Tank (first version)",
+        "kind": "menu",
+        "file": "assets/audios/music/theme_base_v1.ogg",
+        "sampleRate": 48000,
+        "key": "Bb",
+        "loopStart": 4320000,
+        "loopLength": 4114286
+    },
+    "theme_clam_v1": {
+        "title": "Pearl Chamber (first version)",
+        "kind": "menu",
+        "file": "assets/audios/music/theme_clam_v1.ogg",
+        "sampleRate": 48000,
+        "key": "Bb",
+        "loopStart": 4320000,
+        "loopLength": 4114286
+    },
+    "theme_clam_inside_v1": {
+        "title": "Pearl Chamber (Inside) (first version)",
+        "kind": "menu",
+        "file": "assets/audios/music/theme_clam_inside_v1.ogg",
+        "sampleRate": 48000,
+        "key": "Bb",
+        "loopStart": 4320000,
+        "loopLength": 4114286
+    },
+    "theme_map_v1": {
+        "title": "Fish Tank (Battle Stations) (first version)",
+        "kind": "menu",
+        "file": "assets/audios/music/theme_map_v1.ogg",
+        "sampleRate": 48000,
+        "key": "Bb",
+        "loopStart": 4320000,
+        "loopLength": 4114286
+    },
+    "theme_lab_v1": {
+        "title": "Fish Tank (Lab) (first version)",
+        "kind": "menu",
+        "file": "assets/audios/music/theme_lab_v1.ogg",
+        "sampleRate": 48000,
+        "key": "Bb",
+        "loopStart": 4320000,
+        "loopLength": 4114286
+    },
+    "theme_shop_v1": {
+        "title": "Pearl Shop (first version)",
+        "kind": "menu",
+        "file": "assets/audios/music/theme_shop_v1.ogg",
+        "sampleRate": 48000,
+        "key": "Bb",
+        "loopStart": 4320000,
+        "loopLength": 4114286
     }
 }

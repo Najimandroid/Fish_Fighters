@@ -12,11 +12,11 @@
 // Every theme loops like The Battle Cats' stage music: intro, then A (the tune), B (a different middle),
 // C (a breakdown, on the longer themes) and A' (the tune again, fuller), back to A.
 //   theme_title      "Fish Fighters!" 168 BPM  title screen: ska-punk brass and steel drums, power chords, organ
-//   theme_base       "Fish Tank"      112 BPM  the Fish Tank menus: aquarium funk, vibraphone, Rhodes, muted guitar, whistle
-//   theme_map        "Fish Tank (Battle Stations)" 112 BPM  the chapter map: the Fish Tank theme, timpani, taikos and a drumline snare
-//   theme_lab        "Fish Tank (Lab)" 112 BPM  the encyclopedia: the Fish Tank theme, a scanner, chirps and sonar in its groove
+//   theme_base       "Fish Tank"      112 BPM  the Fish Tank menus: aquarium funk-pop, vibraphone, Rhodes, guitar, horns; a disco bridge
+//   theme_map        "Fish Tank (Battle Stations)" 112 BPM  the chapter map: the Fish Tank theme, a drumline snare and a soft bass drum behind
+//   theme_lab        "Fish Tank (Lab)" 112 BPM  the encyclopedia: the Fish Tank theme, a synth vibraphone doubling it, a scanner, chirps, sonar
 //   theme_clam       "Pearl Chamber"  112 BPM  the Clam Room: the Fish Tank theme gone magic (and theme_clam_inside, the Clam Storage)
-//   theme_shop       "Pearl Shop"     112 BPM  the Pearl Shop: a magic bazaar, sitar with meends, tanpura, tabla, bansuri, santoor
+//   theme_shop       "Pearl Shop"     112 BPM  the Pearl Shop: a magic bazaar, sitar over the vibraphone, tanpura, tabla, ghungroo, bansuri, santoor
 //   theme_default    "Reef Rumble"    152 BPM  calypso: steel drums, brass answers, skanking electric piano
 //   theme_calm       "Kelp Garden"    100 BPM  underwater bossa: vibraphone, harp, kalimba (easy stages)
 //   theme_serious    "Deep Current"   138 BPM  horns over a pizzicato ostinato, a clarinet that plans ahead
@@ -261,15 +261,17 @@ function stab(part, prog, beat, offsets, { center = 64, velocity = 96, length = 
     for (const offset of offsets) voice(chordAt(prog, beat + offset).symbol, center).forEach(n => part.hit(beat + offset, n, velocity, length));
 }
 
-// Bass line: pattern [[offset, length, tone, velocity], ...] per bar
-function bassline(part, prog, { pattern, cycle = 4, base = 28 }) {
+// Bass line: pattern [[offset, length, tone, velocity], ...] per bar. then: the chord after the progression (what its
+// last "app" leads to; without it, the progression's first chord)
+function bassline(part, prog, { pattern, cycle = 4, base = 28, then = null }) {
     const start = prog[0].beat, end = progressionEnd(prog);
     for (let c = start; c < end - 1e-6; c += cycle) {
         for (const [offset, length, token, velocity] of pattern) {
             const t = c + offset;
             if (t >= end - 1e-6) continue;
             const entry = chordAt(prog, t);
-            part.hit(t, tone(entry, token, base, { slash: true, next: chordAfter(prog, entry) }), velocity, length);
+            const next = prog[prog.indexOf(entry) + 1] || (then ? { symbol: then } : prog[0]);
+            part.hit(t, tone(entry, token, base, { slash: true, next }), velocity, length);
         }
     }
 }
@@ -375,6 +377,15 @@ function theremin(synth, start, text, { velocity = 96, glide = 0.07, swoopFirst 
     }
 }
 
+// A synth note per written note (render_stems.js synths taking [seconds, frequency, beats, velocity], like synthvibes)
+function synthLine(synth, start, text, { velocity = 90, gate = 0.95, transpose = 0 } = {}) {
+    let t = start;
+    for (const { notes, beats } of parse(text, transpose)) {
+        for (const n of notes) synth.add(t, freq(n), +(beats * gate).toFixed(4), velocity);
+        t += beats;
+    }
+}
+
 function tomFill(part, start, beats = 2, velocity = 100) {
     const toms = [50, 48, 47, 45, 43, 41];
     const count = beats * 4;
@@ -398,12 +409,13 @@ const freq = note => +(440 * Math.pow(2, (note - 69) / 12)).toFixed(3);
 
 // ===== Sitar ornaments =====
 // Meends: in [from, to), each long note reached from a note 1 to 4 semitones under it is pulled up from that note, the
-// way a sitar player pulls the string: it starts on the lower pitch and slides into its own in `beats`, then holds
-function meends(part, from, to, { minBeats = 0.7, beats = 0.2 } = {}) {
+// way a sitar player pulls the string: it starts on the lower pitch and slides into its own in `beats`, then holds.
+// maxGap: the widest pull (semitones)
+function meends(part, from, to, { minBeats = 0.7, beats = 0.2, maxGap = 4 } = {}) {
     const notes = part.events.filter(e => e.time >= from - 1e-6 && e.time < to - 1e-6).sort((x, y) => x.time - y.time);
     for (let i = 1; i < notes.length; i++) {
         const e = notes[i], before = notes[i - 1], gap = e.note - before.note;
-        if (e.length >= minBeats && gap >= 1 && gap <= 4 && e.time - (before.time + before.length) < 0.3) {
+        if (e.length >= minBeats && gap >= 1 && gap <= maxGap && e.time - (before.time + before.length) < 0.3) {
             e.note = before.note;
             e.bend = gap;
             e.bendTime = beats;
@@ -1225,11 +1237,16 @@ const F_MAJOR = [5, 7, 9, 10, 0, 2, 4], EB_MAJOR = [3, 5, 7, 8, 10, 0, 2], EB_LY
     songs.push(song);
 }
 
-// The Fish Tank theme's chords and tune: the Clam Room's theme plays them too, on the same grid (so they crossfade)
+// The Fish Tank theme's chords and tunes: the whole Fish Tank family plays them (the hub's theme, the Clam Room's, the
+// map's, the encyclopedia's, the Pearl Shop's) on the same grid, so the game crossfades them where they are
+//   Intro 2 | A 16 (the tune) | B 8 (the middle) | A' 16 (the tune, fuller) | C 8 (the bridge, climbing back to A)
 const FISH_TANK = (() => {
     const A1 = "Bbmaj7 | Gm7 | Cm7 | F7 | Bbmaj7 | Gm7 | Cm7 F7 | Bbmaj7";
     const A2 = "Bbmaj7 | Gm7 | Ebmaj7 | Ebm6 | Dm7 | G7 | Cm7 F7 | Bbmaj7";
     const B = "Ebmaj7 | F/Eb | Dm7 | Gm7 | Cm7 | F7 | Ebmaj7 | F7";
+    // The bridge: a funk vamp in G dorian (Gm7 to C7), then the lift: the IV going minor (Ebm6, as in A) and the bVI
+    // and the bVII (Gbmaj7, Abmaj7) climbing a step at a time to the tonic at the top of A
+    const C = "Gm7 | C7 | Gm7 | C7 | Ebmaj7 | Ebm6 | Gbmaj7 | Abmaj7";
     const MOTIF = "F4:.5 Bb4:.5 D5:.75 C5:.25 r:.5 Bb4:.5 F5:1";
     const MEL_A = MOTIF + " | r:.5 D5:.5 F5:.5 G5:.5 r:.5 F5:.25 D5:.75 r:.5 | Eb5:.5 G5:.5 Bb5:.75 G5:.25 r:.5 Eb5:.5 C5:1 | r:.5 A4:.5 C5:.5 Eb5:.5 r:.5 D5:.25 C5:.75 r:.5 | " +
         MOTIF + " | r:.5 G5:.5 Bb5:.5 A5:.5 r:.5 G5:.25 F5:.75 r:.5 | Eb5:.5 D5:.5 C5:.5 Bb4:.5 A4:.5 C5:.5 Eb5:.5 F5:.5 | D5:1.5 r:2.5 | " +
@@ -1237,89 +1254,210 @@ const FISH_TANK = (() => {
         "F5:.5 A5:.5 C6:.75 A5:.25 r:.5 F5:.5 D5:1 | r:.5 B4:.5 D5:.5 F5:.5 r:.5 E5:.25 D5:.75 r:.5 | Eb5:.5 G5:.5 Bb5:.5 G5:.5 A5:.5 C6:.5 Eb6:.5 C6:.5 | Bb5:1.5 r:2.5";
     const MEL_B = "G5:1 Bb5:1 D6:2 | C6:1 A5:1 F5:2 | F5:1 A5:1 C6:1.5 A5:.5 | Bb5:2 G5:2 | Eb5:1 G5:1 Bb5:1 C6:1 | A5:1 C6:1 Eb6:2 | D6:1.5 Bb5:.5 G5:2 | F5:1 Eb5:1 C5:1 A4:1";
     const COUNTER = "A4:4 | F4:4 | Eb5:4 | Eb5:2 C5:2 | A4:4 | F4:4 | Eb5:2 Eb5:2 | D5:4 | A4:4 | Bb4:4 | G4:4 | Gb4:4 | F4:4 | F4:4 | Eb5:2 Eb5:2 | D5:4";
-    return { A1, A2, B, MOTIF, MEL_A, MEL_B, COUNTER };
+    // The bridge's tune. Calls (bars 1 and 3): the motif's leaps (a fourth, a third) in G dorian, syncopated, the
+    // second one ending higher; answers (bars 2 and 4): up and down C7. Then the lift: an arch on Ebmaj7, the same
+    // arch gone minor on Ebm6, and the hits (3 + 3 + 2 eighths) climbing the bVI and the bVII
+    const MEL_C = "D5:.25 r:.25 G5:.25 r:.25 Bb5:.5 A5:.25 G5:.25 r:.5 F5:.25 G5:.25 r:.25 D5:.75 | " +
+        "r:.5 E5:.25 G5:.25 Bb5:.25 r:.25 C6:.5 r:.5 Bb5:.25 G5:.25 E5:.5 C5:.5 | " +
+        "D5:.25 r:.25 G5:.25 r:.25 Bb5:.5 A5:.25 G5:.25 r:.5 Bb5:.25 C6:.25 r:.25 D6:.75 | " +
+        "r:.5 E6:.25 D6:.25 C6:.25 r:.25 Bb5:.5 G5:.25 A5:.25 Bb5:.5 C6:.25 D6:.25 r:.5 | " +
+        "G5:.5 Bb5:.5 D6:1 C6:.5 Bb5:.5 G5:1 | Gb5:.5 Bb5:.5 C6:1 Bb5:.5 Gb5:.5 Eb5:1 | Bb5:1.5 Db6:1.5 F6:1 | C6:1.5 Eb6:1.5 r:1";
+    const HITS = [0, 1.5, 3, 4, 5.5];   // The bridge's hits, from its 7th bar: Gbmaj7 on 1, the and of 2, 4; Abmaj7 on 1, the and of 2
+    return { A1, A2, B, C, MOTIF, MEL_A, MEL_B, MEL_C, COUNTER, HITS };
 })();
+// Some bars of a tune: tuneBars(MEL_C, 4, 8) = its bars 5 to 8
+const tuneBars = (text, from, to) => text.split("|").slice(from, to).join("|");
+// A major pentatonic (pitch classes) on a note's pitch class: a harp glissando on it never clashes with its maj7 chord
+const pentatonicOn = note => [0, 2, 4, 7, 9].map(i => mod12(note + i));
 
 // =====================================================================================================
 // 7. "Fish Tank" - the Fish Tank menus (the hub, upgrade, equip; the map and the encyclopedia play its variants, 7d
-//    and 7e). Laid-back aquarium funk: the motif on vibraphone over Rhodes and muted-guitar chops, a whistle in the
-//    middle, kalimba answers.
-//    Intro 2 | A 16 (vibraphone) | B 8 (whistle) | A' 16 (vibraphone and kalimba, the whistle above)
+//    and 7e). Aquarium funk-pop, made to be fun to come back to: the motif on vibraphone over Rhodes, muted-guitar
+//    chops and a busy funk bass, a whistle in the middle, kalimba answers; in A' the horns punch the tune's rests and
+//    a clavinet joins; the bridge goes four on the floor, the horns calling and the vibraphone answering, then the
+//    whole band climbs the bVI and the bVII in hits, a fill, and the tune again.
+//    Intro 2 (the band kicks off) | A 16 (vibraphone) | B 8 (whistle; a build) | A' 16 (vibraphone and kalimba, the
+//    whistle above, horn stabs) | C 8 (the bridge: horns and vibraphone, then the lift and the hits)
 // =====================================================================================================
-const FISH_TANK_MIX = { lead: 0, kalimba: -5, keys: -5, guitar: -8, bass: -4, drums: -6, bubbles: -9 };
+const FISH_TANK_MIX = { lead: 0, brass: -3, kalimba: -5, keys: -6, clav: -10, guitar: -9, bass: -4, drums: -5, bubbles: -9 };
+
+// The Fish Tank band's own voices: lead (the tune in A and A', the answers and the lift in C), middle (B's melody and
+// A''s counter-melody) and brass (the horns), [name, program, options] each. A variant keeps them (so the tune never
+// changes voice when the game crossfades it) and can add a layer: a synth ([name, kind, options]) doubling the lead
+const FISH_TANK_VOICES = {
+    lead: ["Vibraphone", 11, { volume: 104, pan: -0.1, fx: { chorus: { mix: 0.3 }, echo: { beats: 0.75, feedback: 0.25, mix: 0.15 } } }],
+    middle: ["Whistle", 78, { volume: 76, pan: 0.15, fx: { echo: { beats: 0.75, feedback: 0.25, mix: 0.18 } } }],
+    brass: ["Brass", 61, { volume: 94, pan: 0.2 }],
+};
 
 // The Fish Tank band playing the theme: writes its intro and returns its body writer. Its variants (the map, the
 // encyclopedia) call it too and add their layer, so they play exactly the same notes on the same grid and the game
 // crossfades them where they are (AudioManager::play_music_in_sync)
-function fishTankBand(song) {
-    const vibes = song.part("Vibraphone", 11, { group: "lead", volume: 104, pan: -0.1, fx: { chorus: { mix: 0.3 }, echo: { beats: 0.75, feedback: 0.25, mix: 0.15 } } });
-    const whistle = song.part("Whistle", 78, { group: "lead", volume: 86, pan: 0.15, fx: { echo: { beats: 0.75, feedback: 0.25, mix: 0.18 } } });
+function fishTankBand(song, voices = {}) {
+    const { lead, middle, brass, layer } = { ...FISH_TANK_VOICES, ...voices };
+    const vibes = song.part(lead[0], lead[1], { group: "lead", ...lead[2] });
+    const doubling = layer ? song.synth(layer[0], layer[1], { group: "lead", ...layer[2] }) : null;
+    // The lead's lines (and the layer's)
+    const tune = (t, text, options) => {
+        vibes.at(t).play(text, options);
+        if (doubling) synthLine(doubling, t, text, options);
+    };
+    const whistle = song.part(middle[0], middle[1], { group: "lead", ...middle[2] });
+    const horns = song.part(brass[0], brass[1], { group: "brass", ...brass[2] });
     const kalimba = song.part("Kalimba", 108, { group: "kalimba", volume: 92, pan: 0.4, fx: { echo: { beats: 0.75, feedback: 0.35, mix: 0.28 } } });
     const ep = song.part("Electric piano", 4, { group: "keys", volume: 90, pan: -0.2, fx: { chorus: { mix: 0.5 } } });
+    const clav = song.part("Clavinet", 7, { group: "clav", volume: 88, pan: -0.35 });
     const guitar = song.part("Muted guitar", 28, { group: "guitar", volume: 90, pan: 0.35 });
     const bass = song.part("Bass", 33, { group: "bass", volume: 106 });
     const kit = song.drums("Kit", 0, { group: "drums", volume: 86 });
     const bub = song.synth("Bubbles", "bubbles", { group: "bubbles" });
 
-    const { A1, A2, B, MOTIF, MEL_A, MEL_B, COUNTER } = FISH_TANK;
+    const { A1, A2, B, C, MEL_A, MEL_B, MEL_C, COUNTER, HITS } = FISH_TANK;
     const EP_FUNK = [[0, 0.4, 64], [0.75, 0.2, 56], [1.5, 0.4, 60], [2.5, 0.2, 56], [2.75, 0.45, 62], [3.5, 0.2, 56]];
+    const CLAV_FUNK = [[0.5, 0.12, 70], [1.25, 0.12, 60], [1.75, 0.12, 66], [2.5, 0.12, 70], [3.25, 0.12, 60], [3.75, 0.12, 64]];
     const CHOPS = "x.xx.x.x.xx.x.x.";
-    const BASS_FUNK = [[0, 0.4, "R", 100], [0.75, 0.2, "8", 78], [1, 0.25, "R", 74], [1.5, 0.4, "5", 88], [2.5, 0.2, "R", 78], [2.75, 0.4, "8", 84], [3.5, 0.4, "app", 86]];
-    const FUNK = { [KICK]: "x.....x..x......", [SNARE]: "....x..g.g..x..g", [HAT]: "mgogmgogmgogmgog" };
+    // The bass: root and octave pops on the 16ths, a walk-up into the next chord
+    const BASS_FUNK = [[0, 0.35, "R", 104], [0.75, 0.2, "8", 86], [1, 0.2, "R", 76], [1.5, 0.35, "5", 90], [2, 0.2, "8", 80],
+        [2.5, 0.2, "R", 88], [2.75, 0.35, "8", 92], [3.25, 0.2, "5", 74], [3.5, 0.35, "app", 88]];
+    // The bridge's: octaves (disco), then eighths driving the lift
+    const BASS_OCTAVES = [[0, 0.22, "R", 106], [0.5, 0.2, "8", 90], [0.75, 0.15, "R", 72], [1, 0.22, "R", 96], [1.5, 0.2, "8", 92],
+        [2, 0.22, "R", 100], [2.5, 0.2, "8", 90], [2.75, 0.15, "R", 72], [3, 0.22, "5", 92], [3.5, 0.2, "8", 94], [3.75, 0.2, "app", 84]];
+    const BASS_DRIVE = [[0, 0.4, "R", 102], [0.5, 0.3, "R", 80], [1, 0.4, "8", 92], [1.5, 0.3, "R", 80], [2, 0.4, "5", 94],
+        [2.5, 0.3, "R", 80], [3, 0.4, "8", 92], [3.5, 0.3, "app", 86]];
+
+    // Drums. A: funk-pop (the kick on 1, the and of 2, 3 and its and; a hard backbeat with ghost notes; 16th hats
+    // opening on the and of 4); A' adds a tambourine; C: four on the floor. Each phrase ends with a fill
+    const FUNK = { [KICK]: "X.....x.x.x.....", [SNARE]: "....X..g.g..X..g", [HAT]: "mgogmgogmgogmgo.", [OPEN_HAT]: "..............o." };
+    const FUNK_FULL = { ...FUNK, [TAMBOURINE]: "..o...o...o...o." };
     const FUNK_LIGHT = { [KICK]: "x.......x.......", [SIDE_STICK]: "....x.......x...", [HAT]: "o.g.o.g.o.g.o.g.", [SHAKER]: "g.g.g.g.g.g.g.g." };
+    // The fill: the groove for two beats, the snare's 16ths rising on the third, the toms down the fourth
+    const FILL = { [KICK]: "X.....x.X.......", [SNARE]: "....X..g.gox....", [HAT]: "mgogmgog........",
+        [HIGH_TOM]: "............x...", [HI_MID_TOM]: ".............x..", [LOW_MID_TOM]: "..............x.", [LOW_TOM]: "...............x" };
+    const FILL_SOFT = { [KICK]: "X.....x.........", [SNARE]: "....X..g....gomx", [HAT]: "mgogmgogmgog...." };   // Into B
+    const DISCO = { [KICK]: "X...X...X...X...", [SNARE]: "....X..g....X...", [OPEN_HAT]: "..o...o...o...o.", [HAT]: "g...g...g...g...",
+        [TAMBOURINE]: "g.o.g.o.g.o.g.o." };
+    const DISCO_PICKUP = { ...DISCO, [SNARE]: "....X..g....X.ox" };
+    const DISCO_BUILD = { ...DISCO, [SNARE]: "....X...x.x.xxxx", [OPEN_HAT]: "..o...o........." };
+    // A section of the A groove: two phrases of 8 bars, each closed by a fill (`last`: the second phrase's)
+    const grooveA = (t, groove, last) => {
+        beat(kit, t, 7, groove);
+        beat(kit, t + 28, 1, FILL);
+        beat(kit, t + 32, 7, groove);
+        beat(kit, t + 60, 1, last);
+    };
     const answers = start => {
         kalimba.at(start + 30).play("D6:.5 C6:.5 Bb5:.5 F5:.5", { velocity: 72 });
         kalimba.at(start + 62).play("F5:.5 A5:.5 C6:.5 D6:.5", { velocity: 72 });
     };
+    // The bars of A' whose first beat and third beat are rests in the tune: the horns punch them
+    const STAB_BARS = [1, 3, 5, 9, 11, 13];
 
-    // Intro: a held Rhodes chord, bubbles, the kalimba twinkling
+    // Intro: the band kicks off. A Rhodes chord, the kalimba twinkling over the hats; then the horns' hits on Cm7 and
+    // F7 with the bass and the kick, and the toms rolling into the tune
     const pI = progression("Bbmaj7 | Cm7 F7", 0);
-    sustain(ep, pI, { center: 63, velocity: 60 });
-    bassline(bass, pI, { pattern: [[0, 1.9, "R", 90], [2, 1.9, "5", 80]] });
-    kalimba.at(0).play("F5:.5 Bb5:.5 D6:1 r:2 | C6:.5 A5:.5 F5:1 r:2", { velocity: 72 });
+    sustain(ep, progression("Bbmaj7", 0), { center: 63, velocity: 60 });
+    bassline(bass, progression("Bbmaj7", 0), { pattern: [[0, 1.9, "R", 90], [2, 1.4, "5", 80], [3.5, 0.4, "app", 82]], then: "Cm7" });
+    kalimba.at(0).play("F5:.5 Bb5:.5 D6:1 r:2", { velocity: 72 });
     bubbles(bub, 0.5, { count: 10, spread: 4, low: 350, high: 1300 });
-    beat(kit, 4, 1, { [HAT]: "g.g.g.g.g.g.g.g." });
-
+    beat(kit, 0, 1, { [KICK]: "x...............", [HAT]: "g.g.g.g.g.g.g.g." });
+    const INTRO_HITS = [4, 5.5, 6.5];
+    stab(horns, pI, 0, INTRO_HITS, { center: 63, velocity: 100, length: 0.3 });
+    stab(ep, pI, 0, INTRO_HITS, { center: 63, velocity: 70, length: 0.3 });
+    bassline(bass, progression("Cm7 F7", 4), { pattern: [[0, 0.4, "R", 104], [1.5, 0.4, "R", 98], [2.5, 0.4, "R", 104], [3.5, 0.35, "app", 88]], then: "Bbmaj7" });
+    for (const t of INTRO_HITS) kit.hit(t, KICK, 110, 0.2).hit(t, SNARE, 96, 0.2);
+    tomFill(kit, 7, 1, 100);
 
     return s => {
-        const a = s, b = s + 64, a2 = s + 96;
-        const pA = progression(A1 + " | " + A2, a), pB = progression(B, b), pA2 = progression(A1 + " | " + A2, a2);
+        const a = s, b = s + 64, a2 = s + 96, c = s + 160;
+        const pA = progression(A1 + " | " + A2, a), pB = progression(B, b), pA2 = progression(A1 + " | " + A2, a2), pC = progression(C, c);
+        const pVamp = progression(tuneBars(C, 0, 4), c), pLift = progression(tuneBars(C, 4, 6), c + 16);
 
-        // A: the motif on vibraphone, Rhodes and guitar chops, funk bass and drums
-        vibes.at(a).play(MEL_A, { velocity: 94, gate: 0.85 });
+        // A: the motif on the lead over Rhodes and guitar chops, the funk bass, the drums; the kalimba answers
+        tune(a, MEL_A, { velocity: 94, gate: 0.85 });
         comp(ep, pA, { pattern: EP_FUNK, center: 63 });
         chops(guitar, pA, { pattern: CHOPS, tones: ["8", "10", "12", "10"], base: 50, velocity: 64 });
-        bassline(bass, pA, { pattern: BASS_FUNK });
-        beat(kit, a, 16, FUNK);
+        bassline(bass, pA, { pattern: BASS_FUNK, then: "Ebmaj7" });
+        kit.hit(a, CRASH, 96, 1);
+        grooveA(a, FUNK, FILL_SOFT);
         answers(a);
         bubbles(bub, a + 29, { count: 5, spread: 1.5 });
         bubbles(bub, a + 61, { count: 7, spread: 2 });
 
-        // B: the whistle sings over held chords, the kalimba sparkles, lighter drums
+        // B: the middle voice sings over held chords, the kalimba sparkles, lighter drums; a snare roll builds into A'
         whistle.at(b).play(MEL_B, { velocity: 90 });
         sustain(ep, pB, { center: 62, velocity: 56 });
         arp(kalimba, pB, { pattern: [0, 2, 1, 3], rate: 0.5, center: 74, velocity: 52 });
         chops(guitar, pB, { pattern: "x...x...x...x...", tones: ["8"], base: 50, velocity: 56 });
         bassline(bass, pB, { pattern: [[0, 1.4, "R", 92], [1.5, 0.4, "5", 76], [2, 1.9, "8", 84]] });
-        beat(kit, b, 8, FUNK_LIGHT);
+        beat(kit, b, 6, FUNK_LIGHT);
+        beat(kit, b + 24, 2, { [KICK]: "x...x...x...x...", [HAT]: "o.g.o.g.o.g.o.g.", [SHAKER]: "g.g.g.g.g.g.g.g." });
+        roll(kit, b + 24, 4, SNARE, 36, 60, 0.5);
+        roll(kit, b + 28, 4, SNARE, 50, 104, 0.25);
         bubbles(bub, b + 14, { count: 6, spread: 2, low: 300, high: 1000 });
+        bubbles(bub, b + 28, { count: 12, spread: 4, low: 300, high: 1600 });
 
-        // A': vibraphone, the kalimba doubling the second half, the whistle's counter-melody above
-        vibes.at(a2).play(MEL_A, { velocity: 96, gate: 0.85 });
-        kalimba.at(a2 + 32).play(MEL_A.split("|").slice(8).join("|"), { velocity: 62 });
+        // A': the lead, the kalimba doubling the second half, the middle voice's counter-melody above; the horns punch
+        // the tune's rests, a clavinet joins, a tambourine
+        tune(a2, MEL_A, { velocity: 96, gate: 0.85 });
+        kalimba.at(a2 + 32).play(tuneBars(MEL_A, 8, 16), { velocity: 62 });
         whistle.at(a2).play(COUNTER, { velocity: 66, transpose: 12 });
         comp(ep, pA2, { pattern: EP_FUNK, center: 63 });
+        comp(clav, pA2, { pattern: CLAV_FUNK, center: 60 });
         chops(guitar, pA2, { pattern: CHOPS, tones: ["8", "10", "12", "10"], base: 50, velocity: 66 });
-        bassline(bass, pA2, { pattern: BASS_FUNK });
-        beat(kit, a2, 16, FUNK);
-        kit.hit(a2, CRASH, 80, 1);
+        bassline(bass, pA2, { pattern: BASS_FUNK, then: "Gm7" });
+        for (const bar of STAB_BARS) stab(horns, pA2, a2 + bar * 4, [0, 2], { center: 63, velocity: 92, length: 0.25 });
+        kit.hit(a2, CRASH, 104, 1);
+        grooveA(a2, FUNK_FULL, FILL);
         kalimba.at(a2 + 30).play("D6:.5 C6:.5 Bb5:.5 F5:.5", { velocity: 72 });
         bubbles(bub, a2 + 61, { count: 9, spread: 3, low: 350, high: 1400 });
+
+        // C, the bridge: four on the floor. The horns call (an octave down), the lead and the kalimba answer, over the
+        // clavinet, the guitar's 16ths and the octave bass
+        kit.hit(c, CRASH, 104, 1);
+        horns.at(c).play(tuneBars(MEL_C, 0, 1), { velocity: 104, gate: 0.8, transpose: -12 });
+        horns.at(c + 8).play(tuneBars(MEL_C, 2, 3), { velocity: 106, gate: 0.8, transpose: -12 });
+        tune(c + 4, tuneBars(MEL_C, 1, 2), { velocity: 94, gate: 0.8 });
+        tune(c + 12, tuneBars(MEL_C, 3, 4), { velocity: 96, gate: 0.8 });
+        kalimba.at(c + 4).play(tuneBars(MEL_C, 1, 2), { velocity: 56 });
+        kalimba.at(c + 12).play(tuneBars(MEL_C, 3, 4), { velocity: 58 });
+        sustain(ep, pVamp, { center: 62, velocity: 50 });
+        comp(clav, pVamp, { pattern: [[0, 0.12, 76], [0.75, 0.12, 62], [1.5, 0.12, 70], [2.25, 0.12, 64], [2.75, 0.12, 62], [3.5, 0.12, 70]], center: 60 });
+        chops(guitar, pVamp, { pattern: "x.xxx.xxx.xxx.xx", tones: ["8", "10", "12", "10"], base: 50, velocity: 58 });
+        bassline(bass, pVamp, { pattern: BASS_OCTAVES, then: "Ebmaj7" });
+        beat(kit, c, 3, DISCO);
+        beat(kit, c + 12, 1, DISCO_PICKUP);
+
+        // The lift: the lead sings the arch with the horns an octave under it, held chords, the bass driving
+        kit.hit(c + 16, CRASH, 100, 1);
+        tune(c + 16, tuneBars(MEL_C, 4, 8), { velocity: 98, gate: 0.9 });
+        horns.at(c + 16).play(tuneBars(MEL_C, 4, 6), { velocity: 80, gate: 0.95, transpose: -12 });
+        sustain(ep, pLift, { center: 63, velocity: 58 });
+        arp(kalimba, pLift, { pattern: [0, 1, 2, 3], rate: 0.5, center: 76, velocity: 50 });
+        chops(guitar, pLift, { pattern: "x.xxx.xxx.xxx.xx", tones: ["8", "10", "12", "10"], base: 50, velocity: 60 });
+        bassline(bass, pLift, { pattern: BASS_DRIVE, then: "Gbmaj7" });
+        beat(kit, c + 16, 1, DISCO);
+        beat(kit, c + 20, 1, DISCO_BUILD);
+
+        // The hits: the whole band on Gbmaj7 (1, the and of 2, 4) and Abmaj7 (1), the lead on top; then the fill
+        const h = c + 24, pHits = progression(tuneBars(C, 6, 8), h);
+        stab(horns, pHits, h, HITS, { center: 63, velocity: 108, length: 1 });
+        stab(ep, pHits, h, HITS, { center: 63, velocity: 74, length: 1 });
+        stab(clav, pHits, h, HITS, { center: 60, velocity: 78, length: 0.2 });
+        stab(guitar, pHits, h, HITS, { center: 57, velocity: 76, length: 0.2 });
+        for (const t of HITS) {
+            bass.hit(h + t, tone(chordAt(pHits, h + t), "R", 28), 110, 1);
+            kit.hit(h + t, KICK, 118, 0.2).hit(h + t, t % 4 === 0 ? CRASH : SNARE, t % 4 === 0 ? 104 : 112, 1);
+        }
+        beat(kit, h, 2, { [HAT]: "..g...g...g...g...g...g........." });
+        bass.hit(h + 7, pitch("Ab1"), 96, 0.22).hit(h + 7.25, pitch("Eb2"), 88, 0.22).hit(h + 7.5, pitch("Ab2"), 94, 0.22).hit(h + 7.75, pitch("A1"), 90, 0.22);
+        beat(kit, h + 4, 1, { [SNARE]: "........omxX....", [HIGH_TOM]: "............x...", [HI_MID_TOM]: ".............x..",
+            [LOW_MID_TOM]: "..............x.", [LOW_TOM]: "...............x" });
+        bubbles(bub, h, { count: 14, spread: 8, low: 300, high: 1800 });
     };
 }
 
 {
-    const song = new Song("theme_base", "Fish Fighters - Fish Tank", 112, { key: "Bb", kind: "menu", introBars: 2, bodyBars: 40, mix: FISH_TANK_MIX });
+    const song = new Song("theme_base", "Fish Fighters - Fish Tank", 112, { key: "Bb", kind: "menu", introBars: 2, bodyBars: 48, mix: FISH_TANK_MIX });
     song.body(fishTankBand(song));
     songs.push(song);
 }
@@ -1330,11 +1468,12 @@ function fishTankBand(song) {
 //     (AudioManager::play_music_in_sync). The vibraphone's tune on a celesta in echoes, then a music box; a choir
 //     of soft voices holding the chords, a glass harmonica (bowed glass) and a halo pad in the dark, harp
 //     glissandos and crystal drops, a fretless bass, only a whisper of brushes and shaker.
-//     Intro 2 | A 16 (celesta) | B 8 (the voices sing) | A' 16 (music box and celesta, the glass above)
+//     Intro 2 | A 16 (celesta) | B 8 (the voices sing) | A' 16 (music box and celesta, the glass above) |
+//     C 8 (the celesta calls, the crystal answers; the voices sing the lift, the harp sweeps up into the tune)
 // =====================================================================================================
 {
-    const { A1, A2, B, MEL_A, MEL_B, COUNTER } = FISH_TANK;
-    const song = new Song("theme_clam", "Fish Fighters - Pearl Chamber", 112, { key: "Bb", kind: "menu", introBars: 2, bodyBars: 40,
+    const { A1, A2, B, C, MEL_A, MEL_B, MEL_C, COUNTER } = FISH_TANK;
+    const song = new Song("theme_clam", "Fish Fighters - Pearl Chamber", 112, { key: "Bb", kind: "menu", introBars: 2, bodyBars: 48,
         mix: { lead: 0, voices: -4, harp: -6, pad: -7, bass: -6, drums: -14, fx: -9 } });
     const celesta = song.part("Celesta", 8, { group: "lead", volume: 104, pan: -0.1, fx: { echo: { beats: 0.75, feedback: 0.4, mix: 0.3 } } });
     const musicBox = song.part("Music box", 10, { group: "lead", volume: 94, pan: 0.2, fx: { echo: { beats: 1.5, feedback: 0.35, mix: 0.3 } } });
@@ -1366,15 +1505,16 @@ function fishTankBand(song) {
     bubbles(bub, 0.5, { count: 10, spread: 4, low: 350, high: 1300 });
 
     song.body(s => {
-        const a = s, b = s + 64, a2 = s + 96;
-        const pA = progression(A1 + " | " + A2, a), pB = progression(B, b), pA2 = progression(A1 + " | " + A2, a2);
+        const a = s, b = s + 64, a2 = s + 96, c = s + 160;
+        const pA = progression(A1 + " | " + A2, a), pB = progression(B, b), pA2 = progression(A1 + " | " + A2, a2), pC = progression(C, c);
+        const pVamp = progression(tuneBars(C, 0, 4), c), pLift = progression(tuneBars(C, 4, 8), c + 16);
 
         // A: the tune on celesta in echoes over the voices, the glass and the harp; a whisper of brushes
         celesta.at(a).play(MEL_A, { velocity: 92, gate: 0.9 });
         sustain(voices, pA, { center: 60, velocity: 54 });
         sustain(glass, pA, { center: 67, velocity: 44 });
         arp(harp, pA, { pattern: [0, 1, 2, 3, 2, 1], rate: 0.5, center: 62, velocity: 48, gate: 0.9 });
-        bassline(bass, pA, { pattern: BASS_SOFT });
+        bassline(bass, pA, { pattern: BASS_SOFT, then: "Ebmaj7" });
         beat(kit, a, 16, WHISPER);
         glissUp(a);
         glissUp(a + 32);
@@ -1393,15 +1533,33 @@ function fishTankBand(song) {
 
         // A': the music box on the tune, the celesta doubling the second half, the glass singing the counter-melody
         musicBox.at(a2).play(MEL_A, { velocity: 94, gate: 0.85 });
-        celesta.at(a2 + 32).play(MEL_A.split("|").slice(8).join("|"), { velocity: 70 });
+        celesta.at(a2 + 32).play(tuneBars(MEL_A, 8, 16), { velocity: 70 });
         glass.at(a2).play(COUNTER, { velocity: 58, transpose: 12 });
         sustain(voices, pA2, { center: 60, velocity: 56 });
         arp(harp, pA2, { pattern: [0, 1, 2, 3, 2, 1], rate: 0.5, center: 62, velocity: 50, gate: 0.9 });
-        bassline(bass, pA2, { pattern: BASS_SOFT });
+        bassline(bass, pA2, { pattern: BASS_SOFT, then: "Gm7" });
         beat(kit, a2, 16, WHISPER);
         glissUp(a2);
         drops(a2);
         bubbles(bub, a2 + 61, { count: 9, spread: 3, low: 350, high: 1400 });
+
+        // C: the bridge in the chamber. The celesta calls, the crystal answers, over the voices and the harp; then the
+        // voices sing the lift with the music box above them, the halo under; the harp sweeps up the bVI and the bVII
+        celesta.at(c).play(tuneBars(MEL_C, 0, 1), { velocity: 90, gate: 0.85 });
+        celesta.at(c + 8).play(tuneBars(MEL_C, 2, 3), { velocity: 92, gate: 0.85 });
+        crystal.at(c + 4).play(tuneBars(MEL_C, 1, 2), { velocity: 72 });
+        crystal.at(c + 12).play(tuneBars(MEL_C, 3, 4), { velocity: 74 });
+        sustain(voices, pVamp, { center: 60, velocity: 50 });
+        sustain(glass, pVamp, { center: 67, velocity: 40 });
+        arp(harp, pVamp, { pattern: [0, 1, 2, 3, 2, 1], rate: 0.5, center: 62, velocity: 46, gate: 0.9 });
+        voices.at(c + 16).play(tuneBars(MEL_C, 4, 8), { velocity: 86, gate: 0.98, transpose: -12 });
+        musicBox.at(c + 16).play(tuneBars(MEL_C, 4, 8), { velocity: 72, gate: 0.9 });
+        sustain(halo, pLift, { center: 56, velocity: 56 });
+        bassline(bass, pC, { pattern: BASS_SOFT, then: "Bbmaj7" });
+        beat(kit, c, 8, WHISPER);
+        gliss(harp, c + 24, pitch("Gb3"), pitch("F6"), 1.5, pentatonicOn(pitch("Gb3")), 62, 2.5);
+        gliss(harp, c + 28, pitch("Ab3"), pitch("Eb6"), 1.5, pentatonicOn(pitch("Ab3")), 64, 2.5);
+        bubbles(bub, c + 28, { count: 10, spread: 4, low: 300, high: 1500 });
     });
     songs.push(song);
 }
@@ -1411,11 +1569,12 @@ function fishTankBand(song) {
 //     its grid (so the game crossfades the two where they are, AudioManager::play_music_in_sync). Heard through the
 //     shell: every part low-passed, long echoes; no brushes, no crystal; the celesta and the music box soft and far,
 //     the voices and the halo holding the chords, a slow harp, a round bass. 3 dB under the other themes.
-//     Intro 2 | A 16 (celesta, far) | B 8 (the voices hum) | A' 16 (music box, far)
+//     Intro 2 | A 16 (celesta, far) | B 8 (the voices hum) | A' 16 (music box, far) | C 8 (the celesta far, the
+//     voices hum the lift)
 // =====================================================================================================
 {
-    const { A1, A2, B, MEL_A, MEL_B } = FISH_TANK;
-    const song = new Song("theme_clam_inside", "Fish Fighters - Pearl Chamber (Inside)", 112, { key: "Bb", kind: "menu", introBars: 2, bodyBars: 40,
+    const { A1, A2, B, C, MEL_A, MEL_B, MEL_C } = FISH_TANK;
+    const song = new Song("theme_clam_inside", "Fish Fighters - Pearl Chamber (Inside)", 112, { key: "Bb", kind: "menu", introBars: 2, bodyBars: 48,
         loudnessDb: -3, mix: { lead: 0, voices: -3, harp: -6, pad: -5, bass: -6, fx: -12 } });
     const muffled = (cutoff, echo) => ({ lowpass: cutoff, ...(echo ? { echo } : {}) });
     const celesta = song.part("Celesta", 8, { group: "lead", volume: 92, pan: -0.1, fx: muffled(1400, { beats: 1.5, feedback: 0.45, mix: 0.4 }) });
@@ -1437,8 +1596,8 @@ function fishTankBand(song) {
     bubbles(bub, 1, { count: 5, spread: 4, low: 300, high: 900 });
 
     song.body(s => {
-        const a = s, b = s + 64, a2 = s + 96;
-        const pA = progression(A1 + " | " + A2, a), pB = progression(B, b), pA2 = progression(A1 + " | " + A2, a2);
+        const a = s, b = s + 64, a2 = s + 96, c = s + 160;
+        const pA = progression(A1 + " | " + A2, a), pB = progression(B, b), pA2 = progression(A1 + " | " + A2, a2), pC = progression(C, c);
 
         // A: the tune on a far celesta over the voices and the halo, a slow harp, a round bass
         celesta.at(a).play(MEL_A, { velocity: 72, gate: 0.95 });
@@ -1461,30 +1620,38 @@ function fishTankBand(song) {
         arp(harp, pA2, SLOW_ARP);
         bassline(bass, pA2, { pattern: BASS_LONG });
         bubbles(bub, a2 + 60, { count: 4, spread: 3, low: 300, high: 900 });
+
+        // C: the celesta, far, calls and answers; the voices hum the lift over the halo
+        celesta.at(c).play(tuneBars(MEL_C, 0, 4), { velocity: 66, gate: 0.9 });
+        sustain(voices, progression(tuneBars(C, 0, 4), c), { center: 60, velocity: 46 });
+        voices.at(c + 16).play(tuneBars(MEL_C, 4, 8), { velocity: 68, gate: 0.98, transpose: -12 });
+        sustain(halo, pC, { center: 55, velocity: 50 });
+        arp(harp, pC, SLOW_ARP);
+        bassline(bass, pC, { pattern: BASS_LONG });
+        bubbles(bub, c + 28, { count: 5, spread: 3, low: 300, high: 900 });
     });
     songs.push(song);
 }
 
 // =====================================================================================================
 // 7d. "Fish Tank (Battle Stations)" - the chapter map: the Fish Tank theme with the troops getting ready behind it.
-//     Exactly theme_base's notes and grid (fishTankBand), plus the war section: a timpani on the roots and the
-//     orchestra kit's concert bass drums like taikos, and a field snare playing a drumline cadence (16ths with 32nd
-//     diddles, flams on the accents, seven-stroke rolls into the phrases). The cadence comes in for the second half of
-//     each phrase in A, carries the march in B, and runs under all of A'. Crossfaded in sync with the Fish Tank family.
+//     theme_base exactly (fishTankBand: the same voices and notes, so the crossfade only brings the drums in) plus
+//     small battle drums in the back: a field snare playing a drumline cadence (16ths with 32nd diddles, flams on the
+//     accents, seven-stroke rolls into the phrases) over a soft concert bass drum, the timpani only rolling into the
+//     sections and hitting the bridge's hits. The cadence comes in for the second half of each phrase in A, carries
+//     the march in B, runs under all of A' and the bridge, then hits with the band and rolls into the tune.
 // =====================================================================================================
 {
-    const { A1, A2, B } = FISH_TANK;
-    const song = new Song("theme_map", "Fish Fighters - Fish Tank (Battle Stations)", 112, { key: "Bb", kind: "menu", introBars: 2, bodyBars: 40,
-        mix: { ...FISH_TANK_MIX, war: -10, snare: -11 } });   // In the background
+    const { A1, A2, B, C, HITS } = FISH_TANK;
+    const song = new Song("theme_map", "Fish Fighters - Fish Tank (Battle Stations)", 112, { key: "Bb", kind: "menu", introBars: 2, bodyBars: 48,
+        mix: { ...FISH_TANK_MIX, war: -15, snare: -12 } });   // In the background
     const band = fishTankBand(song);
     const timpani = song.part("Timpani", 47, { group: "war", volume: 104 });
     const war = song.drums("War drums", 48, { group: "war", volume: 100 });     // The orchestra kit's concert bass drums
     const field = song.drums("Field snare", 0, { group: "snare", volume: 92, pan: 0.1 });   // The standard kit's snare: crisp
 
-    const TAIKO = { [KICK]: "X.....x.x......." };
-    const MARCH = { [KICK]: "X.......x..x...." };
-    const TIMPANI = [[0, 0.9, "R", 112], [2, 0.9, "5", 92]];
-    const TIMPANI_MARCH = [[0, 1.9, "R", 104], [2.5, 0.4, "R", 80], [3, 0.4, "5", 88], [3.5, 0.4, "5", 96]];
+    const STEP = { [KICK]: "x.......o......." };   // The bass drum on the march's steps
+    const MARCH = { [KICK]: "x.......o..o...." };
 
     // The drumline cadence, one bar. Groove: accents on the beats, taps between, a diddle (two 32nds) on the "a" of 2
     // and a run of diddles into the next bar; fill: a seven-stroke roll into a big 4 (the phrase's last bar). Accents
@@ -1504,52 +1671,65 @@ function fishTankBand(song) {
         for (let bar = first; bar <= last; bar++) cadence(start + bar * 4, { fill: bar === last, level });
     };
 
-    // Intro: a timpani roll swelling into the body, the field snare rolling in with it
-    roll(timpani, 4, 4, pitch("F2"), 40, 108);
+    // Intro: the field snare rolling in, a soft timpani roll under it
+    roll(timpani, 6, 2, pitch("F2"), 30, 80);
     roll(field, 6, 2, SNARE, 36, 96, 0.125);
 
     song.body(s => {
         band(s);
-        const a = s, b = s + 64, a2 = s + 96;
-        const pA = progression(A1 + " | " + A2, a), pB = progression(B, b), pA2 = progression(A1 + " | " + A2, a2);
+        const a = s, b = s + 64, a2 = s + 96, c = s + 160;
 
-        // A: the taikos and the timpani far behind the tune; the cadence joins for the second half of each phrase
-        beat(war, a, 16, TAIKO);
-        bassline(timpani, pA, { pattern: TIMPANI, base: 36 });
-        cadenceBars(a, 4, 7, 0.62);
-        cadenceBars(a, 12, 15, 0.66);
+        // A: the cadence joins for the second half of each phrase, the bass drum stepping under it
+        for (const bar of [4, 12]) { beat(war, a + bar * 4, 4, STEP); cadenceBars(a + bar * 4, 0, 3, 0.6); }
 
-        // B: the march under the whistle, the cadence in front of the war section
+        // B: the march under the whistle, the cadence in front; a timpani roll into A'
         beat(war, b, 8, MARCH);
-        bassline(timpani, pB, { pattern: TIMPANI_MARCH, base: 36 });
-        cadenceBars(b, 0, 7, 0.8);
-        roll(timpani, b + 28, 4, pitch("F2"), 50, 110);
+        cadenceBars(b, 0, 7, 0.74);
+        roll(timpani, b + 28, 4, pitch("F2"), 40, 96);
 
-        // A': a big hit, then the cadence under the whole tune, rolling back into the loop
-        war.hit(a2, KICK, 122, 1);
-        beat(war, a2, 16, TAIKO);
-        bassline(timpani, pA2, { pattern: TIMPANI, base: 36 });
-        cadenceBars(a2, 0, 7, 0.6);
-        cadenceBars(a2, 8, 15, 0.66);
+        // A': the cadence under the whole tune, the bass drum stepping
+        beat(war, a2, 16, STEP);
+        cadenceBars(a2, 0, 7, 0.58);
+        cadenceBars(a2, 8, 15, 0.62);
+
+        // C: the cadence under the bridge, the bass drum marching; then the hits with the band (timpani, bass drum,
+        // snare), and a seven-stroke roll into the tune
+        beat(war, c, 6, MARCH);
+        cadenceBars(c, 0, 3, 0.7);
+        cadenceBars(c, 4, 5, 0.72);
+        const h = c + 24, pHits = progression(tuneBars(C, 6, 8), h);
+        for (const t of HITS) {
+            war.hit(h + t, KICK, 112, 1);
+            timpani.hit(h + t, foldTimp(tone(chordAt(pHits, h + t), "R", 36)), 104, 1);
+            field.hit(h + t - 0.04, SNARE, 40, 0.05).hit(h + t, SNARE, 104, 0.1);
+        }
+        roll(field, h + 6, 2, SNARE, 40, 104, 0.125);
+        roll(timpani, h + 6, 2, foldTimp(pitch("Ab2")), 36, 90);
     });
     songs.push(song);
 }
 
 // =====================================================================================================
-// 7e. "Fish Tank (Lab)" - the encyclopedia, a lab where every fish and enemy is studied: theme_base's notes and grid
-//     (fishTankBand) plus the lab's machines, written into the groove instead of scattered:
+// 7e. "Fish Tank (Lab)" - the encyclopedia, a lab where every fish and enemy is studied: theme_base exactly
+//     (fishTankBand), its vibraphone doubled by a synth vibraphone (render_stems.js synthvibes: the same strike, ring
+//     and motor tremolo, made of sines with an FM shimmer and a detuned stereo pair), plus the lab's machines,
+//     written into the groove instead of scattered:
 //     - a scanner: soft sine blips on the chord tones in a steady 3+3+2 rhythm (twice a bar), up the chord and down,
 //       echoing on the dotted eighth so the echoes fall on the same grid
-//     - a confirmation chirp in the last two beats of bars 4 and 12: two square beeps on the motif's opening fourth
-//       (F to Bb), then a boop falling from D; always the same, like a machine's sound
+//     - a confirmation chirp in the last two beats of bars 4 and 12: two square beeps up a fourth from the chord's
+//       fifth to its root (the motif's opening fourth), then a boop falling from its third
 //     - a sonar ping on the first beat of each 8-bar phrase, a quiet sci-fi pad holding the chords
-//     The machines rest in the middle (the whistle's), with only two low pings. Crossfaded in sync with the family.
+//     The machines rest in the middle (the whistle's), with only two low pings. In the bridge the scanner speeds up
+//     on the lift (every 16th, up two octaves of the chord and down), blips the hits' chords, and a chirp closes the
+//     analysis before the tune. Crossfaded in sync with the family.
 // =====================================================================================================
 {
-    const { A1, A2, B } = FISH_TANK;
-    const song = new Song("theme_lab", "Fish Fighters - Fish Tank (Lab)", 112, { key: "Bb", kind: "menu", introBars: 2, bodyBars: 40,
-        mix: { ...FISH_TANK_MIX, lab: -8, labpad: -14 } });
-    const band = fishTankBand(song);
+    const { A1, A2, B, C, HITS } = FISH_TANK;
+    const song = new Song("theme_lab", "Fish Fighters - Fish Tank (Lab)", 112, { key: "Bb", kind: "menu", introBars: 2, bodyBars: 48,
+        mix: { ...FISH_TANK_MIX, labsynth: 1, lab: -8, labpad: -14 } });
+    const band = fishTankBand(song, {
+        layer: ["Synth vibes", "synthvibes", { group: "labsynth", pan: 0.05, fx: { echo: { beats: 0.75, feedback: 0.3, mix: 0.2 } } }],
+    });
     const scanner = song.synth("Scanner", "beeps", { group: "lab", pan: -0.25, fx: { echo: { beats: 0.75, feedback: 0.35, mix: 0.3 } } });
     const chirps = song.synth("Chirps", "beeps", { group: "lab", pan: 0.3, fx: { echo: { beats: 0.5, feedback: 0.2, mix: 0.2 } } });
     const ping = song.synth("Sonar", "ping", { group: "lab", fx: { echo: { beats: 1.5, feedback: 0.4, mix: 0.4 } } });
@@ -1566,6 +1746,15 @@ function fishTankBand(song) {
                 scanner.add(t, freq(notes[SCAN_ORDER[i] % notes.length]), velocity + (i === 0 ? 8 : 0), 0.045, 0, 0);
             });
     };
+    // The fast scan (the bridge's lift): every 16th, up two octaves of the chord and down, getting louder
+    const FAST_ORDER = [0, 1, 2, 3, 4, 5, 6, 7, 7, 6, 5, 4, 3, 2, 1, 0];
+    const fastScan = (prog, { center = 74, from = 44, to = 66 } = {}) => {
+        const first = prog[0].beat, last = progressionEnd(prog), count = Math.round((last - first) * 4);
+        for (let i = 0; i < count; i++) {
+            const t = first + i / 4, notes = voice(chordAt(prog, t).symbol, center), k = FAST_ORDER[i % 16];
+            scanner.add(t, freq(notes[k % notes.length] + 12 * Math.floor(k / notes.length)), from + (to - from) * i / count + (i % 4 ? 0 : 6), 0.04, 0, 0);
+        }
+    };
     // The chirp follows the chord under it: up a fourth from its fifth to its root (the motif's F to Bb in Bb), a boop
     // falling from its third
     const chirp = (t, prog) => {
@@ -1579,12 +1768,12 @@ function fishTankBand(song) {
     // Intro: the scanner starts up on the intro's chords, a ping, a chirp
     scan(progression("Bbmaj7 | Cm7 F7", 0), { velocity: 50 });
     ping.add(0, freq(pitch("F6")), 86);
-    chirp(6, progression("Bbmaj7 | Cm7 F7", 0));
+    chirp(2, progression("Bbmaj7 | Cm7 F7", 0));
 
     song.body(s => {
         band(s);
-        const a = s, b = s + 64, a2 = s + 96;
-        const pA = progression(A1 + " | " + A2, a), pB = progression(B, b), pA2 = progression(A1 + " | " + A2, a2);
+        const a = s, b = s + 64, a2 = s + 96, c = s + 160;
+        const pA = progression(A1 + " | " + A2, a), pA2 = progression(A1 + " | " + A2, a2), pC = progression(C, c);
 
         // A: the scanner under the tune, chirps closing bars 4 and 12, a ping on each phrase, the pad
         scan(pA);
@@ -1602,6 +1791,16 @@ function fishTankBand(song) {
         chirp(a2 + 46, pA2);
         ping.add(a2, freq(pitch("F6")), 84).add(a2 + 32, freq(pitch("F6")), 80);
         sustain(pad, pA2, { center: 66, velocity: 40 });
+
+        // C: the scanner on the vamp, the fast scan on the lift, a blip of each hit's chord, the chirp closing the
+        // analysis just before the tune; a ping on the bridge and on the lift
+        scan(progression(tuneBars(C, 0, 4), c), { velocity: 58 });
+        fastScan(progression(tuneBars(C, 4, 6), c + 16));
+        const h = c + 24, pHits = progression(tuneBars(C, 6, 8), h);
+        for (const t of HITS) voice(chordAt(pHits, h + t).symbol, 84).forEach(n => scanner.add(h + t, freq(n), 48, 0.06, 0, 0));
+        chirp(h + 6, pHits);
+        ping.add(c, freq(pitch("F6")), 82).add(c + 16, freq(pitch("G6")), 80);
+        sustain(pad, pC, { center: 66, velocity: 42 });
     });
     songs.push(song);
 }
@@ -1610,17 +1809,26 @@ function fishTankBand(song) {
 // 7f. "Pearl Shop" - the Pearl Shop: a little magic bazaar in the reef, the Clam Room's cousin on the Fish Tank's grid
 //     (it crossfades with the Fish Tank family where they are). The sitar is the shop's voice: it sings the tune,
 //     pulling its long notes up into place (meends), over a tanpura that follows the chords' roots and a soft tabla
-//     in keherwa (dha ge na ti | na ka dhi na) with manjira on its first and fifth beats. The bansuri (bamboo flute)
-//     takes the middle over the sitar's broken chords; santoor answers in its double strikes; the Clam Room's halo
-//     and harp underneath, the fretless bass.
+//     in keherwa (dha ge na ti | na ka dhi na) with manjira on its first and fifth beats, and ghungroo (a dancer's
+//     ankle bells) shimmering on the 16ths like the Fish Tank's hats, so the groove carries over from the other
+//     menus. Under the sitar, softly, the Fish Tank's vibraphone keeps playing its lead's lines (the tune, the bridge's
+//     answers and lift), and the fretless bass keeps the Fish Tank's groove: going in or out of the shop, the tune
+//     doesn't change voice at once, the sitar comes in on top of it. Its meends are short pulls (two semitones at
+//     most) so they don't rub against the other menus' tune in the crossfade. The bansuri (bamboo flute) takes the
+//     middle over the sitar's broken chords; santoor answers in its double strikes; the Clam Room's halo and harp
+//     underneath.
 //     Intro 2 (an alaap: the sitar alone over the tanpura) | A 16 (sitar) | B 8 (bansuri) |
-//     A' 16 (sitar, the santoor doubling its second half, the bansuri's counter-melody above)
+//     A' 16 (sitar, the santoor doubling its second half, the bansuri's counter-melody above) |
+//     C 8 (the sitar calls, the santoor answers; the sitar and the bansuri sing the lift; the hits, then a tihai
+//     that lands on the tune's first beat)
 // =====================================================================================================
 {
-    const { A1, A2, B, MEL_A, MEL_B, COUNTER } = FISH_TANK;
-    const song = new Song("theme_shop", "Fish Fighters - Pearl Shop", 112, { key: "Bb", kind: "menu", introBars: 2, bodyBars: 40,
-        mix: { lead: 0, flute: -2, santoor: -6, tanpura: -11, harp: -11, pad: -12, bass: -6, tabla: -8, fx: -13 } });
-    const sitar = song.part("Sitar", 104, { group: "lead", volume: 104, pan: -0.05, fx: { echo: { beats: 0.75, feedback: 0.25, mix: 0.18 } } });
+    const { A1, A2, B, C, MEL_A, MEL_B, MEL_C, COUNTER, HITS } = FISH_TANK;
+    const song = new Song("theme_shop", "Fish Fighters - Pearl Shop", 112, { key: "Bb", kind: "menu", introBars: 2, bodyBars: 48,
+        mix: { lead: 0, mallet: -4, flute: -2, santoor: -5, tanpura: -10, harp: -8, pad: -10, bass: -5, tabla: -6, bells: -15, fx: -13 } });
+    const vibes = song.part(FISH_TANK_VOICES.lead[0], FISH_TANK_VOICES.lead[1], { ...FISH_TANK_VOICES.lead[2], group: "mallet" });
+    // The sitar's buzz softened on top (a lowpass on its fizz), so the tune changes voice gently from the other menus'
+    const sitar = song.part("Sitar", 104, { group: "lead", volume: 104, pan: -0.05, fx: { lowpass: 6500, echo: { beats: 0.75, feedback: 0.25, mix: 0.18 } } });
     const bansuri = song.part("Bansuri", 73, { group: "flute", volume: 92, pan: 0.15, vibrato: { cents: 18, hz: 5.2, delay: 0.18, minBeats: 0.75 },
         fx: { echo: { beats: 1.5, feedback: 0.3, mix: 0.25 } } });
     const santoor = song.part("Santoor", 15, { group: "santoor", volume: 88, pan: 0.35, fx: { echo: { beats: 0.75, feedback: 0.3, mix: 0.25 } } });
@@ -1629,19 +1837,34 @@ function fishTankBand(song) {
     const halo = song.part("Halo pad", 94, { group: "pad", volume: 78 });
     const bass = song.part("Fretless bass", 35, { group: "bass", volume: 96 });
     const tabla = song.drums("Tabla", 0, { group: "tabla", volume: 82 });
+    const ghungroo = song.drums("Ghungroo", 0, { group: "bells", volume: 84, pan: 0.2 });
     const bub = song.synth("Bubbles", "bubbles", { group: "fx" });
 
-    const BAYAN = CONGA_LOW, DAYAN = BONGO_HIGH, KA = CONGA_MUTE, MANJIRA_OPEN = 81, MANJIRA_CLOSED = 80;
+    const BAYAN = CONGA_LOW, DAYAN = BONGO_HIGH, KA = CONGA_MUTE, MANJIRA_OPEN = 81, MANJIRA_CLOSED = 80, BELLS = 83;
     // Keherwa, one cycle a bar in eighths: dha ge na ti | na ka dhi na (the bayan's bass on dha, ge and dhi)
     const KEHERWA = { [BAYAN]: "o.g.........o...", [DAYAN]: "m...m...g...m.g.", [KA]: "......g...g.....",
         [MANJIRA_OPEN]: "g...............", [MANJIRA_CLOSED]: "........g......." };
     const KEHERWA_LIGHT = { [BAYAN]: "o...........g...", [DAYAN]: "g.......g.......", [MANJIRA_OPEN]: "g..............." };
+    const SHIMMER = { [BELLS]: "ogggogggogggoggg" }, SHIMMER_LIGHT = { [BELLS]: "o.g.o.g.o.g.o.g." };
     // A tabla run into the next section: 16ths, dayan and ka in turn, getting louder
     const tablaRun = t => { for (let i = 0; i < 8; i++) tabla.hit(t + i * 0.25, i % 2 ? KA : DAYAN, 48 + i * 8, 0.2); };
+    // A tihai into the tune, from the last hit (the and of 2): a phrase (dayan, ka, dha) three times, a 16th apart, its
+    // last stroke on the tune's first beat (that dha is the keherwa's own, written with the tune); each time louder
+    const tihai = t => {
+        for (let k = 0; k < 10; k++) {
+            if (k % 4 === 3) continue;
+            const level = 70 + 14 * Math.floor(k / 4), stroke = k % 4;
+            tabla.hit(t + k * 0.25, stroke === 1 ? KA : DAYAN, level + (stroke === 2 ? 12 : 0), 0.2);
+            if (stroke === 2) tabla.hit(t + k * 0.25, BAYAN, level + 6, 0.3);
+        }
+    };
     // The tanpura: four plucks a bar (fifth, octave, octave, root), each ringing on, following the chords' roots
     const TANPURA = { pattern: [[0, 3.6, "5", 60], [1, 2.8, "8", 52], [2, 1.9, "8", 52], [3, 0.95, "R", 62]], base: 48 };
     const BASS_SOFT = [[0, 1.4, "R", 88], [1.5, 0.4, "5", 72], [2, 1.4, "8", 80], [3.5, 0.4, "app", 76]];
+    // The Fish Tank's bass accents (1, its 16th after the and, the and of 2...), lighter
+    const BASS_GROOVE = [[0, 0.4, "R", 92], [0.75, 0.2, "8", 74], [1.5, 0.4, "5", 82], [2.5, 0.2, "R", 78], [2.75, 0.4, "8", 84], [3.5, 0.35, "app", 78]];
     const PENTATONIC = [10, 0, 2, 5, 7];
+    const SHORT_MEENDS = { maxGap: 2, beats: 0.12 };
     // The santoor's answers in the tune's rests, each note struck twice (its tremolo), like the Fish Tank's kalimba
     const santoorAnswers = start => {
         tremolo(santoor.at(start + 30), "D6:.5 C6:.5 Bb5:.5 F5:.5", { velocity: 70, rate: 0.25 });
@@ -1655,19 +1878,24 @@ function fishTankBand(song) {
     sitar.at(0).play("F4:1 Bb4:1 D5:2 | Eb5:1 C5:1 A4:1 C5:1", { velocity: 84, gate: 1 });
     meends(sitar, 0, 8, { minBeats: 0.9, beats: 0.35 });
     gliss(harp, 6, pitch("Bb3"), pitch("F5"), 2, PENTATONIC, 52, 2);
+    beat(ghungroo, 4, 1, SHIMMER_LIGHT);
 
     song.body(s => {
-        const a = s, b = s + 64, a2 = s + 96;
-        const pA = progression(A1 + " | " + A2, a), pB = progression(B, b), pA2 = progression(A1 + " | " + A2, a2);
+        const a = s, b = s + 64, a2 = s + 96, c = s + 160;
+        const pA = progression(A1 + " | " + A2, a), pB = progression(B, b), pA2 = progression(A1 + " | " + A2, a2), pC = progression(C, c);
+        const pVamp = progression(tuneBars(C, 0, 4), c);
 
-        // A: the sitar sings the tune; tanpura, halo, a light harp; the tabla in keherwa; the santoor answers
+        // A: the sitar sings the tune; tanpura, halo, a light harp; the tabla in keherwa and the ghungroo; the santoor
+        // answers
         sitar.at(a).play(MEL_A, { velocity: 96, gate: 0.95 });
-        meends(sitar, a, a + 64);
+        meends(sitar, a, a + 64, SHORT_MEENDS);
+        vibes.at(a).play(MEL_A, { velocity: 94, gate: 0.85 });
         bassline(tanpura, pA, TANPURA);
         sustain(halo, pA, { center: 57, velocity: 44 });
         arp(harp, pA, { pattern: [0, 1, 2, 3], rate: 1, center: 62, velocity: 40, gate: 0.9 });
-        bassline(bass, pA, { pattern: BASS_SOFT });
+        bassline(bass, pA, { pattern: BASS_GROOVE, then: "Ebmaj7" });
         beat(tabla, a, 16, KEHERWA);
+        beat(ghungroo, a, 16, SHIMMER);
         santoorAnswers(a);
         tablaRun(a + 62);
         bubbles(bub, a + 29, { count: 4, spread: 1.5 });
@@ -1679,21 +1907,51 @@ function fishTankBand(song) {
         sustain(halo, pB, { center: 58, velocity: 50 });
         bassline(bass, pB, { pattern: [[0, 1.9, "R", 84], [2, 1.9, "8", 76]] });
         beat(tabla, b, 8, KEHERWA_LIGHT);
+        beat(ghungroo, b, 8, SHIMMER_LIGHT);
         gliss(harp, b + 30, pitch("Bb3"), pitch("F5"), 2, PENTATONIC, 50, 2);
         tablaRun(b + 30);
 
         // A': the sitar's tune again, the santoor doubling its second half, the bansuri's counter-melody above
         sitar.at(a2).play(MEL_A, { velocity: 98, gate: 0.95 });
-        meends(sitar, a2, a2 + 64);
-        santoor.at(a2 + 32).play(MEL_A.split("|").slice(8).join("|"), { velocity: 58 });
+        meends(sitar, a2, a2 + 64, SHORT_MEENDS);
+        vibes.at(a2).play(MEL_A, { velocity: 96, gate: 0.85 });
+        santoor.at(a2 + 32).play(tuneBars(MEL_A, 8, 16), { velocity: 58 });
         bansuri.at(a2).play(COUNTER, { velocity: 46, gate: 0.97, transpose: 12 });   // Behind the sitar
         bassline(tanpura, pA2, TANPURA);
         sustain(halo, pA2, { center: 57, velocity: 44 });
         arp(harp, pA2, { pattern: [0, 1, 2, 3], rate: 1, center: 62, velocity: 40, gate: 0.9 });
-        bassline(bass, pA2, { pattern: BASS_SOFT });
+        bassline(bass, pA2, { pattern: BASS_GROOVE, then: "Gm7" });
         beat(tabla, a2, 16, KEHERWA);
+        beat(ghungroo, a2, 16, SHIMMER);
         tablaRun(a2 + 62);
         bubbles(bub, a2 + 61, { count: 6, spread: 2, low: 350, high: 1300 });
+
+        // C: the sitar calls (its fast taans), the santoor answers; then the sitar sings the lift with the bansuri an
+        // octave under it; the hits (dha with the band's), and the tihai into the tune
+        sitar.at(c).play(tuneBars(MEL_C, 0, 1), { velocity: 96, gate: 0.9 });
+        sitar.at(c + 8).play(tuneBars(MEL_C, 2, 3), { velocity: 98, gate: 0.9 });
+        santoor.at(c + 4).play(tuneBars(MEL_C, 1, 2), { velocity: 76 });
+        santoor.at(c + 12).play(tuneBars(MEL_C, 3, 4), { velocity: 78 });
+        sitar.at(c + 16).play(tuneBars(MEL_C, 4, 8), { velocity: 98, gate: 0.95 });
+        meends(sitar, c, c + 32, SHORT_MEENDS);
+        vibes.at(c + 4).play(tuneBars(MEL_C, 1, 2), { velocity: 94, gate: 0.8 });
+        vibes.at(c + 12).play(tuneBars(MEL_C, 3, 4), { velocity: 96, gate: 0.8 });
+        vibes.at(c + 16).play(tuneBars(MEL_C, 4, 8), { velocity: 98, gate: 0.9 });
+        bansuri.at(c + 16).play(tuneBars(MEL_C, 4, 8), { velocity: 60, gate: 0.97, transpose: -12 });
+        bassline(tanpura, pC, TANPURA);
+        sustain(halo, pC, { center: 57, velocity: 46 });
+        arp(harp, pVamp, { pattern: [0, 1, 2, 3], rate: 1, center: 62, velocity: 42, gate: 0.9 });
+        bassline(bass, progression(tuneBars(C, 0, 6), c), { pattern: BASS_GROOVE, then: "Gbmaj7" });
+        for (const t of HITS) bass.hit(c + 24 + t, tone(chordAt(pC, c + 24 + t), "R", 28), 100, 1);
+        beat(tabla, c, 6, KEHERWA);
+        beat(ghungroo, c, 6, SHIMMER);
+        const h = c + 24;
+        for (const t of HITS.slice(0, 4)) tabla.hit(h + t, BAYAN, 96, 0.4).hit(h + t, DAYAN, 100, 0.2).hit(h + t, MANJIRA_OPEN, 64, 0.5);
+        beat(ghungroo, h, 1, SHIMMER_LIGHT);
+        gliss(harp, h, pitch("Gb3"), pitch("F5"), 1.5, pentatonicOn(pitch("Gb3")), 56, 2.5);
+        gliss(harp, h + 4, pitch("Ab3"), pitch("Eb5"), 1.5, pentatonicOn(pitch("Ab3")), 58, 2.5);
+        tihai(h + 5.5);
+        bubbles(bub, h + 4, { count: 8, spread: 4, low: 350, high: 1400 });
     });
     songs.push(song);
 }

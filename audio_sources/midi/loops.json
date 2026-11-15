@@ -65,9 +65,9 @@
         "key": "Bb",
         "tempo": 112,
         "sampleRate": 48000,
-        "lengthSeconds": 175.688,
-        "loopStartSample": 4320000,
-        "loopLengthSample": 4114286
+        "lengthSeconds": 209.984,
+        "loopStartSample": 5142857,
+        "loopLengthSample": 4937143
     },
     "theme_clam": {
         "title": "Pearl Chamber",
@@ -75,9 +75,9 @@
         "key": "Bb",
         "tempo": 112,
         "sampleRate": 48000,
-        "lengthSeconds": 175.701,
-        "loopStartSample": 4320000,
-        "loopLengthSample": 4114286
+        "lengthSeconds": 209.957,
+        "loopStartSample": 5142857,
+        "loopLengthSample": 4937143
     },
     "theme_clam_inside": {
         "title": "Pearl Chamber (Inside)",
@@ -85,9 +85,9 @@
         "key": "Bb",
         "tempo": 112,
         "sampleRate": 48000,
-        "lengthSeconds": 175.688,
-        "loopStartSample": 4320000,
-        "loopLengthSample": 4114286,
+        "lengthSeconds": 209.973,
+        "loopStartSample": 5142857,
+        "loopLengthSample": 4937143,
         "loudnessDb": -3
     },
     "theme_map": {
@@ -96,9 +96,9 @@
         "key": "Bb",
         "tempo": 112,
         "sampleRate": 48000,
-        "lengthSeconds": 175.688,
-        "loopStartSample": 4320000,
-        "loopLengthSample": 4114286
+        "lengthSeconds": 209.987,
+        "loopStartSample": 5142857,
+        "loopLengthSample": 4937143
     },
     "theme_lab": {
         "title": "Fish Tank (Lab)",
@@ -106,9 +106,9 @@
         "key": "Bb",
         "tempo": 112,
         "sampleRate": 48000,
-        "lengthSeconds": 175.688,
-        "loopStartSample": 4320000,
-        "loopLengthSample": 4114286
+        "lengthSeconds": 209.984,
+        "loopStartSample": 5142857,
+        "loopLengthSample": 4937143
     },
     "theme_shop": {
         "title": "Pearl Shop",
@@ -116,9 +116,9 @@
         "key": "Bb",
         "tempo": 112,
         "sampleRate": 48000,
-        "lengthSeconds": 175.688,
-        "loopStartSample": 4320000,
-        "loopLengthSample": 4114286
+        "lengthSeconds": 209.973,
+        "loopStartSample": 5142857,
+        "loopLengthSample": 4937143
     },
     "theme_shanty": {
         "title": "Sunken Galleon",

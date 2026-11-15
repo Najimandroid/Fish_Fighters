@@ -41,5 +41,47 @@
         "key": "A",
         "loopStart": 3565715,
         "loopLength": 3291429
+    },
+    "theme_base_v1": {
+        "title": "Fish Tank (first version)",
+        "kind": "menu",
+        "key": "Bb",
+        "loopStart": 4320000,
+        "loopLength": 4114286
+    },
+    "theme_clam_v1": {
+        "title": "Pearl Chamber (first version)",
+        "kind": "menu",
+        "key": "Bb",
+        "loopStart": 4320000,
+        "loopLength": 4114286
+    },
+    "theme_clam_inside_v1": {
+        "title": "Pearl Chamber (Inside) (first version)",
+        "kind": "menu",
+        "key": "Bb",
+        "loopStart": 4320000,
+        "loopLength": 4114286
+    },
+    "theme_map_v1": {
+        "title": "Fish Tank (Battle Stations) (first version)",
+        "kind": "menu",
+        "key": "Bb",
+        "loopStart": 4320000,
+        "loopLength": 4114286
+    },
+    "theme_lab_v1": {
+        "title": "Fish Tank (Lab) (first version)",
+        "kind": "menu",
+        "key": "Bb",
+        "loopStart": 4320000,
+        "loopLength": 4114286
+    },
+    "theme_shop_v1": {
+        "title": "Pearl Shop (first version)",
+        "kind": "menu",
+        "key": "Bb",
+        "loopStart": 4320000,
+        "loopLength": 4114286
     }
 }

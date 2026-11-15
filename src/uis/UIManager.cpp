@@ -70,6 +70,12 @@ namespace
             if (name == *theme) return true;
         return false;
     }
+    // How long one of them takes to melt into another: the Pearl Shop's sitar, tanpura and tabla are the farthest
+    // from the Fish Tank's band, so to or from the shop the crossfade takes longer
+    float sync_fade_seconds(const std::string& from, const std::string& to)
+    {
+        return from == SHOP_MUSIC || to == SHOP_MUSIC ? 2.5f : 1.5f;
+    }
     const std::string TITLE_MUSIC = "theme_title";   // The title screen
     const float TITLE_MUSIC_TEMPO = 168.f;           // Its tempo: the title bounces on the beat
 }
@@ -140,7 +146,8 @@ void UIManager::enter_menu_screen(const char* theme)
     {
         // From one of the Fish Tank's themes to another (the hub, the map, the Encyclopedia, the Pearl Shop, the Clam
         // Room...), the new one melts in where the old one is (they share their grid)
-        if (is_fish_tank_theme(m_audio->get_current_music())) m_audio->play_music_in_sync(music);
+        const std::string current = m_audio->get_current_music();   // A copy: the switch replaces the track it names
+        if (is_fish_tank_theme(current)) m_audio->play_music_in_sync(music, sync_fade_seconds(current, music));
         else m_audio->play_music(music);
         if (m_revealStyle == Reveal::WAVE) m_audio->play_sound("ui_transition");   // The wipe made its own when it covered
     }
