@@ -10,9 +10,6 @@
 
 namespace
 {
-    // The selected stage is brought to this point of the screen (between the title bar and the info panel)
-    const sf::Vector2f VIEW_CENTER{ 960.f, 480.f };
-
     // Info panel at the bottom, above the bottom bar, between the back button and the BATTLE button (UIManager)
     const sf::FloatRect INFO_PANEL{ { 180.f, UISkin::CONTENT_BOTTOM - 16.f - 190.f }, { 1260.f, 190.f } };
     // Right of the panel, under the map: the BATTLE! button (UIManager), which keeps its presses
@@ -24,6 +21,9 @@ namespace
     const float MIDDLE_TAB_SCALE = 1.3f;              // The tab in the middle is bigger than the others
     const float SIDE_TAB_FADE = 0.5f;                 // The others are see-through: the selected one stands out
 
+    // The selected stage is brought to the middle of the map's free part: between the strip and the info panel
+    const sf::Vector2f VIEW_CENTER{ 960.f, (STRIP_Y + STRIP_TAB.y * MIDDLE_TAB_SCALE + INFO_PANEL.position.y) / 2.f };
+
     const float MARKER_SIZE = 66.f;
     const float SELECTED_MARKER_SIZE = 84.f;
     const sf::Color CLEARED_TINT{ 150, 235, 150 };   // Turns the yellow marker green
@@ -31,18 +31,21 @@ namespace
     const int LOCKED_SHOWN = 2;                      // How many locked stages ahead the map shows
     const std::uint8_t LOCKED_PATH_ALPHA = 100;      // Their path is faint
 
-    // Keeps the map covering the whole screen, a phone's extra width too (no black past its edges); a map smaller
-    // than the screen stays centered
-    float clamp_axis(float offset, float mapSize, float screenStart, float screenSize)
+    // Keeps the map covering the part of the screen it shows in: between the title bar and the bottom bar, inside the
+    // 16:9 layout (a phone's extra width is behind the side pillars, so a stage brought there would be hidden: the
+    // camera used to stop short of the map's right end and leave its last stages under the right pillar). A map
+    // smaller than that stays centered
+    float clamp_axis(float offset, float mapSize, float viewStart, float viewSize)
     {
-        const float lowest = screenStart + screenSize - mapSize, highest = screenStart;
+        const float lowest = viewStart + viewSize - mapSize, highest = viewStart;
         return lowest > highest ? (lowest + highest) / 2.f : std::clamp(offset, lowest, highest);
     }
     sf::Vector2f clamp_to_map(sf::Vector2f offset, sf::Vector2f mapSize)
     {
         const sf::FloatRect screen = UISkin::screen_rect();
-        return { clamp_axis(offset.x, mapSize.x, screen.position.x, screen.size.x),
-                 clamp_axis(offset.y, mapSize.y, screen.position.y, screen.size.y) };
+        const float left = std::max(screen.position.x, 0.f), right = std::min(screen.position.x + screen.size.x, 1920.f);
+        return { clamp_axis(offset.x, mapSize.x, left, right - left),
+                 clamp_axis(offset.y, mapSize.y, UISkin::CONTENT_TOP, UISkin::CONTENT_BOTTOM - UISkin::CONTENT_TOP) };
     }
 }
 
