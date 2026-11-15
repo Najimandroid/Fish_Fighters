@@ -59,6 +59,17 @@ namespace
     const std::string MENU_MUSIC = "theme_base";     // The Fish Tank menus
     const std::string CLAM_MUSIC = "theme_clam";     // The Clam Room: the Fish Tank theme gone magic, on the same grid
     const std::string CLAM_INSIDE_MUSIC = "theme_clam_inside";   // The Clam Storage: the Clam Room's, muffled and calmer
+    const std::string MAP_MUSIC = "theme_map";       // The chapter map: the Fish Tank theme with war drums behind
+    const std::string LAB_MUSIC = "theme_lab";       // The Encyclopedia: the Fish Tank theme in a lab (beeps and boops)
+    const std::string SHOP_MUSIC = "theme_shop";     // The Pearl Shop: the Clam Room's theme, more mystical
+
+    // The Fish Tank's family: all on the same grid, so going from one to another crossfades them where they are
+    bool is_fish_tank_theme(const std::string& name)
+    {
+        for (const std::string* theme : { &MENU_MUSIC, &CLAM_MUSIC, &CLAM_INSIDE_MUSIC, &MAP_MUSIC, &LAB_MUSIC, &SHOP_MUSIC })
+            if (name == *theme) return true;
+        return false;
+    }
     const std::string TITLE_MUSIC = "theme_title";   // The title screen
     const float TITLE_MUSIC_TEMPO = 168.f;           // Its tempo: the title bounces on the beat
 }
@@ -118,17 +129,19 @@ std::pair<float, float> UIManager::reveal_band() const
  * Clears the screen for a Fish Tank menu: the Fish Tank theme (it keeps playing from one menu to the next)
  * and a swish of water between the screens (the wave)
  */
-void UIManager::enter_menu_screen()
+void UIManager::enter_menu_screen(const char* theme)
 {
+    const std::string music = theme ? theme : MENU_MUSIC;
     start_screen_reveal();
     m_revealStyle = m_isWipingOut ? Reveal::WIPE : Reveal::WAVE;   // Out of a battle: the wipe pulls away instead
     m_isWipingOut = false;
     m_hasSideFrame = true;
     if (m_audio)
     {
-        // Back from the Clam Room, its theme melts into the Fish Tank's where it is (both share their grid)
-        if (m_audio->get_current_music() == CLAM_MUSIC || m_audio->get_current_music() == CLAM_INSIDE_MUSIC) m_audio->play_music_in_sync(MENU_MUSIC);
-        else m_audio->play_music(MENU_MUSIC);
+        // From one of the Fish Tank's themes to another (the hub, the map, the Encyclopedia, the Pearl Shop, the Clam
+        // Room...), the new one melts in where the old one is (they share their grid)
+        if (is_fish_tank_theme(m_audio->get_current_music())) m_audio->play_music_in_sync(music);
+        else m_audio->play_music(music);
         if (m_revealStyle == Reveal::WAVE) m_audio->play_sound("ui_transition");   // The wipe made its own when it covered
     }
 }
@@ -812,7 +825,7 @@ void UIManager::generate_clam_storage_uis()
     add_ui_element(storageTitle);
     auto storageInfo = add_info_button(storageTitle->get_info_position(), "The Clam Storage",
         "# Picking fish\n"
-        "The fish out of the clam wait here. Tap one to pick it; tap others of the same kind to add them, or tick {yellow|Select all}.\n"
+        "The fish from the clam wait in here, inside it. Tap one to pick it; tap others of the same kind to add them, or tick {yellow|Select all}.\n"
         "\n"
         "# Use\n"
         "A fish you don't have yet {green|joins your tank}. Every other one gives that fish {purple|+1 extra level}, up to {purple|+10}.\n"
@@ -838,7 +851,7 @@ void UIManager::generate_clam_storage_uis()
 void UIManager::generate_encyclopedia_uis()
 {
     m_screenAgain = [this]() { generate_encyclopedia_uis(); };   // The Pearl Shop's back button comes back here
-    enter_menu_screen();
+    enter_menu_screen(LAB_MUSIC.c_str());
 
     auto bg = std::make_shared<UIChartBackground>();   // The field guide's own place: a research chart
     auto encyclopedia = std::make_shared<UIEncyclopedia>(m_dataLoader);
@@ -971,7 +984,7 @@ void UIManager::add_bottom_bar(UITitleBar::Material material, bool showsScales, 
  */
 void UIManager::generate_shop_uis(std::function<void()> back)
 {
-    enter_menu_screen();
+    enter_menu_screen(SHOP_MUSIC.c_str());
     if (!back) back = [this]() { generate_fish_tank_uis(); };
 
     auto confirm = std::make_shared<UIConfirmDialog>("", "", "BUY", "CANCEL");
@@ -1285,7 +1298,7 @@ void UIManager::generate_battle_uis()
 void UIManager::generate_chapter_map_uis()
 {
     m_screenAgain = [this]() { generate_chapter_map_uis(); };   // The Pearl Shop's back button comes back here
-    enter_menu_screen();
+    enter_menu_screen(MAP_MUSIC.c_str());
 
     auto chapterMap = std::make_shared<UIChapterMap>(m_dataLoader);
 

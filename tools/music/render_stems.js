@@ -45,6 +45,29 @@ function renderBubbles(events) {
     return out;
 }
 
+// Lab beeps and boops (the encyclopedia's theme): short computer tones, a soft square (odd harmonics) or a pure sine,
+// sliding while they sound (a "boop" falls, a "bweep" rises), a quick attack and a short decay
+// events: [[seconds, frequency, velocity, length (seconds), slide (semitones), square (0 or 1)]]
+function renderBeeps(events) {
+    const end = Math.max(0, ...events.map(e => e[0] + e[3])) + 0.5;
+    const out = new Float32Array(Math.ceil(end * RATE) * 2);
+    for (const [start, frequency, velocity, length, slide = 0, square = 0] of events) {
+        const amplitude = Math.pow(velocity / 127, 1.5) * (square ? 0.13 : 0.22), first = Math.round(start * RATE);
+        const frames = Math.round((length + 0.04) * RATE);
+        let phase = 0;
+        for (let i = 0; i < frames; i++) {
+            const t = i / RATE;
+            phase += 2 * Math.PI * frequency * Math.pow(2, slide * Math.min(1, t / length) / 12) / RATE;
+            const wave = square ? Math.sin(phase) + Math.sin(3 * phase) / 3 + Math.sin(5 * phase) / 5 : Math.sin(phase);
+            const envelope = Math.min(1, t / 0.003) * (t < length ? 1 : Math.max(0, 1 - (t - length) / 0.04)) * Math.exp(-t / (length * 2 + 0.03));
+            const sample = amplitude * wave * envelope;
+            out[(first + i) * 2] += sample;
+            out[(first + i) * 2 + 1] += sample;
+        }
+    }
+    return out;
+}
+
 // A sonar ping: a pure tone with a soft second partial and a long decay (the echo effect makes the returns)
 // events: [[seconds, frequency, velocity]]
 function renderPings(events) {
@@ -304,6 +327,7 @@ for (const song of fs.readdirSync(STEMS_MIDI)) {
         const stem = JSON.parse(fs.readFileSync(path.join(STEMS_MIDI, song, file), "utf8"));
         const dry = stem.synth === "bubbles" ? renderBubbles(stem.events)
             : stem.synth === "ping" ? renderPings(stem.events)
+            : stem.synth === "beeps" ? renderBeeps(stem.events)
             : stem.synth === "zaps" ? renderZaps(stem.events)
             : stem.synth === "chant" ? renderChant(stem.events)
             : stem.synth === "wobble" ? renderWobble(stem.events)

@@ -90,6 +90,36 @@
         "loopLengthSample": 4114286,
         "loudnessDb": -3
     },
+    "theme_map": {
+        "title": "Fish Tank (Battle Stations)",
+        "kind": "menu",
+        "key": "Bb",
+        "tempo": 112,
+        "sampleRate": 48000,
+        "lengthSeconds": 175.688,
+        "loopStartSample": 4320000,
+        "loopLengthSample": 4114286
+    },
+    "theme_lab": {
+        "title": "Fish Tank (Lab)",
+        "kind": "menu",
+        "key": "Bb",
+        "tempo": 112,
+        "sampleRate": 48000,
+        "lengthSeconds": 175.688,
+        "loopStartSample": 4320000,
+        "loopLengthSample": 4114286
+    },
+    "theme_shop": {
+        "title": "Pearl Shop",
+        "kind": "menu",
+        "key": "Bb",
+        "tempo": 112,
+        "sampleRate": 48000,
+        "lengthSeconds": 175.701,
+        "loopStartSample": 4320000,
+        "loopLengthSample": 4114286
+    },
     "theme_shanty": {
         "title": "Sunken Galleon",
         "kind": "stage",

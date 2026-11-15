@@ -443,7 +443,7 @@ void UIClamStorage::render(sf::RenderWindow& window)
     if (m_floaters.empty())
     {
         UISkin::style_text(m_text, 36, sf::Color(255, 220, 240));
-        m_text.setString("The fish out of the clam wait here");
+        m_text.setString("The fish from the clam wait in here, inside it");
         UISkin::set_text_anchor(m_text, { 0.5f, 0.5f });
         m_text.setPosition(TANK.position + TANK.size / 2.f);
         window.draw(m_text);

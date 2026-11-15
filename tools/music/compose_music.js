@@ -13,6 +13,10 @@
 // C (a breakdown, on the longer themes) and A' (the tune again, fuller), back to A.
 //   theme_title      "Fish Fighters!" 168 BPM  title screen: ska-punk brass and steel drums, power chords, organ
 //   theme_base       "Fish Tank"      112 BPM  the Fish Tank menus: aquarium funk, vibraphone, Rhodes, muted guitar, whistle
+//   theme_map        "Fish Tank (Battle Stations)" 112 BPM  the chapter map: the Fish Tank theme, war drums and timpani behind
+//   theme_lab        "Fish Tank (Lab)" 112 BPM  the encyclopedia: the Fish Tank theme, computer beeps and boops, sonar, a sci-fi pad
+//   theme_clam       "Pearl Chamber"  112 BPM  the Clam Room: the Fish Tank theme gone magic (and theme_clam_inside, the Clam Storage)
+//   theme_shop       "Pearl Shop"     112 BPM  the Pearl Shop: Pearl Chamber more mystical, a drone, sitar, shakuhachi, hand drums
 //   theme_default    "Reef Rumble"    152 BPM  calypso: steel drums, brass answers, skanking electric piano
 //   theme_calm       "Kelp Garden"    100 BPM  underwater bossa: vibraphone, harp, kalimba (easy stages)
 //   theme_serious    "Deep Current"   138 BPM  horns over a pizzicato ostinato, a clarinet that plans ahead
@@ -383,6 +387,28 @@ function bubbles(synth, start, { count = 6, spread = 1, low = 450, high = 1400, 
         const r = k => hash(synth.name, local, i, k);
         synth.add(start + spread * (i + r(1) * 0.8) / count, low * Math.pow(high / low, (i + r(2)) / count),
             Math.round(velocity * (0.7 + 0.3 * r(3))), size[0] + (size[1] - size[0]) * r(4), (r(5) - 0.5) * 1.2);
+    }
+}
+
+// ===== Lab readouts (the encyclopedia's theme) =====
+// A computer reading out data through a bar: `count` short tones on 16ths, high in the scale; most are beeps (a soft
+// square), some boops (a sine falling) or bweeps (rising). The beeps synth of render_stems.js; the same readout in
+// both body copies
+function readout(synth, start, { count = 4, scale = [10, 0, 2, 5, 7], low = 84, high = 98, velocity = 82 } = {}) {
+    const local = Math.round((start - ORIGIN) * 1000);
+    const notes = [];
+    for (let n = low; n <= high; n++) if (scale.includes(mod12(n))) notes.push(n);
+    const taken = new Set();
+    for (let i = 0; i < count; i++) {
+        const r = k => hash(synth.name, local, i, k);
+        let step = Math.floor(r(1) * 16);
+        while (taken.has(step)) step = (step + 1) % 16;
+        taken.add(step);
+        const frequency = +(440 * Math.pow(2, (notes[Math.floor(r(2) * notes.length)] - 69) / 12)).toFixed(3);
+        const level = Math.round(velocity * (0.75 + 0.25 * r(4))), t = start + step * BAR / 16;
+        if (r(3) < 0.6) synth.add(t, frequency, level, 0.05, 0, 1);                       // beep
+        else if (r(3) < 0.85) synth.add(t, frequency, level, 0.14, -7, 0);                // boop
+        else synth.add(t, +(frequency * 0.75).toFixed(3), level, 0.12, 5, 0);           // bweep
     }
 }
 
@@ -1215,13 +1241,17 @@ const FISH_TANK = (() => {
 })();
 
 // =====================================================================================================
-// 7. "Fish Tank" - the Fish Tank menus (upgrade, equip, encyclopedia, map). Laid-back aquarium funk: the motif
-//    on vibraphone over Rhodes and muted-guitar chops, a whistle in the middle, kalimba answers.
+// 7. "Fish Tank" - the Fish Tank menus (the hub, upgrade, equip; the map and the encyclopedia play its variants, 7d
+//    and 7e). Laid-back aquarium funk: the motif on vibraphone over Rhodes and muted-guitar chops, a whistle in the
+//    middle, kalimba answers.
 //    Intro 2 | A 16 (vibraphone) | B 8 (whistle) | A' 16 (vibraphone and kalimba, the whistle above)
 // =====================================================================================================
-{
-    const song = new Song("theme_base", "Fish Fighters - Fish Tank", 112, { key: "Bb", kind: "menu", introBars: 2, bodyBars: 40,
-        mix: { lead: 0, kalimba: -5, keys: -5, guitar: -8, bass: -4, drums: -6, bubbles: -9 } });
+const FISH_TANK_MIX = { lead: 0, kalimba: -5, keys: -5, guitar: -8, bass: -4, drums: -6, bubbles: -9 };
+
+// The Fish Tank band playing the theme: writes its intro and returns its body writer. Its variants (the map, the
+// encyclopedia) call it too and add their layer, so they play exactly the same notes on the same grid and the game
+// crossfades them where they are (AudioManager::play_music_in_sync)
+function fishTankBand(song) {
     const vibes = song.part("Vibraphone", 11, { group: "lead", volume: 104, pan: -0.1, fx: { chorus: { mix: 0.3 }, echo: { beats: 0.75, feedback: 0.25, mix: 0.15 } } });
     const whistle = song.part("Whistle", 78, { group: "lead", volume: 86, pan: 0.15, fx: { echo: { beats: 0.75, feedback: 0.25, mix: 0.18 } } });
     const kalimba = song.part("Kalimba", 108, { group: "kalimba", volume: 92, pan: 0.4, fx: { echo: { beats: 0.75, feedback: 0.35, mix: 0.28 } } });
@@ -1250,7 +1280,8 @@ const FISH_TANK = (() => {
     bubbles(bub, 0.5, { count: 10, spread: 4, low: 350, high: 1300 });
     beat(kit, 4, 1, { [HAT]: "g.g.g.g.g.g.g.g." });
 
-    song.body(s => {
+
+    return s => {
         const a = s, b = s + 64, a2 = s + 96;
         const pA = progression(A1 + " | " + A2, a), pB = progression(B, b), pA2 = progression(A1 + " | " + A2, a2);
 
@@ -1284,7 +1315,12 @@ const FISH_TANK = (() => {
         kit.hit(a2, CRASH, 80, 1);
         kalimba.at(a2 + 30).play("D6:.5 C6:.5 Bb5:.5 F5:.5", { velocity: 72 });
         bubbles(bub, a2 + 61, { count: 9, spread: 3, low: 350, high: 1400 });
-    });
+    };
+}
+
+{
+    const song = new Song("theme_base", "Fish Fighters - Fish Tank", 112, { key: "Bb", kind: "menu", introBars: 2, bodyBars: 40, mix: FISH_TANK_MIX });
+    song.body(fishTankBand(song));
     songs.push(song);
 }
 
@@ -1425,6 +1461,191 @@ const FISH_TANK = (() => {
         arp(harp, pA2, SLOW_ARP);
         bassline(bass, pA2, { pattern: BASS_LONG });
         bubbles(bub, a2 + 60, { count: 4, spread: 3, low: 300, high: 900 });
+    });
+    songs.push(song);
+}
+
+// =====================================================================================================
+// 7d. "Fish Tank (Battle Stations)" - the chapter map: the Fish Tank theme with war drums in the background, the
+//     school getting ready for battle. Exactly theme_base's notes and grid (fishTankBand), plus a timpani on the roots
+//     and the orchestra kit's concert drums like taikos, a field snare rolling into each phrase; the middle marches.
+//     Crossfaded in sync with the other Fish Tank themes.
+// =====================================================================================================
+{
+    const { A1, A2, B } = FISH_TANK;
+    const song = new Song("theme_map", "Fish Fighters - Fish Tank (Battle Stations)", 112, { key: "Bb", kind: "menu", introBars: 2, bodyBars: 40,
+        mix: { ...FISH_TANK_MIX, war: -10 } });   // In the background
+    const band = fishTankBand(song);
+    const timpani = song.part("Timpani", 47, { group: "war", volume: 104 });
+    const war = song.drums("War drums", 48, { group: "war", volume: 100 });   // The orchestra kit: concert bass drum and snare
+
+    const TAIKO = { [KICK]: "X.....x.x.......", [SNARE]: "......g.....g.gg" };
+    const MARCH = { [KICK]: "X.......x..x....", [SNARE]: "g.g.m.g.g.g.m.gg" };
+    const TIMPANI = [[0, 0.9, "R", 112], [2, 0.9, "5", 92]];
+    const TIMPANI_MARCH = [[0, 1.9, "R", 104], [2.5, 0.4, "R", 80], [3, 0.4, "5", 88], [3.5, 0.4, "5", 96]];
+
+    // Intro: a timpani roll swelling into the body
+    roll(timpani, 4, 4, pitch("F2"), 40, 108);
+    roll(war, 6, 2, SNARE, 40, 100);
+
+    song.body(s => {
+        band(s);
+        const a = s, b = s + 64, a2 = s + 96;
+        const pA = progression(A1 + " | " + A2, a), pB = progression(B, b), pA2 = progression(A1 + " | " + A2, a2);
+
+        // A: the drums far behind the tune, the timpani on the roots, the snare rolling into each 8-bar phrase
+        beat(war, a, 16, TAIKO);
+        bassline(timpani, pA, { pattern: TIMPANI, base: 36 });
+        roll(war, a + 28, 4, SNARE, 40, 96);
+        roll(war, a + 60, 4, SNARE, 40, 100);
+
+        // B: the school marches under the whistle
+        beat(war, b, 8, MARCH);
+        bassline(timpani, pB, { pattern: TIMPANI_MARCH, base: 36 });
+        roll(timpani, b + 28, 4, pitch("F2"), 50, 110);
+
+        // A': a big hit, then behind the tune again, rolling back into the loop
+        war.hit(a2, KICK, 122, 1);
+        beat(war, a2, 16, TAIKO);
+        bassline(timpani, pA2, { pattern: TIMPANI, base: 36 });
+        roll(war, a2 + 28, 4, SNARE, 40, 96);
+        roll(war, a2 + 60, 4, SNARE, 40, 104);
+    });
+    songs.push(song);
+}
+
+// =====================================================================================================
+// 7e. "Fish Tank (Lab)" - the encyclopedia, a lab where every fish and enemy is studied: theme_base's notes and grid
+//     (fishTankBand) plus computers reading out data in beeps and boops (the beeps synth), sonar pings, a soft sci-fi
+//     pad, and under the second A a square-wave data stream. Crossfaded in sync with the other Fish Tank themes.
+// =====================================================================================================
+{
+    const { A1, A2, B } = FISH_TANK;
+    const song = new Song("theme_lab", "Fish Fighters - Fish Tank (Lab)", 112, { key: "Bb", kind: "menu", introBars: 2, bodyBars: 40,
+        mix: { ...FISH_TANK_MIX, lab: -7, labpad: -13 } });
+    const band = fishTankBand(song);
+    const beeps = song.synth("Beeps", "beeps", { group: "lab", pan: 0.2, fx: { echo: { beats: 0.75, feedback: 0.3, mix: 0.3 } } });
+    const ping = song.synth("Sonar", "ping", { group: "lab", fx: { echo: { beats: 1.5, feedback: 0.4, mix: 0.4 } } });
+    const pad = song.part("Sci-fi pad", 99, { group: "labpad", volume: 76, fx: { lowpass: 2800 } });   // FX 4 (atmosphere)
+    const stream = song.part("Data stream", 80, { group: "lab", volume: 70, pan: -0.3, fx: { lowpass: 2200, echo: { beats: 0.75, feedback: 0.2, mix: 0.2 } } });
+
+    // Intro: the computers wake up
+    readout(beeps, 0, { count: 3 });
+    readout(beeps, 4, { count: 5 });
+    ping.add(0, 1396.913, 90);
+
+    song.body(s => {
+        band(s);
+        const a = s, b = s + 64, a2 = s + 96;
+        const pA = progression(A1 + " | " + A2, a), pB = progression(B, b), pA2 = progression(A1 + " | " + A2, a2);
+
+        // A: a readout every bar (busier every other one), a ping every 8 bars, the pad
+        for (let bar = 0; bar < 16; bar++) readout(beeps, a + bar * 4, { count: bar % 2 ? 5 : 3 });
+        ping.add(a, 1396.913, 84).add(a + 32, 1396.913, 80);
+        sustain(pad, pA, { center: 66, velocity: 44 });
+
+        // B: the readouts thin out under the whistle, a lower ping
+        for (let bar = 0; bar < 8; bar += 2) readout(beeps, b + bar * 4, { count: 2 });
+        ping.add(b, 1174.659, 76);
+
+        // A': the data stream under the tune, the readouts again
+        arp(stream, pA2, { pattern: [0, 1, 2, 3, 2, 1, 0, 2], rate: 0.25, center: 84, velocity: 34, accent: 6, gate: 0.5 });
+        for (let bar = 0; bar < 16; bar++) readout(beeps, a2 + bar * 4, { count: bar % 2 ? 4 : 2 });
+        ping.add(a2, 1396.913, 84).add(a2 + 32, 1396.913, 80);
+        sustain(pad, pA2, { center: 66, velocity: 44 });
+    });
+    songs.push(song);
+}
+
+// =====================================================================================================
+// 7f. "Pearl Shop" - the Pearl Shop: Pearl Chamber made more mystical, on the Fish Tank's grid (it crossfades with the
+//     Fish Tank and the Clam Room themes): a low drone of voices like a tanpura, a hand drum's slow heartbeat with a
+//     triangle and a bell tree, a sitar's answers; the tune on celesta in echoes, then on a shakuhachi far away; the
+//     voices sing the middle over the sitar's broken chords.
+//     Intro 2 | A 16 (celesta) | B 8 (the voices sing) | A' 16 (shakuhachi, the celesta doubling)
+// =====================================================================================================
+{
+    const { A1, A2, B, MEL_A, MEL_B, COUNTER } = FISH_TANK;
+    const song = new Song("theme_shop", "Fish Fighters - Pearl Shop", 112, { key: "Bb", kind: "menu", introBars: 2, bodyBars: 40,
+        mix: { lead: 0, voices: -4, harp: -6, pad: -7, drone: -9, sitar: -7, bass: -6, hands: -11, fx: -9 } });
+    const celesta = song.part("Celesta", 8, { group: "lead", volume: 104, pan: -0.1, fx: { echo: { beats: 0.75, feedback: 0.45, mix: 0.32 } } });
+    const flute = song.part("Shakuhachi", 77, { group: "lead", volume: 96, pan: 0.15, fx: { echo: { beats: 1.5, feedback: 0.4, mix: 0.35 } } });
+    const voices = song.part("Voices", 53, { group: "voices", volume: 96, fx: { lowpass: 3000, echo: { beats: 1.5, feedback: 0.3, mix: 0.25 } } });
+    const drone = song.part("Drone", 52, { group: "drone", volume: 90, fx: { lowpass: 1500 } });   // Choir aahs, low
+    const sitar = song.part("Sitar", 104, { group: "sitar", volume: 92, pan: 0.35, fx: { echo: { beats: 0.75, feedback: 0.35, mix: 0.3 } } });
+    const harp = song.part("Harp", 46, { group: "harp", volume: 90, pan: 0.3 });
+    const crystal = song.part("Crystal", 98, { group: "harp", volume: 78, pan: -0.35, fx: { echo: { beats: 0.75, feedback: 0.45, mix: 0.35 } } });
+    const glass = song.part("Bowed glass", 92, { group: "pad", volume: 84, fx: { lowpass: 3200 } });
+    const halo = song.part("Halo pad", 94, { group: "pad", volume: 80 });
+    const bass = song.part("Fretless bass", 35, { group: "bass", volume: 98 });
+    const hands = song.drums("Hand drums", 0, { group: "hands", volume: 84 });
+    const bub = song.synth("Bubbles", "bubbles", { group: "fx" });
+
+    const OPEN_TRIANGLE = 81, BELL_TREE = 84;
+    const BASS_SOFT = [[0, 1.4, "R", 90], [1.5, 0.4, "5", 74], [2, 1.4, "8", 82], [3.5, 0.4, "app", 78]];
+    const HEARTBEAT = { [CONGA_LOW]: "o.....g.....g...", [CONGA_MUTE]: "........g.......", [OPEN_TRIANGLE]: "g..............." };
+    const PENTATONIC = [10, 0, 2, 5, 7];
+    const glissUp = t => gliss(harp, t, pitch("Bb3"), pitch("F6"), 1.5, PENTATONIC, 60, 2.5);
+    const bellTree = t => hands.hit(t, BELL_TREE, 72, 2);
+    const droneOn = (start, bars) => { drone.hit(start, pitch("Bb2"), 52, bars * 4 * 0.99); drone.hit(start, pitch("F3"), 46, bars * 4 * 0.99); };
+    const sitarAnswers = start => {
+        sitar.at(start + 30).play("F5:.25 G5:.25 F5:.5 D5:.5 C5:.5", { velocity: 80 });
+        sitar.at(start + 62).play("Bb4:.25 C5:.25 D5:.5 F5:.5 D5:.5", { velocity: 80 });
+    };
+
+    // Intro: the drone and the halo rise, a bell tree, a harp glissando, crystal drops (the Fish Tank's intro chords)
+    const pI = progression("Bbmaj7 | Cm7 F7", 0);
+    droneOn(0, 2);
+    sustain(halo, pI, { center: 55, velocity: 54 });
+    bassline(bass, pI, { pattern: [[0, 1.9, "R", 82], [2, 1.9, "5", 74]] });
+    bellTree(0);
+    glissUp(4);
+    crystal.at(4).play("F6:.5 D6:.5 Bb5:1 r:2", { velocity: 64 });
+    bubbles(bub, 0.5, { count: 8, spread: 4, low: 350, high: 1300 });
+
+    song.body(s => {
+        const a = s, b = s + 64, a2 = s + 96;
+        const pA = progression(A1 + " | " + A2, a), pB = progression(B, b), pA2 = progression(A1 + " | " + A2, a2);
+
+        // A: the celesta on the tune over the drone, the voices and the glass; the hand drum's heartbeat
+        celesta.at(a).play(MEL_A, { velocity: 90, gate: 0.9 });
+        droneOn(a, 16);
+        sustain(voices, pA, { center: 60, velocity: 50 });
+        sustain(glass, pA, { center: 67, velocity: 42 });
+        arp(harp, pA, { pattern: [0, 1, 2, 3, 2, 1], rate: 0.5, center: 62, velocity: 46, gate: 0.9 });
+        bassline(bass, pA, { pattern: BASS_SOFT });
+        beat(hands, a, 16, HEARTBEAT);
+        bellTree(a);
+        bellTree(a + 32);
+        glissUp(a + 16);
+        glissUp(a + 48);
+        sitarAnswers(a);
+        bubbles(bub, a + 29, { count: 5, spread: 1.5 });
+
+        // B: the voices sing the whistle's melody, the halo, crystal sparkling, the sitar's broken chords low
+        voices.at(b).play(MEL_B, { velocity: 86, gate: 0.98, transpose: -12 });
+        droneOn(b, 8);
+        sustain(halo, pB, { center: 58, velocity: 54 });
+        arp(crystal, pB, { pattern: [0, 2, 1, 3], rate: 1, center: 79, velocity: 48 });
+        arp(sitar, pB, { pattern: [0, 1, 2, 1], rate: 1, center: 62, velocity: 58 });
+        bassline(bass, pB, { pattern: [[0, 1.9, "R", 86], [2, 1.9, "8", 78]] });
+        beat(hands, b, 8, HEARTBEAT);
+        bellTree(b + 16);
+        bubbles(bub, b + 14, { count: 6, spread: 2, low: 300, high: 1000 });
+
+        // A': the shakuhachi on the tune, far, the celesta doubling the second half, the glass's counter-melody
+        flute.at(a2).play(MEL_A, { velocity: 88, gate: 0.9, transpose: -12 });
+        celesta.at(a2 + 32).play(MEL_A.split("|").slice(8).join("|"), { velocity: 68 });
+        glass.at(a2).play(COUNTER, { velocity: 56, transpose: 12 });
+        droneOn(a2, 16);
+        sustain(voices, pA2, { center: 60, velocity: 52 });
+        arp(harp, pA2, { pattern: [0, 1, 2, 3, 2, 1], rate: 0.5, center: 62, velocity: 48, gate: 0.9 });
+        bassline(bass, pA2, { pattern: BASS_SOFT });
+        beat(hands, a2, 16, HEARTBEAT);
+        bellTree(a2);
+        glissUp(a2 + 16);
+        sitarAnswers(a2);
+        bubbles(bub, a2 + 61, { count: 9, spread: 3, low: 350, high: 1400 });
     });
     songs.push(song);
 }

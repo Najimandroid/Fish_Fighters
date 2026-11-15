@@ -157,7 +157,7 @@ private:
 
     // Starts a Fish Tank menu screen: clears the UI, plays the Fish Tank theme (kept if it already plays)
     // and the transition sound
-    void enter_menu_screen();
+    void enter_menu_screen(const char* theme = nullptr);   // Its theme (nullptr: the Fish Tank's), in sync from a sibling
 
     std::shared_ptr<DataLoader> m_dataLoader = nullptr;         // Reference to game data
     std::weak_ptr<Stage> m_stage;                               // Reference to current game stage

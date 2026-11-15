@@ -80,6 +80,33 @@
         "loopStart": 4320000,
         "loopLength": 4114286
     },
+    "theme_map": {
+        "title": "Fish Tank (Battle Stations)",
+        "kind": "menu",
+        "file": "assets/audios/music/theme_map.ogg",
+        "sampleRate": 48000,
+        "key": "Bb",
+        "loopStart": 4320000,
+        "loopLength": 4114286
+    },
+    "theme_lab": {
+        "title": "Fish Tank (Lab)",
+        "kind": "menu",
+        "file": "assets/audios/music/theme_lab.ogg",
+        "sampleRate": 48000,
+        "key": "Bb",
+        "loopStart": 4320000,
+        "loopLength": 4114286
+    },
+    "theme_shop": {
+        "title": "Pearl Shop",
+        "kind": "menu",
+        "file": "assets/audios/music/theme_shop.ogg",
+        "sampleRate": 48000,
+        "key": "Bb",
+        "loopStart": 4320000,
+        "loopLength": 4114286
+    },
     "theme_shanty": {
         "title": "Sunken Galleon",
         "kind": "stage",
