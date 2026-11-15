@@ -83,5 +83,82 @@
         "key": "Bb",
         "loopStart": 4320000,
         "loopLength": 4114286
+    },
+    "theme_title_v1": {
+        "title": "Fish Fighters! (first version)",
+        "kind": "menu",
+        "key": "F",
+        "loopStart": 2605715,
+        "loopLength": 2331429
+    },
+    "theme_default_v1": {
+        "title": "Reef Rumble (first version)",
+        "kind": "stage",
+        "key": "F",
+        "loopStart": 4092632,
+        "loopLength": 3789474
+    },
+    "theme_calm_v1": {
+        "title": "Kelp Garden (first version)",
+        "kind": "stage",
+        "key": "Eb",
+        "loopStart": 4838400,
+        "loopLength": 4608000
+    },
+    "theme_stressful_v1": {
+        "title": "Pressure Alarm (first version)",
+        "kind": "stage",
+        "key": "C",
+        "loopStart": 3348837,
+        "loopLength": 3214884
+    },
+    "theme_boss_v2": {
+        "title": "Leviathan's Waltz (second version)",
+        "kind": "stage",
+        "key": "D",
+        "loopStart": 4266667,
+        "loopLength": 3840000
+    },
+    "theme_crab_v1": {
+        "title": "Crab Cove (first version)",
+        "kind": "stage",
+        "key": "A",
+        "loopStart": 4363636,
+        "loopLength": 4189091
+    },
+    "theme_crab_boss_v3": {
+        "title": "King Crab's Sideways Stomp (first version)",
+        "kind": "stage",
+        "key": "A",
+        "loopStart": 4992000,
+        "loopLength": 4608000
+    },
+    "theme_danger_v1": {
+        "title": "It Came From The Trench! (first version)",
+        "kind": "stage",
+        "key": "G",
+        "loopStart": 3544616,
+        "loopLength": 3249231
+    },
+    "theme_energetic_v2": {
+        "title": "Riptide Rush (first dance version)",
+        "kind": "stage",
+        "key": "A",
+        "loopStart": 5082353,
+        "loopLength": 4743529
+    },
+    "theme_neon_v1": {
+        "title": "Neon Riptide (first version)",
+        "kind": "stage",
+        "key": "A",
+        "loopStart": 5153684,
+        "loopLength": 4850526
+    },
+    "theme_preboss_v1": {
+        "title": "Something Stirs Below (first version)",
+        "kind": "stage",
+        "key": "D",
+        "loopStart": 5348572,
+        "loopLength": 4937143
     }
 }

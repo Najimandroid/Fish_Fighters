@@ -154,6 +154,98 @@ function renderSynthVibes(events, tempo) {
     return out;
 }
 
+// A small deterministic noise source (xorshift), so both body copies of a synthesized sound are identical
+function noiseSource(seed) {
+    let state = (seed >>> 0) || 1;
+    return () => { state ^= state << 13; state ^= state >>> 17; state ^= state << 5; return (state >>> 0) / 2147483648 - 1; };
+}
+
+// A riser (the build before a drop or a big section): white noise through a resonant band-pass sweeping up from
+// 350 Hz to 9 kHz, getting louder all the way, stopping dead on the downbeat. Each side its own noise (wide).
+// events: [[seconds, beats, velocity, seed]]
+function renderRisers(events, tempo) {
+    const spb = 60 / tempo;
+    const end = Math.max(0, ...events.map(e => e[0] + e[1] * spb)) + 1;
+    const out = new Float32Array(Math.ceil(end * RATE) * 2);
+    for (const [start, beats, velocity, seed] of events) {
+        const length = beats * spb, first = Math.round(start * RATE), frames = Math.round(length * RATE);
+        const amplitude = Math.pow(velocity / 127, 1.5) * 0.5;
+        for (let ch = 0; ch < 2; ch++) {
+            const noise = noiseSource(seed * 2 + ch + 1);
+            let low = 0, band = 0;
+            for (let i = 0; i < frames; i++) {
+                const x = i / frames;   // 0 to 1 over the riser
+                const cutoff = 350 * Math.pow(9000 / 350, x * x * (3 - 2 * x) * 0.6 + x * 0.4);
+                const f = 2 * Math.sin(Math.PI * Math.min(cutoff, 12000) / RATE), q = 0.35;
+                const input = noise();
+                low += f * band;
+                const high = input - low - q * band;
+                band += f * high;
+                const envelope = Math.pow(x, 1.6) * Math.min(1, (frames - i) / (0.004 * RATE));
+                out[(first + i) * 2 + ch] += band * amplitude * envelope;
+            }
+        }
+    }
+    return out;
+}
+
+// An impact (the downbeat of a drop): a sub boom falling from 90 Hz to 38 Hz and a short dark noise crack on top
+// events: [[seconds, velocity, seed]]
+function renderImpacts(events) {
+    const end = Math.max(0, ...events.map(e => e[0])) + 3;
+    const out = new Float32Array(Math.ceil(end * RATE) * 2);
+    for (const [start, velocity, seed = 1] of events) {
+        const first = Math.round(start * RATE), frames = Math.round(2.2 * RATE);
+        const amplitude = Math.pow(velocity / 127, 1.5) * 0.9;
+        for (let ch = 0; ch < 2; ch++) {
+            const noise = noiseSource(seed * 2 + ch + 7);
+            let phase = 0, dark = 0;
+            for (let i = 0; i < frames; i++) {
+                const t = i / RATE;
+                const f = 38 + 52 * Math.exp(-t / 0.12);
+                phase += 2 * Math.PI * f / RATE;
+                const boom = Math.sin(phase) * Math.exp(-t / 0.55) * Math.min(1, t / 0.002);
+                dark += (1 - Math.exp(-2 * Math.PI * 1800 / RATE)) * (noise() - dark);
+                const crack = dark * Math.exp(-t / 0.09) * 1.6;
+                out[(first + i) * 2 + ch] += (boom + crack) * amplitude;
+            }
+        }
+    }
+    return out;
+}
+
+// A supersaw (the wide chord stabs of dance music): seven saws detuned up to 28 cents apart, spread across the
+// stereo field, band-limited (polyBLEP), through a soft low-pass that opens with the velocity; a quick envelope.
+// events: [[seconds, frequency, beats, velocity]]
+function renderSupersaw(events, tempo) {
+    const spb = 60 / tempo, DETUNE = [-28, -17, -8, 0, 8, 17, 28], SPREAD = [-0.9, 0.6, -0.4, 0, 0.4, -0.6, 0.9];
+    const end = Math.max(0, ...events.map(e => e[0] + e[2] * spb)) + 1;
+    const out = new Float32Array(Math.ceil(end * RATE) * 2);
+    const blep = (t, dt) => t < dt ? (t /= dt, t + t - t * t - 1) : t > 1 - dt ? (t = (t - 1) / dt, t * t + t + t + 1) : 0;
+    for (const [start, frequency, beats, velocity] of events) {
+        const length = beats * spb, first = Math.round(start * RATE), frames = Math.round((length + 0.18) * RATE);
+        const amplitude = Math.pow(velocity / 127, 1.5) * 0.09;
+        const cutoff = 1800 + 5200 * velocity / 127, a = 1 - Math.exp(-2 * Math.PI * cutoff / RATE);
+        const voices = DETUNE.map((cents, v) => ({ step: frequency * Math.pow(2, cents / 1200) / RATE,
+            phase: (Math.sin(start * 1000 + frequency * 7 + v * 13.7) * 0.5 + 0.5) % 1, left: Math.cos((SPREAD[v] + 1) * Math.PI / 4), right: Math.sin((SPREAD[v] + 1) * Math.PI / 4) }));
+        let l1 = 0, r1 = 0, l2 = 0, r2 = 0;
+        for (let i = 0; i < frames; i++) {
+            const t = i / RATE;
+            let left = 0, right = 0;
+            for (const voice of voices) {
+                const s = 2 * voice.phase - 1 - blep(voice.phase, voice.step);
+                voice.phase += voice.step; if (voice.phase >= 1) voice.phase -= 1;
+                left += s * voice.left; right += s * voice.right;
+            }
+            l1 += a * (left - l1); l2 += a * (l1 - l2); r1 += a * (right - r1); r2 += a * (r1 - r2);
+            const envelope = Math.min(1, t / 0.004) * (0.72 + 0.28 * Math.exp(-t / 0.25)) * (t > length ? Math.max(0, 1 - (t - length) / 0.18) : 1);
+            out[(first + i) * 2] += l2 * amplitude * envelope;
+            out[(first + i) * 2 + 1] += r2 * amplitude * envelope;
+        }
+    }
+    return out;
+}
+
 // Electric zaps (jellyfish): crackles (sparse clicks through a band-pass), a clipped mains-like buzz and a falling
 // "zzap" whine, all fading out. Each zap draws its randomness from its own seed, so both body copies are identical.
 // events: [[seconds, velocity, duration (seconds), seed, pan (-1..1)]]
@@ -314,6 +406,21 @@ function chorus(samples, { mix = 0.4, delayMs = 14, depthMs = 2.5, rateHz = 0.7 
     return out;
 }
 
+// Sidechain pump (dance music's breathing): the level ducks on every beat, as if the kick pushed it down, then swells
+// back over `release` of the beat. On the body's own beat grid, so both copies get the same curve
+function pump(samples, { depth = 0.5, release = 0.6 }, stem) {
+    const beatFrames = 60 / stem.tempo * RATE, intro = Math.round((stem.introSeconds || 0) * RATE);
+    const loop = stem.loopSeconds ? Math.round(stem.loopSeconds * RATE) : 0, frames = samples.length / 2;
+    for (let i = 0; i < frames; i++) {
+        const local = loop && i >= intro ? (i - intro) % loop : i - intro;
+        const phase = ((local / beatFrames) % 1 + 1) % 1;
+        const x = Math.min(1, phase / release), duck = phase < 0.015 ? phase / 0.015 : 1 - x * x * (3 - 2 * x);
+        const gain = 1 - depth * duck;
+        samples[i * 2] *= gain; samples[i * 2 + 1] *= gain;
+    }
+    return samples;
+}
+
 // Ping-pong echo in time with the song, darker at every repeat
 function echo(samples, { beats = 0.75, feedback = 0.3, mix = 0.2, tone = 3500 }, tempo) {
     const delay = Math.round(beats * 60 / tempo * RATE), frames = samples.length / 2;
@@ -337,6 +444,7 @@ function applyEffects(samples, stem) {
     if (fx.lowpass) out = lowpass(out, fx.lowpass);
     if (fx.chorus) out = chorus(out, fx.chorus, stem.loopSeconds);
     if (fx.echo) out = echo(out, fx.echo, stem.tempo);
+    if (fx.pump) out = pump(out, fx.pump, stem);
     // Constant-power panning, a bit wider than written (center = unchanged level on both sides)
     const gain = Math.pow(10, (stem.gainDb || 0) / 20), pan = Math.max(-0.9, Math.min(0.9, (stem.pan || 0) * 1.5));
     const left = gain * Math.SQRT2 * Math.cos((pan + 1) * Math.PI / 4), right = gain * Math.SQRT2 * Math.sin((pan + 1) * Math.PI / 4);
@@ -366,6 +474,9 @@ for (const song of fs.readdirSync(STEMS_MIDI)) {
             : stem.synth === "wobble" ? renderWobble(stem.events)
             : stem.synth === "theremin" ? renderTheremin(stem.events, stem.tempo)
             : stem.synth === "synthvibes" ? renderSynthVibes(stem.events, stem.tempo)
+            : stem.synth === "riser" ? renderRisers(stem.events, stem.tempo)
+            : stem.synth === "impact" ? renderImpacts(stem.events)
+            : stem.synth === "supersaw" ? renderSupersaw(stem.events, stem.tempo)
             : render(font, stem, RATE);
         const wet = applyEffects(dry, stem);
         const group = groups.get(stem.group) || { parts: [], samples: new Float32Array(0) };
