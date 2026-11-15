@@ -67,6 +67,27 @@ things to copy one to one: Fish Fighters keeps its own underwater look (steel, c
   corner, a grid of two columns of buttons (an icon on the left, the name), a "? Help" button at the bottom right.
 - It appears at once (no long animation): menus that are only lists open instantly.
 
+### Popups (Settings, the battle's pause)
+- One popup look for both: a white header band with the title and a faded drawing of the mascot on its left, a big
+  round yellow "x" overlapping the top right corner (it closes it, or resumes the battle), a grey body with thin
+  separator lines (toggles as yellow pills, buttons in a grid, square icon toggles for music, sound, vibration), a
+  white footer band with the one big action of the popup (Escape, in battle).
+- It appears at once over a darkened screen.
+
+### Message dialogs and rewards
+- A message is a dark box with a white double border, its text centered, a picture card above it, a yellow OK at its
+  lower right (framed in pink: the choice).
+- Rewards (daily gifts, events) open as full screens inside the frame: the top and bottom bars stay, the content is a
+  coloured backdrop with a big title, the reward cards and one wide Ok.
+
+### Title screen
+- The logo, then two big yellow buttons (Play, Settings) in a band; Play slides them away and brings a carousel of the
+  chapters in (the selected one with the pink frame).
+
+### Hub badges
+- Round red-orange count badges on the capsule buttons (the tickets you hold: 4, 7, 1), a "!" on GAMATOTO and
+  Missions when something waits there.
+
 ### Capsules (gacha)
 - A row of tabs at the top (the selected one framed in pink).
 - Big yellow arrows on both sides, the capsule machine in the middle, "Try once!" with the tickets left at the bottom
@@ -108,18 +129,20 @@ things to copy one to one: Fish Fighters keeps its own underwater look (steel, c
 | The Battle Cats | Fish Fighters | |
 |---|---|---|
 | Top bar on every menu | UITitleBar (steel, violet, nacre) | done |
-| Bottom bar (back button, shop, premium currency) | UIBottomBar | being added |
-| Lineup on top, list at the bottom (Organize) | Equip | being changed |
-| Page dots on the carousels | Upgrade, Equip | being added |
+| Bottom bar (back button, shop, premium currency) | UIBottomBar on every menu | done |
+| Lineup on top, list at the bottom (Organize) | Equip (with the fish's stats beside the lineup) | done |
+| Page dots on the carousels | Upgrade, Equip | done |
 | Swipe anywhere, fling with momentum | Upgrade, Equip, chapter map | done |
 | Stage strip: selected tab bigger and solid, others see-through | chapter map | done |
-| Doors opening between screens | the bubble wave | ours; could open the hub's porthole instead |
-| Pressed button flashes before the transition | buttons | to do |
-| One pulsing frame for the current choice (and the main button) | yellow borders, breathing main buttons | partly |
+| The bars stay, only the content changes between screens | the bubble wave sweeps the content between the still bars | done |
+| Pressed button flashes before the transition | every button (brighter, pink frame), still lit as the wave covers it | done |
+| One pulsing frame for the current choice (and the main button) | the selected card, BATTLE!, START, CONTINUE, the results' and dialogs' main button | done |
 | Mascot with rotating tips on the hub | the Fish's tips | done |
-| Badges and callout bubbles on hub buttons | | to do ("New fish!" on Upgrade, "FREE" on the Clam Room) |
-| Menu popup: dim, tab title, round x, icon grid, Help | Options, pause | could match |
+| Badges and callout bubbles on hub buttons | counts (scales, upgrades), UICallout ("New fish to unlock!", "Shiny Scales to spend!", "Free Shiny Scale!") | done |
+| Popup: header band with the title and the mascot, round x, footer action | UIPopupFrame: Options, pause, the "i" windows | done |
 | "The Battle Begins!!" | UIBattleIntro | compare |
-| Victory band over the running battle, one Ok | results panel | to do |
-| Zigzag wipe back to the base, buttons slide in | | to do |
+| Victory band over the battle, its main button framed | results panel (a see-through band, the battle in view) | done |
+| Zigzag wipe back to the base, buttons slide in | UIScreenWipe, the buttons popping in as it passes | done |
+| Message dialogs: dark box, white double border | UIConfirmDialog | done |
+| The stage name beside the pause button in battle | battle screen | done |
 | Rolling counters | shells, scales | done |

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "UIPanel.h"
+#include "UIPopupFrame.h"
 #include "UIButtonElement.h"
 #include "UISlider.h"
 
@@ -49,7 +49,7 @@ private:
     std::function<void(bool)> m_setFullscreen;
 
     sf::RectangleShape m_dim;
-    UIPanel m_panel;
+    UIPopupFrame m_frame;               // The popup's look, its X closes it
     std::vector<sf::Text> m_labels;     // Title, section headers, row names, controls
 
     UISlider m_masterSlider;
@@ -58,5 +58,4 @@ private:
     UIButtonElement m_muteButton;       // ON / OFF
     UIButtonElement m_fullscreenButton;
     UIButtonElement m_windowedButton;
-    UIButtonElement m_closeButton;
 };

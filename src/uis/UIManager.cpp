@@ -33,6 +33,8 @@
 #include "widgets/UIOptionsMenu.h"
 #include "widgets/UIResultsPanel.h"
 #include "widgets/UIBadge.h"
+#include "widgets/UICallout.h"
+#include "widgets/UIScreenWipe.h"
 #include "widgets/UIUpgradeIcon.h"
 #include "widgets/UIAmbience.h"
 #include "widgets/UIHubMascot.h"
@@ -118,14 +120,33 @@ std::pair<float, float> UIManager::reveal_band() const
 void UIManager::enter_menu_screen()
 {
     start_screen_reveal();
+    m_revealStyle = m_isWipingOut ? Reveal::WIPE : Reveal::WAVE;   // Out of a battle: the wipe pulls away instead
+    m_isWipingOut = false;
     m_hasSideFrame = true;
     if (m_audio)
     {
         // Back from the Clam Room, its theme melts into the Fish Tank's where it is (both share their grid)
         if (m_audio->get_current_music() == CLAM_MUSIC || m_audio->get_current_music() == CLAM_INSIDE_MUSIC) m_audio->play_music_in_sync(MENU_MUSIC);
         else m_audio->play_music(MENU_MUSIC);
-        m_audio->play_sound("ui_transition");
+        if (m_revealStyle == Reveal::WAVE) m_audio->play_sound("ui_transition");   // The wipe made its own when it covered
     }
+}
+
+/*
+ * Out of a battle (the results' buttons): the zigzag wipe covers the battle, then the battle unloads and generate
+ * builds the menu screen, which the wipe uncovers (enter_menu_screen)
+ */
+void UIManager::wipe_out_of_battle(std::function<void()> generate)
+{
+    add_ui_element(std::make_shared<UIScreenWipe>([this, generate]()
+        {
+            m_pendingAction = [this, generate]()
+                {
+                    leave_battle();
+                    m_isWipingOut = true;
+                    generate();
+                };
+        }));
 }
 
 /*
@@ -164,6 +185,7 @@ void UIManager::generate_title_uis()
     startButton->set_click_sound("ui_start");
     startButton->set_callback(start);
     startButton->set_attention(true);
+    startButton->set_selected(true);
     m_needsEntrance = true;   // The buttons pop in (no bubbles: the game just opened)
 
     auto quitButton = std::make_shared<UIButtonElement>(
@@ -206,24 +228,46 @@ std::shared_ptr<UIConfirmDialog> UIManager::make_quit_dialog(const std::shared_p
     return dialog;
 }
 
-// Add a UI element to the manager
+// Add a UI element to the manager. The bars and the counters on them are always part of the frame (they stay still
+// while the menus change under them)
 void UIManager::add_ui_element(std::shared_ptr<UIElement> element)
 {
+    if (std::dynamic_pointer_cast<UITitleBar>(element) || std::dynamic_pointer_cast<UIBottomBar>(element)
+        || std::dynamic_pointer_cast<UIPlayerShellsInfo>(element))
+        element->set_frame(true);
     m_uiElements.push_back(element);
+}
+
+// A menu screen: its title bar is part of its frame
+bool UIManager::has_frame(const std::vector<std::shared_ptr<UIElement>>& elements)
+{
+    return std::any_of(elements.begin(), elements.end(),
+        [](const auto& element) { return element->is_frame() && std::dynamic_pointer_cast<UITitleBar>(element); });
 }
 
 // Update all UI elements (called each frame)
 void UIManager::update_uis(float deltaTime)
 {
-    // A screen just built: each button pops in as the wave uncovers it (no wave, the title: one after the other)
+    // A screen just built: each button pops in as the wave uncovers it (no wave, the title: one after the other).
+    // From one menu to another the frame stays still (its buttons don't pop in): the wave only sweeps the content
     if (m_needsEntrance)
     {
         m_needsEntrance = false;
+        m_keepsFrame = m_revealTime >= 0.f && m_revealStyle == Reveal::WAVE && has_frame(m_oldElements) && has_frame(m_uiElements);
         float delay = 0.12f;
         for (auto& element : m_uiElements)
-            if (auto button = std::dynamic_pointer_cast<UIButtonElement>(element); button && button->is_visible())
+            if (auto button = std::dynamic_pointer_cast<UIButtonElement>(element); button && button->is_visible() && !(m_keepsFrame && button->is_frame()))
             {
-                if (m_revealTime >= 0.f)
+                if (m_revealTime >= 0.f && m_revealStyle == Reveal::WIPE)
+                {
+                    // When the wipe's edge, pulling away to the left, passes the button's middle (inverse of its ease)
+                    const sf::FloatRect screen = UISkin::screen_rect();
+                    const float travel = screen.size.x + 2.f * UISkin::WIPE_TOOTH;
+                    const float middle = button->get_bounds().position.x + button->get_bounds().size.x / 2.f;
+                    const float p = std::clamp((screen.position.x + screen.size.x + UISkin::WIPE_TOOTH - middle) / travel, 0.f, 1.f);
+                    button->set_entrance(UIScreenWipe::SECONDS * (1.f - std::sqrt(1.f - p)) - m_revealTime);
+                }
+                else if (m_revealTime >= 0.f)
                 {
                     // When the wave's bottom passes the button's middle (inverse of reveal_ease)
                     const sf::FloatRect bounds = button->get_bounds();
@@ -242,7 +286,8 @@ void UIManager::update_uis(float deltaTime)
     if (m_revealTime >= 0.f)
     {
         m_revealTime += deltaTime;
-        if (m_revealTime >= REVEAL_SECONDS) cancel_screen_reveal();   // The wave is gone, and the old screen with it
+        const float length = m_revealStyle == Reveal::WIPE ? UIScreenWipe::SECONDS : REVEAL_SECONDS;
+        if (m_revealTime >= length) cancel_screen_reveal();   // The wave (or the wipe) is gone, and the old screen with it
     }
 
     for (auto& element : m_uiElements)
@@ -275,37 +320,57 @@ void UIManager::render_uis(sf::RenderWindow& window, sf::View& uiView, sf::View&
         return;
     }
 
+    // Out of a battle: the new screen whole, the zigzag band over it pulling away to the left (it covered everything)
+    if (m_revealStyle == Reveal::WIPE)
+    {
+        render_list(window, m_uiElements, uiView, worldView, m_hasSideFrame);
+        window.setView(uiView);
+        const sf::FloatRect screen = UISkin::screen_rect();
+        const float left = screen.position.x - UISkin::WIPE_TOOTH, travel = screen.size.x + 2.f * UISkin::WIPE_TOOTH;
+        UISkin::draw_zigzag_band(window, left, left + travel * (1.f - UIScreenWipe::progress(m_revealTime)));
+        return;
+    }
+
     // The wave sweeping up: the old screen above it, the new one below it (each clipped to its part of the window
-    // with a scissor rectangle, down to the wave's lowest dips), the water over both
+    // with a scissor rectangle, down to the wave's lowest dips), the water over both. Between two menus only the
+    // content between the bars changes: the new screen's frame (bars, counters, back button) is drawn still on top,
+    // like The Battle Cats' bars, its texts changing at once
     const auto [top, bottom] = reveal_band();
     const float height = static_cast<float>(std::max(1u, window.getSize().y));
     const auto row = [&](float y) { return std::clamp(static_cast<float>(window.mapCoordsToPixel({ 0.f, y }, uiView).y) / height, 0.f, 1.f); };
-    const float oldEnd = row(top + UISkin::WATER_WAVE), newStart = row(bottom - UISkin::WATER_WAVE);
-    if (oldEnd > 0.001f)
+    const float areaTop = m_keepsFrame ? row(UISkin::CONTENT_TOP) : 0.f, areaBottom = m_keepsFrame ? row(UISkin::CONTENT_BOTTOM) : 1.f;
+    const Layer content = m_keepsFrame ? Layer::CONTENT : Layer::ALL;
+    const float oldEnd = std::min(row(top + UISkin::WATER_WAVE), areaBottom), newStart = std::max(row(bottom - UISkin::WATER_WAVE), areaTop);
+    if (oldEnd - areaTop > 0.001f)
     {
         sf::View above = uiView;
-        above.setScissor({ { 0.f, 0.f }, { 1.f, oldEnd } });
-        render_list(window, m_oldElements, above, worldView, false);
+        above.setScissor({ { 0.f, areaTop }, { 1.f, oldEnd - areaTop } });
+        render_list(window, m_oldElements, above, worldView, false, content);
     }
-    if (newStart < 0.999f)
+    if (areaBottom - newStart > 0.001f)
     {
         sf::View below = uiView;
-        below.setScissor({ { 0.f, newStart }, { 1.f, 1.f - newStart } });
-        render_list(window, m_uiElements, below, worldView, false);
+        below.setScissor({ { 0.f, newStart }, { 1.f, areaBottom - newStart } });
+        render_list(window, m_uiElements, below, worldView, false, content);
     }
-    window.setView(uiView);
+    sf::View water = uiView;
+    water.setScissor({ { 0.f, areaTop }, { 1.f, areaBottom - areaTop } });
+    window.setView(water);
     UISkin::draw_water_band(window, top, bottom, m_revealTime);
+    if (m_keepsFrame) render_list(window, m_uiElements, uiView, worldView, false, Layer::FRAME);
+    window.setView(uiView);
     if (m_hasSideFrame) UISkin::draw_side_frame(window);   // The frame stays still while the wave passes
 }
 
 // Draws elements in order: the world-space ones in the world view, the others in uiView (which can carry a scissor)
 void UIManager::render_list(sf::RenderWindow& window, std::vector<std::shared_ptr<UIElement>>& elements, const sf::View& uiView, sf::View& worldView,
-    bool withFrame)
+    bool withFrame, Layer layer)
 {
     window.setView(uiView);
     bool isFramed = !withFrame;   // The side frame: over the screen, under an open window (dimmed with the rest)
     for (auto& element : elements)
     {
+        if ((layer == Layer::CONTENT && element->is_frame()) || (layer == Layer::FRAME && !element->is_frame())) continue;
         if (!isFramed && !element->isWorldSpaceUi && element->is_visible() && element->is_blocking_input())
         {
             UISkin::draw_side_frame(window);
@@ -459,9 +524,14 @@ void UIManager::generate_fish_tank_uis()
     std::weak_ptr<UIOptionsMenu> weakOptions = optionsMenu;
     optionsButton->set_callback([weakOptions]() { if (auto menu = weakOptions.lock()) menu->open(); });
 
-    // "!" on UPGRADE when a fish can be upgraded or unlocked with the shells there are
-    auto upgradeBadge = std::make_shared<UIBadge>(sf::Vector2f{ columnX + columnWidth - 14.f, 366.f + 12.f }, "!");
-    upgradeBadge->set_visible(is_upgrade_available());
+    // On UPGRADE, how many fish can be levelled up or unlocked with the shells there are (a count, like The Battle
+    // Cats' badges); a callout beside it when a new fish waits to be unlocked
+    const int upgradeCount = upgrades_available();
+    auto upgradeBadge = std::make_shared<UIBadge>(sf::Vector2f{ columnX + columnWidth - 14.f, 366.f + 12.f }, std::to_string(upgradeCount));
+    upgradeBadge->set_visible(upgradeCount > 0);
+    std::shared_ptr<UICallout> upgradeCallout;
+    if (auto player = m_dataLoader->get_player_data().lock(); player && !player->unitsWaitingToBeUnlocked.empty())
+        upgradeCallout = std::make_shared<UICallout>("New fish to unlock!", sf::Vector2f{ columnX + columnWidth + 14.f, 366.f + stackHeight / 2.f }, UICallout::Tail::LEFT);
 
     auto quitButton = std::make_shared<UIIconTile>(sf::Vector2f{ tileWidth, tileHeight }, sf::Vector2f{ tile_x(2), tileY },
         "QUIT", UIIconTile::Icon::POWER);
@@ -480,6 +550,7 @@ void UIManager::generate_fish_tank_uis()
     add_ui_element(encyclopediaButton);
     add_ui_element(nextStage);
     add_ui_element(upgradeBadge);
+    if (upgradeCallout) add_ui_element(upgradeCallout);
 
     // The Clam Room: a tile with the clam under the porthole, standing on the bottom bar. Locked (greyed, the stage
     // that opens it written under it) until the stage with the "clamRoom" reward is cleared
@@ -500,8 +571,19 @@ void UIManager::generate_fish_tank_uis()
         lockLabel->set_position({ clamTile.position.x + clamTile.size.x / 2.f, clamTile.position.y + clamTile.size.y + 30.f });
         add_ui_element(lockLabel);
     }
-    else if (auto player = m_dataLoader->get_player_data().lock(); player && (player->shinyScales > 0 || !player->clamStorage.empty()))
-        add_ui_element(std::make_shared<UIBadge>(sf::Vector2f{ clamTile.position.x + clamTile.size.x - 36.f, clamTile.position.y + 36.f }, "!"));   // On the clam's shoulder
+    else if (auto player = m_dataLoader->get_player_data().lock())
+    {
+        // On the clam's shoulder: how many Shiny Scales it could eat ("!" for fish waiting in the storage); beside it a
+        // callout while there are scales to spend (on phones, while today's free one is there)
+        if (player->shinyScales > 0 || !player->clamStorage.empty())
+            add_ui_element(std::make_shared<UIBadge>(sf::Vector2f{ clamTile.position.x + clamTile.size.x - 36.f, clamTile.position.y + 36.f },
+                player->shinyScales > 0 ? std::to_string(player->shinyScales) : "!"));
+        const char* callout = player->shinyScales > 0 ? "Shiny Scales to spend!"
+            : Platform::HAS_REWARDED_ADS && player->ads_left_today() > 0 ? "Free Shiny Scale!" : nullptr;
+        if (callout)
+            add_ui_element(std::make_shared<UICallout>(callout, sf::Vector2f{ clamTile.position.x + clamTile.size.x + 6.f, clamTile.position.y + clamTile.size.y * 0.42f },
+                UICallout::Tail::LEFT));
+    }
 
     // The School Rank (top right) with its "i", and its milestones reached since last time
     add_ui_element(std::make_shared<UISchoolRank>(m_dataLoader));
@@ -552,6 +634,7 @@ UIManager::ClamCounters UIManager::add_clam_counters()
     counters.shinyScales->set_trailing_room(58.f);
     auto plus = std::make_shared<UIButtonElement>(sf::Vector2f{ 50.f, 50.f }, sf::Vector2f{ 1920.f - 364.f - 12.f - 50.f, 30.f }, "+");
     plus->set_text_size(40);
+    plus->set_frame(true);   // On the title bar's Shiny Scales pill
     std::weak_ptr<UIConfirmDialog> weakDialog = craftDialog;
     plus->set_callback([this, weakDialog]()
         {
@@ -675,6 +758,7 @@ void UIManager::generate_clam_storage_uis()
     storage->set_counters(counters.shells, counters.fishScales);
     storage->set_flying_icons(flying);
     storage->set_confirm_dialog(sellDialog);
+    add_ui_element(UIClamStorage::make_bottom_bar(storage));   // Mother-of-pearl, USE ALL / SELL ALL on it
     add_ui_element(flying);   // Over the title bar: into the pills
     add_ui_element(backButton);
     add_ui_element(std::make_shared<UIToast>());
@@ -711,6 +795,7 @@ void UIManager::generate_encyclopedia_uis()
 std::shared_ptr<UIRoundButton> UIManager::make_back_button(std::function<void()> onBack)
 {
     auto backButton = std::make_shared<UIRoundButton>(UISkin::BACK_BUTTON.size.x, UISkin::BACK_BUTTON.position, "icon_back");
+    backButton->set_frame(true);   // It stays on the bottom bar while the menus change
     backButton->set_click_sound("ui_back");
     backButton->set_callback([this, onBack]()
         {
@@ -737,6 +822,7 @@ std::shared_ptr<UIButtonElement> UIManager::make_bar_button(const std::string& l
     button->set_text_size(34);
     button->set_style(UIButtonElement::Style::Secondary);
     button->set_callback([this, onPress]() { m_pendingAction = onPress; });
+    button->set_frame(true);
     return button;
 }
 
@@ -912,6 +998,12 @@ void UIManager::generate_battle_uis()
         return m_getGameSpeedCallback && m_getGameSpeedCallback() == GameSpeedState::FASTER ? std::string("x2") : std::string("x1");
         });
 
+    // The stage's name beside them, in yellow (like The Battle Cats' battle screen)
+    auto stageLabel = std::make_shared<UITextElement>(sf::Vector2f{ 700.f, 60.f }, sf::Vector2f{ 0.f, 0.f }, stageName, 44);
+    UISkin::style_text(stageLabel->get_text(), 44, UISkin::NUMBER);
+    UISkin::set_text_anchor(stageLabel->get_text(), { 0.f, 0.5f });
+    stageLabel->set_position({ 268.f, 74.f });
+
 	auto deploymentIcons = std::make_shared<UIDeploymentIcons>(m_dataLoader, m_stage.lock());
 	auto stageCash = std::make_shared<UIStageCash>(m_stage.lock());
 	auto cashUp = std::make_shared<UICashUp>(m_stage.lock());
@@ -934,6 +1026,7 @@ void UIManager::generate_battle_uis()
 	add_ui_element(baseHealthInfo);
     add_ui_element(pauseButton);
     add_ui_element(speedButton);
+    add_ui_element(stageLabel);
 	add_ui_element(deploymentIcons);
 	add_ui_element(stageCash);
 	add_ui_element(cashUp);
@@ -966,6 +1059,7 @@ void UIManager::generate_chapter_map_uis()
     );
     battleButton->set_text_size(66);
     battleButton->set_attention(true);
+    battleButton->set_selected(true);    // The pink frame pulses round it, like The Battle Cats' Attack!
     battleButton->set_click_sound("");   // The battle start jingle instead; the stage's theme follows it
     battleButton->set_callback([this, chapterMap]()
         {
@@ -1073,11 +1167,11 @@ void UIManager::generate_victory_uis()
     // Back to the map rather than straight into the next stage: the player sees the path move on, and can upgrade first
     UIResultsPanel::Actions actions;
     actions.primaryLabel = "RETURN TO MAP";
-    actions.primary = [this]() { m_pendingAction = [this]() { leave_battle(); generate_chapter_map_uis(); }; };
+    actions.primary = [this]() { m_pendingAction = [this]() { wipe_out_of_battle([this]() { generate_chapter_map_uis(); }); }; };
     actions.secondaryLabel = "RETRY";
     actions.secondary = [this, result]() { m_pendingAction = [this, result]() { start_battle(result.stageUID); }; };
     actions.retry = actions.secondary;
-    actions.back = [this]() { m_pendingAction = [this]() { leave_battle(); generate_fish_tank_uis(); }; };
+    actions.back = [this]() { m_pendingAction = [this]() { wipe_out_of_battle([this]() { generate_fish_tank_uis(); }); }; };
 
     add_ui_element(std::make_shared<UIResultsPanel>(result, stageName, m_dataLoader, actions));
 }
@@ -1100,8 +1194,8 @@ void UIManager::generate_defeat_uis()
     actions.primary = [this, result]() { m_pendingAction = [this, result]() { start_battle(result.stageUID); }; };
     actions.retry = actions.primary;
     actions.secondaryLabel = "UPGRADE";
-    actions.secondary = [this]() { m_pendingAction = [this]() { leave_battle(); generate_upgrade_menu_uis(); }; };
-    actions.back = [this]() { m_pendingAction = [this]() { leave_battle(); generate_chapter_map_uis(); }; };
+    actions.secondary = [this]() { m_pendingAction = [this]() { wipe_out_of_battle([this]() { generate_upgrade_menu_uis(); }); }; };
+    actions.back = [this]() { m_pendingAction = [this]() { wipe_out_of_battle([this]() { generate_chapter_map_uis(); }); }; };
 
     add_ui_element(std::make_shared<UIResultsPanel>(result, stageName, m_dataLoader, actions));
 }
@@ -1207,15 +1301,23 @@ std::vector<std::string> UIManager::hub_tips() const
 /*
  * A fish waiting to be unlocked, or one the shells can upgrade
  */
+int UIManager::upgrades_available() const
+{
+    auto player = m_dataLoader->get_player_data().lock();
+    if (!player) return 0;
+    int count = 0;
+    for (const int uid : player->unitsWaitingToBeUnlocked)
+        if (!player->is_unit_owned(uid) && player->shells >= UIUpgradeSlider::calculate_upgrade_cost(*m_dataLoader, uid, 0)) ++count;
+    for (const auto& [uid, unit] : player->ownedUnits)
+        if (unit.level < UIUpgradeIcon::MAX_LEVEL && player->shells >= UIUpgradeSlider::calculate_upgrade_cost(*m_dataLoader, uid, unit.level))
+            ++count;
+    return count;
+}
+
 bool UIManager::is_upgrade_available() const
 {
     auto player = m_dataLoader->get_player_data().lock();
-    if (!player) return false;
-    if (!player->unitsWaitingToBeUnlocked.empty()) return true;
-    for (const auto& [uid, unit] : player->ownedUnits)
-        if (unit.level < UIUpgradeIcon::MAX_LEVEL && player->shells >= UIUpgradeSlider::calculate_upgrade_cost(*m_dataLoader, uid, unit.level))
-            return true;
-    return false;
+    return upgrades_available() > 0 || (player && !player->unitsWaitingToBeUnlocked.empty());
 }
 
 /*
@@ -1226,6 +1328,7 @@ std::shared_ptr<UIInfoPanel> UIManager::add_info_button(sf::Vector2f center, con
 {
     auto panel = std::make_shared<UIInfoPanel>(title, text);
     auto button = std::make_shared<UIInfoButton>(center);
+    button->set_frame(center.y < UISkin::CONTENT_TOP);   // On the title bar: it stays with it
     std::weak_ptr<UIInfoPanel> weakPanel = panel;
     button->set_callback([weakPanel]() { if (auto panel = weakPanel.lock()) panel->open(); });
     add_ui_element(button);

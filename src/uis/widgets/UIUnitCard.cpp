@@ -286,7 +286,13 @@ void UIUnitCard::render(sf::RenderWindow& window)
             { { valueLeft - iconSize - 6.f * scale, lineY - iconSize / 2.f }, { iconSize, iconSize } });
     }
 
-    // ----- Shade over the cards that aren't selected -----
+    // ----- Shade over the cards that aren't selected; the selected one in the pulsing pink frame (the choice) -----
     if (!m_isSelected)
         UISkin::draw_nine_slice(window, UISkin::PANEL_DARK, card, PANEL_CORNERS * scale, SHADE);
+    else
+    {
+        const float border = BORDER * scale;
+        UISkin::draw_selection_frame(window, { card.position - sf::Vector2f{ border, border }, card.size + sf::Vector2f{ border, border } * 2.f },
+            16.f * scale, UISkin::selection_pulse());
+    }
 }

@@ -18,6 +18,7 @@ namespace
     const float ENTRANCE = 0.36f;                 // The pop-in
     const float BREATH = 0.025f;                  // The main action breathes this much (scale)
     const float SHINE_EVERY = 3.6f, SHINE_SWEEP = 0.55f;   // A light across the main action
+    const float FLASH_SECONDS = 0.45f;            // A press's flash fades in this long
 
     // Seconds since the game started: the pop-ins and the attention look run on it (subclasses skip update())
     float clock_seconds()
@@ -42,6 +43,28 @@ void UIButtonElement::set_entrance(float delay)
 void UIButtonElement::set_attention(bool hasAttention)
 {
     m_hasAttention = hasAttention;
+}
+
+void UIButtonElement::set_selected(bool isSelected)
+{
+    m_isSelected = isSelected;
+}
+
+void UIButtonElement::render_highlight(sf::RenderWindow& window, const sf::FloatRect& rect, float radius, bool brightens) const
+{
+    const float flash = 1.f - (clock_seconds() - m_flashStart) / FLASH_SECONDS;
+    if (flash > 0.f)
+    {
+        if (brightens)
+        {
+            sf::ConvexShape light = UISkin::rounded_rect(rect, radius);
+            light.setFillColor(sf::Color(255, 255, 255, static_cast<std::uint8_t>(120.f * flash)));
+            window.draw(light);
+        }
+        UISkin::draw_selection_frame(window, rect, radius, std::min(1.f, flash * 1.6f));
+    }
+    else if (m_isSelected && m_isEnabled && entrance_scale() >= 1.f)
+        UISkin::draw_selection_frame(window, rect, radius, UISkin::selection_pulse());
 }
 
 float UIButtonElement::entrance_scale() const
@@ -242,6 +265,7 @@ void UIButtonElement::render(sf::RenderWindow& window)
     m_text.setScale({ scale, scale });
     window.draw(m_text);
     UISkin::set_text_color(m_text, textColor);
+    render_highlight(window, rect, std::min(rect.size.y * 0.34f, 36.f * scale));
 }
 
 // Track the mouse (hover / press look) and run the callback when the button is clicked
@@ -291,6 +315,7 @@ void UIButtonElement::activate()
     }
     else if (m_callback)
     {
+        m_flashStart = clock_seconds();   // Lit at once (render_highlight)
         play_sound(m_clickSound);
         m_callback();
     }

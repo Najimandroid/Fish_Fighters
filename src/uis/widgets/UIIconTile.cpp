@@ -80,6 +80,7 @@ void UIIconTile::render(sf::RenderWindow& window)
     window.draw(m_text);
     UISkin::set_text_color(m_text, color);
     m_text.setPosition(restore);
+    render_highlight(window, rect, 28.f * scale, false);   // A press flashes the frame (no background to brighten)
 }
 
 /*

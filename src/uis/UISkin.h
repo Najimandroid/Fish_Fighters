@@ -135,6 +135,23 @@ namespace UISkin
     // A rounded rectangle shape (bubbles, pills, vector icons)
     sf::ConvexShape rounded_rect(const sf::FloatRect& rect, float radius);
 
+    // ----- Selection -----
+    // The current choice, like The Battle Cats' pink frame: the selected card, the screen's main button (it pulses),
+    // and any button the moment it's pressed (it flashes, still lit while the next screen's wave covers it)
+    inline const sf::Color SELECTION{ 255, 64, 208 };
+    float selection_pulse();   // 0.55 to 1, about twice a second: the frame breathes
+    // A bright pink rounded outline hugging rect, with a soft glow; strength 0..1 fades it
+    void draw_selection_frame(sf::RenderTarget& target, const sf::FloatRect& rect, float radius, float strength);
+
+    // A message box, like The Battle Cats' dialogs: a dark box with a white line inside its dark outline (a double
+    // border); its buttons straddle its bottom edge
+    void draw_message_box(sf::RenderTarget& target, const sf::FloatRect& rect);
+
+    // The wipe out of a battle (like The Battle Cats' black wipe back to the base): a deep-sea band with zigzag edges
+    // from left to right (UI x), the screen's whole height
+    inline constexpr float WIPE_TOOTH = 46.f;   // How far its zigzag teeth reach
+    void draw_zigzag_band(sf::RenderTarget& target, float left, float right);
+
     // ----- Depth -----
     // The soft shadow under a raised element (buttons, tiles): its own shape, dark, a little lower
     inline constexpr float SHADOW_DROP = 6.f;                     // Down...

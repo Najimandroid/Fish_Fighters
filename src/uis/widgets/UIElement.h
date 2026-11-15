@@ -47,6 +47,11 @@ public:
     // While true (a modal window like the pause menu), this element gets the input events alone
     virtual bool is_blocking_input() const { return false; }
 
+    // Part of a menu's frame (the title bar, the bottom bar, the counters, the back button, the bar's shortcuts): it
+    // stays still while one menu screen changes into another under it, like The Battle Cats' bars (UIManager)
+    void set_frame(bool isFrame) { m_isFrame = isFrame; }
+    bool is_frame() const { return m_isFrame; }
+
     // Sounds of the widgets (clicks, selections...): UIManager plugs the AudioManager in, so the widgets
     // don't depend on it. Without a player, play_sound does nothing.
     // pitch: a factor (1 = as is); pan: -1 left to 1 right
@@ -63,6 +68,7 @@ protected:
     sf::Vector2f m_size = { 0.0f, 0.0f };     // Width and height of the element
 
     bool m_isVisible = true; // Whether the element should be drawn
+    bool m_isFrame = false;  // Stays still while the menu screens change (set_frame)
 
 private:
 

@@ -43,6 +43,12 @@ public:
     void handle_event(const sf::Event& event, const sf::RenderWindow& window) override;
     sf::FloatRect get_bounds() const override { return { { 0.f, 0.f }, { 1920.f, 1080.f } }; }
 
+    // The bottom bar with USE ALL / SELL ALL and how many fish wait: an element of its own, part of the menu frame (it
+    // stays still while the screens change), added after the storage
+    static std::shared_ptr<UIElement> make_bottom_bar(const std::shared_ptr<UIClamStorage>& storage);
+    void render_bottom_bar(sf::RenderWindow& window);
+    void handle_bottom_bar_event(const sf::Event& event, const sf::RenderWindow& window);
+
 private:
     struct Floater
     {
@@ -85,7 +91,7 @@ private:
     UIButtonElement m_sellShells;
     UIButtonElement m_sellScales;
     UIRoundButton m_closeCard;        // The card's X
-    UIBottomBar m_bottomBar;          // Mother-of-pearl, drawn here: USE ALL / SELL ALL sit on it (like The Battle Cats' Storage)
+    UIBottomBar m_bottomBar;          // Mother-of-pearl: USE ALL / SELL ALL sit on it (like The Battle Cats' Storage), make_bottom_bar
     UIButtonElement m_useAll;         // On the bottom bar, with the fish count
     UIButtonElement m_sellAll;
     sf::Text m_text;

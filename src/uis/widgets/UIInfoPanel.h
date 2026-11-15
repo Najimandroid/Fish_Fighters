@@ -1,8 +1,7 @@
 #pragma once
 
 #include "UIElement.h"
-#include "UIPanel.h"
-#include "UIRoundButton.h"
+#include "UIPopupFrame.h"
 
 #include <string>
 #include <vector>
@@ -36,9 +35,7 @@ public:
 
 private:
     sf::FloatRect m_box;
-    UIPanel m_panel;
-    UIRoundButton m_closeButton;
-    sf::Text m_title;
+    UIPopupFrame m_frame;               // The popup look: the title on its header, its X closes it
     sf::Text m_text;
     bool m_isPressedWhileOpen = false;   // A tap outside closes it only if it began while it was open
 };

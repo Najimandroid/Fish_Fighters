@@ -99,6 +99,9 @@ set(PROJECT_SOURCES
     src/uis/widgets/UIAdOverlay.cpp
     src/uis/widgets/UIChartBackground.cpp
     src/uis/widgets/UIBottomBar.cpp
+    src/uis/widgets/UICallout.cpp
+    src/uis/widgets/UIPopupFrame.cpp
+    src/uis/widgets/UIScreenWipe.cpp
     src/uis/widgets/UIStageCash.cpp
     src/uis/widgets/UICashUp.cpp
     src/uis/widgets/UIBaseHealthInfo.cpp

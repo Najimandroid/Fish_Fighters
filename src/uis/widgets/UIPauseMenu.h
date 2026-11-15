@@ -1,13 +1,14 @@
 #pragma once
 
-#include "UIPanel.h"
+#include "UIPopupFrame.h"
 #include "UIButtonElement.h"
 
 /*
  * UIPauseMenu
  * -----------
- * The window shown over the battle when it's paused: the stage name, "Continue", "Options" and "Retreat".
- * Opened by the pause button, Escape, P or Space, closed by "Continue" or the same keys.
+ * The window shown over the battle when it's paused, in the popup look (UIPopupFrame, like The Battle Cats' pause):
+ * "Paused" on its header, the stage name, "Continue" (the choice, framed) and "Options", "Retreat" on its footer;
+ * its X resumes too. Opened by the pause button, Escape, P or Space, closed by "Continue", the X or the same keys.
  * While open it dims the battle and takes every input event (is_blocking_input).
  *
  * It doesn't change the game speed itself: UIManager gives it callbacks that do.
@@ -48,8 +49,7 @@ public:
 private:
 
     sf::RectangleShape m_dim;          // Darkens the battle
-    UIPanel m_panel;
-    sf::Text m_title;                  // "PAUSED"
+    UIPopupFrame m_frame;              // "Paused", its X continues
     sf::Text m_stageName;
     UIButtonElement m_continueButton;
     UIButtonElement m_optionsButton;

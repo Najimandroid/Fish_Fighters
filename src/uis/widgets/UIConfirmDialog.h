@@ -1,6 +1,5 @@
 #pragma once
 
-#include "UIPanel.h"
 #include "UIButtonElement.h"
 
 #include <functional>
@@ -44,7 +43,6 @@ public:
 
 private:
     sf::RectangleShape m_dim;          // Darkens the screen behind
-    UIPanel m_panel;
     sf::Text m_question;
     sf::Text m_explanation;
     UIButtonElement m_confirmButton;   // Left, orange

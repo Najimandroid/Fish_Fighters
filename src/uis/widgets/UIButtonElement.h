@@ -65,6 +65,10 @@ public:
     // now and then (on the yellow image)
     void set_attention(bool hasAttention);
 
+    // The choice the screen points at (BATTLE! on the map, a dialog's main button): a pink frame pulses round it,
+    // like The Battle Cats' Attack!
+    void set_selected(bool isSelected);
+
     // Override UIElement functions
     void update(float deltaTime) override;
     void render(sf::RenderWindow& window) override;
@@ -100,4 +104,11 @@ protected:
     bool m_hasAttention = false;
     float entrance_scale() const;   // 0 (not in yet) to 1
     void render_shine(sf::RenderWindow& window, const sf::FloatRect& rect);
+
+    // A press is answered at once, like The Battle Cats: the button flashes brighter in a pink frame, fading in a
+    // moment (still lit while the next screen's wave covers it: that screen is drawn, not updated). Selected: the pink
+    // frame pulses. Each render draws it over the button (radius: its corners; brightens: a white flash too)
+    float m_flashStart = -10.f;     // When it was pressed (shared clock)
+    bool m_isSelected = false;
+    void render_highlight(sf::RenderWindow& window, const sf::FloatRect& rect, float radius, bool brightens = true) const;
 };

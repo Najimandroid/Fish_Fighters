@@ -341,6 +341,84 @@ void UISkin::fill_screen(sf::RenderTarget& target, sf::Color color)
     target.draw(fill);
 }
 
+float UISkin::selection_pulse()
+{
+    static const sf::Clock clock;
+    return 0.775f + 0.225f * std::sin(clock.getElapsedTime().asSeconds() * 2.f * 3.14159265f * 2.f);
+}
+
+void UISkin::draw_selection_frame(sf::RenderTarget& target, const sf::FloatRect& rect, float radius, float strength)
+{
+    strength = std::clamp(strength, 0.f, 1.f);
+    if (strength <= 0.01f) return;
+    const auto shape = [&](float grow, float thickness, std::uint8_t alpha)
+        {
+            const sf::Vector2f g{ grow, grow };
+            sf::ConvexShape outline = rounded_rect({ rect.position - g, rect.size + g * 2.f }, radius + grow);
+            outline.setFillColor(sf::Color::Transparent);
+            outline.setOutlineThickness(thickness);
+            outline.setOutlineColor(sf::Color(SELECTION.r, SELECTION.g, SELECTION.b, static_cast<std::uint8_t>(alpha * strength)));
+            target.draw(outline);
+        };
+    shape(6.f, 10.f, 70);    // The glow
+    shape(2.f, 6.f, 255);    // The frame
+}
+
+void UISkin::draw_message_box(sf::RenderTarget& target, const sf::FloatRect& rect)
+{
+    sf::ConvexShape shadow = rounded_rect({ rect.position + sf::Vector2f{ SHADOW_SHIFT, SHADOW_DROP } * 1.6f, rect.size }, 10.f);
+    shadow.setFillColor(sf::Color(0, 0, 0, 110));
+    target.draw(shadow);
+
+    // The box: deep sea blue, darker at the bottom
+    sf::VertexArray box(sf::PrimitiveType::TriangleStrip, 4);
+    const sf::Color top{ 44, 66, 96 }, bottom{ 12, 20, 34 };
+    box[0] = sf::Vertex{ rect.position, top };
+    box[1] = sf::Vertex{ { rect.position.x + rect.size.x, rect.position.y }, top };
+    box[2] = sf::Vertex{ { rect.position.x, rect.position.y + rect.size.y }, bottom };
+    box[3] = sf::Vertex{ rect.position + rect.size, bottom };
+    target.draw(box);
+
+    // The double border: the dark outline, a white line just inside it
+    sf::RectangleShape border(rect.size);
+    border.setPosition(rect.position);
+    border.setFillColor(sf::Color::Transparent);
+    border.setOutlineThickness(7.f);
+    border.setOutlineColor(OUTLINE);
+    target.draw(border);
+    border.setSize(rect.size - sf::Vector2f{ 20.f, 20.f });
+    border.setPosition(rect.position + sf::Vector2f{ 10.f, 10.f });
+    border.setOutlineThickness(3.f);
+    border.setOutlineColor(sf::Color(240, 246, 252));
+    target.draw(border);
+}
+
+void UISkin::draw_zigzag_band(sf::RenderTarget& target, float left, float right)
+{
+    if (right <= left) return;
+    const sf::FloatRect screen = screen_rect();
+    const float top = screen.position.y - 10.f, bottom = screen.position.y + screen.size.y + 10.f;
+    const float toothHeight = 64.f;
+    const sf::Color fill{ 8, 14, 26 };
+
+    // The body between the teeth, then the teeth on each edge (triangles pointing out)
+    sf::RectangleShape body({ right - left, bottom - top });
+    body.setPosition({ left, top });
+    body.setFillColor(fill);
+    target.draw(body);
+    sf::VertexArray teeth(sf::PrimitiveType::Triangles);
+    for (float y = top; y < bottom; y += toothHeight)
+    {
+        for (const auto& [edge, direction] : { std::pair{ left, -1.f }, std::pair{ right, 1.f } })
+        {
+            teeth.append(sf::Vertex{ { edge, y }, fill });
+            teeth.append(sf::Vertex{ { edge + direction * WIPE_TOOTH, y + toothHeight / 2.f }, fill });
+            teeth.append(sf::Vertex{ { edge, y + toothHeight }, fill });
+        }
+    }
+    target.draw(teeth);
+}
+
 bool UISkin::is_slide_area(sf::Vector2f point)
 {
     const sf::Vector2f margin{ 16.f, 16.f };   // A finger is wider than the mouse: a little room round the button

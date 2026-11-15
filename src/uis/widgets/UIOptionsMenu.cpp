@@ -7,16 +7,15 @@
 namespace
 {
     const sf::Vector2f SCREEN_SIZE{ 1920.f, 1080.f };
-    // A phone has no "Mute in background" and no DISPLAY rows: a shorter window, centered
-    const sf::Vector2f PANEL_SIZE{ 1000.f, Platform::IS_MOBILE ? 680.f : 860.f };
-    const sf::Vector2f PANEL_POSITION{ (SCREEN_SIZE.x - PANEL_SIZE.x) / 2.f, Platform::IS_MOBILE ? (SCREEN_SIZE.y - PANEL_SIZE.y) / 2.f : 110.f };
+    // A phone has no "Mute in background" and no DISPLAY rows: a shorter window, centered. The X on its corner closes it
+    const sf::Vector2f PANEL_SIZE{ 1000.f, Platform::IS_MOBILE ? 520.f : 760.f };
+    const sf::Vector2f PANEL_POSITION{ (SCREEN_SIZE.x - PANEL_SIZE.x) / 2.f, Platform::IS_MOBILE ? (SCREEN_SIZE.y - PANEL_SIZE.y) / 2.f : 130.f };
     const float TOP = PANEL_POSITION.y;                  // Every row from the window's top
     const float LEFT = PANEL_POSITION.x + 70.f;          // Row names and section headers
     const float SLIDER_X = PANEL_POSITION.x + 340.f;
     const float SLIDER_WIDTH = 440.f;
     const float SLIDER_HEIGHT = 22.f;
     const float MASTER_Y = TOP + 195.f, MUSIC_Y = TOP + 265.f, EFFECTS_Y = TOP + 335.f, MUTE_Y = TOP + 410.f;   // Row centers
-    const float CLOSE_Y = TOP + (Platform::IS_MOBILE ? 550.f : 740.f);
     const unsigned int HEADER_SIZE = 34;
     const unsigned int ROW_SIZE = 34;
 }
@@ -26,14 +25,13 @@ UIOptionsMenu::UIOptionsMenu(std::shared_ptr<DataLoader> dataLoader, std::shared
     UIElement(SCREEN_SIZE, { 0.f, 0.f }),
     m_dataLoader(dataLoader), m_audio(audio), m_setFullscreen(std::move(setFullscreen)),
     m_dim(SCREEN_SIZE),
-    m_panel(PANEL_SIZE, PANEL_POSITION, UISkin::PANEL_DARK, 1.2f),
+    m_frame({ PANEL_POSITION, PANEL_SIZE }, "Options"),
     m_masterSlider({ SLIDER_X, MASTER_Y - SLIDER_HEIGHT / 2.f }, SLIDER_WIDTH, 1.f),
     m_musicSlider({ SLIDER_X, MUSIC_Y - SLIDER_HEIGHT / 2.f }, SLIDER_WIDTH, 1.f),
     m_effectsSlider({ SLIDER_X, EFFECTS_Y - SLIDER_HEIGHT / 2.f }, SLIDER_WIDTH, 1.f),
     m_muteButton({ 200.f, 70.f }, { SLIDER_X + SLIDER_WIDTH - 200.f + 130.f, MUTE_Y - 35.f }, "ON"),
     m_fullscreenButton({ 320.f, 80.f }, { LEFT, TOP + 525.f }, "FULLSCREEN"),
-    m_windowedButton({ 320.f, 80.f }, { LEFT + 350.f, TOP + 525.f }, "WINDOWED"),
-    m_closeButton({ 280.f, 84.f }, { (SCREEN_SIZE.x - 280.f) / 2.f, CLOSE_Y }, "CLOSE")
+    m_windowedButton({ 320.f, 80.f }, { LEFT + 350.f, TOP + 525.f }, "WINDOWED")
 {
     m_dim.setFillColor(sf::Color(0, 0, 0, 150));
 
@@ -46,7 +44,6 @@ UIOptionsMenu::UIOptionsMenu(std::shared_ptr<DataLoader> dataLoader, std::shared
             label.setPosition(position);
             m_labels.push_back(label);
         };
-    addText("OPTIONS", 64, UISkin::TEXT, { SCREEN_SIZE.x / 2.f, TOP + 65.f }, { 0.5f, 0.5f });
     addText("AUDIO", HEADER_SIZE, UISkin::TITLE, { LEFT, TOP + 135.f }, { 0.f, 0.5f });
     addText("Master", ROW_SIZE, UISkin::TEXT, { LEFT, MASTER_Y }, { 0.f, 0.5f });
     addText("Music", ROW_SIZE, UISkin::TEXT, { LEFT, MUSIC_Y }, { 0.f, 0.5f });
@@ -100,9 +97,7 @@ UIOptionsMenu::UIOptionsMenu(std::shared_ptr<DataLoader> dataLoader, std::shared
     m_fullscreenButton.set_callback([setMode]() { setMode(true); });
     m_windowedButton.set_callback([setMode]() { setMode(false); });
 
-    m_closeButton.set_text_size(40);
-    m_closeButton.set_click_sound("ui_back");
-    m_closeButton.set_callback([this]() { close(); });
+    m_frame.set_on_close([this]() { close(); });   // Its X
 
     m_isVisible = false;
 }
@@ -144,7 +139,7 @@ void UIOptionsMenu::update(float deltaTime)
     m_muteButton.update(deltaTime);
     m_fullscreenButton.update(deltaTime);
     m_windowedButton.update(deltaTime);
-    m_closeButton.update(deltaTime);
+    m_frame.update(deltaTime);
 }
 
 void UIOptionsMenu::render(sf::RenderWindow& window)
@@ -152,7 +147,7 @@ void UIOptionsMenu::render(sf::RenderWindow& window)
     if (!m_isVisible) return;
 
     window.draw(m_dim);
-    m_panel.render(window);
+    m_frame.render(window);
     for (const sf::Text& label : m_labels) window.draw(label);
     m_masterSlider.render(window);
     m_musicSlider.render(window);
@@ -163,7 +158,6 @@ void UIOptionsMenu::render(sf::RenderWindow& window)
         m_fullscreenButton.render(window);
         m_windowedButton.render(window);
     }
-    m_closeButton.render(window);
 }
 
 void UIOptionsMenu::handle_event(const sf::Event& event, const sf::RenderWindow& window)
@@ -189,7 +183,7 @@ void UIOptionsMenu::handle_event(const sf::Event& event, const sf::RenderWindow&
         m_fullscreenButton.handle_event(event, window);
         m_windowedButton.handle_event(event, window);
     }
-    m_closeButton.handle_event(event, window);
+    m_frame.handle_event(event, window);
 }
 
 sf::FloatRect UIOptionsMenu::get_bounds() const

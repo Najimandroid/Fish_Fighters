@@ -116,6 +116,7 @@ private:
     // The hub: the stage the map opens on ("Stage 5 - Clam Leader"), and whether something can be upgraded
     std::string next_stage_label() const;
     bool is_upgrade_available() const;
+    int upgrades_available() const;   // Fish that can be levelled up or unlocked with the shells there are (UPGRADE's badge)
 
     // What the Fish (UIHubMascot) says in the Fish Tank: what's worth doing now first, then general tips
     std::vector<std::string> hub_tips() const;
@@ -169,8 +170,19 @@ private:
     void start_screen_reveal();
     void cancel_screen_reveal();                                // A screen with its own transition (battle, storage)
     std::pair<float, float> reveal_band() const;                // The wave's top and bottom (UI y) now
+    // Which elements a pass draws: all, all but the menu frame (the content under a still frame), the frame alone
+    enum class Layer { ALL, CONTENT, FRAME };
     void render_list(sf::RenderWindow& window, std::vector<std::shared_ptr<UIElement>>& elements, const sf::View& uiView, sf::View& worldView,
-        bool withFrame);
+        bool withFrame, Layer layer = Layer::ALL);
+    // Between two menus (both with a title bar), the frame stays still and the wave sweeps the content between the bars
+    static bool has_frame(const std::vector<std::shared_ptr<UIElement>>& elements);
+    bool m_keepsFrame = false;                                  // This wave keeps the frame still
+    // Out of a battle the new screen comes in by a zigzag wipe instead (like The Battle Cats' wipe back to the base):
+    // UIScreenWipe covers the battle, then the battle unloads, generate builds the menu and the band pulls away
+    enum class Reveal { WAVE, WIPE };
+    Reveal m_revealStyle = Reveal::WAVE;
+    bool m_isWipingOut = false;                                 // The next menu screen comes in by the wipe
+    void wipe_out_of_battle(std::function<void()> generate);
 
 	std::function<void(GameSpeedState)> m_setGameSpeedCallback; // Callback to set game speed state
     std::function<GameSpeedState()> m_getGameSpeedCallback;     // Callback to get current game speed state

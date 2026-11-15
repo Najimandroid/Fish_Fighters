@@ -95,6 +95,7 @@ UIResultsPanel::UIResultsPanel(const BattleResult& result, const std::string& st
     m_primaryButton.set_callback(m_actions.primary);
     m_primaryButton.set_hotkey(sf::Keyboard::Key::Enter);
     m_primaryButton.set_attention(true);
+    m_primaryButton.set_selected(true);   // The pink frame: the way on
     m_secondaryButton.set_text_size(38);
     m_secondaryButton.set_style(UIButtonElement::Style::Secondary);
     m_secondaryButton.set_callback(m_actions.secondary);
@@ -161,26 +162,38 @@ void UIResultsPanel::update(float deltaTime)
 
 void UIResultsPanel::render(sf::RenderWindow& window)
 {
-    // The battlefield dims
+    // The battlefield dims a little: it stays in view behind the result, like The Battle Cats' victory
     sf::RectangleShape dim(SCREEN_SIZE);
-    dim.setFillColor(sf::Color(DIM.r, DIM.g, DIM.b, static_cast<std::uint8_t>(150.f * std::clamp(m_time / DIM_SECONDS, 0.f, 1.f))));
+    dim.setFillColor(sf::Color(DIM.r, DIM.g, DIM.b, static_cast<std::uint8_t>(70.f * std::clamp(m_time / DIM_SECONDS, 0.f, 1.f))));
     window.draw(dim);
 
-    // The panel slides up into place
+    // A see-through dark band across the whole screen slides up into place (the result on it), its edges lit
     const float slide = std::clamp(m_time / SLIDE_SECONDS, 0.f, 1.f);
     const std::uint8_t alpha = alpha_of(slide * 2.f);
     sf::FloatRect panel = m_panel;
     panel.position.y += 60.f * (1.f - ease_out_back(slide));
-    UISkin::draw_nine_slice(window, UISkin::PANEL_DARK, panel, 1.2f, sf::Color(255, 255, 255, alpha));
+    const sf::FloatRect screen = UISkin::screen_rect();
+    const float bandTop = panel.position.y + 150.f, bandBottom = panel.position.y + panel.size.y + 14.f;
+    sf::RectangleShape band({ screen.size.x, bandBottom - bandTop });
+    band.setPosition({ screen.position.x, bandTop });
+    band.setFillColor(sf::Color(8, 16, 28, static_cast<std::uint8_t>(185 * alpha / 255)));
+    window.draw(band);
+    sf::RectangleShape edge({ screen.size.x, 4.f });
+    edge.setFillColor(sf::Color(190, 215, 240, static_cast<std::uint8_t>(110 * alpha / 255)));
+    for (const float y : { bandTop - 2.f, bandBottom - 2.f })
+    {
+        edge.setPosition({ screen.position.x, y });
+        window.draw(edge);
+    }
 
-    // Banner: big, slightly tilted, settling from 1.4x
+    // Banner: huge, slightly tilted, over the band's top edge, settling from 1.4x
     const float bannerProgress = std::clamp((m_time - BANNER_START) / BANNER_SECONDS, 0.f, 1.f);
     const float bannerScale = 1.4f - 0.4f * (1.f - (1.f - bannerProgress) * (1.f - bannerProgress));
     const sf::Vector2f bannerPosition{ SCREEN_SIZE.x / 2.f, panel.position.y + 110.f };
     if (m_result.isVictory)
-        draw_text(window, "VICTORY!", 120, UISkin::NUMBER, bannerPosition, { 0.5f, 0.5f }, alpha_of(bannerProgress * 3.f), bannerScale, -2.f);
+        draw_text(window, "VICTORY!", 140, UISkin::NUMBER, bannerPosition, { 0.5f, 0.5f }, alpha_of(bannerProgress * 3.f), bannerScale, -2.f);
     else
-        draw_text(window, "DEFEAT...", 110, UISkin::TITLE, bannerPosition, { 0.5f, 0.5f }, alpha_of(bannerProgress * 3.f), bannerScale, 2.f);
+        draw_text(window, "DEFEAT...", 124, UISkin::TITLE, bannerPosition, { 0.5f, 0.5f }, alpha_of(bannerProgress * 3.f), bannerScale, 2.f);
 
     draw_text(window, m_stageName, 34, UISkin::TITLE, { SCREEN_SIZE.x / 2.f, panel.position.y + 205.f }, { 0.5f, 0.5f }, alpha);
 

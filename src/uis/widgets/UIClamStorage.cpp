@@ -462,18 +462,9 @@ void UIClamStorage::render(sf::RenderWindow& window)
             window.draw(scallop);
         }
 
-    // The bottom bar, on it USE ALL, SELL ALL and how many fish wait; under the title, what a tap does
-    m_bottomBar.render(window);
+    // Under the title, what a tap does (the bottom bar is an element of its own: make_bottom_bar)
     if (!m_floaters.empty())
     {
-        m_useAll.render(window);
-        m_sellAll.render(window);
-        const int total = stored_total();
-        UISkin::style_text(m_text, 34, sf::Color(255, 220, 240));
-        m_text.setString(std::to_string(total) + " fish");
-        UISkin::set_text_anchor(m_text, { 1.f, 0.5f });
-        m_text.setPosition({ 1872.f, BULK_Y + BULK_SIZE.y / 2.f });
-        window.draw(m_text);
         UISkin::style_text(m_text, 26, sf::Color(255, 214, 238));
         m_text.setString("Tap a fish to use or sell it");
         UISkin::set_text_anchor(m_text, { 0.5f, 0.5f });
@@ -620,6 +611,54 @@ void UIClamStorage::render_panel(sf::RenderWindow& window)
     text("10 Fish Scales craft a Shiny Scale (+)", 22, INK_SOFT, { PANEL_CENTER, 872.f }, { 0.5f, 0.5f }, true);
 }
 
+namespace
+{
+    // UIClamStorage's bottom bar as an element of its own, so it is part of the menu frame (UIClamStorage::make_bottom_bar)
+    class StorageBottomBar : public UIElement
+    {
+    public:
+        explicit StorageBottomBar(std::weak_ptr<UIClamStorage> storage) :
+            UIElement({ 1920.f, 1080.f - UISkin::CONTENT_BOTTOM }, { 0.f, UISkin::CONTENT_BOTTOM }), m_storage(std::move(storage)) {}
+        void update(float) override {}
+        void render(sf::RenderWindow& window) override { if (auto storage = m_storage.lock()) storage->render_bottom_bar(window); }
+        void handle_event(const sf::Event& event, const sf::RenderWindow& window) override
+        {
+            if (auto storage = m_storage.lock()) storage->handle_bottom_bar_event(event, window);
+        }
+
+    private:
+        std::weak_ptr<UIClamStorage> m_storage;
+    };
+}
+
+std::shared_ptr<UIElement> UIClamStorage::make_bottom_bar(const std::shared_ptr<UIClamStorage>& storage)
+{
+    auto bar = std::make_shared<StorageBottomBar>(storage);
+    bar->set_frame(true);
+    return bar;
+}
+
+// The mother-of-pearl bar, on it USE ALL, SELL ALL and how many fish wait (like The Battle Cats' Storage)
+void UIClamStorage::render_bottom_bar(sf::RenderWindow& window)
+{
+    m_bottomBar.render(window);
+    if (m_floaters.empty()) return;
+    m_useAll.render(window);
+    m_sellAll.render(window);
+    UISkin::style_text(m_text, 34, sf::Color(255, 220, 240));
+    m_text.setString(std::to_string(stored_total()) + " fish");
+    UISkin::set_text_anchor(m_text, { 1.f, 0.5f });
+    m_text.setPosition({ 1872.f, BULK_Y + BULK_SIZE.y / 2.f });
+    window.draw(m_text);
+}
+
+void UIClamStorage::handle_bottom_bar_event(const sf::Event& event, const sf::RenderWindow& window)
+{
+    if (is_card_open() || m_floaters.empty()) return;   // The card takes the input while it's up
+    m_useAll.handle_event(event, window);
+    m_sellAll.handle_event(event, window);
+}
+
 bool UIClamStorage::is_card_open() const
 {
     return m_selectedUid >= 0 && selected_count() > 0;
@@ -739,9 +778,7 @@ void UIClamStorage::handle_event(const sf::Event& event, const sf::RenderWindow&
         return;
     }
 
-    // Else: USE ALL / SELL ALL, or a fish (its card comes up)
-    m_useAll.handle_event(event, window);
-    m_sellAll.handle_event(event, window);
+    // Else: a fish (its card comes up); USE ALL / SELL ALL are on the bottom bar (handle_bottom_bar_event)
     const auto* pressed = event.getIf<sf::Event::MouseButtonPressed>();
     if (!pressed || pressed->button != sf::Mouse::Button::Left) return;
     if (Floater* floater = floater_at(window.mapPixelToCoords(pressed->position))) click_fish(*floater);

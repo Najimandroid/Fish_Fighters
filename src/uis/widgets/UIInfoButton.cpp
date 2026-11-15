@@ -41,6 +41,7 @@ void UIInfoButton::render(sf::RenderWindow& window)
     m_text.setScale({ scale, scale });
     m_text.setPosition(center + sf::Vector2f{ 0.f, -radius * 0.06f });
     window.draw(m_text);
+    render_highlight(window, rect, radius);   // A press flashes
 }
 
 sf::FloatRect UIInfoButton::get_bounds() const

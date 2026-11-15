@@ -4,7 +4,8 @@
 namespace
 {
     const sf::Vector2f SCREEN_SIZE{ 1920.f, 1080.f };
-    const sf::Vector2f PANEL_SIZE{ 640.f, 590.f };
+    const sf::Vector2f PANEL_SIZE{ 640.f, 600.f };
+    const float FOOTER = 140.f;                       // RETREAT on the footer band
     const sf::Vector2f PANEL_POSITION = (SCREEN_SIZE - PANEL_SIZE) / 2.f;
     const sf::Vector2f BUTTON_SIZE{ 400.f, 96.f };
     const float BUTTON_X = (SCREEN_SIZE.x - BUTTON_SIZE.x) / 2.f;
@@ -14,22 +15,17 @@ namespace
 UIPauseMenu::UIPauseMenu(const std::string& stageName) :
     UIElement(SCREEN_SIZE, { 0.f, 0.f }),
     m_dim(SCREEN_SIZE),
-    m_panel(PANEL_SIZE, PANEL_POSITION, UISkin::PANEL_DARK, 1.2f),
-    m_title(UISkin::heavy_font(), "PAUSED"),
+    m_frame({ PANEL_POSITION, PANEL_SIZE }, "Paused", FOOTER),
     m_stageName(UISkin::heavy_font(), stageName),
-    m_continueButton(BUTTON_SIZE, { BUTTON_X, PANEL_POSITION.y + 210.f }, "CONTINUE"),
-    m_optionsButton(BUTTON_SIZE, { BUTTON_X, PANEL_POSITION.y + 330.f }, "OPTIONS"),
-    m_retreatButton(BUTTON_SIZE, { BUTTON_X, PANEL_POSITION.y + 450.f }, "RETREAT")
+    m_continueButton(BUTTON_SIZE, { BUTTON_X, PANEL_POSITION.y + 196.f }, "CONTINUE"),
+    m_optionsButton(BUTTON_SIZE, { BUTTON_X, PANEL_POSITION.y + 312.f }, "OPTIONS"),
+    m_retreatButton(BUTTON_SIZE, { BUTTON_X, PANEL_POSITION.y + PANEL_SIZE.y - FOOTER + (FOOTER - BUTTON_SIZE.y) / 2.f }, "RETREAT")
 {
     m_dim.setFillColor(sf::Color(0, 0, 0, 150));
 
-    UISkin::style_text(m_title, 72);
-    UISkin::set_text_anchor(m_title, { 0.5f, 0.5f });
-    m_title.setPosition({ SCREEN_SIZE.x / 2.f, PANEL_POSITION.y + 75.f });
-
     UISkin::style_text(m_stageName, 36, UISkin::NUMBER);
     UISkin::set_text_anchor(m_stageName, { 0.5f, 0.5f });
-    m_stageName.setPosition({ SCREEN_SIZE.x / 2.f, PANEL_POSITION.y + 150.f });
+    m_stageName.setPosition({ SCREEN_SIZE.x / 2.f, PANEL_POSITION.y + UIPopupFrame::HEADER + 46.f });
 
     m_continueButton.set_text_size(40);
     m_retreatButton.set_text_size(40);
@@ -40,6 +36,9 @@ UIPauseMenu::UIPauseMenu(const std::string& stageName) :
     // RETREAT asks first (UIManager's confirm dialog plays "ui_back" if the player confirms)
 
     m_continueButton.set_callback([this]() { if (m_continueCallback) m_continueCallback(); });
+    m_continueButton.set_selected(true);   // The choice: back to the battle
+    m_frame.set_close_sound("");
+    m_frame.set_on_close([this]() { if (m_continueCallback) m_continueCallback(); });
 
     m_isVisible = false;
 }
@@ -87,6 +86,7 @@ void UIPauseMenu::update(float deltaTime)
     m_continueButton.update(deltaTime);
     m_optionsButton.update(deltaTime);
     m_retreatButton.update(deltaTime);
+    m_frame.update(deltaTime);
 }
 
 void UIPauseMenu::render(sf::RenderWindow& window)
@@ -94,8 +94,7 @@ void UIPauseMenu::render(sf::RenderWindow& window)
     if (!m_isVisible) return;
 
     window.draw(m_dim);
-    m_panel.render(window);
-    window.draw(m_title);
+    m_frame.render(window);
     window.draw(m_stageName);
     m_continueButton.render(window);
     m_optionsButton.render(window);
@@ -121,6 +120,7 @@ void UIPauseMenu::handle_event(const sf::Event& event, const sf::RenderWindow& w
     m_continueButton.handle_event(event, window);
     m_optionsButton.handle_event(event, window);
     m_retreatButton.handle_event(event, window);
+    m_frame.handle_event(event, window);
 }
 
 sf::FloatRect UIPauseMenu::get_bounds() const

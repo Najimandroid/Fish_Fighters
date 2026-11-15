@@ -4,11 +4,12 @@
 namespace
 {
     const sf::Vector2f SCREEN_SIZE{ 1920.f, 1080.f };
-    const sf::Vector2f PANEL_SIZE{ 760.f, 400.f };
-    const sf::Vector2f PANEL_POSITION = (SCREEN_SIZE - PANEL_SIZE) / 2.f;
-    const sf::Vector2f BUTTON_SIZE{ 320.f, 96.f };
+    // A message box (UISkin::draw_message_box, like The Battle Cats' dialogs), its buttons straddling its bottom edge
+    const sf::Vector2f PANEL_SIZE{ 840.f, 300.f };
+    const sf::Vector2f PANEL_POSITION{ (SCREEN_SIZE.x - PANEL_SIZE.x) / 2.f, (SCREEN_SIZE.y - PANEL_SIZE.y) / 2.f - 40.f };
+    const sf::Vector2f BUTTON_SIZE{ 340.f, 96.f };   // "KEEP FIGHTING" fits
     const float BUTTON_GAP = 40.f;
-    const float BUTTON_Y = PANEL_POSITION.y + PANEL_SIZE.y - BUTTON_SIZE.y - 44.f;
+    const float BUTTON_Y = PANEL_POSITION.y + PANEL_SIZE.y - BUTTON_SIZE.y * 0.4f;
     const float EXPLANATION_WIDTH = PANEL_SIZE.x - 120.f;
     const unsigned int QUESTION_SIZE = 48;
     const unsigned int EXPLANATION_SIZE = 30;
@@ -19,7 +20,6 @@ UIConfirmDialog::UIConfirmDialog(const std::string& question, const std::string&
     const std::string& confirmLabel, const std::string& cancelLabel) :
     UIElement(SCREEN_SIZE, { 0.f, 0.f }),
     m_dim(SCREEN_SIZE),
-    m_panel(PANEL_SIZE, PANEL_POSITION, UISkin::PANEL_DARK, 1.2f),
     m_question(UISkin::heavy_font(), question),
     m_explanation(UISkin::regular_font()),
     m_confirmButton(BUTTON_SIZE, { SCREEN_SIZE.x / 2.f - BUTTON_GAP / 2.f - BUTTON_SIZE.x, BUTTON_Y }, confirmLabel),
@@ -29,12 +29,12 @@ UIConfirmDialog::UIConfirmDialog(const std::string& question, const std::string&
 
     UISkin::style_text(m_question, QUESTION_SIZE);
     UISkin::set_text_anchor(m_question, { 0.5f, 0.5f });
-    m_question.setPosition({ SCREEN_SIZE.x / 2.f, PANEL_POSITION.y + 78.f });
+    m_question.setPosition({ SCREEN_SIZE.x / 2.f, PANEL_POSITION.y + 74.f });
 
     UISkin::style_body_text(m_explanation, EXPLANATION_SIZE, UISkin::TITLE);
     m_explanation.setString(UISkin::wrap_text(explanation, EXPLANATION_SIZE, EXPLANATION_WIDTH, UISkin::regular_font()));
     UISkin::set_text_anchor(m_explanation, { 0.5f, 0.5f });
-    m_explanation.setPosition({ SCREEN_SIZE.x / 2.f, PANEL_POSITION.y + 170.f });
+    m_explanation.setPosition({ SCREEN_SIZE.x / 2.f, PANEL_POSITION.y + 158.f });
 
     m_confirmButton.set_text_size(38);
     m_confirmButton.set_fill_color(DANGER_TINT);
@@ -46,7 +46,8 @@ UIConfirmDialog::UIConfirmDialog(const std::string& question, const std::string&
             if (onConfirm) onConfirm();
         });
 
-    m_cancelButton.set_text_size(38);   // The safe choice stays yellow: it's the one to take
+    m_cancelButton.set_text_size(38);   // The safe choice stays yellow: it's the one to take, framed in pink
+    m_cancelButton.set_selected(true);
     m_cancelButton.set_callback([this]() { close(); });
 
     m_isVisible = false;
@@ -94,7 +95,7 @@ void UIConfirmDialog::render(sf::RenderWindow& window)
     if (!m_isVisible) return;
 
     window.draw(m_dim);
-    m_panel.render(window);
+    UISkin::draw_message_box(window, { PANEL_POSITION, PANEL_SIZE });
     window.draw(m_question);
     window.draw(m_explanation);
     m_confirmButton.render(window);
