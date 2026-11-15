@@ -187,9 +187,9 @@ class SoundFont {
 const timecents = tc => Math.pow(2, tc / 1200);
 const centibels = cb => Math.pow(10, -cb / 200);
 
-// bend: semitones the pitch slides by over the held part of the note (0 = none)
+// bend: semitones the pitch slides by over the held part of the note (0 = none), or over bendSeconds (then held)
 // vibrato: { cents, hz, delay } added on top of the instrument's own (a player's vibrato on long notes), or null
-function renderVoice(font, region, key, velocity, start, length, out, rate, gain, bend = 0, vibrato = null) {
+function renderVoice(font, region, key, velocity, start, length, out, rate, gain, bend = 0, vibrato = null, bendSeconds = 0) {
     const v = region.value, sample = region.sample;
     const data = font.data;
 
@@ -291,7 +291,7 @@ function renderVoice(font, region, key, velocity, start, length, out, rate, gain
             else modEnv = Math.max(0, modReleaseFrom * (1 - (f - heldFrames) / (modRelease * rate)));
             const vib = t > vibDelay ? triangle((t - vibDelay) * vibFreq) : 0;
             const modLfo = t > modLfoDelay ? triangle((t - modLfoDelay) * modLfoFreq) : 0;
-            const bendCents = bend ? bend * 100 * Math.min(1, f / Math.max(1, heldFrames)) : 0;
+            const bendCents = bend ? bend * 100 * Math.min(1, f / Math.max(1, bendSeconds > 0 ? bendSeconds * rate : heldFrames)) : 0;
             // The player's vibrato fades in after its delay (over 0.2 s)
             const playerCents = vibrato ? vibrato.cents * Math.min(1, Math.max(0, (t - vibrato.delay) / 0.2)) * Math.sin(2 * Math.PI * vibrato.hz * t) : 0;
             step = isPitchModulated || bend
@@ -318,7 +318,7 @@ function renderVoice(font, region, key, velocity, start, length, out, rate, gain
     }
 }
 
-// notes: [[startSeconds, lengthSeconds, key, velocity, bend?], ...]. Returns interleaved stereo Float32Array.
+// notes: [[startSeconds, lengthSeconds, key, velocity, bend?, bendSeconds?], ...]. Returns interleaved stereo Float32Array.
 // Channel 10 plays the drum kit numbered program (bank 128: 0 Standard, 8 Room, 16 Power, 40 Brush...)
 // vibrato: { cents, hz, delay (seconds), minBeats } on notes held at least minBeats (tempo: the song's, for beats)
 function render(font, { notes, channel, program, volume = 100, vibrato = null, tempo = 120 }, rate = 48000, tail = 3) {
@@ -342,11 +342,11 @@ function render(font, { notes, channel, program, volume = 100, vibrato = null, t
         }
     });
 
-    sorted.forEach(([start, length, key, velocity, bend = 0], i) => {
+    sorted.forEach(([start, length, key, velocity, bend = 0, bendSeconds = 0], i) => {
         for (const region of font.regions(bank, program, key, velocity)) {
             // Drums play their whole sample (one-shots), unless cut by their exclusive class
             const held = isDrums ? Math.min(cuts[i], 4) : length;
-            renderVoice(font, region, key, velocity, start, held, out, rate, gain, bend, vibrato && length >= minVibratoSeconds ? vibrato : null);
+            renderVoice(font, region, key, velocity, start, held, out, rate, gain, bend, vibrato && length >= minVibratoSeconds ? vibrato : null, bendSeconds);
         }
     });
     return out;
