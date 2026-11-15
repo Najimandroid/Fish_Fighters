@@ -24,6 +24,7 @@ public:
     void update(float deltaTime) override;
     void render(sf::RenderWindow& window) override;
     bool is_blocking_input() const override { return true; }
+    bool dims_letterbox() const override { return false; }
     sf::FloatRect get_bounds() const override { return { { 0.f, 0.f }, { 1920.f, 1080.f } }; }
 
     // How far a wipe's moving edge has gone (0 to 1) after t seconds: fast, then easing in

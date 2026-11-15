@@ -23,7 +23,7 @@ public:
     // dataLoader: reference to DataLoader to access player data
     // SHELLS at the right end of the title bar, SHINY_SCALES left of it (with the craft "+" inside its right end),
     // FISH_SCALES further left
-    enum class Currency { SHELLS, SHINY_SCALES, FISH_SCALES };
+    enum class Currency { SHELLS, SHINY_SCALES, FISH_SCALES, PEARLS };
     UIPlayerShellsInfo(std::shared_ptr<DataLoader> dataLoader, Currency currency = Currency::SHELLS);
 
     // Update the displayed shell count
@@ -48,7 +48,7 @@ public:
     void set_tint(sf::Color tint);
 
     // At the right end of the bottom bar (UIBottomBar) instead of the title bar, like The Battle Cats' Cat Food
-    void place_in_bottom_bar();
+    void place_in_bottom_bar(float offsetX = 40.f);   // Its right edge this far from the layout's right edge
 
 private:
 
@@ -61,9 +61,10 @@ private:
     float m_shown = -1.f;                     // The amount the digits show (rolls to the real one; -1: not yet)
     float m_spent = 0.f;                      // 1 when the amount goes down (the digits flash red), back to 0
     bool m_isInBottomBar = false;
+    float m_bottomBarOffsetX = 40.f;
 
     const float OFFSET_Y = 18.f;      // Vertical padding from the top
-    const float OFFSET_X = 24.f;      // Horizontal padding from the right
+    const float OFFSET_X = 40.f;      // Horizontal padding from the right (the bars' rivets outside it)
     const float PILL_HEIGHT = 74.f;
     const float MIN_PILL_WIDTH = 300.f;
 };

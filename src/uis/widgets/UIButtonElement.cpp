@@ -50,7 +50,7 @@ void UIButtonElement::set_selected(bool isSelected)
     m_isSelected = isSelected;
 }
 
-void UIButtonElement::render_highlight(sf::RenderWindow& window, const sf::FloatRect& rect, float radius, bool brightens) const
+void UIButtonElement::render_highlight(sf::RenderWindow& window, const sf::FloatRect& rect, float radius, bool brightens, bool framed) const
 {
     const float flash = 1.f - (clock_seconds() - m_flashStart) / FLASH_SECONDS;
     if (flash > 0.f)
@@ -61,9 +61,9 @@ void UIButtonElement::render_highlight(sf::RenderWindow& window, const sf::Float
             light.setFillColor(sf::Color(255, 255, 255, static_cast<std::uint8_t>(120.f * flash)));
             window.draw(light);
         }
-        UISkin::draw_selection_frame(window, rect, radius, std::min(1.f, flash * 1.6f));
+        if (framed) UISkin::draw_selection_frame(window, rect, radius, std::min(1.f, flash * 1.6f));
     }
-    else if (m_isSelected && m_isEnabled && entrance_scale() >= 1.f)
+    else if (framed && m_isSelected && m_isEnabled && entrance_scale() >= 1.f)
         UISkin::draw_selection_frame(window, rect, radius, UISkin::selection_pulse());
 }
 

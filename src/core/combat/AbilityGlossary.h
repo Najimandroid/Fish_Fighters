@@ -3,6 +3,7 @@
 #include "../../data/AbilityData.h"
 #include "DamageCalculator.h"
 
+#include <algorithm>
 #include <string>
 
 /*
@@ -32,6 +33,7 @@ namespace AbilityGlossary
         case EntityType::CRUSTACEAN: return "Crustacean";
         case EntityType::JELLY:      return "Jelly";
         case EntityType::FISH:       return "Fish";
+        case EntityType::ALL_ENEMIES:return "All Enemies";
         default:                     return "None";
         }
     }
@@ -90,6 +92,7 @@ namespace AbilityGlossary
     // Who an ability targets: "Crustacean and Shelled enemies", or "fish" for the abilities of enemies
     inline std::string targets_text(const std::vector<EntityType>& targetTypes)
     {
+        if (std::find(targetTypes.begin(), targetTypes.end(), EntityType::ALL_ENEMIES) != targetTypes.end()) return "all enemies";
         std::string names;
         bool targetsFish = false;
         for (size_t i = 0; i < targetTypes.size(); ++i)

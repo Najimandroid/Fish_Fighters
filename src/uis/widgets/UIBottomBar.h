@@ -18,7 +18,8 @@ class UIBottomBar : public UIElement
 {
 public:
 
-    explicit UIBottomBar(UITitleBar::Material material = UITitleBar::Material::STEEL);
+    // hasBackButton: the back button sits on its left end (no rivet there)
+    explicit UIBottomBar(UITitleBar::Material material = UITitleBar::Material::STEEL, bool hasBackButton = true);
 
     void update(float deltaTime) override {}
     void render(sf::RenderWindow& window) override;
@@ -26,4 +27,5 @@ public:
 private:
 
     UITitleBar::Material m_material;
+    bool m_hasBackButton;
 };

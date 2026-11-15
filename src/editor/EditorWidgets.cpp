@@ -4,6 +4,7 @@
 
 #include "../data/AbilityData.h"
 #include "../data/EntityType.h"
+#include "../data/Rarity.h"
 #include "../core/combat/DamageCalculator.h"
 #include "../core/combat/AbilityGlossary.h"
 #include "../core/entities/status/StatusEffect.h"
@@ -88,13 +89,16 @@ namespace
     // One checkbox per enemy type, after its icon. True when the list changed
     // One checkbox (with its icon) per enemy type, wrapping onto new lines when the space runs out (a narrow
     // table cell, like the abilities' Targets column, keeps them inside it)
-    bool enemy_type_checkboxes(EditorContext& ctx, std::vector<int>& types)
+    // withAllEnemies: the hidden ALL_ENEMIES too (a fish ability's targets: every enemy has it)
+    bool enemy_type_checkboxes(EditorContext& ctx, std::vector<int>& types, bool withAllEnemies = false)
     {
         bool changed = false;
         const ImGuiStyle& style = ImGui::GetStyle();
         const float right = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x;
         bool isFirst = true;
-        for (EntityType enemyType : ENEMY_TYPES)
+        std::vector<EntityType> choices(std::begin(ENEMY_TYPES), std::end(ENEMY_TYPES));
+        if (withAllEnemies) choices.push_back(EntityType::ALL_ENEMIES);
+        for (EntityType enemyType : choices)
         {
             const int type = static_cast<int>(enemyType);
             bool hasType = std::find(types.begin(), types.end(), type) != types.end();
@@ -285,6 +289,24 @@ namespace EditorWidgets
         if (changed)
         {
             object[key] = value ? 1 : 0;
+            ctx.commit(file);
+        }
+        ImGui::PopID();
+        return changed;
+    }
+
+    bool rarity_field(EditorContext& ctx, DataFile file, ordered_json& object)
+    {
+        property_label("Rarity", "Normal fish come from the stages; the giant clam gives the Rare and Super Rare ones\n"
+            "(only Normal fish exist yet: until the first Rare one, it gives those). Shared by every form.");
+        ImGui::PushID("rarity");
+        int index = static_cast<int>(rarity_from_key(read_string(object, "rarity", "NORMAL")));
+        if (index >= static_cast<int>(Rarity::COUNT)) index = 0;
+        const char* names[] = { "Normal", "Rare", "Super Rare" };
+        const bool changed = ImGui::Combo("##value", &index, names, 3);
+        if (changed)
+        {
+            object["rarity"] = rarity_key(static_cast<Rarity>(index));
             ctx.commit(file);
         }
         ImGui::PopID();
@@ -805,7 +827,7 @@ namespace EditorWidgets
                 else
                 {
                     std::vector<int> targets = read_type_list(ability, "targetTypes");
-                    if (enemy_type_checkboxes(ctx, targets))
+                    if (enemy_type_checkboxes(ctx, targets, true))
                     {
                         ability["targetTypes"] = targets;
                         ctx.commit(file);

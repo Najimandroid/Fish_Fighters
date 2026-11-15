@@ -123,6 +123,7 @@ namespace
             int_field(ctx, UNITS_FILE, "Max level", form, "maxLevel", 0, 999, "...to this one. The next form starts at max level + 1.", 0.1f);
             int_field(ctx, UNITS_FILE, "Upgrade base cost", unit, "baseUpgradeCost", 0, 100000000,
                 "Shells for the first upgrade, later upgrades cost more. Shared by every form.");
+            rarity_field(ctx, UNITS_FILE, unit);
             end_properties();
         }
 

@@ -8,8 +8,7 @@ namespace
     const unsigned int TITLE_SIZE = 54;
     const sf::Color BODY{ 26, 42, 64 };
     const sf::Color BAND_TOP{ 238, 245, 251 }, BAND_BOTTOM{ 206, 221, 236 };   // Foam white, a touch of blue lower down
-    const sf::Color FADED_FISH{ 70, 96, 130, 80 };                                // The face drawn faint on the band
-    const char* FISH_ICON = "assets/images/textures/icons/units/icon_1_0.png";
+    const sf::Color FADED_FISH{ 70, 96, 130, 90 };                                // The face drawn faint on the band
 }
 
 UIPopupFrame::UIPopupFrame(const sf::FloatRect& rect, const std::string& title, float footerHeight) :
@@ -33,6 +32,11 @@ void UIPopupFrame::set_title(const std::string& title)
 void UIPopupFrame::set_on_close(std::function<void()> onClose)
 {
     m_close.set_callback(std::move(onClose));
+}
+
+void UIPopupFrame::set_face(const std::string& textureName)
+{
+    m_face = textureName;
 }
 
 void UIPopupFrame::set_close_sound(const std::string& sound)
@@ -101,8 +105,8 @@ void UIPopupFrame::render(sf::RenderWindow& window)
     if (m_footerHeight > 0.f) band(m_rect.position.y + m_rect.size.y - m_footerHeight, m_footerHeight, false);
 
     // The Fish's face, faint, on the header's left (like the cat on The Battle Cats' popups)
-    UISkin::draw_fitted(window, UISkin::texture_file(FISH_ICON),
-        { { m_rect.position.x + 24.f, m_rect.position.y + 6.f }, { 150.f, HEADER - 12.f } }, FADED_FISH);
+    UISkin::draw_fitted(window, UISkin::texture(m_face),
+        { { m_rect.position.x + 26.f, m_rect.position.y + 6.f }, { HEADER - 12.f, HEADER - 12.f } }, FADED_FISH);
 
     window.draw(m_title);
     m_close.render(window);

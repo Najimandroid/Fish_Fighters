@@ -3,6 +3,7 @@
 #include "../EntityPortraits.h"
 
 #include "../../core/stages/Stage.h"
+#include "../../data/BattlefieldLayout.h"
 
 #include <algorithm>
 #include <cmath>
@@ -30,6 +31,14 @@ namespace
     const sf::Color LOCKED_TINT{ 150, 156, 166 };    // Grey disc: what comes next, not playable yet
     const int LOCKED_SHOWN = 2;                      // How many locked stages ahead the map shows
     const std::uint8_t LOCKED_PATH_ALPHA = 100;      // Their path is faint
+
+    // The Fish on the map
+    const int WALKER_UID = 1;                        // The Fish
+    const sf::Vector2f WALKER_BOX{ 118.f, 88.f };    // Its picture fits in this
+    const float WALK_SPEED = 380.f;                  // Pixels per second, at least
+    const float WALK_MAX_SECONDS = 1.4f;             // A long walk goes quicker so it never takes longer
+    const float WALK_FRAME_SECONDS = 0.09f;
+    const float WALK_HOP = 9.f;                      // A little hop each step
 
     // Keeps the map covering the part of the screen it shows in: between the title bar and the bottom bar, inside the
     // 16:9 layout (a phone's extra width is behind the side pillars, so a stage brought there would be hidden: the
@@ -117,6 +126,7 @@ void UIChapterMap::select_stage(int stageUID)
         const sf::Vector2f targetOffset = offset_for(static_cast<int>(it - m_stageIcons.begin()));
 
         describe_selected_stage();
+        walk_to(static_cast<int>(it - m_stageIcons.begin()));
 
         m_offsetTween = tweeny::from(m_viewOffset.x, m_viewOffset.y)
             .to(targetOffset.x, targetOffset.y)
@@ -402,10 +412,115 @@ void UIChapterMap::update(float deltaTime)
         if (!isGliding) select_stage(m_selectedStage);
     }
 
+    update_walker(deltaTime);
+
     // The names strip slides to the selected stage (while a finger holds it or it glides, it follows that instead)
     const int index = selected_index();
     if (index >= 0 && !m_isFollowing && !m_glide.isActive)
         m_stripSlide += (static_cast<float>(index) - m_stripSlide) * std::min(1.f, deltaTime * 10.f);
+}
+
+/*
+ * The Fish sets off for that stage's marker: from the marker nearest to it, through the ones between (the path's
+ * order), at WALK_SPEED or quicker so a long walk still takes at most WALK_MAX_SECONDS. The first time it's put there
+ */
+void UIChapterMap::walk_to(int index)
+{
+    if (index < 0 || index >= static_cast<int>(m_stageIcons.size())) return;
+    const sf::Vector2f target = m_stageIcons[index].circle.getPosition();
+    m_walkPath.clear();
+    if (!m_hasWalkerPlace)
+    {
+        m_walkerPosition = target;
+        m_hasWalkerPlace = true;
+        return;
+    }
+
+    const auto distance = [](sf::Vector2f a, sf::Vector2f b) { const sf::Vector2f d = b - a; return std::sqrt(d.x * d.x + d.y * d.y); };
+    if (distance(m_walkerPosition, target) < 1.f) return;   // Already there
+    int from = 0;
+    for (int i = 1; i < static_cast<int>(m_stageIcons.size()); ++i)
+        if (distance(m_stageIcons[i].circle.getPosition(), m_walkerPosition) < distance(m_stageIcons[from].circle.getPosition(), m_walkerPosition))
+            from = i;
+    const int step = index > from ? 1 : -1;
+    if (from == index) m_walkPath.push_back(target);
+    else for (int i = from + step; ; i += step)
+    {
+        m_walkPath.push_back(m_stageIcons[i].circle.getPosition());
+        if (i == index) break;
+    }
+
+    float length = 0.f;
+    sf::Vector2f point = m_walkerPosition;
+    for (const sf::Vector2f& next : m_walkPath) { length += distance(point, next); point = next; }
+    m_walkSpeed = std::max(WALK_SPEED, length / WALK_MAX_SECONDS);
+}
+
+void UIChapterMap::update_walker(float deltaTime)
+{
+    if (!m_hasWalkerPlace) walk_to(selected_index());   // The map opened: on the stage it opened on
+    m_walkerTime += deltaTime;
+    if (m_walkPath.empty()) { m_walkTime = 0.f; return; }
+    m_walkTime += deltaTime;
+    float budget = m_walkSpeed * deltaTime;
+    while (budget > 0.f && !m_walkPath.empty())
+    {
+        const sf::Vector2f gap = m_walkPath.front() - m_walkerPosition;
+        const float length = std::sqrt(gap.x * gap.x + gap.y * gap.y);
+        if (std::abs(gap.x) > length * 0.2f) m_walkerFacesRight = gap.x > 0.f;   // Not on a steep bit (no flipping)
+        if (length <= budget)
+        {
+            m_walkerPosition = m_walkPath.front();
+            m_walkPath.erase(m_walkPath.begin());
+            budget -= length;
+        }
+        else
+        {
+            m_walkerPosition += gap / length * budget;
+            budget = 0.f;
+        }
+    }
+}
+
+/*
+ * The Fish on its marker: idle, its first frame breathing (a slow squash); walking, its walk frames with a hop on
+ * each step. Facing where it goes, a soft shadow under it
+ */
+void UIChapterMap::render_walker(sf::RenderWindow& window, const sf::RenderStates& states)
+{
+    if (!m_hasWalkerPlace) return;
+    auto player = m_playerData.lock();
+    if (!player) return;
+    auto data = m_dataLoader->get_unit_data(WALKER_UID, player->get_unit_form(WALKER_UID));
+    if (!data || data->texture.empty()) return;
+    const UISkin::SwimFrames& frames = UISkin::swim_frames(data->texture, data->frameCount, data->knockbackFrameIndex);
+    if (frames.box.size.x <= 0 || frames.box.size.y <= 0) return;
+
+    const bool isWalking = !m_walkPath.empty();
+    const int frame = isWalking ? static_cast<int>(m_walkTime / WALK_FRAME_SECONDS) % std::max(1, frames.count) : 0;
+    const float hop = isWalking ? std::abs(std::sin(m_walkTime * 3.14159265f / (WALK_FRAME_SECONDS * 2.f))) * WALK_HOP : 0.f;
+    const float breath = isWalking ? 0.f : std::sin(m_walkerTime * 2.6f);
+    const sf::Vector2f boxSize(frames.box.size);
+    const float fit = std::min(WALKER_BOX.x / boxSize.x, WALKER_BOX.y / boxSize.y);
+    const sf::Vector2f feet = m_walkerPosition + sf::Vector2f{ 0.f, boxSize.y * fit * 0.5f };   // Centered on the marker: on top of it
+
+    const sf::Texture& shadowTexture = UISkin::texture_file(SHADOW_TEXTURE);
+    const sf::Vector2f shadowSize(shadowTexture.getSize());
+    if (shadowSize.x > 0.f && shadowSize.y > 0.f)
+    {
+        sf::Sprite shadow(shadowTexture);
+        shadow.setOrigin(shadowSize / 2.f);
+        const float shrink = 1.f - 0.25f * hop / WALK_HOP;
+        shadow.setScale({ boxSize.x * fit * 0.8f * shrink / shadowSize.x, 22.f * shrink / shadowSize.y });
+        shadow.setPosition(feet + sf::Vector2f{ 0.f, 4.f });
+        window.draw(shadow, states);
+    }
+
+    sf::Sprite fish(UISkin::texture_file(data->texture), { { frame * frames.frameWidth + frames.box.position.x, frames.box.position.y }, frames.box.size });
+    fish.setOrigin({ boxSize.x / 2.f, boxSize.y });   // Its feet
+    fish.setScale({ fit * (1.f - 0.03f * breath) * (m_walkerFacesRight ? -1.f : 1.f), fit * (1.f + 0.04f * breath) });
+    fish.setPosition(feet - sf::Vector2f{ 0.f, hop });
+    window.draw(fish, states);
 }
 
 void UIChapterMap::render(sf::RenderWindow& window)
@@ -462,6 +577,8 @@ void UIChapterMap::render(sf::RenderWindow& window)
         window.draw(m_markerNumber, states);
     }
 
+    render_walker(window, states);   // Over the markers: it walks across them
+
     // Info panel of the selected stage
     m_infoPanel.render(window);
     window.draw(m_stageName);
@@ -494,8 +611,10 @@ void UIChapterMap::render_stage_enemies(sf::RenderWindow& window, const PlayerDa
     const float slotSize = std::min(88.f, (maxWidth - gap * (count - 1.f)) / count);
     const float left = right - count * slotSize - (count - 1.f) * gap;
 
-    UISkin::set_text_anchor(m_enemiesTitle, { 0.f, 0.5f });
-    m_enemiesTitle.setPosition({ left, INFO_PANEL.position.y + 50.f });
+    // ENEMIES over the slots, its right end on the slots' right edge (with one slot the word is wider than the slot:
+    // left-aligned it ran out of the panel)
+    UISkin::set_text_anchor(m_enemiesTitle, { 1.f, 0.5f });
+    m_enemiesTitle.setPosition({ right, INFO_PANEL.position.y + 50.f });
     window.draw(m_enemiesTitle);
 
     for (size_t i = 0; i < m_stageEnemies.size(); ++i)

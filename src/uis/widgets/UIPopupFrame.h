@@ -28,6 +28,8 @@ public:
     void set_title(const std::string& title);
     void set_on_close(std::function<void()> onClose);   // The X (with the "back" sound)
     void set_close_sound(const std::string& sound);      // "": the callback plays its own
+    // The Fish's face on the header (a UI texture): icon_fish_face, or icon_fish_info (puzzled) on the help windows
+    void set_face(const std::string& textureName);
 
     sf::FloatRect get_rect() const { return m_rect; }
     sf::FloatRect get_body() const;     // Between the header and the footer
@@ -41,6 +43,7 @@ public:
 private:
     sf::FloatRect m_rect;
     float m_footerHeight;
+    std::string m_face = "icon_fish_face";
     sf::Text m_title;
     UIRoundButton m_close;
 };

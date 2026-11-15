@@ -3,15 +3,16 @@
 
 #include <algorithm>
 
-UIBottomBar::UIBottomBar(UITitleBar::Material material) :
+UIBottomBar::UIBottomBar(UITitleBar::Material material, bool hasBackButton) :
     UIElement({ 1920.f, 1080.f - UISkin::CONTENT_BOTTOM }, { 0.f, UISkin::CONTENT_BOTTOM }),
-    m_material(material)
+    m_material(material),
+    m_hasBackButton(hasBackButton)
 {
 }
 
 /*
  * The title bar's band upside down: a shadow it casts up on the screen, a dark edge and a bright bevel at its top,
- * darker at the bottom, two rivets at each end (the back button covers the left ones)
+ * darker at the bottom, a rivet at each end (none under the back button), level with the title bar's
  */
 void UIBottomBar::render(sf::RenderWindow& window)
 {
@@ -50,9 +51,10 @@ void UIBottomBar::render(sf::RenderWindow& window)
     rivet.setFillColor(look.rivet);
     rivet.setOutlineThickness(2.5f);
     rivet.setOutlineColor(UISkin::OUTLINE);
-    for (const float x : { 14.f, 34.f, 1920.f - 34.f, 1920.f - 14.f })
+    for (const float x : { 20.f, 1920.f - 20.f })
     {
-        rivet.setPosition({ x, top + 26.f });
+        if (x < 960.f && m_hasBackButton) continue;
+        rivet.setPosition({ x, 1080.f - UISkin::BAR_RIVET_INSET });
         window.draw(rivet);
     }
 }

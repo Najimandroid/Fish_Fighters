@@ -121,7 +121,9 @@ namespace UISkin
     // across the bottom (UIBottomBar, from CONTENT_BOTTOM: shortcuts, future shop buttons, the Shiny Scales) and the
     // round back button sitting on its left end (UIManager::make_back_button, BACK_BUTTON), like The Battle Cats' frame
     inline constexpr float CONTENT_TOP = 104.f;
-    inline constexpr float CONTENT_BOTTOM = 1080.f - 84.f;
+    inline constexpr float CONTENT_BOTTOM = 1080.f - CONTENT_TOP;   // The bottom bar as tall as the title bar
+    inline constexpr float BAR_RIVET_INSET = 52.f;   // The bars' rivets: this far in from the layout's edges, centered in the bars
+    inline constexpr float BOTTOM_BAR_MIDDLE = 1080.f - 55.f;   // Where the bottom bar's pill and buttons are centered (the title bar's pills mirrored)
     inline const sf::FloatRect BACK_BUTTON{ { 24.f, 1080.f - 24.f - 120.f }, { 120.f, 120.f } };
 
     // A slide can start there (the carousels and the chapter map slide wherever the finger is, not only on their

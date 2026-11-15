@@ -28,6 +28,7 @@ public:
 
     // A frame with the screen fully covered was drawn: the stage can load now (the player sees the water and the title)
     bool has_covered_screen() const { return m_hasCovered; }
+    bool is_over_frame() const override { return true; }   // The water rises over the pillars too
 
     void update(float deltaTime) override;
     void render(sf::RenderWindow& window) override;

@@ -5,6 +5,7 @@
 
 #include "EntityType.h"
 #include "AbilityData.h"
+#include "Rarity.h"
 
 enum AttackType : int;   // Defined in DataLoader.h (declared ahead with its type: standard C++, needed by Clang)
 
@@ -13,7 +14,7 @@ enum AttackType : int;   // Defined in DataLoader.h (declared ahead with its typ
  * ----------
  * Defines the base/template data for a unit or entity in the game.
  *
- * This struct is not used directly during gameplay — instead, it provides
+ * This struct is not used directly during gameplay ï¿½ instead, it provides
  * the "blueprint" for instantiating units. For example, units on the field
  * will reference values from their EntityData.
  *
@@ -65,4 +66,5 @@ struct EntityData
 
     // ===== Upgrade Attributes =====
     int baseUpgradeCost = 100;                  // Base cost for upgrading this unit
+    Rarity rarity = Rarity::NORMAL;             // Units: Normal, Rare or Super Rare ("rarity", shared by every form)
 };

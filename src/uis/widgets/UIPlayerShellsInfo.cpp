@@ -11,8 +11,8 @@ namespace
     const unsigned int DIGITS_SIZE = 52;
     const float ICON_SIZE = 62.f;
     const float PADDING = 18.f;
-    const float SHINY_OFFSET_X = 364.f;   // The Shiny Scales pill: left of the shells pill
-    const float FISH_OFFSET_X = 704.f;    // The Fish Scales pill: left of it (40 px apart, like the others)
+    const float SHINY_OFFSET_X = 380.f;   // The Shiny Scales pill: left of the shells pill
+    const float FISH_OFFSET_X = 720.f;    // The Fish Scales pill: left of it (40 px apart, like the others)
 }
 
 /*
@@ -34,7 +34,8 @@ void UIPlayerShellsInfo::update(float deltaTime)
     if (auto player = m_dataLoader->get_player_data().lock())
     {
         const int amount = m_currency == Currency::SHELLS ? player->shells
-            : m_currency == Currency::SHINY_SCALES ? player->shinyScales : player->fishScales;
+            : m_currency == Currency::SHINY_SCALES ? player->shinyScales
+            : m_currency == Currency::PEARLS ? player->pearls : player->fishScales;
         const float target = static_cast<float>(amount - m_heldBack);
 
         // The digits roll to a new amount instead of jumping (spent: they flash red on the way down)
@@ -55,9 +56,9 @@ void UIPlayerShellsInfo::update(float deltaTime)
 
     const float textWidth = m_text.getLocalBounds().size.x;
     m_size = { std::max(MIN_PILL_WIDTH, textWidth + ICON_SIZE + 3.f * PADDING + m_trailingRoom), PILL_HEIGHT };
-    const float offset = m_isInBottomBar ? OFFSET_X
+    const float offset = m_isInBottomBar ? m_bottomBarOffsetX
         : m_currency == Currency::SHELLS ? OFFSET_X : m_currency == Currency::SHINY_SCALES ? SHINY_OFFSET_X : FISH_OFFSET_X;
-    const float y = m_isInBottomBar ? UISkin::CONTENT_BOTTOM + (1080.f - UISkin::CONTENT_BOTTOM - PILL_HEIGHT) / 2.f + 2.f : OFFSET_Y;
+    const float y = m_isInBottomBar ? UISkin::BOTTOM_BAR_MIDDLE - PILL_HEIGHT / 2.f : OFFSET_Y;
     m_position = { 1920.f - offset - m_size.x, y };
 
     // Digits on the right of the pill (left of a button there), vertically centered
@@ -70,9 +71,10 @@ void UIPlayerShellsInfo::set_tint(sf::Color tint)
     m_tint = tint;
 }
 
-void UIPlayerShellsInfo::place_in_bottom_bar()
+void UIPlayerShellsInfo::place_in_bottom_bar(float offsetX)
 {
     m_isInBottomBar = true;
+    m_bottomBarOffsetX = offsetX;
 }
 
 void UIPlayerShellsInfo::set_trailing_room(float room)
@@ -86,7 +88,8 @@ void UIPlayerShellsInfo::render(sf::RenderWindow& window)
 
     UISkin::draw_nine_slice(window, UISkin::PANEL_DARK, get_bounds(), 1.f, m_tint);
     const float iconSize = ICON_SIZE * (1.f + 0.3f * m_pop);   // Pops when something lands in it
-    const char* icon = m_currency == Currency::SHELLS ? "icon_shell" : m_currency == Currency::SHINY_SCALES ? "icon_shiny_scale" : "icon_fish_scale";
+    const char* icon = m_currency == Currency::SHELLS ? "icon_shell" : m_currency == Currency::SHINY_SCALES ? "icon_shiny_scale"
+        : m_currency == Currency::PEARLS ? "icon_pearl" : "icon_fish_scale";
     UISkin::draw_fitted(window, UISkin::texture(icon),
         { get_icon_center() - sf::Vector2f{ iconSize, iconSize } / 2.f, { iconSize, iconSize } });
     window.draw(m_text);

@@ -4,6 +4,7 @@
 #include "UIPanel.h"
 #include "UIAbilityList.h"
 
+#include <map>
 #include <memory>
 #include <vector>
 
@@ -14,11 +15,13 @@ struct EntityData;
  * UIEncyclopedia
  * --------------
  * The fish and enemy encyclopedia, like The Battle Cats' Cat Guide and Enemy Guide:
- * two tabs (FISH / ENEMIES), sort buttons (number, name, health, attack, range, speed; click the
- * active one again to reverse it), a scrollable grid of portraits, and a panel describing the
- * selected one: name, types, description, stats and abilities (UIAbilityList).
- * Fish the player doesn't own and enemies not met in battle yet are black, with their details hidden.
- * Fish stats are the ones of their current level.
+ * two tabs (FISH / ENEMIES), a sort pill (its list: number, name, health, attack, range, speed) with a button
+ * reversing the order, a grid of portraits (a finger drags it up and down, the mouse wheel scrolls it), and a panel
+ * describing the selected one: name, number, rarity or types, description, stats and abilities (UIAbilityList).
+ * Numbers are the order they're met in the game: the first fish, then the fish the stages give, chapter by chapter
+ * (then the clam's rarer ones); the enemies in the order the stages send them.
+ * Fish the player doesn't own and enemies not met in battle yet are black, with their details hidden; the forms a
+ * fish hasn't reached are "???" too. Fish stats are the ones of their current level.
  */
 
 class UIEncyclopedia : public UIElement
@@ -41,6 +44,7 @@ private:
     struct Entry
     {
         int uid = -1;
+        int number = 0;                    // Its No.: the order it's met in the game
         std::shared_ptr<EntityData> data;  // Current form for fish
         bool isKnown = false;              // Owned fish, enemies met
         int level = 0;                     // Fish only
@@ -52,6 +56,7 @@ private:
     };
 
     void build_entries();
+    std::map<int, int> encounter_numbers() const;   // UID -> No. of the book open
     void sort_entries();
     void select(int index);
 
@@ -68,6 +73,11 @@ private:
     // A folder tab of the grid panel: the open one is part of the panel (yellow label), the other darker steel
     void render_tab(sf::RenderWindow& window, const UIButtonElement& tab, const std::string& label, bool isOpen);
     void render_details(sf::RenderWindow& window);
+    sf::FloatRect detail_scroll_rect() const;   // Under the portrait: the description, stats and abilities (they scroll)
+    float m_detailScroll = 0.f;                 // How far they're scrolled up
+    float m_detailContentHeight = 0.f;          // How tall they are (set when drawn)
+    bool m_isDetailDragging = false;
+    float m_detailPressY = 0.f, m_detailPressScroll = 0.f;
     void render_portrait(sf::RenderWindow& window, const Entry& entry, const sf::FloatRect& area);
 
     float health_of(const Entry& entry) const;
@@ -84,13 +94,28 @@ private:
 
     UIButtonElement m_fishTab;
     UIButtonElement m_enemiesTab;
-    std::vector<std::unique_ptr<UIButtonElement>> m_sortButtons;   // One per SortKey
-    std::vector<std::unique_ptr<UIButtonElement>> m_formButtons;   // FORM 1, FORM 2... of the selected fish
+    UIButtonElement m_sortPill;          // "Sort: Name": opens the list of orders under it
+    UIButtonElement m_sortDirection;     // Up or down: reverses the order
+    bool m_isSortOpen = false;           // The list is open (it takes the input until closed)
+    sf::FloatRect sort_option_rect(int key) const;
+    void choose_sort(SortKey key);
+    void render_sort_menu(sf::RenderWindow& window);
+    std::vector<std::unique_ptr<UIButtonElement>> m_formButtons;   // FORM 1, FORM 2... of the selected fish (??? not reached)
     int m_pendingForm = -1;                                        // Clicked, shown at the next update
-    sf::Text m_sortLabel;
+
+    // A finger dragging the grid up and down scrolls it; a tap (no drag) selects
+    bool m_isGridPressed = false;
+    bool m_isGridDragging = false;
+    sf::Vector2f m_gridPress;
+    int m_gridPressRow = 0;
 
     UIPanel m_gridPanel;
     UIPanel m_detailPanel;
     sf::Text m_text;            // Reused for the details
     UIAbilityList m_abilities;
+
+    // A fish looked at for the first time gives its Pearls: "+10 Pearls!" rises over its portrait
+    void discover_selected();
+    float m_rewardTime = 0.f;   // Counts down while it shows
+    int m_rewardAmount = 0;
 };

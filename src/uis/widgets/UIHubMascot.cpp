@@ -10,22 +10,23 @@
 namespace
 {
     const int FISH_UID = 1;                         // The Fish
-    const sf::Vector2f HOME{ 1040.f, 912.f };       // The fish's center
+    const sf::Vector2f HOME{ 1040.f, 892.f };       // The fish's center
     const sf::Vector2f FISH_BOX{ 190.f, 140.f };    // It fits in this
-    const float FLOOR_Y = 988.f;                    // Its shadow: on the floor, just above the bottom bar
+    const float FLOOR_Y = 968.f;                    // Its shadow: on the floor, just above the bottom bar
     const float SHADOW_WIDTH = 150.f, SHADOW_HEIGHT = 34.f;
     const float WALK_FRAME_SECONDS = 0.14f;
     const float HOP_SECONDS = 0.4f, HOP_HEIGHT = 40.f;   // Stays under its bubble
 
     // Room around it: away from the buttons (they end at x 630) and the porthole's ring
-    const float BUBBLE_LEFT = 680.f, BUBBLE_WIDTH = 384.f, BUBBLE_BOTTOM = 774.f;
+    const float BUBBLE_LEFT = 680.f, BUBBLE_WIDTH = 384.f, BUBBLE_BOTTOM = 754.f;
     const float PADDING = 24.f, CORNER = 28.f, OUTLINE = 5.f;
-    const sf::Vector2f TAIL_TIP{ 1000.f, 818.f };   // The bubble's tail points at the fish's head
+    const sf::Vector2f TAIL_TIP{ 1000.f, 798.f };   // The bubble's tail points at the fish's head
     const unsigned int TEXT_SIZE = 28;
     const sf::Color PAPER{ 252, 253, 255 };
 
     const float CHARS_PER_SECOND = 42.f;
     const float POP_SECONDS = 0.25f;
+    const float TAP_COOLDOWN = 1.5f;                // A new tip at most this often by tapping
     const float HOLD_SECONDS = 6.5f;                // Once all typed
     const float FADE_SECONDS = 0.3f, GAP_SECONDS = 1.4f;
 
@@ -179,10 +180,21 @@ void UIHubMascot::render_bubble(sf::RenderWindow& window)
     bubble.setPoint(point++, TAIL_TIP);
     bubble.setPoint(point++, { tailX - 26.f, bottom });
     for (std::size_t i = half; i < box.getPointCount(); ++i) bubble.setPoint(point++, box.getPoint(i));
-    bubble.setFillColor(with_alpha(PAPER));
+    // Its outline only: with the tail's notch the shape isn't convex, and SFML fills a convex shape from its middle,
+    // which spilled white past the outline by the tail. The paper is filled as two convex shapes, the box and the tail
+    bubble.setFillColor(sf::Color::Transparent);
     bubble.setOutlineThickness(OUTLINE);
     bubble.setOutlineColor(with_alpha(UISkin::OUTLINE));
     window.draw(bubble, states);
+    sf::ConvexShape paper = box;
+    paper.setFillColor(with_alpha(PAPER));
+    window.draw(paper, states);
+    sf::ConvexShape tail(3);
+    tail.setPoint(0, { tailX + 18.f, bottom - 1.f });
+    tail.setPoint(1, TAIL_TIP);
+    tail.setPoint(2, { tailX - 26.f, bottom - 1.f });
+    tail.setFillColor(with_alpha(PAPER));
+    window.draw(tail, states);
 
     const std::size_t shown = std::min(m_wrapped.size(), static_cast<std::size_t>(std::max(0.f, m_tipTime) * CHARS_PER_SECOND));
     m_text.setString(m_wrapped.substr(0, shown));
@@ -205,9 +217,13 @@ void UIHubMascot::handle_event(const sf::Event& event, const sf::RenderWindow& w
     {
         if (pressed->button != sf::Mouse::Button::Left) return;
         const sf::Vector2f point = window.mapPixelToCoords(pressed->position);
+        // Not too often: a new tip at most every TAP_COOLDOWN seconds (spamming the Fish only made noise)
+        const bool isReady = m_time - m_lastTapTime >= TAP_COOLDOWN;
         if (get_bounds().contains(point))
         {
             // Tapped: a hop, a blub, and something else to say
+            if (!isReady) return;
+            m_lastTapTime = m_time;
             if (m_hopTime < 0.f || m_hopTime > HOP_SECONDS + 0.2f) m_hopTime = 0.f;
             play_sound("fish_blub", 1.1f);
             next_tip();
@@ -216,7 +232,11 @@ void UIHubMascot::handle_event(const sf::Event& event, const sf::RenderWindow& w
         {
             const float typing = static_cast<float>(m_wrapped.size()) / CHARS_PER_SECOND;
             if (m_tipTime < typing) m_tipTime = typing;   // The whole tip at once
-            else next_tip();
+            else if (isReady)
+            {
+                m_lastTapTime = m_time;
+                next_tip();
+            }
         }
     }
 }

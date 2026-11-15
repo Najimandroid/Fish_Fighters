@@ -170,7 +170,7 @@ private:
 
     // Card layout: bottom-aligned on CARDS_BOTTOM (the shelf's rail), the selected card centered
     const sf::Vector2f baseIconSize = { 250.0f, 250.0f };
-    const float CARDS_BOTTOM = 950.f;
+    const float CARDS_BOTTOM = 934.f;
     const float ICON_SPACING = 380.0f;
     const float CENTER_SCALE = 1.3f;
     const float SIDE_SCALE = 1.0f;

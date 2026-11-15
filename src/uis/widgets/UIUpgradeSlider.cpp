@@ -2,6 +2,7 @@
 #include "UIToast.h"
 #include "../UISkin.h"
 #include "../../core/DataLoader.h"
+#include "../../core/stages/Stage.h"
 
 #include <algorithm>
 #include <cmath>
@@ -9,14 +10,14 @@
 namespace
 {
     const sf::FloatRect UPGRADE_BUTTON{ { 60.f, 700.f }, { 470.f, 140.f } };
-    const sf::FloatRect DESCRIPTION_PANEL{ { 570.f, 676.f }, { 1290.f, 308.f } };   // Down to the bottom bar: room for the abilities
+    const sf::FloatRect DESCRIPTION_PANEL{ { 570.f, 668.f }, { 1290.f, UISkin::CONTENT_BOTTOM - 16.f - 668.f } };   // Down to the bottom bar: room for the abilities
     const float SHELF_TOP = 116.f;     // The cards' shelf, under the title bar
     const float DOTS_Y = 146.f;        // The page dots, at its top
     const float TEXT_PADDING = 50.f;
     const float ARROW_SIZE = 96.f;
     const float ARROW_Y = 412.f;
     const unsigned int NAME_SIZE = 44;
-    const unsigned int DESCRIPTION_SIZE = 30;
+    const unsigned int DESCRIPTION_SIZE = 28;
     const float STATS_X = DESCRIPTION_PANEL.position.x + 790.f;     // The right column of the panel: the upgrade
     const float DESCRIPTION_WIDTH = 690.f;                            // The left column: description and abilities
     const unsigned int STAT_SIZE = 30;
@@ -27,6 +28,22 @@ namespace
     {
         const int rounded = static_cast<int>(std::lround(value));
         return std::to_string(rounded);
+    }
+
+    // The base upgrades' and the categories' cards
+    const char* BASE_TEXTURE = "assets/images/textures/bases/fishBaseTEST.png";   // The fish bowl (Stage::spawn_bases)
+    const char* WALLET_TEXTURE = "assets/images/textures/icons/uis/cash_up.png";  // The battle's WALLET button
+    const sf::Color CATEGORY_SLOT{ 255, 214, 120 };                              // A category card's slot: gold
+    const int FISH_UID = 1;                                                       // The Normal fish' card shows the Fish
+
+    const char* base_upgrade_name(PlayerData::BaseUpgrade upgrade)
+    {
+        return upgrade == PlayerData::BaseUpgrade::HEALTH ? "Base Health" : "Wallet Up";
+    }
+
+    std::string percent(float factor)
+    {
+        return "+" + std::to_string(static_cast<int>(std::lround((factor - 1.f) * 100.f))) + "%";
     }
 }
 
@@ -66,47 +83,69 @@ UIUpgradeSlider::UIUpgradeSlider(std::shared_ptr<DataLoader> dataLoader) :
 void UIUpgradeSlider::upgrade_selected()
 {
 	if (m_upgradeIcons.empty()) return;
+	auto player = m_dataLoader->get_player_data().lock();
+	if (!player) return;
+	const Entry entry = m_entries[m_currentIndex];
 
-	if (auto player = m_dataLoader->get_player_data().lock())
+	// A category card: OPEN
+	if (entry.kind == Entry::Kind::CATEGORY)
 	{
-		int unitUid = m_availableUpgrades[m_currentIndex];      // Currently selected unit
-		int level = player->get_unit_level(unitUid);           // Current level
-		int upgradeCost = calculate_upgrade_cost(unitUid, level); // Calculate cost
+		open_category(static_cast<Category>(entry.id));
+		return;
+	}
 
-		if (level >= UIUpgradeIcon::MAX_LEVEL) return;
+	// A base upgrade: a level for the shells
+	if (entry.kind == Entry::Kind::BASE)
+	{
+		const auto upgrade = static_cast<PlayerData::BaseUpgrade>(entry.id);
+		const int level = player->get_base_upgrade_level(upgrade);
+		if (level >= PlayerData::BASE_UPGRADE_MAX_LEVEL || !player->spend_shells(PlayerData::base_upgrade_cost(level))) return;
+		player->upgrade_base(upgrade);
+		play_sound("purchase");
+		auto icon = m_upgradeIcons[m_currentIndex];
+		icon->set_unit_level(player->get_base_upgrade_level(upgrade));
+		icon->set_upgrade_cost(PlayerData::base_upgrade_cost(player->get_base_upgrade_level(upgrade)));
+		m_describedKey = -1;
+		m_dataLoader->save_progress();
+		return;
+	}
 
-		if (player->spend_shells(upgradeCost))
+	int unitUid = entry.id;                                // Currently selected unit
+	int level = player->get_unit_level(unitUid);           // Current level
+	int upgradeCost = calculate_upgrade_cost(unitUid, level); // Calculate cost
+
+	if (level >= UIUpgradeIcon::MAX_LEVEL) return;
+
+	if (player->spend_shells(upgradeCost))
+	{
+		// Shells clinking for a level, a fanfare for a new fish
+		if (player->is_unit_owned(unitUid))
 		{
-			// Shells clinking for a level, a fanfare for a new fish
-			if (player->is_unit_owned(unitUid))
-			{
-				player->upgrade_unit(unitUid, m_dataLoader->get_unit_form_count(unitUid)); // Upgrade if owned
-				play_sound("purchase");
-			}
-			else
-			{
-				player->unlock_unit(unitUid); // Unlock if not owned
-				play_sound("unlock");
-			}
-			UIToast::announce_school_rank_rewards(*player);   // A School Rank milestone: Shiny Scales
-
-			// The form (and so the name and icon) can change with the level
-			auto icon = m_upgradeIcons[m_currentIndex];
-			auto unitLevel = player->get_unit_level(unitUid);
-			auto unitForm = player->get_unit_form(unitUid);
-			auto unitData = m_dataLoader->get_unit_data(unitUid, unitForm);
-
-			icon->set_unit_level(unitLevel);
-			icon->set_upgrade_cost(calculate_upgrade_cost(unitUid, unitLevel));
-			icon->set_unit_name(unitData->name);
-			icon->set_texture(m_dataLoader->get_unit_icon_texture_path(unitUid, unitForm));
-			m_describedUid = -1; // Name and description again
-
-			m_dataLoader->save_progress();
+			player->upgrade_unit(unitUid, m_dataLoader->get_unit_form_count(unitUid)); // Upgrade if owned
+			play_sound("purchase");
 		}
+		else
+		{
+			player->unlock_unit(unitUid); // Unlock if not owned
+			play_sound("unlock");
+		}
+		UIToast::announce_school_rank_rewards(*player);   // A School Rank milestone: Shiny Scales
+
+		// The form (and so the name and icon) can change with the level
+		auto icon = m_upgradeIcons[m_currentIndex];
+		auto unitLevel = player->get_unit_level(unitUid);
+		auto unitForm = player->get_unit_form(unitUid);
+		auto unitData = m_dataLoader->get_unit_data(unitUid, unitForm);
+
+		icon->set_unit_level(unitLevel);
+		icon->set_upgrade_cost(calculate_upgrade_cost(unitUid, unitLevel));
+		icon->set_unit_name(unitData->name);
+		icon->set_texture(m_dataLoader->get_unit_icon_texture_path(unitUid, unitForm));
+		m_describedKey = -1; // Name and description again
+
+		m_dataLoader->save_progress();
 	}
 }
-
 /*
  * Initializes the array of UIUpgradeIcon objects based on player data.
  * Includes owned units and units waiting to be unlocked.
@@ -114,46 +153,150 @@ void UIUpgradeSlider::upgrade_selected()
 void UIUpgradeSlider::init_icons()
 {
 	m_upgradeIcons.clear();
-	m_availableUpgrades.clear();
-
+	m_entries.clear();
 	auto playerData = m_dataLoader->get_player_data().lock();
 	if (!playerData) return;
+	build_entries(*playerData);
 
-	for (auto& [uid, _] : playerData->ownedUnits)
-		m_availableUpgrades.push_back(uid);
+	// At first on the first fish, not on the category cards before them
+	if (m_currentIndex <= 0 && m_category == Category::NORMAL)
+		for (int i = 0; i < static_cast<int>(m_entries.size()); ++i)
+			if (m_entries[i].kind != Entry::Kind::CATEGORY) { m_currentIndex = i; break; }
+	layout_cards();
+}
 
-	for (int uid : playerData->unitsWaitingToBeUnlocked)
-	{
-		if (playerData->ownedUnits.find(uid) == playerData->ownedUnits.end())
-			m_availableUpgrades.push_back(uid);
-	}
-
-	std::sort(m_availableUpgrades.begin(), m_availableUpgrades.end(),
-		[&](int a, int b) {
-			bool aOwned = playerData->is_unit_owned(a);
-			bool bOwned = playerData->is_unit_owned(b);
-			if (aOwned != bOwned) return aOwned > bOwned; // unlocked first
-			return a < b;                                 // then by UID
+/*
+ * The cards of the category shown. The Normal fish: the category cards first (BASE; RARE and SUPER RARE once the
+ * player has a fish that rare), then the fish, owned ones first. A category: NORMAL (back) first, then its cards
+ */
+void UIUpgradeSlider::build_entries(const PlayerData& player)
+{
+	m_entries.clear();
+	std::vector<int> fish;
+	for (auto& [uid, _] : player.ownedUnits) fish.push_back(uid);
+	for (int uid : player.unitsWaitingToBeUnlocked)
+		if (!player.is_unit_owned(uid)) fish.push_back(uid);
+	std::sort(fish.begin(), fish.end(), [&](int a, int b) {
+		const bool aOwned = player.is_unit_owned(a), bOwned = player.is_unit_owned(b);
+		if (aOwned != bOwned) return aOwned > bOwned;   // unlocked first
+		return a < b;                                   // then by UID
 		});
 
-	m_currentIndex = std::clamp(m_currentIndex, 0, std::max(0, static_cast<int>(m_availableUpgrades.size()) - 1));
+	const auto add_fish = [&](Category category) {
+		for (int uid : fish)
+			if (category_of(uid) == category) m_entries.push_back({ Entry::Kind::FISH, uid });
+		};
+	const auto has_fish = [&](Category category) {
+		return std::any_of(fish.begin(), fish.end(), [&](int uid) { return category_of(uid) == category; });
+		};
+
+	switch (m_category)
+	{
+	case Category::NORMAL:
+		m_entries.push_back({ Entry::Kind::CATEGORY, static_cast<int>(Category::BASE) });
+		for (Category rarity : { Category::RARE, Category::SUPER_RARE })
+			if (has_fish(rarity)) m_entries.push_back({ Entry::Kind::CATEGORY, static_cast<int>(rarity) });
+		add_fish(Category::NORMAL);
+		break;
+	case Category::BASE:
+		m_entries.push_back({ Entry::Kind::CATEGORY, static_cast<int>(Category::NORMAL) });
+		for (int i = 0; i < static_cast<int>(PlayerData::BaseUpgrade::COUNT); ++i)
+			m_entries.push_back({ Entry::Kind::BASE, i });
+		break;
+	default:
+		m_entries.push_back({ Entry::Kind::CATEGORY, static_cast<int>(Category::NORMAL) });
+		add_fish(m_category);
+		break;
+	}
+}
+
+UIUpgradeSlider::Category UIUpgradeSlider::category_of(int uid) const
+{
+	auto data = m_dataLoader->get_unit_data(uid, 0);
+	const Rarity rarity = data ? data->rarity : Rarity::NORMAL;
+	return rarity == Rarity::SUPER_RARE ? Category::SUPER_RARE : rarity == Rarity::RARE ? Category::RARE : Category::NORMAL;
+}
+
+int UIUpgradeSlider::index_of(Entry::Kind kind, int id) const
+{
+	for (int i = 0; i < static_cast<int>(m_entries.size()); ++i)
+		if (m_entries[i].kind == kind && m_entries[i].id == id) return i;
+	return -1;
+}
+
+/*
+ * A card for an entry: a fish (its level, the next level's price), a base upgrade (the bowl or the wallet, fitted
+ * whole in the slot), or a category (a gold slot, how many cards it holds)
+ */
+std::shared_ptr<UIUpgradeIcon> UIUpgradeSlider::make_card(const Entry& entry, const PlayerData& player) const
+{
+	std::shared_ptr<UIUpgradeIcon> icon;
+	if (entry.kind == Entry::Kind::FISH)
+	{
+		const int unitForm = player.get_unit_form(entry.id);
+		auto unitData = m_dataLoader->get_unit_data(entry.id, unitForm);
+		const int unitLevel = player.get_unit_level(entry.id);
+		icon = std::make_shared<UIUpgradeIcon>(m_dataLoader->get_unit_icon_texture_path(entry.id, unitForm));
+		icon->set_unit_name(unitData ? unitData->name : "?");
+		icon->set_unit_level(unitLevel);
+		icon->set_extra_levels(player.get_unit_extra_levels(entry.id));
+		icon->set_upgrade_cost(calculate_upgrade_cost(*m_dataLoader, entry.id, unitLevel));
+		return icon;
+	}
+	if (entry.kind == Entry::Kind::BASE)
+	{
+		const auto upgrade = static_cast<PlayerData::BaseUpgrade>(entry.id);
+		const int level = player.get_base_upgrade_level(upgrade);
+		icon = std::make_shared<UIUpgradeIcon>(upgrade == PlayerData::BaseUpgrade::HEALTH ? BASE_TEXTURE : WALLET_TEXTURE);
+		icon->set_icon_fitted(true);
+		icon->set_unit_name(base_upgrade_name(upgrade));
+		icon->set_max_level(PlayerData::BASE_UPGRADE_MAX_LEVEL);
+		icon->set_unit_level(level);
+		icon->set_upgrade_cost(PlayerData::base_upgrade_cost(level));
+		return icon;
+	}
+
+	// A category: its picture (the bowl, or its first fish), its name, what it holds
+	const auto category = static_cast<Category>(entry.id);
+	std::string picture = BASE_TEXTURE, name = "BASE", caption;
+	if (category == Category::BASE)
+		caption = std::to_string(static_cast<int>(PlayerData::BaseUpgrade::COUNT)) + " UPGRADES";
+	else
+	{
+		int count = 0, first = -1;
+		for (auto& [uid, _] : player.ownedUnits)
+			if (category_of(uid) == category) { ++count; if (first < 0 || uid < first) first = uid; }
+		if (category == Category::NORMAL && player.is_unit_owned(FISH_UID)) first = FISH_UID;
+		if (first >= 0) picture = m_dataLoader->get_unit_icon_texture_path(first, player.get_unit_form(first));
+		name = category == Category::NORMAL ? "NORMAL" : category == Category::RARE ? "RARE" : "SUPER RARE";
+		caption = std::to_string(count) + " FISH";
+	}
+	icon = std::make_shared<UIUpgradeIcon>(picture);
+	icon->set_icon_fitted(category == Category::BASE);
+	icon->set_slot_tint(CATEGORY_SLOT);
+	icon->set_unit_name(name);
+	icon->set_caption(caption);
+	return icon;
+}
+
+/*
+ * The cards round the selected one (it big in the middle); slideIn: they start that far to the side and glide in
+ * (a category opening or closing)
+ */
+void UIUpgradeSlider::layout_cards(float slideIn)
+{
+	m_upgradeIcons.clear();
+	auto playerData = m_dataLoader->get_player_data().lock();
+	if (!playerData) return;
+	m_currentIndex = std::clamp(m_currentIndex, 0, std::max(0, static_cast<int>(m_entries.size()) - 1));
 	const float centerX = 1920.f / 2.0f - baseIconSize.x / 2.f;
 
-	for (int i = 0; i < static_cast<int>(m_availableUpgrades.size()); ++i)
+	for (int i = 0; i < static_cast<int>(m_entries.size()); ++i)
 	{
-		auto unitUid = m_availableUpgrades[i];
-		auto unitLevel = playerData->get_unit_level(unitUid);
-		auto unitForm = playerData->get_unit_form(unitUid);
-		auto unitData = m_dataLoader->get_unit_data(unitUid, unitForm);
-
-		auto icon = std::make_shared<UIUpgradeIcon>(m_dataLoader->get_unit_icon_texture_path(unitUid, unitForm));
+		auto icon = make_card(m_entries[i], *playerData);
 		icon->select(i == m_currentIndex);
-		icon->set_unit_name(unitData->name);
-		icon->set_unit_level(unitLevel);
-		icon->set_extra_levels(playerData->get_unit_extra_levels(unitUid));
-		icon->set_upgrade_cost(calculate_upgrade_cost(unitUid, unitLevel));
 
-		float posX = centerX + (i - m_currentIndex) * ICON_SPACING;
+		float posX = centerX + (i - m_currentIndex) * ICON_SPACING + slideIn;
 		if (i == m_currentIndex)
 			posX -= CENTER_OFFSET_X;
 
@@ -167,8 +310,29 @@ void UIUpgradeSlider::init_icons()
 
 		m_upgradeIcons.push_back(icon);
 	}
+	m_describedKey = -1;
+	if (slideIn != 0.f) move_to_index(m_currentIndex, true);   // Glide into place
 }
 
+/*
+ * Shows a category's cards (NORMAL: back to the Normal fish). Inside one, its first card is selected; back, the
+ * category card it came from. They slide in from the side they're on
+ */
+void UIUpgradeSlider::open_category(Category category)
+{
+	auto player = m_dataLoader->get_player_data().lock();
+	if (!player || category == m_category) return;
+	const Category from = m_category;
+	m_category = category;
+	m_glide.isActive = false;
+	build_entries(*player);
+	if (category == Category::NORMAL)
+		m_currentIndex = std::max(0, index_of(Entry::Kind::CATEGORY, static_cast<int>(from)));
+	else
+		m_currentIndex = std::min(1, static_cast<int>(m_entries.size()) - 1);
+	play_sound("ui_transition");
+	layout_cards(category == Category::NORMAL ? -ICON_SPACING : ICON_SPACING);
+}
 /*
  * Computes the cost to upgrade a unit based on its level and evolutions.
  */
@@ -201,13 +365,15 @@ void UIUpgradeSlider::update(float deltaTime)
 	for (int i = 0; i < static_cast<int>(m_upgradeIcons.size()); ++i)
 	{
 		auto& icon = m_upgradeIcons[i];
-		const int uid = m_availableUpgrades[i];
-		if (player)
+		const Entry& entry = m_entries[i];
+		if (player && entry.kind == Entry::Kind::FISH)
 		{
-			const int level = player->get_unit_level(uid);
-			icon->set_affordable(player->shells >= calculate_upgrade_cost(uid, level));
-			icon->set_in_lineup(std::find(player->equippedUnits.begin(), player->equippedUnits.end(), uid) != player->equippedUnits.end());
+			const int level = player->get_unit_level(entry.id);
+			icon->set_affordable(player->shells >= calculate_upgrade_cost(entry.id, level));
+			icon->set_in_lineup(std::find(player->equippedUnits.begin(), player->equippedUnits.end(), entry.id) != player->equippedUnits.end());
 		}
+		else if (player && entry.kind == Entry::Kind::BASE)
+			icon->set_affordable(player->shells >= PlayerData::base_upgrade_cost(player->get_base_upgrade_level(static_cast<PlayerData::BaseUpgrade>(entry.id))));
 		icon->update(deltaTime); // Tweens and info lines
 	}
 
@@ -223,23 +389,70 @@ void UIUpgradeSlider::update(float deltaTime)
 		return;
 	}
 
-	// The button: UNLOCK! for a new unit, greyed out when maxed or too expensive
-	const int uid = m_availableUpgrades[m_currentIndex];
-	const int level = player->get_unit_level(uid);
-	m_upgradeButton.set_text(level <= 0 ? "UNLOCK!" : "UPGRADE!");
-	m_upgradeButton.set_enabled(level < UIUpgradeIcon::MAX_LEVEL && player->shells >= calculate_upgrade_cost(uid, level));
-	m_upgradeButton.set_cost(level < UIUpgradeIcon::MAX_LEVEL ? calculate_upgrade_cost(uid, level) : -1);   // The price on the button
-	if (level >= UIUpgradeIcon::MAX_LEVEL) m_upgradeButton.set_text("MAX LEVEL");
+	// The button: OPEN for a category, UNLOCK! for a new unit, greyed out when maxed or too expensive
+	const Entry entry = m_entries[m_currentIndex];
+	int level = 0, cost = 0, maxLevel = UIUpgradeIcon::MAX_LEVEL;
+	if (entry.kind == Entry::Kind::FISH)
+	{
+		level = player->get_unit_level(entry.id);
+		cost = calculate_upgrade_cost(entry.id, level);
+	}
+	else if (entry.kind == Entry::Kind::BASE)
+	{
+		level = player->get_base_upgrade_level(static_cast<PlayerData::BaseUpgrade>(entry.id));
+		cost = PlayerData::base_upgrade_cost(level);
+		maxLevel = PlayerData::BASE_UPGRADE_MAX_LEVEL;
+	}
+	if (entry.kind == Entry::Kind::CATEGORY)
+	{
+		m_upgradeButton.set_text("OPEN");
+		m_upgradeButton.set_enabled(true);
+		m_upgradeButton.set_cost(-1);
+	}
+	else
+	{
+		m_upgradeButton.set_text(level <= 0 ? "UNLOCK!" : "UPGRADE!");
+		m_upgradeButton.set_enabled(level < maxLevel && player->shells >= cost);
+		m_upgradeButton.set_cost(level < maxLevel ? cost : -1);   // The price on the button
+		if (level >= maxLevel) m_upgradeButton.set_text("MAX LEVEL");
+	}
 	m_upgradeButton.update(deltaTime);
 
-	// Name and description of the selected unit (wrapped to the panel)
-	if (uid != m_describedUid)
+	// Name and description of the selected card (wrapped to the panel)
+	const int key = static_cast<int>(entry.kind) * 100000 + entry.id;
+	if (key != m_describedKey)
 	{
-		auto unitData = m_dataLoader->get_unit_data(uid, player->get_unit_form(uid));
-		m_unitName.setString(unitData->name);
-		m_description.setString(UISkin::wrap_text(unitData->description, DESCRIPTION_SIZE, DESCRIPTION_WIDTH, UISkin::regular_font()));
-		m_abilities.set_abilities(unitData->abilities);
-		m_describedUid = uid;
+		std::string name, description;
+		std::vector<AbilityData> abilities;
+		if (entry.kind == Entry::Kind::FISH)
+		{
+			auto unitData = m_dataLoader->get_unit_data(entry.id, player->get_unit_form(entry.id));
+			name = unitData->name;
+			description = unitData->description;
+			abilities = unitData->abilities;
+		}
+		else if (entry.kind == Entry::Kind::BASE)
+		{
+			const bool isHealth = static_cast<PlayerData::BaseUpgrade>(entry.id) == PlayerData::BaseUpgrade::HEALTH;
+			name = base_upgrade_name(static_cast<PlayerData::BaseUpgrade>(entry.id));
+			description = isHealth
+				? "Your fish bowl gets 15% more health in every stage, for each level."
+				: "Your wallet starts every stage 10% bigger and fills up 10% faster, for each level. The WALLET upgrades of the battle add to it.";
+		}
+		else
+		{
+			switch (static_cast<Category>(entry.id))
+			{
+			case Category::BASE: name = "Base"; description = "Upgrades for your fish bowl and your wallet. They work in every stage."; break;
+			case Category::RARE: name = "Rare fish"; description = "Rare fish from the giant clam (Clam Room)."; break;
+			case Category::SUPER_RARE: name = "Super Rare fish"; description = "The rarest fish of the giant clam (Clam Room)."; break;
+			default: name = "Normal fish"; description = "The fish you meet in the stages. Back to them."; break;
+			}
+		}
+		m_unitName.setString(name);
+		m_description.setString(UISkin::wrap_text(description, DESCRIPTION_SIZE, DESCRIPTION_WIDTH, UISkin::regular_font()));
+		m_abilities.set_abilities(abilities);
+		m_describedKey = key;
 		m_describedLevel = -1;   // The numbers too
 
 		// Name centered, description and abilities left-aligned under it
@@ -249,12 +462,67 @@ void UIUpgradeSlider::update(float deltaTime)
 		m_description.setPosition({ DESCRIPTION_PANEL.position.x + TEXT_PADDING, DESCRIPTION_PANEL.position.y + 80.f });
 
 		const float descriptionBottom = m_description.getGlobalBounds().position.y + m_description.getGlobalBounds().size.y;
-		m_abilities.set_position({ DESCRIPTION_PANEL.position.x + TEXT_PADDING, descriptionBottom + 16.f });
+		m_abilitiesTop = descriptionBottom + 14.f;
+		m_descriptionScroll = 0.f;
 	}
-	if (uid != m_describedUid || level != m_describedLevel) describe_upgrade(uid, level);
-	m_describedUid = uid;
+	if (level != m_describedLevel || m_statRows.empty())
+	{
+		if (entry.kind == Entry::Kind::FISH) describe_upgrade(entry.id, level);
+		else if (entry.kind == Entry::Kind::BASE) describe_base(static_cast<PlayerData::BaseUpgrade>(entry.id), level);
+		else describe_category(static_cast<Category>(entry.id));
+	}
 }
 
+/*
+ * A base upgrade's numbers: its level, what it gives now and at the next level, the price
+ */
+void UIUpgradeSlider::describe_base(PlayerData::BaseUpgrade upgrade, int level)
+{
+	m_describedLevel = level;
+	m_statRows.clear();
+	m_evolutionLine.clear();
+	m_isMaxLevel = level >= PlayerData::BASE_UPGRADE_MAX_LEVEL;
+	m_infoTitle = m_isMaxLevel ? "MAX LEVEL" : "NEXT LEVEL";
+	m_cost = PlayerData::base_upgrade_cost(level);
+	const int next = m_isMaxLevel ? level : level + 1;
+	m_statRows.push_back({ "Level", std::to_string(level), std::to_string(next), next > level });
+	if (upgrade == PlayerData::BaseUpgrade::HEALTH)
+		m_statRows.push_back({ "Health", percent(PlayerData::base_health_factor(level)), percent(PlayerData::base_health_factor(next)), !m_isMaxLevel });
+	else
+	{
+		const float now = PlayerData::wallet_factor(level), then = PlayerData::wallet_factor(next);
+		m_statRows.push_back({ "Wallet", format_stat(Stage::BASE_MAX_CASH * now), format_stat(Stage::BASE_MAX_CASH * then), !m_isMaxLevel });
+		m_statRows.push_back({ "Per second", format_stat(Stage::BASE_CASH_PER_SECOND * now), format_stat(Stage::BASE_CASH_PER_SECOND * then), !m_isMaxLevel });
+	}
+}
+
+/*
+ * A category card: what it holds (one value per row)
+ */
+void UIUpgradeSlider::describe_category(Category category)
+{
+	m_describedLevel = 0;
+	m_statRows.clear();
+	m_evolutionLine.clear();
+	m_isMaxLevel = true;   // One value per row
+	m_infoTitle = "INSIDE";
+	m_cost = 0;
+	auto player = m_dataLoader->get_player_data().lock();
+	if (!player) return;
+	if (category == Category::BASE)
+	{
+		for (int i = 0; i < static_cast<int>(PlayerData::BaseUpgrade::COUNT); ++i)
+		{
+			const auto upgrade = static_cast<PlayerData::BaseUpgrade>(i);
+			m_statRows.push_back({ base_upgrade_name(upgrade), "Lv " + std::to_string(player->get_base_upgrade_level(upgrade)), "" });
+		}
+		return;
+	}
+	int owned = 0;
+	for (auto& [uid, _] : player->ownedUnits)
+		if (category_of(uid) == category) ++owned;
+	m_statRows.push_back({ "Fish", std::to_string(owned), "" });
+}
 /*
  * The upgrade's numbers: level, health and attack now and after it (the level multiplies both), the evolution
  * coming, the price
@@ -265,6 +533,7 @@ void UIUpgradeSlider::describe_upgrade(int uid, int level)
 	m_statRows.clear();
 	m_evolutionLine.clear();
 	m_isMaxLevel = level >= UIUpgradeIcon::MAX_LEVEL;
+	m_infoTitle = m_isMaxLevel ? "MAX LEVEL" : "NEXT LEVEL";
 	m_cost = calculate_upgrade_cost(uid, level);
 
 	auto player = m_dataLoader->get_player_data().lock();
@@ -308,7 +577,7 @@ void UIUpgradeSlider::render_upgrade_info(sf::RenderWindow& window)
 		};
 
 	float y = DESCRIPTION_PANEL.position.y + 42.f;
-	drawText(m_isMaxLevel ? "MAX LEVEL" : "NEXT LEVEL", 34, UISkin::TITLE, { STATS_X + 190.f, y }, { 0.5f, 0.5f });
+	drawText(m_infoTitle, 34, UISkin::TITLE, { STATS_X + 190.f, y }, { 0.5f, 0.5f });
 	y += 50.f;
 	for (const StatRow& row : m_statRows)
 	{
@@ -321,6 +590,12 @@ void UIUpgradeSlider::render_upgrade_info(sf::RenderWindow& window)
 			continue;
 		}
 		drawText(row.name, STAT_SIZE, UISkin::TEXT, { STATS_X, y }, { 0.f, 0.5f });
+		if (row.next.empty() && m_isMaxLevel)   // A category's contents: the value at the column's end
+		{
+			drawText(row.now, STAT_SIZE, UISkin::NUMBER, { STATS_X + 385.f, y }, { 1.f, 0.5f });
+			y += 43.f;
+			continue;
+		}
 		drawText(row.now, STAT_SIZE, UISkin::TEXT, { STATS_X + 250.f, y }, { 1.f, 0.5f });
 		if (!m_isMaxLevel)
 		{
@@ -334,7 +609,7 @@ void UIUpgradeSlider::render_upgrade_info(sf::RenderWindow& window)
 
 	// The price is on the button; under it, what is missing
 	auto player = m_dataLoader->get_player_data().lock();
-	if (!player || m_upgradeIcons.empty() || m_isMaxLevel) return;
+	if (!player || m_upgradeIcons.empty() || m_isMaxLevel || m_entries[m_currentIndex].kind == Entry::Kind::CATEGORY) return;
 	const float centerX = UPGRADE_BUTTON.position.x + UPGRADE_BUTTON.size.x / 2.f;
 	if (player->shells < m_cost)
 		drawText("Need " + std::to_string(m_cost - player->shells) + " more shells", 28, CORAL, { centerX, UPGRADE_BUTTON.position.y + UPGRADE_BUTTON.size.y + 34.f }, { 0.5f, 0.5f });
@@ -362,9 +637,42 @@ void UIUpgradeSlider::render(sf::RenderWindow& window)
 
 	m_descriptionPanel.render(window);
 	window.draw(m_unitName);
-	window.draw(m_description);
+	// The description and the abilities, clipped to the left column (scrolled when too long)
+	{
+		const sf::FloatRect area = description_area();
+		const sf::View view = window.getView();
+		const sf::Vector2f windowSize(window.getSize());
+		const sf::Vector2i topLeft = window.mapCoordsToPixel(area.position, view);
+		const sf::Vector2i bottomRight = window.mapCoordsToPixel(area.position + area.size, view);
+		sf::View clipped = view;
+		clipped.setScissor({ { std::clamp(topLeft.x / windowSize.x, 0.f, 1.f), std::clamp(topLeft.y / windowSize.y, 0.f, 1.f) },
+			{ std::clamp((bottomRight.x - topLeft.x) / windowSize.x, 0.f, 1.f), std::clamp((bottomRight.y - topLeft.y) / windowSize.y, 0.f, 1.f) } });
+		window.setView(clipped);
+		const float scrolled = std::round(m_descriptionScroll);
+		sf::RenderStates states;
+		states.transform.translate({ 0.f, -scrolled });
+		window.draw(m_description, states);
+		m_abilities.set_position({ DESCRIPTION_PANEL.position.x + TEXT_PADDING, m_abilitiesTop - scrolled });
+		m_abilities.render_lines(window);
+		window.setView(view);
+
+		const float hidden = description_hidden();
+		if (hidden > 1.f)
+		{
+			const float contentHeight = area.size.y + hidden;
+			const float thumbHeight = std::max(40.f, area.size.y * area.size.y / contentHeight);
+			sf::RectangleShape track({ 8.f, area.size.y });
+			track.setPosition({ area.position.x + area.size.x + 6.f, area.position.y });
+			track.setFillColor(sf::Color(255, 255, 255, 40));
+			window.draw(track);
+			sf::RectangleShape thumb({ 8.f, thumbHeight });
+			thumb.setPosition({ track.getPosition().x, area.position.y + (area.size.y - thumbHeight) * std::clamp(m_descriptionScroll / hidden, 0.f, 1.f) });
+			thumb.setFillColor(UISkin::NUMBER);
+			window.draw(thumb);
+		}
+	}
 	render_upgrade_info(window);
-	m_abilities.render(window);   // Last: its bubble goes over everything
+	m_abilities.render_hover_bubble(window);   // Last: its bubble goes over everything
 }
 
 /*
@@ -436,9 +744,11 @@ void UIUpgradeSlider::handle_event(const sf::Event& event, const sf::RenderWindo
 		}
 		else
 			for (int i = 0; i < static_cast<int>(m_upgradeIcons.size()); ++i)
-				if (i != m_currentIndex && m_upgradeIcons[i]->get_bounds().contains(mousePos))
+				if (m_upgradeIcons[i]->get_bounds().contains(mousePos))
 				{
-					move_to_index(i);
+					// A side card comes to the middle; the category card in the middle opens
+					if (i != m_currentIndex) move_to_index(i);
+					else if (m_entries[i].kind == Entry::Kind::CATEGORY) open_category(static_cast<Category>(m_entries[i].id));
 					break;
 				}
 	}
@@ -447,6 +757,36 @@ void UIUpgradeSlider::handle_event(const sf::Event& event, const sf::RenderWindo
 	m_nextButton.handle_event(event, window);
 	m_upgradeButton.handle_event(event, window);
 	m_abilities.handle_event(event, window);
+
+	// The description column: dragged up and down (or the wheel) when it doesn't fit
+	const float hidden = description_hidden();
+	if (const auto* pressed = event.getIf<sf::Event::MouseButtonPressed>(); pressed && hidden > 0.f
+		&& description_area().contains(window.mapPixelToCoords(pressed->position)))
+	{
+		m_isDescriptionDragging = true;
+		m_descriptionPressY = window.mapPixelToCoords(pressed->position).y;
+		m_descriptionPressScroll = m_descriptionScroll;
+	}
+	else if (const auto* moved = event.getIf<sf::Event::MouseMoved>(); moved && m_isDescriptionDragging)
+		m_descriptionScroll = std::clamp(m_descriptionPressScroll - (window.mapPixelToCoords(moved->position).y - m_descriptionPressY), 0.f, hidden);
+	else if (event.is<sf::Event::MouseButtonReleased>())
+		m_isDescriptionDragging = false;
+	else if (const auto* wheel = event.getIf<sf::Event::MouseWheelScrolled>(); wheel && description_area().contains(window.mapPixelToCoords(wheel->position)))
+		m_descriptionScroll = std::clamp(m_descriptionScroll - wheel->delta * 50.f, 0.f, hidden);
+}
+
+sf::FloatRect UIUpgradeSlider::description_area() const
+{
+	const float top = DESCRIPTION_PANEL.position.y + 72.f;
+	return { { DESCRIPTION_PANEL.position.x + TEXT_PADDING - 8.f, top },
+		{ DESCRIPTION_WIDTH + 16.f, DESCRIPTION_PANEL.position.y + DESCRIPTION_PANEL.size.y - 16.f - top } };
+}
+
+float UIUpgradeSlider::description_hidden() const
+{
+	const float bottom = m_abilitiesTop + m_abilities.get_height();
+	const sf::FloatRect area = description_area();
+	return std::max(0.f, bottom + 6.f - (area.position.y + area.size.y));
 }
 
 /*
@@ -479,17 +819,20 @@ int UIUpgradeSlider::snap_index(float dragX, bool allowsFlick) const
 
 int UIUpgradeSlider::get_selected_uid() const
 {
-	return m_availableUpgrades.empty() ? -1 : m_availableUpgrades[m_currentIndex];
+	if (m_entries.empty() || m_entries[m_currentIndex].kind != Entry::Kind::FISH) return -1;
+	return m_entries[m_currentIndex].id;
 }
-
 void UIUpgradeSlider::select_unit(int uid)
 {
-	const auto found = std::find(m_availableUpgrades.begin(), m_availableUpgrades.end(), uid);
-	if (found == m_availableUpgrades.end()) return;
-	m_currentIndex = static_cast<int>(found - m_availableUpgrades.begin());
-	init_icons();   // Laid out round it at once
+	auto player = m_dataLoader->get_player_data().lock();
+	if (!player) return;
+	m_category = category_of(uid);   // Among its rarity's cards
+	build_entries(*player);
+	const int index = index_of(Entry::Kind::FISH, uid);
+	if (index < 0) return;
+	m_currentIndex = index;
+	layout_cards();   // Laid out round it at once
 }
-
 float UIUpgradeSlider::drag_offset() const
 {
 	if (m_upgradeIcons.empty()) return 0.f;

@@ -118,6 +118,18 @@ private:
     void release_slide(float dragX, float speed);   // Let go: glides on when flung, else settles on the nearest
     sf::FloatRect strip_tab_rect(int index) const;
     void render_strip(sf::RenderWindow& window);
+    // The Fish stands on the selected stage's marker, breathing; another stage picked, it walks there along the path
+    // (through the markers between, its walk frames), then idles again
+    std::vector<sf::Vector2f> m_walkPath;       // The markers still to reach (map coordinates)
+    sf::Vector2f m_walkerPosition{ 0.f, 0.f };  // Where it stands on the map
+    bool m_hasWalkerPlace = false;              // Placed at once on the first selection
+    bool m_walkerFacesRight = false;            // The sheets face left
+    float m_walkSpeed = 0.f;                    // Pixels per second of the current walk (long walks go quicker)
+    float m_walkerTime = 0.f;                   // Its idle breathing
+    float m_walkTime = 0.f;                     // Since it set off (its walk frames)
+    void walk_to(int index);
+    void update_walker(float deltaTime);
+    void render_walker(sf::RenderWindow& window, const sf::RenderStates& states);
     sf::Vector2f m_targetOffset{ 0.f, 0.f };    // target camera offset
     float m_moveSpeed = 5.f;
 };

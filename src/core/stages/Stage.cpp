@@ -78,13 +78,18 @@ void Stage::load(int uid)
 	m_enemiesCount = 0;
 	m_unitsCount = 0;
 	m_currentCash = 0;
-	m_maxCash = BASE_MAX_CASH;               // Cash Up upgrades only last for one stage
-	m_cashPerSecond = BASE_CASH_PER_SECOND;
+
+	// The base upgrades (Upgrade screen): a bigger, quicker wallet and a sturdier bowl in every stage
+	auto player = m_dataLoader->get_player_data().lock();
+	m_walletFactor = player ? PlayerData::wallet_factor(player->get_base_upgrade_level(PlayerData::BaseUpgrade::WALLET)) : 1.f;
+	const float bowlFactor = player ? PlayerData::base_health_factor(player->get_base_upgrade_level(PlayerData::BaseUpgrade::HEALTH)) : 1.f;
+	m_maxCash = static_cast<int>(std::lround(BASE_MAX_CASH * m_walletFactor));   // Cash Up upgrades only last for one stage
+	m_cashPerSecond = static_cast<int>(std::lround(BASE_CASH_PER_SECOND * m_walletFactor));
 	m_cashRemainder = 0.f;
 	m_length = stageJson->length;
 
 	// Spawn bases with provided health and texture
-	spawn_bases(stageJson->baseHealth, stageJson->playerBaseHealth, stageJson->baseTexture);
+	spawn_bases(stageJson->baseHealth, std::round(stageJson->playerBaseHealth * bowlFactor), stageJson->baseTexture);
 
 	// Copy enemy spawn data from stage JSON
 	m_enemyStageDatas.clear();
@@ -564,10 +569,10 @@ bool Stage::upgrade_cash(int level, int cost)
 	if (m_currentCash < cost) return false;
 
 	m_currentCash -= cost;
-	m_maxCash += 150 * level;
+	m_maxCash += static_cast<int>(std::lround(150.f * level * m_walletFactor));
 
-	// Increase cash per second by 50% per level
-	m_cashPerSecond = 50.0f * std::pow(1.5f, static_cast<float>(level));
+	// Increase cash per second by 50% per level (Wallet Up's bonus kept)
+	m_cashPerSecond = static_cast<int>(std::lround(BASE_CASH_PER_SECOND * std::pow(1.5f, static_cast<float>(level)) * m_walletFactor));
 
 	return true;
 }

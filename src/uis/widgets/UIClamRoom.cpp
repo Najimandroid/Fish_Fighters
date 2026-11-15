@@ -195,16 +195,21 @@ void UIClamRoom::open(int count)
 {
     auto player = m_dataLoader->get_player_data().lock();
     if (m_phase != Phase::IDLE || !player) return;
+
+    // The fish it gives: the Rare and Super Rare ones (CLAM_MIN_RARITY); while there are none, every fish
+    std::set<int> uids, rareUids;
+    for (const auto& [key, data] : m_dataLoader->get_units_database())
+    {
+        uids.insert(key.first);
+        if (data && data->rarity >= CLAM_MIN_RARITY) rareUids.insert(key.first);
+    }
+    const std::vector<int> pool = rareUids.empty() ? std::vector<int>(uids.begin(), uids.end()) : std::vector<int>(rareUids.begin(), rareUids.end());
+    if (pool.empty()) return;
     if (!player->spend_shiny_scales(count))
     {
         play_sound("ui_error");
         return;
     }
-
-    std::set<int> uids;
-    for (const auto& [key, data] : m_dataLoader->get_units_database()) uids.insert(key.first);
-    const std::vector<int> pool(uids.begin(), uids.end());
-    if (pool.empty()) return;
 
     m_reveals.clear();
     for (int i = 0; i < count; ++i)

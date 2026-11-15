@@ -45,6 +45,7 @@ namespace EditorWidgets
     bool flag_field(EditorContext& ctx, DataFile file, const char* label, ordered_json& object, const char* key,
         const char* help = nullptr);   // Written as 1 / 0 like the existing files
     bool attack_type_field(EditorContext& ctx, DataFile file, ordered_json& object);
+    bool rarity_field(EditorContext& ctx, DataFile file, ordered_json& object);   // A unit's "rarity" (Rarity.h)
     bool pair_field(EditorContext& ctx, DataFile file, const char* label, ordered_json& object, const char* key,
         float defaultFirst, float defaultSecond, const char* help = nullptr);  // [ a, b ] lists (damageZone)
     bool scale_field(EditorContext& ctx, DataFile file, const char* label, ordered_json& object, const char* key,

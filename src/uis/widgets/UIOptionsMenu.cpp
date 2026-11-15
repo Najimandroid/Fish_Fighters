@@ -4,12 +4,16 @@
 #include "../../core/DataLoader.h"
 #include "../../audio/AudioManager.h"
 
+#include <string>
+#include <utility>
+#include <vector>
+
 namespace
 {
     const sf::Vector2f SCREEN_SIZE{ 1920.f, 1080.f };
-    // A phone has no "Mute in background" and no DISPLAY rows: a shorter window, centered. The X on its corner closes it
-    const sf::Vector2f PANEL_SIZE{ 1000.f, Platform::IS_MOBILE ? 520.f : 760.f };
-    const sf::Vector2f PANEL_POSITION{ (SCREEN_SIZE.x - PANEL_SIZE.x) / 2.f, Platform::IS_MOBILE ? (SCREEN_SIZE.y - PANEL_SIZE.y) / 2.f : 130.f };
+    // A phone has no "Mute in background" and no DISPLAY rows: a shorter window. Centered; the X on its corner closes it
+    const sf::Vector2f PANEL_SIZE{ 1000.f, Platform::IS_MOBILE ? 650.f : 880.f };
+    const sf::Vector2f PANEL_POSITION{ (SCREEN_SIZE.x - PANEL_SIZE.x) / 2.f, (SCREEN_SIZE.y - PANEL_SIZE.y) / 2.f };
     const float TOP = PANEL_POSITION.y;                  // Every row from the window's top
     const float LEFT = PANEL_POSITION.x + 70.f;          // Row names and section headers
     const float SLIDER_X = PANEL_POSITION.x + 340.f;
@@ -18,6 +22,12 @@ namespace
     const float MASTER_Y = TOP + 195.f, MUSIC_Y = TOP + 265.f, EFFECTS_Y = TOP + 335.f, MUTE_Y = TOP + 410.f;   // Row centers
     const unsigned int HEADER_SIZE = 34;
     const unsigned int ROW_SIZE = 34;
+
+    // CONTROLS: a table, what in yellow, how in white
+    const float CONTROLS_Y = TOP + (Platform::IS_MOBILE ? 420.f : 655.f);   // The header's center
+    const float CONTROL_ROW = 42.f;
+    const float CONTROL_HOW_X = LEFT + 250.f;
+    const unsigned int CONTROL_SIZE = 28;
 }
 
 UIOptionsMenu::UIOptionsMenu(std::shared_ptr<DataLoader> dataLoader, std::shared_ptr<AudioManager> audio,
@@ -54,15 +64,25 @@ UIOptionsMenu::UIOptionsMenu(std::shared_ptr<DataLoader> dataLoader, std::shared
     {
         addText("Mute in background", ROW_SIZE, UISkin::TEXT, { LEFT, MUTE_Y }, { 0.f, 0.5f });
         addText("DISPLAY", HEADER_SIZE, UISkin::TITLE, { LEFT, TOP + 490.f }, { 0.f, 0.5f });
-        addText("CONTROLS", HEADER_SIZE, UISkin::TITLE, { LEFT, TOP + 655.f }, { 0.f, 0.5f });
-        addText("Pause: Esc, P or Space    Speed: F    Camera: drag and mouse wheel", 26, UISkin::TEXT,
-            { LEFT, TOP + 695.f }, { 0.f, 0.5f });
     }
-    else
+    addText("CONTROLS", HEADER_SIZE, UISkin::TITLE, { LEFT, CONTROLS_Y }, { 0.f, 0.5f });
+    using Rows = std::vector<std::pair<std::string, std::string>>;
+    const Rows controls = Platform::IS_MOBILE
+        ? Rows{
+            { "Send a fish", "tap it at the bottom" },
+            { "Pause, speed", "the buttons at the top left" },
+            { "Camera", "drag the battlefield" },
+            { "Zoom", "pinch it with two fingers" } }
+        : Rows{
+            { "Send a fish", "click it, or its key: 1 to 0" },
+            { "Pause", "Esc, P or Space" },
+            { "Speed", "F" },
+            { "Camera", "drag the battlefield, wheel to zoom" } };
+    for (size_t i = 0; i < controls.size(); ++i)
     {
-        addText("CONTROLS", HEADER_SIZE, UISkin::TITLE, { LEFT, TOP + 420.f }, { 0.f, 0.5f });
-        addText("Pause and speed: the buttons at the top left    Camera: drag the battlefield", 26, UISkin::TEXT,
-            { LEFT, TOP + 462.f }, { 0.f, 0.5f });
+        const float y = CONTROLS_Y + 48.f + CONTROL_ROW * static_cast<float>(i);
+        addText(controls[i].first, CONTROL_SIZE, UISkin::NUMBER, { LEFT, y }, { 0.f, 0.5f });
+        addText(controls[i].second, CONTROL_SIZE, UISkin::TEXT, { CONTROL_HOW_X, y }, { 0.f, 0.5f });
     }
 
     // Sliders: live, the Effects one plays a click so its level can be heard

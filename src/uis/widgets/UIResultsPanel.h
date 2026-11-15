@@ -42,6 +42,7 @@ public:
 
     sf::FloatRect get_bounds() const override;
     bool is_blocking_input() const override { return true; }
+    bool dims_letterbox() const override { return false; }
 
 private:
     void render_victory(sf::RenderWindow& window, const sf::FloatRect& panel, std::uint8_t alpha);

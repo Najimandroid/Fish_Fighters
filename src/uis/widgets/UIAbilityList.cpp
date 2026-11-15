@@ -56,6 +56,7 @@ sf::Color UIAbilityList::type_color(EntityType type)
     case EntityType::SHELLED:    return { 196, 140, 255 };
     case EntityType::JELLY:      return { 255, 130, 214 };
     case EntityType::FISH:       return { 120, 210, 255 };
+    case EntityType::ALL_ENEMIES:return { 255, 214, 90 };
     default:                     return UISkin::TEXT;
     }
 }
@@ -106,7 +107,7 @@ float UIAbilityList::render_line(sf::RenderWindow& window, Line& line, sf::Vecto
     {
         const EntityType type = line.ability.targetTypes[i];
         x += GAP;
-        if (type != EntityType::FISH)
+        if (type != EntityType::FISH && type != EntityType::ALL_ENEMIES)   // No icon: a name alone
         {
             UISkin::draw_fitted(window, typeSheet, UISkin::icon_cell(typeSheet, AbilityGlossary::type_icon_index(type), AbilityGlossary::ICON_CELL_SIZE),
                 { { x, centerY - TYPE_ICON_SIZE / 2.f }, { TYPE_ICON_SIZE, TYPE_ICON_SIZE } });
@@ -142,11 +143,20 @@ void UIAbilityList::render_bubble(sf::RenderWindow& window, const Line& line)
 
 void UIAbilityList::render(sf::RenderWindow& window)
 {
-    if (!m_isVisible) return;
+    render_lines(window);
+    render_hover_bubble(window);
+}
 
+void UIAbilityList::render_lines(sf::RenderWindow& window)
+{
+    if (!m_isVisible) return;
     for (size_t i = 0; i < m_lines.size(); ++i)
         render_line(window, m_lines[i], { m_position.x, m_position.y + static_cast<float>(i) * LINE_HEIGHT });
+}
 
+void UIAbilityList::render_hover_bubble(sf::RenderWindow& window)
+{
+    if (!m_isVisible) return;
     const int shown = m_pinnedLine >= 0 ? m_pinnedLine : m_hoveredLine;
     if (shown >= 0 && shown < static_cast<int>(m_lines.size()))
         render_bubble(window, m_lines[shown]);

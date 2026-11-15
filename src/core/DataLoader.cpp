@@ -240,6 +240,9 @@ bool DataLoader::load_units(const std::string& path)
     {
         int UID = read_int(value, "UID");
         int baseUpgradeCost = read_int(value, "baseUpgradeCost");
+        const Rarity rarity = value.contains("rarity") ? rarity_from_key(value.at("rarity").get<std::string>()) : Rarity::NORMAL;
+        if (rarity == Rarity::COUNT)
+            throw std::runtime_error("Unit " + std::to_string(UID) + ": unknown rarity " + value.at("rarity").dump() + " (NORMAL, RARE or SUPER_RARE)");
 
         for (auto& formValue : value.at("forms"))
         {
@@ -247,6 +250,7 @@ bool DataLoader::load_units(const std::string& path)
 
             data->UID = UID;
             data->baseUpgradeCost = baseUpgradeCost;
+            data->rarity = rarity;
 
             data->name = formValue.at("name").get<std::string>();
             data->description = formValue.at("description").get<std::string>();
@@ -346,6 +350,9 @@ bool DataLoader::load_enemies(const std::string& path)
         data->types = read_types(value, "types");
         if (std::find(data->types.begin(), data->types.end(), EntityType::FISH) != data->types.end())
             throw std::runtime_error(data->name + ": FISH is reserved for units");
+        // Every enemy has the hidden ALL_ENEMIES type (abilities targeting it hit them all)
+        if (std::find(data->types.begin(), data->types.end(), EntityType::ALL_ENEMIES) == data->types.end())
+            data->types.push_back(EntityType::ALL_ENEMIES);
 
         // Enemy abilities target every fish unless they say otherwise
         data->abilities = read_abilities(value, { EntityType::FISH });
@@ -626,6 +633,7 @@ bool DataLoader::load_player(const std::string& path)
         // Shells
         m_playerData->shells = read_int(j.at("money"), "shells");
         m_playerData->shinyScales = j.at("money").contains("shinyScales") ? read_int(j.at("money"), "shinyScales") : 0;
+        m_playerData->pearls = j.at("money").contains("pearls") ? read_int(j.at("money"), "pearls") : 0;
         m_playerData->fishScales = j.at("money").contains("fishScales") ? read_int(j.at("money"), "fishScales") : 0;
 
         // The Clam Storage: fish out of the clam waiting to be used or sold (missing in older saves)
@@ -691,6 +699,23 @@ bool DataLoader::load_player(const std::string& path)
             : progression.contains("shoalRewardsClaimed") ? read_int(progression, "shoalRewardsClaimed") : 0;   // Its first name
         m_playerData->hasClamRoomGift = progression.contains("clamRoomGift") && progression.at("clamRoomGift").get<bool>();
         m_playerData->adsDay = progression.contains("adsDay") ? progression.at("adsDay").get<std::string>() : "";
+
+        // Fish already looked at in the encyclopedia, the shop's free videos today (missing in older saves)
+        if (progression.contains("discoveredFish") && progression.at("discoveredFish").is_array())
+            for (const json& uid : progression.at("discoveredFish")) m_playerData->discoveredFish.insert(read_int_value(uid, "discoveredFish"));
+        m_playerData->shopAdsDay = progression.contains("shopAdsDay") ? progression.at("shopAdsDay").get<std::string>() : "";
+        m_playerData->shopAdsToday = progression.contains("shopAdsToday") ? read_int(progression, "shopAdsToday") : 0;
+
+        // The base upgrades' levels (missing in older saves: level 1)
+        if (progression.contains("baseUpgrades"))
+        {
+            const json& levels = progression.at("baseUpgrades");
+            const auto level = [&levels](const char* key) {
+                return levels.contains(key) ? std::clamp(read_int(levels, key), 1, PlayerData::BASE_UPGRADE_MAX_LEVEL) : 1;
+            };
+            m_playerData->baseUpgradeLevels[static_cast<size_t>(PlayerData::BaseUpgrade::HEALTH)] = level("health");
+            m_playerData->baseUpgradeLevels[static_cast<size_t>(PlayerData::BaseUpgrade::WALLET)] = level("wallet");
+        }
         m_playerData->adsToday = progression.contains("adsToday") ? progression.at("adsToday").get<int>() : 0;
 
         // Enemies met in battle (missing in older saves)
@@ -731,6 +756,7 @@ bool DataLoader::save_player(const std::string& path)
     // Shells
     j["money"]["shells"] = m_playerData->shells;
     j["money"]["shinyScales"] = m_playerData->shinyScales;
+    j["money"]["pearls"] = m_playerData->pearls;
     j["money"]["fishScales"] = m_playerData->fishScales;
 
     // The Clam Storage
@@ -784,6 +810,13 @@ bool DataLoader::save_player(const std::string& path)
     j["progression"]["clamRoomGift"] = m_playerData->hasClamRoomGift;
     j["progression"]["adsDay"] = m_playerData->adsDay;
     j["progression"]["adsToday"] = m_playerData->adsToday;
+    std::vector<int> discovered(m_playerData->discoveredFish.begin(), m_playerData->discoveredFish.end());
+    std::sort(discovered.begin(), discovered.end());   // The file doesn't change order between saves
+    j["progression"]["discoveredFish"] = discovered;
+    j["progression"]["shopAdsDay"] = m_playerData->shopAdsDay;
+    j["progression"]["shopAdsToday"] = m_playerData->shopAdsToday;
+    j["progression"]["baseUpgrades"]["health"] = m_playerData->get_base_upgrade_level(PlayerData::BaseUpgrade::HEALTH);
+    j["progression"]["baseUpgrades"]["wallet"] = m_playerData->get_base_upgrade_level(PlayerData::BaseUpgrade::WALLET);
 
     // Enemies met in battle (sorted, so the file doesn't change order between saves)
     std::vector<int> seenEnemies(m_playerData->seenEnemies.begin(), m_playerData->seenEnemies.end());
@@ -1009,4 +1042,11 @@ bool DataLoader::is_clam_room_open() const
 std::string DataLoader::get_enemy_icon_texture_path(int uid) const
 {
     return "assets/images/textures/icons/enemies/icon_" + std::to_string(uid) + ".png";
+}
+std::vector<int> DataLoader::get_chapter_uids() const
+{
+    std::vector<int> uids;
+    for (const auto& [uid, chapter] : m_chaptersDatabase) uids.push_back(uid);
+    std::sort(uids.begin(), uids.end());
+    return uids;
 }

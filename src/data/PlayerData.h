@@ -151,6 +151,32 @@ public:
     // each evolution (levels 10 and 30). The Upgrade screen and FishEditor's cost estimate both use it.
     static int upgrade_cost(int baseUpgradeCost, int level);
 
+    // ===== Pearls: the rare currency (like The Battle Cats' cat food), spent in the Pearl Shop (UIShopMenu) =====
+    // They come from looking at a new fish in the encyclopedia, the shop's free videos (phones), and later its packs
+    static constexpr int PEARLS_PER_NEW_FISH = 10;     // A fish owned and seen in the encyclopedia for the first time
+    static constexpr int PEARLS_PER_AD = 5;            // The shop's free offer, SHOP_ADS_PER_DAY a day
+    static constexpr int SHOP_ADS_PER_DAY = 3;
+    static constexpr int PEARLS_FOR_SCALE = 25;        // One Shiny Scale
+    static constexpr int PEARLS_FOR_TEN_SCALES = 225;  // Ten at once: one of them free
+    bool discover_fish(int unitUid);                   // +PEARLS_PER_NEW_FISH the first time (false: seen before or not owned)
+    bool is_fish_discovered(int unitUid) const;
+    int undiscovered_fish() const;                     // Owned fish not looked at yet (their pearls are waiting)
+    int shop_ads_left_today() const;
+    bool watch_shop_ad();                              // +PEARLS_PER_AD (false: none left today)
+    bool buy_shiny_scales(int count);                  // 1 or 10 for pearls (false: not enough)
+
+    // ===== Base upgrades (the Upgrade screen's BASE cards, like The Battle Cats' base upgrades) =====
+    // Base Health: the fish bowl's health in every stage, +15 % a level. Wallet Up: the wallet holds more and fills
+    // faster from the start of every stage, +10 % a level. Both from level 1 to BASE_UPGRADE_MAX_LEVEL
+    enum class BaseUpgrade { HEALTH, WALLET, COUNT };
+    static constexpr int BASE_UPGRADE_MAX_LEVEL = 10;
+    static constexpr int BASE_UPGRADE_COST = 500;     // Shells from level 1 to 2, x1.5 a level after that
+    static int base_upgrade_cost(int level);          // From level to level + 1
+    static float base_health_factor(int level);       // The bowl's health at this level, compared to level 1
+    static float wallet_factor(int level);            // The wallet's size and filling speed, compared to level 1
+    int get_base_upgrade_level(BaseUpgrade upgrade) const;
+    void upgrade_base(BaseUpgrade upgrade);           // One level up (never past the max)
+
 public:
     // Currency
     int shells = 0;
@@ -161,6 +187,11 @@ public:
     bool hasClamRoomGift = false;          // The welcome Shiny Scale was given
     std::string adsDay;                    // The day of the ads counted (YYYY-MM-DD), and how many
     int adsToday = 0;
+    int pearls = 0;                        // The rare currency (Pearl Shop)
+    std::unordered_set<int> discoveredFish;// Fish already looked at in the encyclopedia (their pearls given)
+    std::string shopAdsDay;                // The day of the shop's free videos counted, and how many
+    int shopAdsToday = 0;
+    std::array<int, static_cast<size_t>(BaseUpgrade::COUNT)> baseUpgradeLevels{ 1, 1 };   // Saved in "progression"
 
     // Units
     struct OwnedUnit

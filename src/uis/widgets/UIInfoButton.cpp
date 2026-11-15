@@ -6,7 +6,6 @@ namespace
 {
     const float SIZE = Platform::IS_MOBILE ? 72.f : 56.f;
     const float TOUCH_MARGIN = Platform::IS_MOBILE ? 18.f : 0.f;
-    const sf::Color FILL{ 86, 192, 236 };
 }
 
 UIInfoButton::UIInfoButton(sf::Vector2f center) :
@@ -32,16 +31,15 @@ void UIInfoButton::render(sf::RenderWindow& window)
     circle.setFillColor(UISkin::SHADOW_TINT);
     window.draw(circle);
 
-    circle.setPosition(center);
-    circle.setFillColor(m_isPressed ? FILL * sf::Color(215, 215, 215) : FILL);
-    circle.setOutlineThickness(4.f * scale);
-    circle.setOutlineColor(UISkin::OUTLINE);
-    window.draw(circle);
+    // The bubble drawing, the "i" in it
+    const float drawn = rect.size.x * 1.08f;
+    UISkin::draw_fitted(window, UISkin::texture("bubble"), { center - sf::Vector2f{ drawn, drawn } / 2.f, { drawn, drawn } },
+        m_isPressed ? sf::Color(215, 215, 215) : sf::Color::White);
 
     m_text.setScale({ scale, scale });
     m_text.setPosition(center + sf::Vector2f{ 0.f, -radius * 0.06f });
     window.draw(m_text);
-    render_highlight(window, rect, radius);   // A press flashes
+    render_highlight(window, rect, radius, true, false);   // A press brightens it (no frame)
 }
 
 sf::FloatRect UIInfoButton::get_bounds() const

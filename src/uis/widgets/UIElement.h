@@ -47,10 +47,30 @@ public:
     // While true (a modal window like the pause menu), this element gets the input events alone
     virtual bool is_blocking_input() const { return false; }
 
+    // Drawn over the side frame (the pillars on a phone's extra width): the modal windows, the battle start's water
+    virtual bool is_over_frame() const { return is_blocking_input(); }
+
+    // Darkens what the screen shows outside the 16:9 layout (a phone's sides) as it darkens the layout itself: the
+    // modal windows (not the results' see-through band nor the wipe: they span the whole screen themselves)
+    virtual bool dims_letterbox() const { return is_blocking_input(); }
+
     // Part of a menu's frame (the title bar, the bottom bar, the counters, the back button, the bar's shortcuts): it
     // stays still while one menu screen changes into another under it, like The Battle Cats' bars (UIManager)
     void set_frame(bool isFrame) { m_isFrame = isFrame; }
     bool is_frame() const { return m_isFrame; }
+
+    // Stays over everything on its screen, even the elements added after it (UIManager::add_ui_element puts those
+    // under it): the Pearl Shop, added with the bottom bar
+    void set_topmost(bool isTopmost) { m_isTopmost = isTopmost; }
+    bool is_topmost() const { return m_isTopmost; }
+
+    // The battle HUD's corners: on a screen wider than 16:9 (a phone) the element goes to the screen's far left or
+    // right instead of the layout's edge. UIManager draws it and passes it the input shifted (screen_shift)
+    enum class ScreenAnchor { NONE, LEFT, RIGHT };
+    void set_screen_anchor(ScreenAnchor anchor) { m_screenAnchor = anchor; }
+    float screen_shift() const { return shift_for(m_screenAnchor); }
+    static float shift_for(ScreenAnchor anchor);   // How far right of its layout place (negative: left)
+    sf::FloatRect get_screen_bounds() const;       // get_bounds() where it is on screen
 
     // Sounds of the widgets (clicks, selections...): UIManager plugs the AudioManager in, so the widgets
     // don't depend on it. Without a player, play_sound does nothing.
@@ -69,6 +89,8 @@ protected:
 
     bool m_isVisible = true; // Whether the element should be drawn
     bool m_isFrame = false;  // Stays still while the menu screens change (set_frame)
+    bool m_isTopmost = false;
+    ScreenAnchor m_screenAnchor = ScreenAnchor::NONE;
 
 private:
 

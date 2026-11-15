@@ -3,6 +3,7 @@
 #include "../uis/UISkin.h"
 
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <vector>
 
@@ -217,6 +218,7 @@ void Game::terminate()
  */
 std::vector<sf::Event> Game::touch_as_mouse(const sf::Event& event)
 {
+    track_pinch(event);
     const auto left = sf::Mouse::Button::Left;
     if (const auto* down = event.getIf<sf::Event::TouchBegan>())
     {
@@ -234,6 +236,49 @@ std::vector<sf::Event> Game::touch_as_mouse(const sf::Event& event)
         return { sf::Event::MouseButtonReleased{ left, up->position }, sf::Event::MouseMoved{ { -100000, -100000 } } };
     }
     return { event };
+}
+
+/*
+ * Two fingers on the battlefield zoom it: apart, closer; together, further (the camera's limits are the mouse
+ * wheel's). The second finger stops the first one's drag
+ */
+void Game::track_pinch(const sf::Event& event)
+{
+    const auto distance = [this]() {
+        const sf::Vector2f gap = static_cast<sf::Vector2f>(m_touches[1] - m_touches[0]);
+        return std::sqrt(gap.x * gap.x + gap.y * gap.y);
+    };
+    if (const auto* down = event.getIf<sf::Event::TouchBegan>())
+    {
+        if (down->finger > 1) return;
+        m_touches[down->finger] = down->position;
+        m_isTouching[down->finger] = true;
+        const bool isOnField = !m_uiManager->is_mouse_over_ui(static_cast<sf::Vector2i>(m_window.mapPixelToCoords(down->position, m_uiCamera)));
+        if (m_isTouching[0] && m_isTouching[1] && isOnField && m_stage->is_loaded())
+        {
+            m_isPinching = true;
+            m_isDragging = false;
+            m_pinchDistance = distance();
+        }
+    }
+    else if (const auto* moved = event.getIf<sf::Event::TouchMoved>())
+    {
+        if (moved->finger > 1) return;
+        m_touches[moved->finger] = moved->position;
+        if (!m_isPinching || !m_stage->is_loaded()) return;
+        const float now = distance();
+        if (now > 20.f && m_pinchDistance > 20.f)
+        {
+            m_stage->apply_zoom(m_pinchDistance / now);
+            m_pinchDistance = now;
+        }
+    }
+    else if (const auto* up = event.getIf<sf::Event::TouchEnded>())
+    {
+        if (up->finger > 1) return;
+        m_isTouching[up->finger] = false;
+        m_isPinching = false;
+    }
 }
 
 void Game::poll_events()

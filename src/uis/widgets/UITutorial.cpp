@@ -4,6 +4,7 @@
 #include "../../core/DataLoader.h"
 #include "../../core/stages/Stage.h"
 #include "../../data/PlayerData.h"
+#include "../../core/Platform.h"
 
 #include <algorithm>
 #include <cmath>
@@ -27,6 +28,13 @@ namespace
     const float BASE_SECONDS = 6.f;
     const float INTRO_SECONDS = 2.4f;      // UIBattleIntro's length
     const sf::Color HIGHLIGHT{ 72, 224, 255 };
+
+    // Where a HUD widget anchored to a screen corner is (a phone's far corners)
+    sf::FloatRect shifted(sf::FloatRect rect, UIElement::ScreenAnchor anchor)
+    {
+        rect.position.x += UIElement::shift_for(anchor);
+        return rect;
+    }
 }
 
 bool UITutorial::is_wanted(const DataLoader& dataLoader, int stageUid)
@@ -62,9 +70,9 @@ UITutorial::Hint UITutorial::hint_of(Step step) const
 {
     switch (step)
     {
-    case Step::WALLET:  return { "This is your wallet: it fills up by itself. Spend it to send fish!", WALLET, false };
-    case Step::DEPLOY:  return { "Tap a fish to send it into battle! Its number key works too.", DEPLOY_TRAY, true };
-    case Step::CASH_UP: return { "Upgrade your WALLET: it holds more and fills up faster.", CASH_UP, true };
+    case Step::WALLET:  return { "This is your wallet: it fills up by itself. Spend it to send fish!", shifted(WALLET, ScreenAnchor::RIGHT), false };
+    case Step::DEPLOY:  return { Platform::IS_MOBILE ? "Tap a fish to send it into battle!" : "Click a fish to send it into battle! Its number key works too.", DEPLOY_TRAY, true };
+    case Step::CASH_UP: return { "Upgrade your WALLET: it holds more and fills up faster.", shifted(CASH_UP, ScreenAnchor::LEFT), true };
     case Step::BASE:    return { "Destroy the enemy base on the left to win. Don't let them reach your fish bowl!", {}, false };
     default:            return { "", {}, false };
     }
@@ -143,7 +151,8 @@ void UITutorial::render(sf::RenderWindow& window)
     if (hasTarget)
     {
         const float centerX = hint.target.position.x + hint.target.size.x / 2.f;
-        position.x = std::clamp(centerX - size.x / 2.f, 24.f, 1920.f - 24.f - size.x);
+        const sf::FloatRect screen = UISkin::screen_rect();   // On screen, a phone's wider one too
+        position.x = std::clamp(centerX - size.x / 2.f, screen.position.x + 24.f, screen.position.x + screen.size.x - 24.f - size.x);
         position.y = hint.isBubbleAbove ? hint.target.position.y - GAP - ARROW - size.y
                                         : hint.target.position.y + hint.target.size.y + GAP + ARROW;
     }

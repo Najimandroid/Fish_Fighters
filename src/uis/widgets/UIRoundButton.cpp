@@ -88,5 +88,5 @@ void UIRoundButton::render(sf::RenderWindow& window)
         m_label.setPosition({ center.x, rect.position.y + rect.size.y + 8.f });
         window.draw(m_label);
     }
-    render_highlight(window, rect, rect.size.x / 2.f);   // A press flashes; selected, it pulses
+    render_highlight(window, rect, rect.size.x / 2.f, true, false);   // A press brightens it (an icon button: no frame)
 }

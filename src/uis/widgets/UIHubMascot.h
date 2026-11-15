@@ -46,5 +46,6 @@ private:
     float m_tipTime = -0.9f;        // Seconds since this tip appeared (negative: waiting for it)
     float m_hopTime = -1.f;         // Seconds since the fish was tapped (-1: not hopping)
     float m_time = 0.f;
+    float m_lastTapTime = -100.f;   // When a tap last brought a new tip (the cooldown)
     bool m_isHovered = false;
 };

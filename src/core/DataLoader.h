@@ -72,6 +72,7 @@ public:
     const std::shared_ptr<EntityData> get_enemy_data(int uid) const;
     const std::shared_ptr<StageData> get_stage_data(int uid) const;
     const std::shared_ptr<ChapterData> get_chapter_data(int uid) const;
+    std::vector<int> get_chapter_uids() const;   // Every chapter, in order
 
     // Settings of a background image (backgrounds.json): ground row, seamless overlap. Defaults if not listed
     BackgroundData get_background_data(const std::string& texture) const;

@@ -34,6 +34,9 @@ public:
 
     // Lines, then the bubble of the hovered (or clicked) line on top
     void render(sf::RenderWindow& window) override;
+    // The same in two steps: the lines (inside a clipped, scrolling area), later the bubble (over everything)
+    void render_lines(sf::RenderWindow& window);
+    void render_hover_bubble(sf::RenderWindow& window);
 
     // Mouse moves (hover) and left clicks (keep the bubble open / close it)
     void handle_event(const sf::Event& event, const sf::RenderWindow& window) override;

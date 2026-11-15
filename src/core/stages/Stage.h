@@ -183,18 +183,19 @@ public:
     // Check if a stage is currently loaded
     bool is_loaded() const;
 
+    static constexpr int BASE_MAX_CASH = 500;        // Wallet size at the start of every stage (Wallet Up: more)
+    static constexpr int BASE_CASH_PER_SECOND = 50;  // Income at the start of every stage (Wallet Up: more)
+
 private:
 
     // ----- Stage Data -----
     int m_uid = -1;
     std::string m_stageName = "Unknown Area ???";
 
-    static constexpr int BASE_MAX_CASH = 500;        // Wallet size at the start of every stage
-    static constexpr int BASE_CASH_PER_SECOND = 50;  // Income at the start of every stage
-
     int m_currentCash = 0;                   // Current cash available to the player
     int m_maxCash = BASE_MAX_CASH;           // Maximum cash allowed
 	int m_cashPerSecond = BASE_CASH_PER_SECOND; // Cash gained per second (with no upgrades)
+    float m_walletFactor = 1.f;              // Wallet Up (a base upgrade): size and income multiplied by it
     float m_cashRemainder = 0.f;             // Fraction of cash earned but not added yet (frame-rate independent income)
     std::vector<CashPopup> m_cashPopups;     // Cash dropped by enemies, shown for CASH_POPUP_SECONDS
 

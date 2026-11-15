@@ -110,5 +110,6 @@ protected:
     // frame pulses. Each render draws it over the button (radius: its corners; brightens: a white flash too)
     float m_flashStart = -10.f;     // When it was pressed (shared clock)
     bool m_isSelected = false;
-    void render_highlight(sf::RenderWindow& window, const sf::FloatRect& rect, float radius, bool brightens = true) const;
+    // framed: the pink frame too (not on the icon buttons: they only brighten)
+    void render_highlight(sf::RenderWindow& window, const sf::FloatRect& rect, float radius, bool brightens = true, bool framed = true) const;
 };

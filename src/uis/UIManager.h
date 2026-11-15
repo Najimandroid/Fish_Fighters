@@ -96,7 +96,7 @@ private:
 
     // The bottom bar of a menu (UIBottomBar), the Shiny Scales at its right end (not where the title bar shows them:
     // the Clam Room); add it after the screen's content, before its buttons (the back button sits on it)
-    void add_bottom_bar(UITitleBar::Material material = UITitleBar::Material::STEEL, bool showsScales = true);
+    void add_bottom_bar(UITitleBar::Material material = UITitleBar::Material::STEEL, bool showsScales = true, bool hasBackButton = true);
 
     // A shortcut on the bottom bar, right of the back button (Equip <-> Upgrade): runs onPress as a deferred action
     std::shared_ptr<UIButtonElement> make_bar_button(const std::string& label, std::function<void()> onPress);
@@ -124,6 +124,8 @@ private:
 
     // Darkens the bars around the 16:9 UI area while a modal window is open (screens that aren't 16:9)
     void dim_letterbox_bars(sf::RenderWindow& window, const sf::View& uiView) const;
+    // The event as an element drawn shift layout units from its place sees it (UIElement::set_screen_anchor)
+    static sf::Event shifted_event(const sf::Event& event, const sf::RenderWindow& window, float shift);
 
     // "Quit Fish Fighters?" dialog that quitButton opens (add it last, so it's on top)
     std::shared_ptr<UIConfirmDialog> make_quit_dialog(const std::shared_ptr<UIButtonElement>& quitButton);

@@ -32,7 +32,7 @@ void UITitleBar::render(sf::RenderWindow& window)
     if (!m_isVisible) return;
 
     // A plain steel band across the whole screen (the side frame covers its ends on a phone): lighter at the top,
-    // a bright bevel and a dark edge at the bottom, a shadow on the screen under it, two rivets at each end
+    // a bright bevel and a dark edge at the bottom, a shadow on the screen under it, a rivet at each end
     const sf::FloatRect screen = UISkin::screen_rect();
     const float left = std::min(0.f, screen.position.x), right = std::max(SCREEN_WIDTH, screen.position.x + screen.size.x);
     const float top = screen.position.y;
@@ -64,9 +64,9 @@ void UITitleBar::render(sf::RenderWindow& window)
     rivet.setFillColor(look.rivet);
     rivet.setOutlineThickness(2.5f);
     rivet.setOutlineColor(UISkin::OUTLINE);
-    for (const float x : { 14.f, 34.f, SCREEN_WIDTH - 34.f, SCREEN_WIDTH - 14.f })
+    for (const float x : { 20.f, SCREEN_WIDTH - 20.f })
     {
-        rivet.setPosition({ x, BAND_BOTTOM - 24.f });
+        rivet.setPosition({ x, UISkin::BAR_RIVET_INSET });
         window.draw(rivet);
     }
     window.draw(m_title);

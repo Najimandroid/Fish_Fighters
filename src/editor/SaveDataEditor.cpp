@@ -237,6 +237,10 @@ void SaveDataEditor::draw_progress(EditorContext& ctx)
         int fishScales = m_save["money"].contains("fishScales") ? read_int(m_save["money"], "fishScales") : 0;
         if (ImGui::DragInt("##fishScales", &fishScales, 1.f, 0, 1000000)) { m_save["money"]["fishScales"] = std::max(0, fishScales); m_hasChanges = true; }
 
+        property_label("Pearls", "The rare currency of the Pearl Shop (a new fish's first look in the encyclopedia, the shop's free videos)");
+        int pearls = m_save["money"].contains("pearls") ? read_int(m_save["money"], "pearls") : 0;
+        if (ImGui::DragInt("##pearls", &pearls, 1.f, 0, 1000000)) { m_save["money"]["pearls"] = std::max(0, pearls); m_hasChanges = true; }
+
         property_label("Current chapter", "The chapter the map opens on");
         int chapter = read_int(m_save["progression"], "currentChapter", 1);
         if (ImGui::InputInt("##chapter", &chapter)) { m_save["progression"]["currentChapter"] = std::max(1, chapter); m_hasChanges = true; }

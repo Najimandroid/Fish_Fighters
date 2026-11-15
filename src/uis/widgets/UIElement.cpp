@@ -1,4 +1,29 @@
 #include "UIElement.h"
+#include "../UISkin.h"
+#include "../../core/Platform.h"
+
+#include <algorithm>
+
+namespace
+{
+    // On a phone, the corners stay a little further in than on PC (its rounded corners)
+    const float CORNER_INSET = Platform::IS_MOBILE ? 16.f : 0.f;
+}
+
+float UIElement::shift_for(ScreenAnchor anchor)
+{
+    const sf::FloatRect screen = UISkin::screen_rect();
+    if (anchor == ScreenAnchor::LEFT) return std::min(0.f, screen.position.x + CORNER_INSET);
+    if (anchor == ScreenAnchor::RIGHT) return std::max(0.f, screen.position.x + screen.size.x - 1920.f - CORNER_INSET);
+    return 0.f;
+}
+
+sf::FloatRect UIElement::get_screen_bounds() const
+{
+    sf::FloatRect bounds = get_bounds();
+    bounds.position.x += screen_shift();
+    return bounds;
+}
 
 // Constructor: initialize size and position
 UIElement::UIElement(sf::Vector2f size, sf::Vector2f position)

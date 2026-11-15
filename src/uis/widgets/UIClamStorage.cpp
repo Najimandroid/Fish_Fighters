@@ -21,7 +21,7 @@ namespace
     const sf::FloatRect TANK{ { 40.f, 120.f }, { 1840.f, 810.f } };     // Where the fish swim
     const sf::FloatRect PANEL{ { 960.f - 265.f, 150.f }, { 530.f, 750.f } };   // The card of the kind picked
     const sf::Vector2f BULK_SIZE{ 280.f, 66.f };   // On the bottom bar
-    const float BULK_Y = UISkin::CONTENT_BOTTOM + (1080.f - UISkin::CONTENT_BOTTOM - BULK_SIZE.y) / 2.f + 2.f;
+    const float BULK_Y = UISkin::BOTTOM_BAR_MIDDLE - BULK_SIZE.y / 2.f;
     const float PANEL_X = PANEL.position.x + 30.f, PANEL_CENTER = PANEL.position.x + PANEL.size.x / 2.f;
     const float TEXT_WIDTH = PANEL.size.x - 60.f;
     const sf::FloatRect CHECKBOX{ { PANEL_X, 488.f }, { 38.f, 38.f } };

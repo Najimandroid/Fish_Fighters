@@ -18,7 +18,7 @@ namespace
     const float PANEL_TITLE_BAND = 52.f;                 // "LINEUP" above the slots
     const float GHOST_SCALE = 1.5f;                      // The dragged unit is a slot this much bigger
     const float ARROW_SIZE = 96.f;
-    const float ARROW_Y = 700.f;
+    const float ARROW_Y = 690.f;
     const float SHELF_TOP = 494.f;                       // The cards' shelf: from here down to the bottom bar
     const float DOTS_Y = 528.f;                          // The page dots, at the top of the shelf
     const unsigned int INFO_NAME_SIZE = 40;

@@ -227,8 +227,15 @@ void UIUnitCard::render(sf::RenderWindow& window)
     const float padding = PADDING * scale;
     const float iconWidth = card.size.x - 2.f * padding;
     const sf::FloatRect slot{ { left + padding, top + NAME_BAND * scale }, { iconWidth, iconWidth * ICON_RATIO } };
-    UISkin::draw_nine_slice(window, UISkin::SLOT, slot, PANEL_CORNERS * scale);
-    UISkin::draw_cropped(window, m_texture, UISkin::slot_inner(slot, PANEL_CORNERS * scale), m_isLocked ? LOCKED_TINT : sf::Color::White);
+    UISkin::draw_nine_slice(window, UISkin::SLOT, slot, PANEL_CORNERS * scale, m_slotTint);
+    const sf::FloatRect inner = UISkin::slot_inner(slot, PANEL_CORNERS * scale);
+    if (m_isIconFitted)
+    {
+        const sf::Vector2f margin = inner.size * 0.08f;
+        UISkin::draw_fitted(window, m_texture, { inner.position + margin, inner.size - margin * 2.f }, m_isLocked ? LOCKED_TINT : sf::Color::White);
+    }
+    else
+        UISkin::draw_cropped(window, m_texture, inner, m_isLocked ? LOCKED_TINT : sf::Color::White);
     UISkin::draw_nine_slice(window, UISkin::SLOT_FRAME, slot, PANEL_CORNERS * scale);
 
     // Badge in the top right corner of the icon
@@ -286,13 +293,7 @@ void UIUnitCard::render(sf::RenderWindow& window)
             { { valueLeft - iconSize - 6.f * scale, lineY - iconSize / 2.f }, { iconSize, iconSize } });
     }
 
-    // ----- Shade over the cards that aren't selected; the selected one in the pulsing pink frame (the choice) -----
+    // ----- Shade over the cards that aren't selected (the selected one has its golden border) -----
     if (!m_isSelected)
         UISkin::draw_nine_slice(window, UISkin::PANEL_DARK, card, PANEL_CORNERS * scale, SHADE);
-    else
-    {
-        const float border = BORDER * scale;
-        UISkin::draw_selection_frame(window, { card.position - sf::Vector2f{ border, border }, card.size + sf::Vector2f{ border, border } * 2.f },
-            16.f * scale, UISkin::selection_pulse());
-    }
 }

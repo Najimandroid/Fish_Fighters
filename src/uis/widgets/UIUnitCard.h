@@ -88,11 +88,21 @@ protected:
     // Small red label over the icon ("IN USE"), empty = none
     void set_badge(const std::string& text);
 
+public:
+
+    // The picture fitted whole in the slot (a base, a wallet) instead of cropped to fill it (a fish's face)
+    void set_icon_fitted(bool isFitted) { m_isIconFitted = isFitted; }
+
+    // The slot's colour (a category card: gold)
+    void set_slot_tint(sf::Color tint) { m_slotTint = tint; }
+
 private:
 
     bool m_isSelected = false;
     bool m_isLocked = false;
     bool m_showsShell = false;
+    bool m_isIconFitted = false;
+    sf::Color m_slotTint = sf::Color::White;
 
     sf::Text m_name;
     sf::Text m_level;

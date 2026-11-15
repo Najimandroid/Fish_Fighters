@@ -1,4 +1,5 @@
 #include "UISkin.h"
+#include "../core/Platform.h"
 
 #include <algorithm>
 #include <cmath>
@@ -10,6 +11,43 @@ namespace
 {
     const std::string FONT_FOLDER = "assets/fonts/";
     const std::string TEXTURE_FOLDER = "assets/images/textures/ui/";
+
+    // A stand-in for the pearl icon until there's a drawing of it (assets/images/textures/ui/icon_pearl.png replaces
+    // it): a pearly ball, pink at its rim, a shine at the top left, a dark outline like the other icons
+    sf::Texture make_pearl_texture()
+    {
+        const unsigned int size = 128;
+        sf::RenderTexture canvas({ size, size });
+        canvas.clear(sf::Color::Transparent);
+        const sf::Vector2f center{ size / 2.f, size / 2.f + 2.f };
+        const float radius = size * 0.4f;
+
+        sf::CircleShape ball(radius, 64);
+        ball.setOrigin({ radius, radius });
+        ball.setPosition(center);
+        ball.setFillColor(sf::Color(236, 206, 232));
+        ball.setOutlineThickness(7.f);
+        ball.setOutlineColor(sf::Color(26, 22, 34));
+        canvas.draw(ball);
+        // Lighter towards the middle (circles a little up and left: the light comes from there)
+        for (int i = 1; i <= 7; ++i)
+        {
+            const float t = static_cast<float>(i) / 7.f;
+            sf::CircleShape layer(radius * (1.f - 0.11f * i), 48);
+            layer.setOrigin({ layer.getRadius(), layer.getRadius() });
+            layer.setPosition(center - sf::Vector2f{ 1.6f, 2.f } * static_cast<float>(i));
+            layer.setFillColor(sf::Color(static_cast<std::uint8_t>(236 + 19 * t), static_cast<std::uint8_t>(206 + 46 * t), static_cast<std::uint8_t>(232 + 20 * t)));
+            canvas.draw(layer);
+        }
+        sf::CircleShape shine(radius * 0.2f, 24);
+        shine.setOrigin({ shine.getRadius(), shine.getRadius() });
+        shine.setScale({ 1.4f, 0.9f });
+        shine.setPosition(center - sf::Vector2f{ radius * 0.38f, radius * 0.42f });
+        shine.setFillColor(sf::Color::White);
+        canvas.draw(shine);
+        canvas.display();
+        return canvas.getTexture();
+    }
 
     // Loads a font the first time it's asked for
     const sf::Font& load_font(sf::Font& font, bool& isLoaded, const std::string& fileName)
@@ -74,7 +112,9 @@ const sf::Texture& UISkin::texture(const std::string& name)
     if (it != textures.end()) return *it->second;
 
     auto texture = std::make_unique<sf::Texture>();
-    if (!texture->loadFromFile(TEXTURE_FOLDER + name + ".png"))
+    if (name == "icon_pearl" && !Platform::exists(TEXTURE_FOLDER + name + ".png"))
+        *texture = make_pearl_texture();   // No drawing of it yet: a stand-in pearl
+    else if (!texture->loadFromFile(TEXTURE_FOLDER + name + ".png"))
         std::cerr << "UISkin: can't load the texture " << name << "\n";
     texture->setSmooth(true);
 
@@ -485,16 +525,18 @@ void UISkin::draw_side_frame(sf::RenderTarget& target)
         shadow[3] = sf::Vertex{ { shadowEnd, bottom }, sf::Color(0, 0, 0, 0) };
         target.draw(shadow);
 
-        // Rivets down the pillar
-        const float rivetX = innerX - toInner * std::min(46.f, side * 0.4f);
+        // Rivets down the pillar, evenly spaced: the first and the last level with the bars' rivets
+        const float rivetX = innerX - toInner * std::min(40.f, side * 0.4f);
         sf::CircleShape rivet(8.f);
         rivet.setOrigin({ 8.f, 8.f });
         rivet.setOutlineThickness(3.f);
         rivet.setOutlineColor(OUTLINE);
-        for (float y = top + 70.f; y < bottom - 30.f; y += 150.f)
+        rivet.setFillColor(sf::Color(112, 130, 154));
+        const float first = top + BAR_RIVET_INSET, last = bottom - BAR_RIVET_INSET;
+        const int gaps = std::max(1, static_cast<int>(std::lround((last - first) / 160.f)));
+        for (int i = 0; i <= gaps; ++i)
         {
-            rivet.setFillColor(sf::Color(112, 130, 154));
-            rivet.setPosition({ rivetX, y });
+            rivet.setPosition({ rivetX, first + (last - first) * static_cast<float>(i) / static_cast<float>(gaps) });
             target.draw(rivet);
         }
     }

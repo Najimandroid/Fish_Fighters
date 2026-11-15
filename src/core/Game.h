@@ -50,8 +50,9 @@ public:
 
     // On a phone a finger is the mouse: the first finger down moves the mouse there and presses the left button,
     // moving it moves the mouse, lifting it releases the button and moves the mouse away (no hover left behind).
-    // Other events are passed on as they are
-    static std::vector<sf::Event> touch_as_mouse(const sf::Event& event);
+    // A second finger on the battlefield pinches: the two fingers zoom it (track_pinch). Other events are passed on
+    std::vector<sf::Event> touch_as_mouse(const sf::Event& event);
+    void track_pinch(const sf::Event& event);
 
     // Handles window resizing
     void resize_window(sf::Vector2u newSize);
@@ -102,6 +103,10 @@ private:
     // ----- Mouse and Inputs -----
     bool m_isDragging = false;     // Indicates if the user is dragging the camera
     sf::Vector2i m_lastMousePos{ 0, 0 };
+    sf::Vector2i m_touches[2]{};   // The first two fingers (a pinch)
+    bool m_isTouching[2]{};
+    bool m_isPinching = false;
+    float m_pinchDistance = 0.f;   // Between the two fingers, last time it zoomed (pixels)
 
     // ----- Systems -----
     std::shared_ptr<DataLoader> m_dataLoader; // Loads unit and game data

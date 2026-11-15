@@ -392,3 +392,73 @@ float PlayerData::stat_multiplier(int level)
     const float growth = 0.15f;
     return level > 1 ? std::pow(1.f + growth, static_cast<float>(level - 1)) : 1.f;
 }
+
+int PlayerData::base_upgrade_cost(int level)
+{
+    return static_cast<int>(std::lround(BASE_UPGRADE_COST * std::pow(1.5f, static_cast<float>(std::max(0, level - 1)))));
+}
+
+float PlayerData::base_health_factor(int level)
+{
+    return 1.f + 0.15f * static_cast<float>(std::max(0, level - 1));
+}
+
+float PlayerData::wallet_factor(int level)
+{
+    return 1.f + 0.1f * static_cast<float>(std::max(0, level - 1));
+}
+
+int PlayerData::get_base_upgrade_level(BaseUpgrade upgrade) const
+{
+    const size_t index = static_cast<size_t>(upgrade);
+    return index < baseUpgradeLevels.size() ? baseUpgradeLevels[index] : 1;
+}
+
+void PlayerData::upgrade_base(BaseUpgrade upgrade)
+{
+    const size_t index = static_cast<size_t>(upgrade);
+    if (index < baseUpgradeLevels.size()) baseUpgradeLevels[index] = std::min(BASE_UPGRADE_MAX_LEVEL, baseUpgradeLevels[index] + 1);
+}
+
+bool PlayerData::discover_fish(int unitUid)
+{
+    if (!is_unit_owned(unitUid) || !discoveredFish.insert(unitUid).second) return false;
+    pearls += PEARLS_PER_NEW_FISH;
+    return true;
+}
+
+bool PlayerData::is_fish_discovered(int unitUid) const
+{
+    return discoveredFish.count(unitUid) > 0;
+}
+
+int PlayerData::undiscovered_fish() const
+{
+    int count = 0;
+    for (const auto& [uid, unit] : ownedUnits)
+        if (!is_fish_discovered(uid)) ++count;
+    return count;
+}
+
+int PlayerData::shop_ads_left_today() const
+{
+    return shopAdsDay == today() ? std::max(0, SHOP_ADS_PER_DAY - shopAdsToday) : SHOP_ADS_PER_DAY;
+}
+
+bool PlayerData::watch_shop_ad()
+{
+    if (shop_ads_left_today() <= 0) return false;
+    if (shopAdsDay != today()) { shopAdsDay = today(); shopAdsToday = 0; }
+    shopAdsToday += 1;
+    pearls += PEARLS_PER_AD;
+    return true;
+}
+
+bool PlayerData::buy_shiny_scales(int count)
+{
+    const int price = count >= 10 ? PEARLS_FOR_TEN_SCALES : PEARLS_FOR_SCALE * count;
+    if (count <= 0 || pearls < price) return false;
+    pearls -= price;
+    shinyScales += count;
+    return true;
+}
