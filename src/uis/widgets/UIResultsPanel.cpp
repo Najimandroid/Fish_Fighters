@@ -162,8 +162,11 @@ void UIResultsPanel::update(float deltaTime)
 
 void UIResultsPanel::render(sf::RenderWindow& window)
 {
-    // The battlefield dims a little: it stays in view behind the result, like The Battle Cats' victory
-    sf::RectangleShape dim(SCREEN_SIZE);
+    // The battlefield dims a little: it stays in view behind the result, like The Battle Cats' victory. The whole
+    // screen, a phone's wider one too (only the 16:9 middle left its sides bright)
+    const sf::FloatRect screen = UISkin::screen_rect();
+    sf::RectangleShape dim(screen.size);
+    dim.setPosition(screen.position);
     dim.setFillColor(sf::Color(DIM.r, DIM.g, DIM.b, static_cast<std::uint8_t>(70.f * std::clamp(m_time / DIM_SECONDS, 0.f, 1.f))));
     window.draw(dim);
 
@@ -172,7 +175,6 @@ void UIResultsPanel::render(sf::RenderWindow& window)
     const std::uint8_t alpha = alpha_of(slide * 2.f);
     sf::FloatRect panel = m_panel;
     panel.position.y += 60.f * (1.f - ease_out_back(slide));
-    const sf::FloatRect screen = UISkin::screen_rect();
     const float bandTop = panel.position.y + 150.f, bandBottom = panel.position.y + panel.size.y + 14.f;
     sf::RectangleShape band({ screen.size.x, bandBottom - bandTop });
     band.setPosition({ screen.position.x, bandTop });
