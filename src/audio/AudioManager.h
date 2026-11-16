@@ -80,6 +80,23 @@ public:
     // Semitones from one key to another, folded into -6..+5 (to shift a sound into a theme's key)
     static int key_distance(const std::string& from, const std::string& to);
 
+    // ===== The playlist (Options) =====
+    struct Listing
+    {
+        std::string name;           // "theme_default"
+        std::string title;          // "Reef Rumble" (music.json)
+        std::string kind;           // "menu", "stage" or "jingle"
+        float seconds = 0.f;        // A theme: its whole file (the intro and the loop twice); a jingle: until its last note
+        bool isJingle = false;
+    };
+    // Every theme and jingle of music.json, by name
+    std::vector<Listing> get_music_list() const;
+    // Where the music playing is, in seconds (0 without music)
+    float get_music_position() const;
+    bool is_music_ducked() const { return m_isDucked; }
+    // Starts a theme at a position (seconds), crossfading: the music the playlist interrupted, back where it was
+    void resume_music(const std::string& name, float offsetSeconds, float fadeSeconds = 0.8f);
+
     // ===== Sounds =====
     // volumeScale multiplies the sound's own volume (sfx.json); pan: -1 left to 1 right (where it happens);
     // pitch: a factor on top of the sound's random variation
@@ -106,6 +123,8 @@ private:
         std::uint64_t loopLength = 0;     // 0: plays once (jingles)
         float length = 0.f;               // Jingles: seconds until their last note ends (a queued theme starts there)
         std::string key;                  // Its tonic ("D", "Eb"...), "" if unknown
+        std::string title;                // Its name in the playlist ("Reef Rumble")
+        std::string kind;                 // "menu", "stage" or "jingle"
     };
 
     struct SoundInfo

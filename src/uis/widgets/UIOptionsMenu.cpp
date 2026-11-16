@@ -41,7 +41,9 @@ UIOptionsMenu::UIOptionsMenu(std::shared_ptr<DataLoader> dataLoader, std::shared
     m_effectsSlider({ SLIDER_X, EFFECTS_Y - SLIDER_HEIGHT / 2.f }, SLIDER_WIDTH, 1.f),
     m_muteButton({ 200.f, 70.f }, { SLIDER_X + SLIDER_WIDTH - 200.f + 130.f, MUTE_Y - 35.f }, "ON"),
     m_fullscreenButton({ 320.f, 80.f }, { LEFT, TOP + 525.f }, "FULLSCREEN"),
-    m_windowedButton({ 320.f, 80.f }, { LEFT + 350.f, TOP + 525.f }, "WINDOWED")
+    m_windowedButton({ 320.f, 80.f }, { LEFT + 350.f, TOP + 525.f }, "WINDOWED"),
+    m_playlistButton({ 250.f, 70.f }, { SLIDER_X + SLIDER_WIDTH + 130.f - 250.f, TOP + 135.f - 35.f }, "PLAYLIST"),
+    m_playlist(audio)
 {
     set_z(Z_WINDOW);
     m_dim.setFillColor(sf::Color(0, 0, 0, 150));
@@ -118,6 +120,10 @@ UIOptionsMenu::UIOptionsMenu(std::shared_ptr<DataLoader> dataLoader, std::shared
     m_fullscreenButton.set_callback([setMode]() { setMode(true); });
     m_windowedButton.set_callback([setMode]() { setMode(false); });
 
+    // The playlist, on the AUDIO header's row
+    m_playlistButton.set_text_size(32);
+    m_playlistButton.set_callback([this]() { m_playlist.open(); });
+
     m_frame.set_on_close([this]() { close(); });   // Its X
 
     m_isVisible = false;
@@ -135,6 +141,7 @@ void UIOptionsMenu::open()
 
 void UIOptionsMenu::close()
 {
+    m_playlist.close();
     m_isVisible = false;
     m_dataLoader->save_settings();
 }
@@ -157,6 +164,8 @@ void UIOptionsMenu::refresh_buttons()
 
 void UIOptionsMenu::update(float deltaTime)
 {
+    m_playlist.update(deltaTime);
+    m_playlistButton.update(deltaTime);
     m_muteButton.update(deltaTime);
     m_fullscreenButton.update(deltaTime);
     m_windowedButton.update(deltaTime);
@@ -179,11 +188,20 @@ void UIOptionsMenu::render(sf::RenderWindow& window)
         m_fullscreenButton.render(window);
         m_windowedButton.render(window);
     }
+    m_playlistButton.render(window);
+    m_playlist.render(window);   // Over the window when it's open
 }
 
 void UIOptionsMenu::handle_event(const sf::Event& event, const sf::RenderWindow& window)
 {
     if (!m_isVisible) return;
+
+    // The playlist open over the window has the input (its Escape closes it, not the window)
+    if (m_playlist.is_open())
+    {
+        m_playlist.handle_event(event, window);
+        return;
+    }
 
     if (const auto* keyPressed = event.getIf<sf::Event::KeyPressed>())
     {
@@ -198,6 +216,7 @@ void UIOptionsMenu::handle_event(const sf::Event& event, const sf::RenderWindow&
     m_masterSlider.handle_event(event, window);
     m_musicSlider.handle_event(event, window);
     m_effectsSlider.handle_event(event, window);
+    m_playlistButton.handle_event(event, window);
     if constexpr (!Platform::IS_MOBILE)
     {
         m_muteButton.handle_event(event, window);

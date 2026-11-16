@@ -3,6 +3,7 @@
 #include "UIPopupFrame.h"
 #include "UIButtonElement.h"
 #include "UISlider.h"
+#include "UIPlaylist.h"
 
 #include <functional>
 #include <memory>
@@ -14,7 +15,8 @@ class AudioManager;
  * UIOptionsMenu
  * -------------
  * The Options window, opened from the title screen, the Fish Tank and the pause menu:
- *   - Audio: Master / Music / Effects sliders (applied live), "Mute in background" (not on phones: always muted)
+ *   - Audio: Master / Music / Effects sliders (applied live), "Mute in background" (not on phones: always muted),
+ *     PLAYLIST: every song of the game to listen to (UIPlaylist, over the window)
  *   - Display: fullscreen or a resizable window (not on phones: always full screen)
  *   - Controls: the keys (on phones, the touch controls)
  * On a phone the window is shorter and centered, without the rows it doesn't have
@@ -58,4 +60,6 @@ private:
     UIButtonElement m_muteButton;       // ON / OFF
     UIButtonElement m_fullscreenButton;
     UIButtonElement m_windowedButton;
+    UIButtonElement m_playlistButton;
+    UIPlaylist m_playlist;              // While it's open, it has the input and draws over the window
 };

@@ -53,6 +53,8 @@ bool AudioManager::load_music_list(const std::string& path)
             info.loopLength = value.value("loopLength", std::uint64_t{ 0 });
             info.length = value.value("length", 0.f);
             info.key = value.value("key", std::string{});
+            info.title = value.value("title", name);
+            info.kind = value.value("kind", std::string{ "stage" });
             m_musicInfos[name] = info;
         }
     }
@@ -326,6 +328,33 @@ float AudioManager::get_music_length(const std::string& name) const
 {
     const auto found = m_musicInfos.find(name);
     return found != m_musicInfos.end() ? found->second.length : 0.f;
+}
+
+std::vector<AudioManager::Listing> AudioManager::get_music_list() const
+{
+    std::vector<Listing> list;
+    for (const auto& [name, info] : m_musicInfos)
+    {
+        Listing entry{ name, info.title, info.kind };
+        entry.isJingle = info.loopLength == 0;
+        entry.seconds = entry.isJingle ? info.length
+            : static_cast<float>(info.loopStart + info.loopLength) / static_cast<float>(std::max(1u, info.sampleRate));
+        list.push_back(entry);
+    }
+    return list;
+}
+
+float AudioManager::get_music_position() const
+{
+    return m_current ? m_current->music->getPlayingOffset().asSeconds() : 0.f;
+}
+
+void AudioManager::resume_music(const std::string& name, float offsetSeconds, float fadeSeconds)
+{
+    const bool wasPlaying = m_current && m_current->name == name;
+    play_music(name, fadeSeconds);
+    // Only once playing does the offset take (as in play_music_in_sync)
+    if (!wasPlaying && m_current && m_current->name == name && offsetSeconds > 0.f) m_current->music->setPlayingOffset(sf::seconds(offsetSeconds));
 }
 
 int AudioManager::key_distance(const std::string& from, const std::string& to)
