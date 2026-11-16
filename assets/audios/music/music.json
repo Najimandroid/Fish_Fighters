@@ -484,5 +484,59 @@
         "key": "D",
         "loopStart": 5348572,
         "loopLength": 4937143
+    },
+    "theme_serious_v1": {
+        "title": "Deep Current (first version)",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_serious_v1.ogg",
+        "sampleRate": 48000,
+        "key": "D",
+        "loopStart": 4340870,
+        "loopLength": 4006957
+    },
+    "theme_shanty_v1": {
+        "title": "Sunken Galleon (first version)",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_shanty_v1.ogg",
+        "sampleRate": 48000,
+        "key": "D",
+        "loopStart": 4571428,
+        "loopLength": 4388571
+    },
+    "theme_jelly_v1": {
+        "title": "Jellyfish Lair (first version)",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_jelly_v1.ogg",
+        "sampleRate": 48000,
+        "key": "E",
+        "loopStart": 4830968,
+        "loopLength": 4459355
+    },
+    "theme_jelly_boss_v3": {
+        "title": "High Voltage Majesty (first version)",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_jelly_boss_v3.ogg",
+        "sampleRate": 48000,
+        "key": "E",
+        "loopStart": 4340870,
+        "loopLength": 4006957
+    },
+    "theme_energetic_boss_v1": {
+        "title": "Riptide Rampage (first version)",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_energetic_boss_v1.ogg",
+        "sampleRate": 48000,
+        "key": "A",
+        "loopStart": 4800000,
+        "loopLength": 4480000
+    },
+    "theme_neon_boss_v1": {
+        "title": "Neon Headliner (first version)",
+        "kind": "stage",
+        "file": "assets/audios/music/theme_neon_boss_v1.ogg",
+        "sampleRate": 48000,
+        "key": "A",
+        "loopStart": 4320000,
+        "loopLength": 4032000
     }
 }
