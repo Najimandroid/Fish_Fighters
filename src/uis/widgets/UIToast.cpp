@@ -1,5 +1,6 @@
 #include "UIToast.h"
 #include "../UISkin.h"
+#include "../RichText.h"
 #include "../../data/PlayerData.h"
 
 #include <algorithm>
@@ -36,7 +37,7 @@ void UIToast::announce_school_rank_rewards(PlayerData& player)
     const int scales = player.claim_school_rank_rewards();
     if (scales <= 0) return;
     show("SCHOOL RANK " + std::to_string(player.get_school_rank()) + "!",
-        "+" + std::to_string(scales) + " Shiny Scale" + (scales > 1 ? "s" : "") + " for the Clam Room", "icon_shiny_scale");
+        "+" + std::to_string(scales) + " [shiny] for the Clam Room", "icon_shiny_scale");
 }
 
 void UIToast::update(float deltaTime)
@@ -77,14 +78,16 @@ void UIToast::render(sf::RenderWindow& window)
         UISkin::draw_fitted(window, UISkin::texture(news.icon), { { box.position.x + 24.f, box.position.y + 20.f }, { 80.f, 80.f } });
         textLeft += 96.f;
     }
-    sf::Text text(UISkin::heavy_font(), news.title);
-    UISkin::style_text(text, 40, TITLE_COLOR);
-    UISkin::set_text_anchor(text, { 0.f, 0.5f });
-    text.setPosition({ textLeft, box.position.y + 40.f });
-    window.draw(text);
-    text.setString(news.line);
-    UISkin::style_text(text, 28, UISkin::TEXT);
-    UISkin::set_text_anchor(text, { 0.f, 0.5f });
-    text.setPosition({ textLeft, box.position.y + 84.f });
-    window.draw(text);
+    // Currencies as their icons ("+5 [pearl]", "+11 [shiny] for the Clam Room")
+    sf::Text style(UISkin::heavy_font());
+    UISkin::style_text(style, 40, TITLE_COLOR);
+    RichText text(style);
+    text.set_string(news.title);
+    text.set_position({ textLeft, box.position.y + 40.f }, { 0.f, 0.5f });
+    text.draw(window);
+    UISkin::style_text(style, 28, UISkin::TEXT);
+    text.set_style(style);
+    text.set_string(news.line);
+    text.set_position({ textLeft, box.position.y + 84.f }, { 0.f, 0.5f });
+    text.draw(window);
 }

@@ -634,8 +634,8 @@ void UIManager::generate_fish_tank_uis()
         if (player->shinyScales > 0 || !player->clamStorage.empty())
             add_ui_element(std::make_shared<UIBadge>(sf::Vector2f{ clamTile.position.x + clamTile.size.x - 36.f, clamTile.position.y + 36.f },
                 player->shinyScales > 0 ? std::to_string(player->shinyScales) : "!"));
-        const char* callout = player->shinyScales > 0 ? "Shiny Scales to spend!"
-            : Platform::HAS_REWARDED_ADS && player->ads_left_today() > 0 ? "Free Shiny Scale!" : nullptr;
+        const char* callout = player->shinyScales > 0 ? "[shiny] to spend!"
+            : Platform::HAS_REWARDED_ADS && player->ads_left_today() > 0 ? "Free [shiny]!" : nullptr;
         if (callout)
             add_ui_element(std::make_shared<UICallout>(callout, sf::Vector2f{ clamTile.position.x + clamTile.size.x + 6.f, clamTile.position.y + clamTile.size.y * 0.42f },
                 UICallout::Tail::LEFT));
@@ -648,11 +648,15 @@ void UIManager::generate_fish_tank_uis()
         "Your school's strength: the {yellow|levels} of all your fish added up, their {purple|extra levels} included. It goes up each time you upgrade a fish or use a fish from the {pink|Clam Storage}.\n"
         "\n"
         "# Rewards\n"
-        "Milestones give {cyan|Shiny Scales}, to feed the giant clam:\n"
-        "- {cyan|1} at ranks 10, 25 and 50\n"
-        "- {cyan|7} at rank 77\n"
-        "- {cyan|1} at ranks 100 and 125, then {cyan|1} more every 25 ranks\n"
-        "The bar shows how close the next milestone is.");
+        "Milestones give [shiny], to feed the giant clam:\n"
+        "- {cyan|1} [shiny] at ranks 10, 25 and 50\n"
+        "- {cyan|7} [shiny] at rank 77\n"
+        "- {cyan|1} [shiny] at ranks 100 and 125, then {cyan|1} more every 25 ranks\n"
+        "The bar shows how close the next milestone is.\n"
+        "\n"
+        "# Energy\n"
+        "Your School Rank raises the most [energy] you can hold: {yellow|" + std::to_string(PlayerData::ENERGY_BASE_MAX) + "}, plus 1 every "
+        + std::to_string(PlayerData::SCHOOL_RANKS_PER_ENERGY) + " ranks.");
     if (auto player = m_dataLoader->get_player_data().lock())
     {
         const int before = player->shinyScales;
@@ -704,7 +708,7 @@ UIManager::ClamCounters UIManager::add_clam_counters()
             auto player = m_dataLoader->get_player_data().lock();
             if (!dialog || !player) return;
             const int need = PlayerData::FISH_SCALES_PER_SHINY;
-            dialog->set_texts("Craft a Shiny Scale?", std::to_string(need) + " Fish Scales make one (you have " + std::to_string(player->fishScales)
+            dialog->set_texts("Craft a [shiny]?", std::to_string(need) + " [scale] make one (you have " + std::to_string(player->fishScales)
                 + "). Sell fish in the Clam Storage for more.", "CRAFT");
             dialog->open([this]()
                 {
@@ -738,7 +742,7 @@ void UIManager::generate_clam_room_uis(bool fromStorage)
     }
     if (auto player = m_dataLoader->get_player_data().lock(); player && player->give_clam_room_gift())
     {
-        UIToast::show("A WELCOME GIFT!", "1 Shiny Scale for your first clam", "icon_shiny_scale");
+        UIToast::show("A WELCOME GIFT!", "1 [shiny] for your first clam", "icon_shiny_scale");
         m_dataLoader->save_progress();
     }
 
@@ -760,26 +764,26 @@ void UIManager::generate_clam_room_uis(bool fromStorage)
     auto clamInfo = add_info_button(clamTitle->get_info_position(), "The giant clam",
 std::string(Platform::IS_MOBILE
             ? "# Opening it\n"
-              "Feed the clam {cyan|Shiny Scales}: each one gives a random {rare|Rare} fish or, more rarely, a {superrare|Super Rare} one. {yellow|OPEN} uses 1 scale, {yellow|OPEN x10} uses 10.\n"
+              "Feed the clam [shiny]: each one gives a random {rare|Rare} fish or, more rarely, a {superrare|Super Rare} one. {yellow|OPEN} uses 1 [shiny], {yellow|OPEN x10} uses 10.\n"
               "\n"
               "# Your new fish\n"
               "They all go to the {pink|Clam Storage} (the chest on the right). There, {green|use} a fish: a new one joins your tank, one you already have gets {purple|+1 extra level}. Or {red|sell} it.\n"
               "\n"
-              "# Getting Shiny Scales\n"
+              "# Getting [shiny]\n"
               "- {blue|School Rank} milestones (the bar in the Fish Tank)\n"
-              "- {cyan|10 Fish Scales} make one: tap the {yellow|+} on the Shiny Scales counter\n"
-              "- The {pink|Pearl Shop}: the {yellow|+} on the Pearls counter\n"
+              "- {cyan|10} [scale] make one: tap the {yellow|+} on the [shiny] counter\n"
+              "- The {pink|Pearl Shop}: the {yellow|+} on the [pearl] counter\n"
               "- A free one for watching a short video, up to {green|3} a day"
             : "# Opening it\n"
-              "Feed the clam {cyan|Shiny Scales}: each one gives a random {rare|Rare} fish or, more rarely, a {superrare|Super Rare} one. {yellow|OPEN} uses 1 scale, {yellow|OPEN x10} uses 10.\n"
+              "Feed the clam [shiny]: each one gives a random {rare|Rare} fish or, more rarely, a {superrare|Super Rare} one. {yellow|OPEN} uses 1 [shiny], {yellow|OPEN x10} uses 10.\n"
               "\n"
               "# Your new fish\n"
               "They all go to the {pink|Clam Storage} (the chest on the right). There, {green|use} a fish: a new one joins your tank, one you already have gets {purple|+1 extra level}. Or {red|sell} it.\n"
               "\n"
-              "# Getting Shiny Scales\n"
+              "# Getting [shiny]\n"
               "- {blue|School Rank} milestones (the bar in the Fish Tank)\n"
-              "- {cyan|10 Fish Scales} make one: tap the {yellow|+} on the Shiny Scales counter\n"
-              "- The {pink|Pearl Shop}: the {yellow|+} on the Pearls counter"));
+              "- {cyan|10} [scale] make one: tap the {yellow|+} on the [shiny] counter\n"
+              "- The {pink|Pearl Shop}: the {yellow|+} on the [pearl] counter"));
     const ClamCounters counters = add_clam_counters();
     room->set_scales_counter(counters.shinyScales);   // The scales fly out of it
     for (const auto& pill : { counters.shells, counters.shinyScales, counters.fishScales }) pill->set_tint(sf::Color(206, 186, 255));   // Violet room
@@ -797,7 +801,7 @@ std::string(Platform::IS_MOBILE
                     if (!player || !player->watch_ad()) return;
                     m_dataLoader->save_progress();
                     if (m_audio) m_audio->play_sound("purchase");
-                    UIToast::show("+1 SHINY SCALE", "Thanks for watching!", "icon_shiny_scale");
+                    UIToast::show("+1 [shiny]", "Thanks for watching!", "icon_shiny_scale");
                 });
         });
     add_bottom_bar(UITitleBar::Material::VIOLET, false);   // The Shiny Scales are on the title bar here
@@ -843,7 +847,7 @@ void UIManager::generate_clam_storage_uis()
         "A fish you don't have yet {green|joins your tank}. Every other one gives that fish {purple|+1 extra level}, up to {purple|+10}.\n"
         "\n"
         "# Sell\n"
-        "For {orange|shells}, or for {cyan|1 Fish Scale} each. {cyan|10 Fish Scales} make a Shiny Scale (the {yellow|+} on its counter).\n"
+        "For [shell], or for {cyan|1} [scale] each. {cyan|10} [scale] make a [shiny] (the {yellow|+} on its counter).\n"
         "\n"
         "{green|USE ALL} and {red|SELL ALL} on the bottom bar do it for every fish here at once.");
     const ClamCounters counters = add_clam_counters();
@@ -883,7 +887,7 @@ std::string(Platform::IS_MOBILE
               "{blue|FISH}: every fish of the game, one category per rarity: {white|NORMAL}, {rare|RARE} and {superrare|SUPER RARE}. {blue|ENEMIES}: every enemy. The ones you haven't got or met yet are {gray|black shapes}. Their {yellow|No.} is the order you meet them in.\n"
               "\n"
               "# A fish or an enemy\n"
-              "Pick one to see it walk, tap it to see it attack. Under it: its description, stats and abilities. A fish's {yellow|FORM} buttons show its evolutions: the ones it hasn't reached stay {gray|???}. The first look at a new fish gives {pink|10 Pearls} (the ones marked {red|NEW}).\n"
+              "Pick one to see it walk, tap it to see it attack. Under it: its description, stats and abilities. A fish's {yellow|FORM} buttons show its evolutions: the ones it hasn't reached stay {gray|???}. The first look at a new fish gives {pink|10} [pearl] (the ones marked {red|NEW}).\n"
               "\n"
               "# Types\n"
               "An enemy's types are written under its name:\n"
@@ -916,7 +920,7 @@ std::string(Platform::IS_MOBILE
               "{blue|FISH}: every fish of the game, one category per rarity: {white|NORMAL}, {rare|RARE} and {superrare|SUPER RARE}. {blue|ENEMIES}: every enemy. The ones you haven't got or met yet are {gray|black shapes}. Their {yellow|No.} is the order you meet them in.\n"
               "\n"
               "# A fish or an enemy\n"
-              "Pick one to see it walk, click it to see it attack. Under it: its description, stats and abilities. A fish's {yellow|FORM} buttons show its evolutions: the ones it hasn't reached stay {gray|???}. The first look at a new fish gives {pink|10 Pearls} (the ones marked {red|NEW}).\n"
+              "Pick one to see it walk, click it to see it attack. Under it: its description, stats and abilities. A fish's {yellow|FORM} buttons show its evolutions: the ones it hasn't reached stay {gray|???}. The first look at a new fish gives {pink|10} [pearl] (the ones marked {red|NEW}).\n"
               "\n"
               "# Types\n"
               "An enemy's types are written under its name:\n"
@@ -1036,7 +1040,7 @@ void UIManager::open_energy_dialog(const std::shared_ptr<UIConfirmDialog>& dialo
     if (needed > 0)
     {
         const int wait = player->seconds_to_energy(needed);
-        explanation = "This stage needs " + number(needed) + " energy and you have " + number(energy)
+        explanation = "This stage needs " + number(needed) + " [energy] and you have " + number(energy)
             + (wait > 0 ? ": enough in " + UIEnergyMeter::format_time(wait) + "." : ": your max grows with your School Rank.");
     }
     else
@@ -1045,10 +1049,10 @@ void UIManager::open_energy_dialog(const std::shared_ptr<UIConfirmDialog>& dialo
             + (PlayerData::ENERGY_REGEN_SECONDS == 60 ? "1 every minute" : "1 every " + number(PlayerData::ENERGY_REGEN_SECONDS) + " seconds")
             + ": full in " + UIEnergyMeter::format_time(player->seconds_to_energy(max)) + ".";
     }
-    explanation += canPay ? " Refill it to " + number(max) + " for " + number(price) + " Pearls?"
-        : " A refill costs " + number(price) + " Pearls and you have " + number(player->pearls) + ".";
+    explanation += canPay ? " Refill it to " + number(max) + " for " + number(price) + " [pearl]?"
+        : " A refill costs " + number(price) + " [pearl] and you have " + number(player->pearls) + ".";
 
-    dialog->set_texts(needed > 0 ? "Not enough energy" : "Refill your energy?", explanation, canPay ? "REFILL" : "GET PEARLS");
+    dialog->set_texts(needed > 0 ? "Not enough [energy]" : "Refill your [energy]?", explanation, canPay ? "REFILL" : "GET PEARLS");
     dialog->open([this, canPay, inBattle, back = m_screenAgain]()
         {
             if (canPay)
@@ -1115,18 +1119,20 @@ void UIManager::generate_shop_uis(std::function<void()> back)
     add_ui_element(make_back_button(back));
     add_ui_element(add_info_button(titleBar->get_info_position(), "The Pearl Shop",
 std::string(Platform::IS_MOBILE
-            ? "# Pearls\n"
-              "{pink|Pearls} are the rare currency. The first look at a new fish in the {blue|Encyclopedia} gives {pink|10 Pearls}; a short video gives {pink|5}, up to {green|3} times a day.\n"
+            ? "# [pearl] Pearls\n"
+              "[pearl] {pink|Pearls} are the rare currency. The first look at a new fish in the {blue|Encyclopedia} gives {pink|10} [pearl]; a short video gives {pink|5} [pearl], up to {green|3} times a day.\n"
               "\n"
               "# What they buy\n"
-              "- {cyan|Shiny Scales}, to feed the giant clam: {pink|25 Pearls} each, or {pink|225} for {green|10} (one free)\n"
-              "- Pearl packs for real money: {gray|coming soon}"
-            : "# Pearls\n"
-              "{pink|Pearls} are the rare currency. The first look at a new fish in the {blue|Encyclopedia} gives {pink|10 Pearls}. On phones, a short video gives {pink|5}, up to {green|3} times a day.\n"
+              "- [shiny], to feed the giant clam: {pink|25} [pearl] each, or {pink|225} [pearl] for {green|10} (one free)\n"
+              "- [energy]: a refill for {pink|" + std::to_string(PlayerData::ENERGY_REFILL_PEARLS) + "} [pearl] (the {yellow|+} on the [energy] counter)\n"
+              "- [pearl] packs for real money: {gray|coming soon}"
+            : "# [pearl] Pearls\n"
+              "[pearl] {pink|Pearls} are the rare currency. The first look at a new fish in the {blue|Encyclopedia} gives {pink|10} [pearl]. On phones, a short video gives {pink|5} [pearl], up to {green|3} times a day.\n"
               "\n"
               "# What they buy\n"
-              "- {cyan|Shiny Scales}, to feed the giant clam: {pink|25 Pearls} each, or {pink|225} for {green|10} (one free)\n"
-              "- Pearl packs for real money: {gray|coming soon}")));
+              "- [shiny], to feed the giant clam: {pink|25} [pearl] each, or {pink|225} [pearl] for {green|10} (one free)\n"
+              "- [energy]: a refill for {pink|" + std::to_string(PlayerData::ENERGY_REFILL_PEARLS) + "} [pearl] (the {yellow|+} on the [energy] counter)\n"
+              "- [pearl] packs for real money: {gray|coming soon}")));
     add_ui_element(std::make_shared<UIToast>());
     add_ui_element(confirm);
     add_ui_element(adOverlay);
@@ -1178,7 +1184,7 @@ void UIManager::generate_upgrade_menu_uis(int selectUid)
     add_ui_element(std::make_shared<UIToast>());   // School Rank milestones reached by upgrading
     add_ui_element(add_info_button(titleBar->get_info_position(), "Upgrading",
         "# Fish\n"
-        "Spend {orange|shells} to raise a fish's level: {green|more health and attack}. Each level costs more than the last: the price is on the card and on {yellow|UPGRADE!}. A fish goes up to {yellow|level 30}, and {blue|evolves} at levels 10 and 30.\n"
+        "Spend [shell] to raise a fish's level: {green|more health and attack}. Each level costs more than the last: the price is on the card and on {yellow|UPGRADE!}. A fish goes up to {yellow|level 30}, and {blue|evolves} at levels 10 and 30.\n"
         "\n"
         "{purple|Extra levels} (the purple +1, +2...) come from the Clam Room: using a fish you already have from the Clam Storage gives it +1, up to +10, on top of its level.\n"
         "\n"
@@ -1308,7 +1314,7 @@ void UIManager::generate_battle_uis()
 
     // Retreat: asks first, then leaves the battle without rewards and goes back to the chapter map
     auto retreatDialog = std::make_shared<UIConfirmDialog>("Retreat?",
-        "You'll lose this battle and earn no shells.", "RETREAT", "KEEP FIGHTING");
+        "You'll lose this battle and earn no [shell].", "RETREAT", "KEEP FIGHTING");
     std::weak_ptr<UIConfirmDialog> weakRetreatDialog = retreatDialog;
     pauseMenu->set_retreat_callback([this, weakRetreatDialog]() {
         auto dialog = weakRetreatDialog.lock();
@@ -1464,12 +1470,12 @@ void UIManager::generate_chapter_map_uis()
         "{green|Green}: cleared. {yellow|Yellow}: the next one to play. {gray|Grey}, with a padlock: they open as you clear the stages before them. The Fish walks to the stage you pick.\n"
         "\n"
         "# The panel\n"
-        "The {red|enemy base's health}, the {orange|shells} a win brings, and the {blue|enemies} you'll meet (black until you've met them).\n"
+        "The {red|enemy base's health}, the [shell] a win brings, and the {blue|enemies} you'll meet (black until you've met them).\n"
         "\n"
-        "# Energy\n"
-        "Each stage costs {yellow|energy} to play: the tag on {yellow|BATTLE!} says how much. It's spent when the battle starts, won or lost. "
+        "# [energy] Energy\n"
+        "Each stage costs [energy] to play: the tag on {yellow|BATTLE!} says how much. It's spent when the battle starts, won or lost. "
         "It comes back by itself, {cyan|1 every minute}, even with the game closed. Your {purple|School Rank} raises the most you can hold. "
-        "Out of it? The {yellow|+} on the energy refills it for " + std::to_string(PlayerData::ENERGY_REFILL_PEARLS) + " {pink|Pearls}."));
+        "Out of it? The {yellow|+} on the [energy] counter refills it for {pink|" + std::to_string(PlayerData::ENERGY_REFILL_PEARLS) + "} [pearl]."));
     add_ui_element(energyDialog);   // A window: last
 }
 
@@ -1661,8 +1667,7 @@ std::vector<std::string> UIManager::hub_tips() const
 
     // Short: two or three lines in the bubble
     if (m_dataLoader->is_clam_room_open() && player->shinyScales > 0)
-        tips.push_back("The clam looks hungry! We have " + std::to_string(player->shinyScales)
-            + (player->shinyScales == 1 ? " Shiny Scale." : " Shiny Scales."));
+        tips.push_back("The clam looks hungry! We have " + std::to_string(player->shinyScales) + " [shiny].");
     int stored = 0;
     for (const auto& [uid, count] : player->clamStorage) stored += count;
     if (stored > 0)
@@ -1673,12 +1678,11 @@ std::vector<std::string> UIManager::hub_tips() const
     for (int i = 0; i < 200; ++i)
         if (const auto milestone = PlayerData::school_rank_milestone(i); milestone.power > rank)
         {
-            tips.push_back("School Rank " + std::to_string(milestone.power) + " gives " + std::to_string(milestone.shinyScales)
-                + (milestone.shinyScales == 1 ? " Shiny Scale!" : " Shiny Scales!"));
+            tips.push_back("School Rank " + std::to_string(milestone.power) + " gives " + std::to_string(milestone.shinyScales) + " [shiny]!");
             break;
         }
     if (player->get_energy() < player->get_max_energy() / 4)
-        tips.push_back("Low on energy! It comes back by itself, 1 a minute.");
+        tips.push_back("Low on [energy]! It comes back by itself, 1 a minute.");
     if (const std::string next = next_stage_label(); !next.empty())
         tips.push_back("Next: " + next + ". Ready?");
 

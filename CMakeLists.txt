@@ -66,6 +66,7 @@ set(PROJECT_SOURCES
 
     src/uis/UIManager.cpp
     src/uis/UISkin.cpp
+    src/uis/RichText.cpp
     src/uis/EntityPortraits.cpp
 
     src/uis/widgets/UIElement.cpp

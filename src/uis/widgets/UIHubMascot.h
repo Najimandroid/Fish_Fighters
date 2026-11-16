@@ -1,6 +1,7 @@
 #pragma once
 
 #include "UIElement.h"
+#include "../RichText.h"
 
 #include <memory>
 #include <string>
@@ -40,8 +41,7 @@ private:
     std::shared_ptr<DataLoader> m_dataLoader;
     std::vector<std::string> m_tips;
     int m_tipIndex = -1;
-    sf::Text m_text;
-    std::string m_wrapped;          // The tip cut into lines to fit the bubble
+    RichText m_text;                // The tip, wrapped to the bubble, currencies as their icons, typed out
     float m_bubbleHeight = 0.f;     // For the whole tip (the bubble doesn't grow while it types)
     float m_tipTime = -0.9f;        // Seconds since this tip appeared (negative: waiting for it)
     float m_hopTime = -1.f;         // Seconds since the fish was tapped (-1: not hopping)

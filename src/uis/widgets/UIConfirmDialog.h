@@ -1,6 +1,7 @@
 #pragma once
 
 #include "UIButtonElement.h"
+#include "../RichText.h"
 
 #include <functional>
 #include <string>
@@ -43,8 +44,8 @@ public:
 
 private:
     sf::RectangleShape m_dim;          // Darkens the screen behind
-    sf::Text m_question;
-    sf::Text m_explanation;
+    RichText m_question;               // Currencies as their icons ("Buy 10 [shiny]?")
+    RichText m_explanation;
     UIButtonElement m_confirmButton;   // Left, orange
     UIButtonElement m_cancelButton;    // Right, yellow: the safe choice
 

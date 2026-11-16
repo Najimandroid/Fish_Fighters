@@ -41,11 +41,13 @@ public:
     bool is_blocking_input() const override;
 
 private:
-    // The text laid out from the markup: one run per part of a line in one style, the bullets' centers, its height
-    // (content coordinates: from the text area's top left)
+    // The text laid out from the markup: one run per part of a line in one style, the currency icons ([pearl]...,
+    // RichText's tokens) and the bullets' centers, its height (content coordinates: from the text area's top left)
     struct Layout
     {
         std::vector<sf::Text> runs;
+        struct IconSpot { const char* texture = nullptr; sf::Vector2f center; float size = 0.f; };
+        std::vector<IconSpot> icons;
         std::vector<sf::Vector2f> bullets;
         float height = 0.f;
     };

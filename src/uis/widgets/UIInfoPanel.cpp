@@ -1,5 +1,6 @@
 #include "UIInfoPanel.h"
 #include "../UISkin.h"
+#include "../RichText.h"
 #include "SFML/Window/Event.hpp"
 
 #include <algorithm>
@@ -83,11 +84,30 @@ UIInfoPanel::Layout UIInfoPanel::lay_out(const std::string& text)
         if (line.rfind("# ", 0) == 0)
         {
             if (!isFirstLine) y += SECTION_GAP;
-            const std::string titleText = line.substr(2);
-            sf::Text title(UISkin::heavy_font(), sf::String::fromUtf8(titleText.begin(), titleText.end()));
-            UISkin::style_text(title, TITLE_SIZE, SECTION);
-            title.setPosition({ 0.f, y });
-            runs.push_back(title);
+            // Its words, and the currency icons in it ("# Getting [shiny]")
+            std::string rest = line.substr(2);
+            float titleX = 0.f;
+            while (!rest.empty())
+            {
+                const size_t open = rest.find('[');
+                const size_t close = open == std::string::npos ? std::string::npos : rest.find(']', open);
+                const char* texture = close == std::string::npos ? nullptr : RichText::icon_texture(rest.substr(open + 1, close - open - 1));
+                const std::string words = texture ? rest.substr(0, open) : rest;
+                if (!words.empty())
+                {
+                    sf::Text title(UISkin::heavy_font(), sf::String::fromUtf8(words.begin(), words.end()));
+                    UISkin::style_text(title, TITLE_SIZE, SECTION);
+                    title.setPosition({ titleX, y });
+                    runs.push_back(title);
+                    titleX = end_of(title);
+                }
+                if (!texture) break;
+                const float iconWidth = RichText::icon_size(TITLE_SIZE) + 2.f * RichText::ICON_PADDING * TITLE_SIZE;
+                layout.icons.push_back({ texture, { titleX + iconWidth / 2.f, y + RichText::icon_center_y(UISkin::heavy_font(), TITLE_SIZE) },
+                    RichText::icon_size(TITLE_SIZE) });
+                titleX += iconWidth;
+                rest = rest.substr(close + 1);
+            }
             y += TITLE_HEIGHT;
             isFirstLine = false;
             continue;
@@ -105,6 +125,7 @@ UIInfoPanel::Layout UIInfoPanel::lay_out(const std::string& text)
         float x = indent;
         int run = -1;                 // The run being filled (-1: a new one is needed)
         Style runStyle;
+        bool glueNext = false;        // An icon just went in: letters right after it ("[pearl].") stick to it
         const auto new_run = [&](const Style& style) {
             sf::Text t(style.isColored ? UISkin::heavy_font() : UISkin::regular_font());
             if (style.isColored) UISkin::style_text(t, TEXT_SIZE, style.color);
@@ -128,11 +149,30 @@ UIInfoPanel::Layout UIInfoPanel::lay_out(const std::string& text)
                 runs[run].setString(runs[run].getString() + sf::String(" ") + word);
             else
             {
-                if (x > indent + 0.5f) x += spaceWidth;
+                if (x > indent + 0.5f && !glueNext) x += spaceWidth;
                 new_run(style);
                 runs[run].setString(word);
             }
+            glueNext = false;
             x = end_of(runs[run]);   // Where the run really ends
+        };
+        // A currency icon (RichText's tokens) in the line, a little bigger than the letters; glued: right after a
+        // word, no space before it
+        const float iconSize = RichText::icon_size(TEXT_SIZE);
+        const float iconWidth = iconSize + 2.f * RichText::ICON_PADDING * TEXT_SIZE;
+        const float iconY = 4.f + RichText::icon_center_y(UISkin::regular_font(), TEXT_SIZE);   // Runs sit 4 px down
+        const auto put_icon = [&](const char* texture, bool isGlued) {
+            const float gap = x > indent + 0.5f && !isGlued ? spaceWidth : 0.f;
+            if (x > indent + 0.5f && x + gap + iconWidth > text_width())
+            {
+                y += LINE_HEIGHT;
+                x = indent;
+            }
+            else x += gap;
+            layout.icons.push_back({ texture, { x + iconWidth / 2.f, y + iconY }, iconSize });
+            x += iconWidth;
+            run = -1;
+            glueNext = true;
         };
 
         Style style;                  // The words being read: body, *yellow*, or {name|...}
@@ -150,6 +190,21 @@ UIInfoPanel::Layout UIInfoPanel::lay_out(const std::string& text)
                 style = isStarred ? Style{ true, UISkin::NUMBER } : Style{};
                 justClosed = !isStarred;
                 continue;
+            }
+            if (c == '[')
+            {
+                const size_t close = body.find(']', i);
+                const char* texture = close == std::string::npos ? nullptr : RichText::icon_texture(body.substr(i + 1, close - i - 1));
+                if (texture)
+                {
+                    const bool isGlued = !word.empty();
+                    put_word(word, style);
+                    word.clear();
+                    put_icon(texture, isGlued);
+                    justClosed = false;
+                    i = close;
+                    continue;
+                }
             }
             if (c == '{' && !isStarred)
             {
@@ -179,6 +234,7 @@ UIInfoPanel::Layout UIInfoPanel::lay_out(const std::string& text)
                 put_word(word, style);
                 word.clear();
                 justClosed = false;
+                glueNext = false;
                 continue;
             }
             // Punctuation right after a coloured part: glued to it (no space), in body text
@@ -268,6 +324,7 @@ void UIInfoPanel::render(sf::RenderWindow& window)
     sf::RenderStates states;
     states.transform.translate(area.position - sf::Vector2f{ 0.f, std::round(m_scroll) });
     for (const sf::Text& run : m_layout.runs) window.draw(run, states);
+    for (const Layout::IconSpot& icon : m_layout.icons) RichText::draw_icon(window, icon.texture, icon.center, icon.size, states);
     sf::CircleShape bullet(7.f);
     bullet.setOrigin({ 7.f, 7.f });
     bullet.setFillColor(SECTION);

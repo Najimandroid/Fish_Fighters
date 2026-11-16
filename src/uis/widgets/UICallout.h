@@ -1,6 +1,7 @@
 #pragma once
 
 #include "UIElement.h"
+#include "../RichText.h"
 
 #include <string>
 
@@ -27,7 +28,7 @@ public:
     sf::FloatRect get_bounds() const override { return {}; }   // Nothing to click: the button under it gets them
 
 private:
-    sf::Text m_text;
+    RichText m_text;   // Currencies as their icons ("[shiny] to spend!")
     sf::Vector2f m_tip;
     Tail m_tail;
     float m_time = 0.f;

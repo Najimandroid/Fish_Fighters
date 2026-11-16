@@ -20,22 +20,24 @@ UIConfirmDialog::UIConfirmDialog(const std::string& question, const std::string&
     const std::string& confirmLabel, const std::string& cancelLabel) :
     UIElement(SCREEN_SIZE, { 0.f, 0.f }),
     m_dim(SCREEN_SIZE),
-    m_question(UISkin::heavy_font(), question),
-    m_explanation(UISkin::regular_font()),
     m_confirmButton(BUTTON_SIZE, { SCREEN_SIZE.x / 2.f - BUTTON_GAP / 2.f - BUTTON_SIZE.x, BUTTON_Y }, confirmLabel),
     m_cancelButton(BUTTON_SIZE, { SCREEN_SIZE.x / 2.f + BUTTON_GAP / 2.f, BUTTON_Y }, cancelLabel)
 {
     set_z(Z_WINDOW);
     m_dim.setFillColor(sf::Color(0, 0, 0, 150));
 
-    UISkin::style_text(m_question, QUESTION_SIZE);
-    UISkin::set_text_anchor(m_question, { 0.5f, 0.5f });
-    m_question.setPosition({ SCREEN_SIZE.x / 2.f, PANEL_POSITION.y + 74.f });
+    sf::Text style(UISkin::heavy_font());
+    UISkin::style_text(style, QUESTION_SIZE);
+    m_question.set_style(style);
+    m_question.set_alignment(0.5f);
+    m_question.set_position({ SCREEN_SIZE.x / 2.f, PANEL_POSITION.y + 74.f }, { 0.5f, 0.5f });
 
-    UISkin::style_body_text(m_explanation, EXPLANATION_SIZE, UISkin::TITLE);
-    m_explanation.setString(UISkin::wrap_text(explanation, EXPLANATION_SIZE, EXPLANATION_WIDTH, UISkin::regular_font()));
-    UISkin::set_text_anchor(m_explanation, { 0.5f, 0.5f });
-    m_explanation.setPosition({ SCREEN_SIZE.x / 2.f, PANEL_POSITION.y + 158.f });
+    UISkin::style_body_text(style, EXPLANATION_SIZE, UISkin::TITLE);
+    m_explanation.set_style(style);
+    m_explanation.set_max_width(EXPLANATION_WIDTH);
+    m_explanation.set_alignment(0.5f);
+    m_explanation.set_position({ SCREEN_SIZE.x / 2.f, PANEL_POSITION.y + 158.f }, { 0.5f, 0.5f });
+    set_texts(question, explanation, confirmLabel);
 
     m_confirmButton.set_text_size(38);
     m_confirmButton.set_fill_color(DANGER_TINT);
@@ -73,10 +75,8 @@ void UIConfirmDialog::set_confirm_sound(const std::string& soundName)
 
 void UIConfirmDialog::set_texts(const std::string& question, const std::string& explanation, const std::string& confirmLabel)
 {
-    m_question.setString(question);
-    UISkin::set_text_anchor(m_question, { 0.5f, 0.5f });
-    m_explanation.setString(UISkin::wrap_text(explanation, EXPLANATION_SIZE, EXPLANATION_WIDTH, UISkin::regular_font()));
-    UISkin::set_text_anchor(m_explanation, { 0.5f, 0.5f });
+    m_question.set_string(question);
+    m_explanation.set_string(explanation);
     m_confirmButton.set_text(confirmLabel);
 }
 
@@ -97,8 +97,8 @@ void UIConfirmDialog::render(sf::RenderWindow& window)
 
     window.draw(m_dim);
     UISkin::draw_message_box(window, { PANEL_POSITION, PANEL_SIZE });
-    window.draw(m_question);
-    window.draw(m_explanation);
+    m_question.draw(window);
+    m_explanation.draw(window);
     m_confirmButton.render(window);
     m_cancelButton.render(window);
 }

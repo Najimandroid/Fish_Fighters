@@ -1,6 +1,7 @@
 #include "UIClamRoom.h"
 #include "UIPlayerShellsInfo.h"
 #include "../UISkin.h"
+#include "../RichText.h"
 #include "../../core/DataLoader.h"
 #include "../../data/BattlefieldLayout.h"
 #include "../../data/PlayerData.h"
@@ -532,10 +533,9 @@ void UIClamRoom::render(sf::RenderWindow& window)
         auto adPlayer = m_dataLoader->get_player_data().lock();
         const int left = adPlayer ? adPlayer->ads_left_today() : 0;
         UISkin::style_text(m_text, 24, left > 0 ? sf::Color(170, 240, 225) : sf::Color(200, 190, 220));
-        m_text.setString(left > 0 ? "+1 Shiny Scale  " + std::to_string(left) + "/" + std::to_string(PlayerData::ADS_PER_DAY) : "Back tomorrow");
-        UISkin::set_text_anchor(m_text, { 0.5f, 1.f });   // Above the button: the bottom bar is under it
-        m_text.setPosition({ offers_left() + AD_OFFER_WIDTH / 2.f, OFFER_Y - 10.f });
-        window.draw(m_text);
+        // Above the button: the bottom bar is under it
+        RichText::draw_text(window, m_text, left > 0 ? "+1 [shiny]  " + std::to_string(left) + "/" + std::to_string(PlayerData::ADS_PER_DAY) : "Back tomorrow",
+            { offers_left() + AD_OFFER_WIDTH / 2.f, OFFER_Y - 10.f }, { 0.5f, 1.f });
     }
 
     // STORAGE: the Clam Storage's chest, with how many fish wait there
@@ -547,16 +547,13 @@ void UIClamRoom::render(sf::RenderWindow& window)
     // What to do
     std::string hint;
     if (m_phase == Phase::IDLE)
-        hint = player && player->shinyScales > 0 ? "Feed the giant clam a Shiny Scale..."
-            : "No Shiny Scales: raise your School Rank, or craft one from Fish Scales (+)";
+        hint = player && player->shinyScales > 0 ? "Feed the giant clam a [shiny]..."
+            : "No [shiny]: raise your School Rank, or craft one from 10 [scale] (+)";
     else if (m_phase == Phase::REVEALED) hint = "Tap to continue: your fish wait in the Clam Storage";
     if (!hint.empty())
     {
         UISkin::style_text(m_text, 36, UISkin::TITLE);
-        m_text.setString(hint);
-        UISkin::set_text_anchor(m_text, { 0.5f, 0.5f });
-        m_text.setPosition({ 960.f, 170.f });
-        window.draw(m_text);
+        RichText::draw_text(window, m_text, hint, { 960.f, 170.f }, { 0.5f, 0.5f });
     }
 }
 

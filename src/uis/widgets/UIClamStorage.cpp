@@ -246,8 +246,8 @@ void UIClamStorage::ask_sell(bool forFishScales)
     const std::string name = data ? data->name : "fish";
     const std::string question = "Sell " + std::to_string(count) + " " + name + "?";
     std::string explanation = forFishScales
-        ? "For " + std::to_string(count) + " Fish Scale" + (count > 1 ? "s" : "") + ". 10 Fish Scales craft a Shiny Scale: the + next to your Shiny Scales."
-        : "For " + std::to_string(count * shells_each(m_selectedUid)) + " shells.";
+        ? "For " + std::to_string(count) + " [scale]. 10 [scale] craft a [shiny]: the + next to your [shiny]."
+        : "For " + std::to_string(count * shells_each(m_selectedUid)) + " [shell].";
     if (!player->is_unit_owned(m_selectedUid) && count >= player->get_stored_count(m_selectedUid))
         explanation += " You don't have this fish in your tank yet!";
     dialog->set_texts(question, explanation, "SELL");
@@ -608,7 +608,9 @@ void UIClamStorage::render_panel(sf::RenderWindow& window)
         const sf::FloatRect bounds = button->get_bounds();
         UISkin::draw_fitted(window, UISkin::texture(icon), { { bounds.position.x + 10.f, bounds.position.y + bounds.size.y / 2.f - 24.f }, { 48.f, 48.f } });
     }
-    text("10 Fish Scales craft a Shiny Scale (+)", 22, INK_SOFT, { PANEL_CENTER, 872.f }, { 0.5f, 0.5f }, true);
+    UISkin::style_body_text(m_text, 22, INK_SOFT);
+    m_text.setOutlineThickness(0.f);
+    RichText::draw_text(window, m_text, "10 [scale] craft a [shiny] (+)", { PANEL_CENTER, 872.f }, { 0.5f, 0.5f });
 }
 
 namespace
@@ -721,7 +723,7 @@ void UIClamStorage::ask_sell_all()
         shells += count * shells_each(uid);
         hasNewFish = hasNewFish || !player->is_unit_owned(uid);
     }
-    std::string explanation = "For " + std::to_string(shells) + " shells.";
+    std::string explanation = "For " + std::to_string(shells) + " [shell].";
     if (hasNewFish) explanation += " Some of them aren't in your tank yet!";
     dialog->set_texts("Sell all " + std::to_string(total) + " fish?", explanation, "SELL ALL");
     dialog->open([this]() { sell_all(); });

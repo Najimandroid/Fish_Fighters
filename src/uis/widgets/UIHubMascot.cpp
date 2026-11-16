@@ -60,11 +60,13 @@ namespace
 UIHubMascot::UIHubMascot(std::shared_ptr<DataLoader> dataLoader, std::vector<std::string> tips) :
     UIElement({ FISH_BOX.x, FISH_BOX.y }, HOME - FISH_BOX / 2.f),
     m_dataLoader(std::move(dataLoader)),
-    m_tips(std::move(tips)),
-    m_text(UISkin::regular_font())
+    m_tips(std::move(tips))
 {
-    UISkin::style_body_text(m_text, TEXT_SIZE, UISkin::OUTLINE);
-    m_text.setOutlineThickness(0.f);
+    sf::Text style(UISkin::regular_font());
+    UISkin::style_body_text(style, TEXT_SIZE, UISkin::OUTLINE);
+    style.setOutlineThickness(0.f);
+    m_text.set_style(style);
+    m_text.set_max_width(BUBBLE_WIDTH - 2.f * PADDING);
     if (!m_tips.empty()) next_tip();
     m_tipTime = -0.9f;   // The first one once the screen is in
 }
@@ -73,9 +75,8 @@ void UIHubMascot::next_tip()
 {
     if (m_tips.empty()) return;
     m_tipIndex = (m_tipIndex + 1) % static_cast<int>(m_tips.size());
-    m_wrapped = UISkin::wrap_text(m_tips[m_tipIndex], TEXT_SIZE, BUBBLE_WIDTH - 2.f * PADDING, UISkin::regular_font());
-    m_text.setString(m_wrapped);
-    m_bubbleHeight = m_text.getLocalBounds().size.y + 2.f * PADDING + 8.f;
+    m_text.set_string(m_tips[m_tipIndex]);
+    m_bubbleHeight = m_text.get_bounds().size.y + 2.f * PADDING + 16.f;   // The descenders and the icons under the last line
     m_tipTime = 0.f;
 }
 
@@ -102,7 +103,7 @@ void UIHubMascot::update(float deltaTime)
     if (m_tips.empty()) return;
 
     m_tipTime += deltaTime;
-    const float typing = static_cast<float>(m_wrapped.size()) / CHARS_PER_SECOND;
+    const float typing = static_cast<float>(m_text.get_length()) / CHARS_PER_SECOND;
     if (m_tipTime > typing + HOLD_SECONDS + FADE_SECONDS + GAP_SECONDS) next_tip();
 }
 
@@ -157,7 +158,7 @@ void UIHubMascot::render(sf::RenderWindow& window)
 void UIHubMascot::render_bubble(sf::RenderWindow& window)
 {
     if (m_tips.empty() || m_tipTime < 0.f) return;
-    const float typing = static_cast<float>(m_wrapped.size()) / CHARS_PER_SECOND;
+    const float typing = static_cast<float>(m_text.get_length()) / CHARS_PER_SECOND;
     const float fadeStart = typing + HOLD_SECONDS;
     const float alpha = m_tipTime < fadeStart ? 1.f : std::max(0.f, 1.f - (m_tipTime - fadeStart) / FADE_SECONDS);
     if (alpha <= 0.f) return;
@@ -196,14 +197,11 @@ void UIHubMascot::render_bubble(sf::RenderWindow& window)
     tail.setFillColor(with_alpha(PAPER));
     window.draw(tail, states);
 
-    const std::size_t shown = std::min(m_wrapped.size(), static_cast<std::size_t>(std::max(0.f, m_tipTime) * CHARS_PER_SECOND));
-    m_text.setString(m_wrapped.substr(0, shown));
-    UISkin::set_text_color(m_text, with_alpha(UISkin::OUTLINE));
-    m_text.setOutlineThickness(0.f);
-    UISkin::set_text_anchor(m_text, { 0.f, 0.f });
-    m_text.setPosition(rect.position + sf::Vector2f{ PADDING, PADDING });
-    window.draw(m_text, states);
-    m_text.setString(m_wrapped);   // Its size stays the whole tip's
+    const std::size_t shown = std::min(m_text.get_length(), static_cast<std::size_t>(std::max(0.f, m_tipTime) * CHARS_PER_SECOND));
+    m_text.set_revealed(shown);   // Laid out whole: the lines don't jump while it types
+    m_text.set_fill_color(with_alpha(UISkin::OUTLINE));
+    m_text.set_position(rect.position + sf::Vector2f{ PADDING, PADDING });
+    m_text.draw(window, states);
 }
 
 void UIHubMascot::handle_event(const sf::Event& event, const sf::RenderWindow& window)
@@ -230,7 +228,7 @@ void UIHubMascot::handle_event(const sf::Event& event, const sf::RenderWindow& w
         }
         else if (m_tipTime >= 0.f && bubble_rect().contains(point))
         {
-            const float typing = static_cast<float>(m_wrapped.size()) / CHARS_PER_SECOND;
+            const float typing = static_cast<float>(m_text.get_length()) / CHARS_PER_SECOND;
             if (m_tipTime < typing) m_tipTime = typing;   // The whole tip at once
             else if (isReady)
             {

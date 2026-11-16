@@ -1,5 +1,6 @@
 #include "UIResultsPanel.h"
 #include "../UISkin.h"
+#include "../RichText.h"
 #include "../../core/DataLoader.h"
 
 #include <algorithm>
@@ -47,7 +48,7 @@ namespace
         "Cash Up early: a bigger wallet buys bigger fish.",
         "Upgrade your fish in the Fish Tank: every level makes them stronger.",
         "Cheap fish make a good wall in front of your strong ones.",
-        "Replay cleared stages for shells, then come back stronger.",
+        "Replay cleared stages for [shell], then come back stronger.",
         "Enemies drop cash when they fall: keep the front line busy.",
     };
 
@@ -69,18 +70,17 @@ namespace
     }
 
     // An outlined text, faded with alpha
+    // A text of the panel, the currencies as their icons (RichText): scaled and turned around its anchor, faded by
+    // alpha; wrapped past maxWidth (0: on one line), its lines centered on the anchor
     void draw_text(sf::RenderWindow& window, const std::string& string, unsigned int size, sf::Color fill, sf::Vector2f position,
-        sf::Vector2f anchor, std::uint8_t alpha, float scale = 1.f, float rotation = 0.f, const sf::Font& font = UISkin::heavy_font())
+        sf::Vector2f anchor, std::uint8_t alpha, float scale = 1.f, float rotation = 0.f, const sf::Font& font = UISkin::heavy_font(),
+        float maxWidth = 0.f)
     {
-        sf::Text text(font, string);
-        UISkin::style_text(text, size, fill, font);
-        UISkin::set_text_anchor(text, anchor);
-        text.setFillColor(with_alpha(fill, alpha));
-        text.setOutlineColor(with_alpha(UISkin::OUTLINE, alpha));
-        text.setScale({ scale, scale });
-        text.setRotation(sf::degrees(rotation));
-        text.setPosition(position);
-        window.draw(text);
+        sf::Text style(font);
+        UISkin::style_text(style, size, with_alpha(fill, alpha), font);
+        sf::RenderStates states;
+        states.transform.translate(position).rotate(sf::degrees(rotation)).scale({ scale, scale });
+        RichText::draw_text(window, style, string, { 0.f, 0.f }, anchor, anchor.x, maxWidth, states);
     }
 }
 
@@ -259,7 +259,7 @@ void UIResultsPanel::render_victory(sf::RenderWindow& window, const sf::FloatRec
             UISkin::draw_fitted(window, UISkin::texture("clam_closed"),
                 { { textLeft - 24.f - 166.f * 0.8f / 2.f - clamSize / 2.f, centerY - clamSize * 0.72f }, { clamSize, clamSize } });
         draw_text(window, "CLAM ROOM OPEN!", 40, UISkin::EXTRA, { textLeft, centerY - 22.f }, { 0.f, 0.5f }, alpha_of(pop * 2.f));
-        draw_text(window, "A Shiny Scale waits for you there", 28, UISkin::TEXT, { textLeft, centerY + 24.f }, { 0.f, 0.5f }, alpha_of(pop * 2.f));
+        draw_text(window, "A [shiny] waits for you there", 28, UISkin::TEXT, { textLeft, centerY + 24.f }, { 0.f, 0.5f }, alpha_of(pop * 2.f));
     }
 }
 
@@ -290,8 +290,8 @@ void UIResultsPanel::render_defeat(sf::RenderWindow& window, const sf::FloatRect
     window.draw(fill);
 
     // A tip for next time
-    draw_text(window, UISkin::wrap_text(m_tip, 30, 720.f, UISkin::regular_font()), 30, UISkin::TITLE, { SCREEN_SIZE.x / 2.f, panel.position.y + 420.f },
-        { 0.5f, 0.5f }, alpha, 1.f, 0.f, UISkin::regular_font());
+    draw_text(window, m_tip, 30, UISkin::TITLE, { SCREEN_SIZE.x / 2.f, panel.position.y + 420.f },
+        { 0.5f, 0.5f }, alpha, 1.f, 0.f, UISkin::regular_font(), 720.f);
 }
 
 void UIResultsPanel::handle_event(const sf::Event& event, const sf::RenderWindow& window)

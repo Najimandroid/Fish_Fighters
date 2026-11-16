@@ -1,6 +1,7 @@
 #include "UIUpgradeSlider.h"
 #include "UIToast.h"
 #include "../UISkin.h"
+#include "../RichText.h"
 #include "../../core/DataLoader.h"
 #include "../../core/stages/Stage.h"
 #include "../../data/StageData.h"
@@ -612,7 +613,12 @@ void UIUpgradeSlider::render_upgrade_info(sf::RenderWindow& window)
 	if (!player || m_upgradeIcons.empty() || m_isMaxLevel || m_entries[m_currentIndex].kind == Entry::Kind::CATEGORY) return;
 	const float centerX = UPGRADE_BUTTON.position.x + UPGRADE_BUTTON.size.x / 2.f;
 	if (player->shells < m_cost)
-		drawText("Need " + std::to_string(m_cost - player->shells) + " more shells", 28, CORAL, { centerX, UPGRADE_BUTTON.position.y + UPGRADE_BUTTON.size.y + 34.f }, { 0.5f, 0.5f });
+	{
+		sf::Text style(UISkin::heavy_font());
+		UISkin::style_text(style, 28, CORAL);
+		RichText::draw_text(window, style, "Need " + std::to_string(m_cost - player->shells) + " more [shell]",
+			{ centerX, UPGRADE_BUTTON.position.y + UPGRADE_BUTTON.size.y + 34.f }, { 0.5f, 0.5f });
+	}
 }
 
 /*

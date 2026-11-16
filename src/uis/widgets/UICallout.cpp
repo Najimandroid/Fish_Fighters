@@ -15,10 +15,14 @@ namespace
 }
 
 UICallout::UICallout(const std::string& text, sf::Vector2f tip, Tail tail) :
-    m_text(UISkin::heavy_font(), text), m_tip(tip), m_tail(tail)
+    m_tip(tip), m_tail(tail)
 {
-    UISkin::style_text(m_text, TEXT_SIZE, UISkin::OUTLINE);
-    m_text.setOutlineThickness(0.f);
+    sf::Text style(UISkin::heavy_font());
+    UISkin::style_text(style, TEXT_SIZE, UISkin::OUTLINE);
+    style.setOutlineThickness(0.f);
+    m_text.set_style(style);
+    m_text.set_string(text);
+    m_text.set_alignment(0.5f);
 }
 
 void UICallout::update(float deltaTime)
@@ -35,7 +39,7 @@ void UICallout::render(sf::RenderWindow& window)
     const float bob = std::sin(m_time * 3.f) * BOB;
 
     // The pill beside or above the tip, its tail on the tip
-    const sf::FloatRect textBounds = m_text.getLocalBounds();
+    const sf::FloatRect textBounds = m_text.get_bounds();
     const sf::Vector2f size = (textBounds.size + PADDING * 2.f) * pop;
     sf::Vector2f tip = m_tip;
     sf::Vector2f pillPosition;
@@ -89,8 +93,8 @@ void UICallout::render(sf::RenderWindow& window)
     root.setFillColor(FILL);
     window.draw(root);
 
-    UISkin::set_text_anchor(m_text, { 0.5f, 0.5f });
-    m_text.setScale({ pop, pop });
-    m_text.setPosition(pill.position + pill.size / 2.f - sf::Vector2f{ 0.f, 2.f });
-    window.draw(m_text);
+    sf::RenderStates textStates;
+    textStates.transform.translate(pill.position + pill.size / 2.f - sf::Vector2f{ 0.f, 2.f }).scale({ pop, pop });
+    m_text.set_position({ 0.f, 0.f }, { 0.5f, 0.5f });
+    m_text.draw(window, textStates);
 }

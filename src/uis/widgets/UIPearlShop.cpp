@@ -3,6 +3,7 @@
 #include "UIAdOverlay.h"
 #include "UIToast.h"
 #include "../UISkin.h"
+#include "../RichText.h"
 #include "../../core/DataLoader.h"
 #include "../../core/Platform.h"
 #include "../../data/PlayerData.h"
@@ -42,7 +43,7 @@ UIPearlShop::UIPearlShop(std::shared_ptr<DataLoader> dataLoader, std::weak_ptr<U
     {
         Card card;
         card.rect = card_at(ROW_PEARLS, 0);
-        card.title = std::to_string(PlayerData::PEARLS_PER_AD) + " PEARLS";
+        card.title = std::to_string(PlayerData::PEARLS_PER_AD) + " [pearl]";
         auto button = std::make_unique<UIOfferButton>(BUTTON, button_at(card.rect), "FREE", UIOfferButton::Kind::REWARDED_AD);
         button->set_text_size(40);
         button->set_click_sound("");
@@ -56,7 +57,7 @@ UIPearlShop::UIPearlShop(std::shared_ptr<DataLoader> dataLoader, std::weak_ptr<U
                         if (!player || !player->watch_shop_ad()) return;
                         m_dataLoader->save_progress();
                         play_sound("purchase");
-                        UIToast::show("+" + std::to_string(PlayerData::PEARLS_PER_AD) + " PEARLS", "Thanks for watching!", "icon_pearl");
+                        UIToast::show("+" + std::to_string(PlayerData::PEARLS_PER_AD) + " [pearl]", "Thanks for watching!", "icon_pearl");
                     });
             });
         card.button = std::move(button);
@@ -68,7 +69,7 @@ UIPearlShop::UIPearlShop(std::shared_ptr<DataLoader> dataLoader, std::weak_ptr<U
     {
         Card card;
         card.rect = card_at(ROW_PEARLS, i + 1);
-        card.title = std::to_string(PACKS[i].pearls) + " PEARLS";
+        card.title = std::to_string(PACKS[i].pearls) + " [pearl]";
         card.iconCount = PACKS[i].pile;
         card.line = "Coming soon!";
         card.lineColor = FADED;
@@ -84,7 +85,7 @@ UIPearlShop::UIPearlShop(std::shared_ptr<DataLoader> dataLoader, std::weak_ptr<U
     {
         Card card;
         card.rect = card_at(ROW_SCALES, count == 1 ? 0 : 1);
-        card.title = count == 1 ? "1 SHINY SCALE" : "10 SHINY SCALES";
+        card.title = std::to_string(count) + " [shiny]";
         card.icon = "icon_shiny_scale";
         card.iconCount = count == 1 ? 1 : 4;
         card.line = count == 1 ? "To feed the giant clam" : "10 for the price of 9!";
@@ -110,15 +111,14 @@ void UIPearlShop::buy_scales(int count)
         play_sound("ui_error");
         return;
     }
-    const std::string what = count == 1 ? "1 Shiny Scale" : std::to_string(count) + " Shiny Scales";
-    confirm->set_texts("Buy " + what + "?", "For " + std::to_string(price) + " Pearls.", "BUY");
-    confirm->open([this, count, what]()
+    confirm->set_texts("Buy " + std::to_string(count) + " [shiny]?", "For " + std::to_string(price) + " [pearl].", "BUY");
+    confirm->open([this, count]()
         {
             auto player = m_dataLoader->get_player_data().lock();
             if (!player || !player->buy_shiny_scales(count)) return;
             m_dataLoader->save_progress();
             play_sound("purchase");
-            UIToast::show("+" + std::string(count == 1 ? "1 SHINY SCALE" : std::to_string(count) + " SHINY SCALES"), "To feed the giant clam", "icon_shiny_scale");
+            UIToast::show("+" + std::to_string(count) + " [shiny]", "To feed the giant clam", "icon_shiny_scale");
         });
 }
 
@@ -142,14 +142,11 @@ void UIPearlShop::render(sf::RenderWindow& window)
         const sf::Font& font = UISkin::heavy_font())
         {
             UISkin::style_text(m_text, size, color, font);
-            m_text.setString(sf::String::fromUtf8(text.begin(), text.end()));
-            UISkin::set_text_anchor(m_text, anchor);
-            m_text.setPosition(position);
-            window.draw(m_text);
+            RichText::draw_text(window, m_text, text, position, anchor);   // Currencies as their icons ("30 [pearl]")
         };
 
-    drawText("PEARLS", 40, UISkin::TITLE, { ROWS_LEFT, ROW_PEARLS - 30.f }, { 0.f, 0.5f });
-    drawText("SHINY SCALES", 40, UISkin::TITLE, { ROWS_LEFT, ROW_SCALES - 30.f }, { 0.f, 0.5f });
+    drawText("[pearl] PEARLS", 40, UISkin::TITLE, { ROWS_LEFT, ROW_PEARLS - 30.f }, { 0.f, 0.5f });
+    drawText("[shiny] SHINY SCALES", 40, UISkin::TITLE, { ROWS_LEFT, ROW_SCALES - 30.f }, { 0.f, 0.5f });
 
     for (auto& card : m_cards)
     {

@@ -307,7 +307,7 @@ void UIChapterMap::describe_selected_stage()
         if (reward->type == "shells") shells += reward->amount;
         else if (reward->type == "unit") hasNewFish = true;
     }
-    m_rewardText.setString(std::to_string(shells) + " shells" + (hasNewFish ? "   + a new fish!" : ""));
+    m_rewardText.setString(std::to_string(shells) + (hasNewFish ? "   + a new fish!" : ""));   // The shell icon says what
 
     // Every enemy of the stage once, in the order of the waves
     m_stageEnemies.clear();
