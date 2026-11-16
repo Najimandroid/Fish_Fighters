@@ -16,6 +16,9 @@
 //   node tools/art/mdp_to_sheet.js fish.mdp [more.mdp...]   writes export/<name>_sheet.png and export/icon_<name>.png
 //                                                          next to each file
 //   options: --sheet out.png  --icon out.png  --no-icon  --frame-width px  --json (one line of JSON, for FishEditor)
+//            --enemy (an enemy faces right: its icon isn't mirrored)
+// A sketch (one drawing, no Walk1.. layers) gives a placeholder sheet: the drawing as the walk, knockback and attack
+// frame (3 frames, knockback frame 1).
 //   node tools/art/mdp_to_sheet.js --icon-from-sheet sheet.png --frames N --icon out.png   (only the icon, from a sheet)
 // tools/art/mdp_to_sheet.bat: drop .mdp files on it.
 
@@ -130,7 +133,9 @@ function bodyBox({ width, pixels }, box) {
 }
 
 // ===== The icon =====
-function makeIcon(idle) {
+// isEnemy: an enemy faces right in its sheet and its icon keeps that (a fish faces left and is mirrored)
+function makeIcon(frame, isEnemy = false) {
+    const idle = isEnemy ? mirror(frame) : frame;
     const icon = blank(ICON.width, ICON.height);
     const box = contentBox(idle);
     if (!box) return icon;
@@ -164,6 +169,14 @@ function frameLayers(mdp, file) {
             if (list[i].number !== list[i - 1].number + 1) warnings.push(`no ${kind} frame between ${list[i - 1].layer.name} and ${list[i].layer.name}`);
         }
     }
+    // A sketch (no frame layers at all): its visible layers make one placeholder frame, used to walk, be knocked back
+    // and attack until the frames are drawn
+    if (!groups.walk.length && !groups.knockback.length && !groups.attack.length) {
+        const drawing = mdp.layers.filter(layer => layer.visible);
+        if (!drawing.length) throw new Error(`${file}: no visible layer to make a frame from`);
+        warnings.push("a sketch (no Walk1, Knockback1, Attack1... layers): one placeholder frame for walking, knockback and the attack");
+        return { sketch: drawing, walk: [drawing[0]], knockback: drawing[0], attack: [drawing[0]], ignored: [], warnings };
+    }
     if (!groups.walk.length) throw new Error(`${file}: no Walk layer (name the frames Walk1, Walk2..., Knockback1, Attack1...)`);
     if (!groups.knockback.length) throw new Error(`${file}: no Knockback layer (the game needs one knockback frame, after the walk frames)`);
     if (groups.knockback.length > 1) warnings.push(`the game uses one knockback frame: ${groups.knockback.slice(1).map(f => f.layer.name).join(", ")} left out`);
@@ -171,11 +184,18 @@ function frameLayers(mdp, file) {
     return { walk: groups.walk.map(f => f.layer), knockback: groups.knockback[0].layer, attack: groups.attack.map(f => f.layer), ignored, warnings };
 }
 
-function convert(file, { sheet, icon, frameWidth = 0 } = {}) {
+function convert(file, { sheet, icon, frameWidth = 0, isEnemy = false } = {}) {
     const mdp = readMdp(file);
     const layers = frameLayers(mdp, file);
     const ordered = [...layers.walk, layers.knockback, ...layers.attack];
-    const canvases = ordered.map(layer => ({ width: mdp.width, height: mdp.height, pixels: layer.pixels() }));
+    let canvases;
+    if (layers.sketch) {
+        // Its layers flattened into one frame (bottom first), three times: walk, knockback, attack
+        const flat = blank(mdp.width, mdp.height);
+        for (const layer of layers.sketch) draw(flat, { width: mdp.width, height: mdp.height, pixels: layer.pixels() }, 0, 0);
+        canvases = ordered.map(() => flat);
+    }
+    else canvases = ordered.map(layer => ({ width: mdp.width, height: mdp.height, pixels: layer.pixels() }));
 
     // A file drawn as a whole sheet: each frame is cut from the slot its drawing is in
     let size = { width: mdp.width, height: mdp.height }, guessed = false;
@@ -197,7 +217,7 @@ function convert(file, { sheet, icon, frameWidth = 0 } = {}) {
     frames.forEach((frame, i) => draw(out, frame, i * size.width, 0));
     fs.mkdirSync(path.dirname(sheet), { recursive: true });
     writePng(sheet, out);
-    if (icon) { fs.mkdirSync(path.dirname(icon), { recursive: true }); writePng(icon, makeIcon(frames[0])); }
+    if (icon) { fs.mkdirSync(path.dirname(icon), { recursive: true }); writePng(icon, makeIcon(frames[0], isEnemy)); }
 
     const empty = ordered.filter((layer, i) => !contentBox(frames[i])).map(layer => layer.name);
     if (empty.length) layers.warnings.push(`empty: ${empty.join(", ")}`);
@@ -213,14 +233,14 @@ function convert(file, { sheet, icon, frameWidth = 0 } = {}) {
 function main(args) {
     const option = name => { const i = args.indexOf(name); if (i < 0) return null; const v = args[i + 1]; args.splice(i, 2); return v; };
     const flag = name => { const i = args.indexOf(name); if (i < 0) return false; args.splice(i, 1); return true; };
-    const json = flag("--json"), noIcon = flag("--no-icon");
+    const json = flag("--json"), noIcon = flag("--no-icon"), isEnemy = flag("--enemy");
     const fromSheet = option("--icon-from-sheet"), frames = Number(option("--frames") || 1);
     const sheetOut = option("--sheet"), iconOut = option("--icon"), frameWidth = Number(option("--frame-width") || 0);
 
     if (fromSheet) {
         if (!iconOut) throw new Error("--icon-from-sheet needs --icon out.png");
         const image = readPng(fromSheet), width = Math.floor(image.width / Math.max(1, frames));
-        writePng(iconOut, makeIcon(crop(image, { x: 0, y: 0, width, height: image.height })));
+        writePng(iconOut, makeIcon(crop(image, { x: 0, y: 0, width, height: image.height }), isEnemy));
         console.log(json ? JSON.stringify({ icon: iconOut }) : `Icon: ${iconOut}`);
         return;
     }
@@ -233,7 +253,7 @@ function main(args) {
         const result = convert(file, {
             sheet: sheetOut || path.join(folder, `${name}_sheet.png`),
             icon: noIcon ? null : iconOut || path.join(folder, `icon_${name}.png`),
-            frameWidth,
+            frameWidth, isEnemy,
         });
         if (json) { console.log(JSON.stringify(result)); continue; }
         console.log(`${path.basename(file)}: ${result.walk} walk + 1 knockback + ${result.attack} attack = ${result.frameCount} frames of ${result.frameWidth} x ${result.frameHeight}`);

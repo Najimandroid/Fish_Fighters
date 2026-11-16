@@ -72,14 +72,15 @@ namespace
     }
 }
 
-std::optional<MdpImport::Result> MdpImport::convert(const fs::path& projectFolder, const fs::path& drawing, std::string& error)
+std::optional<MdpImport::Result> MdpImport::convert(const fs::path& projectFolder, const fs::path& drawing, std::string& error, bool isEnemy)
 {
     const fs::path folder = work_folder();
     Result result;
     result.sheet = folder / "sheet.png";
     result.icon = folder / "icon.png";
 
-    const auto json = run_tool(projectFolder, quoted(drawing) + L" --sheet " + quoted(result.sheet) + L" --icon " + quoted(result.icon), error);
+    const auto json = run_tool(projectFolder, quoted(drawing) + L" --sheet " + quoted(result.sheet) + L" --icon " + quoted(result.icon)
+        + (isEnemy ? L" --enemy" : L""), error);
     if (!json) return std::nullopt;
 
     result.frameCount = json->value("frameCount", 0);
@@ -100,10 +101,12 @@ std::optional<MdpImport::Result> MdpImport::convert(const fs::path& projectFolde
     return result;
 }
 
-std::optional<fs::path> MdpImport::icon_from_sheet(const fs::path& projectFolder, const fs::path& sheet, int frameCount, std::string& error)
+std::optional<fs::path> MdpImport::icon_from_sheet(const fs::path& projectFolder, const fs::path& sheet, int frameCount, std::string& error,
+    bool isEnemy)
 {
     const fs::path icon = work_folder() / "icon.png";
-    if (!run_tool(projectFolder, L"--icon-from-sheet " + quoted(sheet) + L" --frames " + std::to_wstring(frameCount) + L" --icon " + quoted(icon), error))
+    if (!run_tool(projectFolder, L"--icon-from-sheet " + quoted(sheet) + L" --frames " + std::to_wstring(frameCount) + L" --icon " + quoted(icon)
+        + (isEnemy ? L" --enemy" : L""), error))
         return std::nullopt;
 
     std::error_code fsError;

@@ -281,6 +281,10 @@ void UIPlaylist::update(float deltaTime)
 void UIPlaylist::render(sf::RenderWindow& window)
 {
     if (!m_isVisible) return;
+    // Over the Options window: the whole screen (a phone's sides too, already dimmed once like the layout)
+    const sf::FloatRect screen = UISkin::screen_rect();
+    m_dim.setPosition(screen.position);
+    m_dim.setSize(screen.size);
     window.draw(m_dim);
     m_frame.render(window);
     render_list(window);

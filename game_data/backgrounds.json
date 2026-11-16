@@ -22,5 +22,13 @@
     "assets/images/textures/backgrounds/stages/RockyShore.png": {
         "seamlessOverlap": 32,
         "groundRow": 794
+    },
+    "assets/images/textures/backgrounds/stages/JellyfishCavern.png": {
+        "seamlessOverlap": 32,
+        "groundRow": 854
+    },
+    "assets/images/textures/backgrounds/stages/ShipwreckCimetery.png": {
+        "groundRow": 884,
+        "seamlessOverlap": 32
     }
 }

@@ -63,7 +63,7 @@ namespace EntityFields
         if (auto picked = ctx.take_dialog_result(mdpId))
         {
             std::string error;
-            if (auto made = MdpImport::convert(ctx.project.get_project_folder(), *picked, error))
+            if (auto made = MdpImport::convert(ctx.project.get_project_folder(), *picked, error, folder == ImageFolder::ENEMY_SHEETS))
             {
                 const std::string sheetPath = std::string(AssetLibrary::folder(folder)) + "/" + picked->stem().string() + "_sheet.png";
                 if (ctx.assets.replace(sheetPath, made->sheet, error) && ctx.assets.replace(iconPath, made->icon, error))
@@ -136,13 +136,14 @@ void EntityFields::icon(EditorContext& ctx, const std::string& iconPath, const c
     const sf::Texture* sheet = ctx.textures.get(read_string(entity, "texture"));
     ImGui::BeginDisabled(!sheet);
     const bool isMakeClicked = ImGui::Button("Make from first frame");
-    ImGui::SetItemTooltip("Framed like the hand-made icons: the first frame mirrored to face right, zoomed, its head near the right edge");
+    ImGui::SetItemTooltip("Framed like the hand-made icons: the first frame facing right (a fish's is mirrored), zoomed, its head near the right edge");
     if (isMakeClicked && sheet)
     {
         // Framed by tools/art/mdp_to_sheet.js; without Node.js, the whole frame fitted in the icon
         std::string error;
         const int frames = read_int(entity, "frameCount", 1);
-        if (auto made = MdpImport::icon_from_sheet(ctx.project.get_project_folder(), ctx.project.resolve(read_string(entity, "texture")), frames, error))
+        const bool isEnemy = iconPath.find("/icons/enemies/") != std::string::npos;   // Keeps its facing (a fish's is mirrored)
+        if (auto made = MdpImport::icon_from_sheet(ctx.project.get_project_folder(), ctx.project.resolve(read_string(entity, "texture")), frames, error, isEnemy))
         {
             if (ctx.assets.replace(iconPath, *made, error)) ctx.notify("Icon made from the first frame: " + iconPath);
             else ctx.notify(error, true);

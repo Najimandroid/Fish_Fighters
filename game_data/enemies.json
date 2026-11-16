@@ -229,5 +229,241 @@
         "abilities": [],
         "cashDrop": 300,
         "attackSound": "attack_pinch"
+    },
+    "UID_9": {
+        "UID": 9,
+        "name": "Armored Shrimp",
+        "description": "A shrimp that got tired of being the snack.\nIts armor takes a lot of hits, and its pinch hurts more than its little cousins'.",
+        "health": 120,
+        "attackPower": 14,
+        "attackRange": 15,
+        "attackFrequency": 2.5,
+        "attackType": 1,
+        "foreswing": 0.2,
+        "backswing": 0.3,
+        "damageZone": [
+            0,
+            20
+        ],
+        "types": [
+            1
+        ],
+        "movementSpeed": 6,
+        "knockbackCount": 2,
+        "texture": "assets/images/textures/enemies/armored_shrimp_sheet.png",
+        "frameCount": 3,
+        "knockbackFrameIndex": 1,
+        "abilities": [],
+        "cashDrop": 150,
+        "attackSound": "attack_pinch"
+    },
+    "UID_10": {
+        "UID": 10,
+        "name": "Urchin",
+        "description": "A ball of spines rolling along the seabed, very, very slowly.\nEvery fish that hits it gets pricked: a few big hits hurt less than many small ones.",
+        "health": 800,
+        "attackPower": 30,
+        "attackRange": 90,
+        "attackFrequency": 6,
+        "attackType": 1,
+        "foreswing": 0.6,
+        "backswing": 0.4,
+        "damageZone": [
+            0,
+            95
+        ],
+        "types": [
+            -1
+        ],
+        "movementSpeed": 1.5,
+        "knockbackCount": 2,
+        "texture": "assets/images/textures/enemies/urchin_sheet.png",
+        "frameCount": 3,
+        "knockbackFrameIndex": 1,
+        "abilities": [
+            {
+                "type": "THORNS",
+                "value": 0.02
+            }
+        ],
+        "cashDrop": 500,
+        "attackSound": "attack_heavy"
+    },
+    "UID_11": {
+        "UID": 11,
+        "name": "Big Clam",
+        "description": "The small clams' big sister, and she's very protective.\nA slow wall of shell with a bite to match: bring fish strong against Shelled enemies.",
+        "health": 1000,
+        "attackPower": 70,
+        "attackRange": 20,
+        "attackFrequency": 5,
+        "attackType": 1,
+        "foreswing": 0.4,
+        "backswing": 0.3,
+        "damageZone": [
+            0,
+            25
+        ],
+        "types": [
+            -1,
+            0
+        ],
+        "movementSpeed": 1.5,
+        "knockbackCount": 1,
+        "texture": "assets/images/textures/enemies/big_clam_sheet.png",
+        "frameCount": 3,
+        "knockbackFrameIndex": 1,
+        "abilities": [],
+        "cashDrop": 600,
+        "attackSound": "attack_heavy"
+    },
+    "UID_12": {
+        "UID": 12,
+        "name": "Anemone",
+        "description": "Pretty, isn't it? Don't touch.\nIt barely moves, but its stinging tentacles reach far and can paralyze your fish.",
+        "health": 300,
+        "attackPower": 25,
+        "attackRange": 160,
+        "attackFrequency": 12,
+        "attackType": 2,
+        "foreswing": 0.6,
+        "backswing": 0.5,
+        "damageZone": [
+            0,
+            170
+        ],
+        "types": [
+            3
+        ],
+        "movementSpeed": 1,
+        "knockbackCount": 1,
+        "texture": "assets/images/textures/enemies/anemone_sheet.png",
+        "frameCount": 3,
+        "knockbackFrameIndex": 1,
+        "abilities": [
+            {
+                "type": "PARALYZE_ATTACK",
+                "value": 0.5,
+                "chance": 50,
+                "duration": 2.5
+            }
+        ],
+        "cashDrop": 300,
+        "attackSound": "attack_zap"
+    },
+    "UID_13": {
+        "UID": 13,
+        "name": "Pistol Shrimp",
+        "description": "It snaps its claw so fast the water itself goes bang.\nIts shot reaches farther than any fish, but it can't take a hit: get to it quickly.",
+        "health": 10,
+        "attackPower": 60,
+        "attackRange": 280,
+        "attackFrequency": 9,
+        "attackType": 1,
+        "foreswing": 0.8,
+        "backswing": 0.4,
+        "damageZone": [
+            0,
+            285
+        ],
+        "types": [
+            1
+        ],
+        "movementSpeed": 6,
+        "knockbackCount": 1,
+        "texture": "assets/images/textures/enemies/pistol_shrimp_sheet.png",
+        "frameCount": 3,
+        "knockbackFrameIndex": 1,
+        "abilities": [],
+        "cashDrop": 250,
+        "attackSound": "attack_squirt"
+    },
+    "UID_14": {
+        "UID": 14,
+        "name": "Jellyfish King",
+        "description": "The ruler of the jellyfish, and of the dance floor.\nEach zap paralyzes every fish it touches. He's slow to zap again: strike in between.",
+        "health": 2000,
+        "attackPower": 80,
+        "attackRange": 135,
+        "attackFrequency": 9,
+        "attackType": 2,
+        "foreswing": 0.8,
+        "backswing": 0.6,
+        "damageZone": [
+            0,
+            145
+        ],
+        "types": [
+            3
+        ],
+        "movementSpeed": 3,
+        "knockbackCount": 4,
+        "texture": "assets/images/textures/enemies/jellyfish_king_sheet.png",
+        "frameCount": 3,
+        "knockbackFrameIndex": 1,
+        "abilities": [
+            {
+                "type": "PARALYZE_ATTACK",
+                "value": 0.5,
+                "chance": 100,
+                "duration": 3
+            }
+        ],
+        "cashDrop": 1500,
+        "attackSound": "attack_zap"
+    },
+    "UID_15": {
+        "UID": 15,
+        "name": "Mr. Wheel",
+        "description": "Mr. Star after a very, very long training montage.\nHe rolls over whole groups of fish at once: keep him busy with cheap fish while the others hit him.",
+        "health": 600,
+        "attackPower": 100,
+        "attackRange": 10,
+        "attackFrequency": 0.5,
+        "attackType": 2,
+        "foreswing": 0.3,
+        "backswing": 0.5,
+        "damageZone": [
+            0,
+            60
+        ],
+        "types": [
+            -1
+        ],
+        "movementSpeed": 5.5,
+        "knockbackCount": 3,
+        "texture": "assets/images/textures/enemies/mr_wheel_sheet.png",
+        "frameCount": 3,
+        "knockbackFrameIndex": 1,
+        "abilities": [],
+        "cashDrop": 1200,
+        "attackSound": "attack_slap"
+    },
+    "UID_16": {
+        "UID": 16,
+        "name": "Mantis Shrimp",
+        "description": "The fastest punch in the ocean: it cracks shells, and fish.\nIts punch comes out of nowhere, then it needs a long moment to recover. Knock it back and it charges right back in, punch ready.",
+        "health": 400,
+        "attackPower": 180,
+        "attackRange": 45,
+        "attackFrequency": 0.5,
+        "attackType": 2,
+        "foreswing": 0.05,
+        "backswing": 1.8,
+        "damageZone": [
+            0,
+            70
+        ],
+        "types": [
+            1
+        ],
+        "movementSpeed": 22,
+        "knockbackCount": 8,
+        "texture": "assets/images/textures/enemies/mantis_shrimp_sheet.png",
+        "frameCount": 3,
+        "knockbackFrameIndex": 1,
+        "abilities": [],
+        "cashDrop": 900,
+        "attackSound": "attack_heavy"
     }
 }

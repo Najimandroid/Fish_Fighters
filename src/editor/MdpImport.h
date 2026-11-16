@@ -27,10 +27,12 @@ namespace MdpImport
         std::vector<std::string> notes; // The tool's warnings (empty frames, gaps in the numbers...)
     };
 
-    // The sheet and the icon of a drawing. Empty (and the error) if it couldn't be converted
-    std::optional<Result> convert(const std::filesystem::path& projectFolder, const std::filesystem::path& drawing, std::string& error);
+    // The sheet and the icon of a drawing. Empty (and the error) if it couldn't be converted.
+    // isEnemy: an enemy faces right and its icon keeps that (a fish's icon is mirrored to face right)
+    std::optional<Result> convert(const std::filesystem::path& projectFolder, const std::filesystem::path& drawing, std::string& error,
+        bool isEnemy = false);
 
     // Only the icon, from the first frame of a sheet (the same framing). Empty (and the error) if it failed
     std::optional<std::filesystem::path> icon_from_sheet(const std::filesystem::path& projectFolder, const std::filesystem::path& sheet,
-        int frameCount, std::string& error);
+        int frameCount, std::string& error, bool isEnemy = false);
 }
