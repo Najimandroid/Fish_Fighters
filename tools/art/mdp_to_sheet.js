@@ -16,7 +16,9 @@
 //   node tools/art/mdp_to_sheet.js fish.mdp [more.mdp...]   writes export/<name>_sheet.png and export/icon_<name>.png
 //                                                          next to each file
 //   options: --sheet out.png  --icon out.png  --no-icon  --frame-width px  --json (one line of JSON, for FishEditor)
-//            --enemy (an enemy faces right: its icon isn't mirrored)
+//            --enemy (an enemy faces right: its icon isn't mirrored) / --fish (a fish: mirrored). Without either, a
+//            path through an "enemies" folder (the drawing's, the sheet's or the icon's) means an enemy: the
+//            drawings in ...\Enemies\, FishEditor's icons/enemies (an older FishEditor never passes --enemy)
 // A sketch (one drawing, no Walk1.. layers) gives a placeholder sheet: the drawing as the walk, knockback and attack
 // frame (3 frames, knockback frame 1).
 //   node tools/art/mdp_to_sheet.js --icon-from-sheet sheet.png --frames N --icon out.png   (only the icon, from a sheet)
@@ -233,9 +235,15 @@ function convert(file, { sheet, icon, frameWidth = 0, isEnemy = false } = {}) {
 function main(args) {
     const option = name => { const i = args.indexOf(name); if (i < 0) return null; const v = args[i + 1]; args.splice(i, 2); return v; };
     const flag = name => { const i = args.indexOf(name); if (i < 0) return false; args.splice(i, 1); return true; };
-    const json = flag("--json"), noIcon = flag("--no-icon"), isEnemy = flag("--enemy");
+    const json = flag("--json"), noIcon = flag("--no-icon"), forcesEnemy = flag("--enemy"), forcesFish = flag("--fish");
     const fromSheet = option("--icon-from-sheet"), frames = Number(option("--frames") || 1);
     const sheetOut = option("--sheet"), iconOut = option("--icon"), frameWidth = Number(option("--frame-width") || 0);
+
+    // An enemy faces right and keeps it in its icon; a fish faces left and is mirrored. Said by --enemy / --fish, or
+    // read from the paths: an "enemies" (or "enemy") folder on the way
+    const inEnemyFolder = (...paths) => paths.some(p => p && path.resolve(p).split(/[\\/]+/).slice(0, -1).some(part => /^enem(y|ies)$/i.test(part)));
+    const enemyFor = file => forcesEnemy || (!forcesFish && inEnemyFolder(file, sheetOut, iconOut, fromSheet));
+    const isEnemy = enemyFor(null);
 
     if (fromSheet) {
         if (!iconOut) throw new Error("--icon-from-sheet needs --icon out.png");
@@ -253,7 +261,7 @@ function main(args) {
         const result = convert(file, {
             sheet: sheetOut || path.join(folder, `${name}_sheet.png`),
             icon: noIcon ? null : iconOut || path.join(folder, `icon_${name}.png`),
-            frameWidth, isEnemy,
+            frameWidth, isEnemy: enemyFor(file),
         });
         if (json) { console.log(JSON.stringify(result)); continue; }
         console.log(`${path.basename(file)}: ${result.walk} walk + 1 knockback + ${result.attack} attack = ${result.frameCount} frames of ${result.frameWidth} x ${result.frameHeight}`);

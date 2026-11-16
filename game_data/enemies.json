@@ -234,8 +234,8 @@
         "UID": 9,
         "name": "Armored Shrimp",
         "description": "A shrimp that got tired of being the snack.\nIts armor takes a lot of hits, and its pinch hurts more than its little cousins'.",
-        "health": 120,
-        "attackPower": 14,
+        "health": 80,
+        "attackPower": 10,
         "attackRange": 15,
         "attackFrequency": 2.5,
         "attackType": 1,
@@ -254,15 +254,15 @@
         "frameCount": 3,
         "knockbackFrameIndex": 1,
         "abilities": [],
-        "cashDrop": 150,
+        "cashDrop": 120,
         "attackSound": "attack_pinch"
     },
     "UID_10": {
         "UID": 10,
         "name": "Urchin",
         "description": "A ball of spines rolling along the seabed, very, very slowly.\nEvery fish that hits it gets pricked: a few big hits hurt less than many small ones.",
-        "health": 800,
-        "attackPower": 30,
+        "health": 250,
+        "attackPower": 20,
         "attackRange": 90,
         "attackFrequency": 6,
         "attackType": 1,
@@ -283,18 +283,18 @@
         "abilities": [
             {
                 "type": "THORNS",
-                "value": 0.02
+                "value": 0.03
             }
         ],
-        "cashDrop": 500,
+        "cashDrop": 400,
         "attackSound": "attack_heavy"
     },
     "UID_11": {
         "UID": 11,
         "name": "Big Clam",
         "description": "The small clams' big sister, and she's very protective.\nA slow wall of shell with a bite to match: bring fish strong against Shelled enemies.",
-        "health": 1000,
-        "attackPower": 70,
+        "health": 400,
+        "attackPower": 35,
         "attackRange": 20,
         "attackFrequency": 5,
         "attackType": 1,
@@ -314,14 +314,14 @@
         "frameCount": 3,
         "knockbackFrameIndex": 1,
         "abilities": [],
-        "cashDrop": 600,
+        "cashDrop": 450,
         "attackSound": "attack_heavy"
     },
     "UID_12": {
         "UID": 12,
         "name": "Anemone",
         "description": "Pretty, isn't it? Don't touch.\nIt barely moves, but its stinging tentacles reach far and can paralyze your fish.",
-        "health": 300,
+        "health": 180,
         "attackPower": 25,
         "attackRange": 160,
         "attackFrequency": 12,
@@ -348,7 +348,7 @@
                 "duration": 2.5
             }
         ],
-        "cashDrop": 300,
+        "cashDrop": 250,
         "attackSound": "attack_zap"
     },
     "UID_13": {
@@ -356,7 +356,7 @@
         "name": "Pistol Shrimp",
         "description": "It snaps its claw so fast the water itself goes bang.\nIts shot reaches farther than any fish, but it can't take a hit: get to it quickly.",
         "health": 10,
-        "attackPower": 60,
+        "attackPower": 40,
         "attackRange": 280,
         "attackFrequency": 9,
         "attackType": 1,
@@ -417,7 +417,7 @@
         "name": "Mr. Wheel",
         "description": "Mr. Star after a very, very long training montage.\nHe rolls over whole groups of fish at once: keep him busy with cheap fish while the others hit him.",
         "health": 600,
-        "attackPower": 100,
+        "attackPower": 50,
         "attackRange": 10,
         "attackFrequency": 0.5,
         "attackType": 2,
@@ -443,8 +443,8 @@
         "UID": 16,
         "name": "Mantis Shrimp",
         "description": "The fastest punch in the ocean: it cracks shells, and fish.\nIts punch comes out of nowhere, then it needs a long moment to recover. Knock it back and it charges right back in, punch ready.",
-        "health": 400,
-        "attackPower": 180,
+        "health": 250,
+        "attackPower": 100,
         "attackRange": 45,
         "attackFrequency": 0.5,
         "attackType": 2,
@@ -463,7 +463,7 @@
         "frameCount": 3,
         "knockbackFrameIndex": 1,
         "abilities": [],
-        "cashDrop": 900,
+        "cashDrop": 600,
         "attackSound": "attack_heavy"
     }
 }

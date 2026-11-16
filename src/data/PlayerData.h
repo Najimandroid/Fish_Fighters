@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <array>
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <string>
@@ -177,6 +178,24 @@ public:
     int get_base_upgrade_level(BaseUpgrade upgrade) const;
     void upgrade_base(BaseUpgrade upgrade);           // One level up (never past the max)
 
+    // ===== Energy (like The Battle Cats' energy): playing a stage costs some (StageData::energyCost) =====
+    // It comes back by itself, one point every ENERGY_REGEN_SECONDS on the real clock (the game closed too), up to
+    // the max: ENERGY_BASE_MAX, and one more every SCHOOL_RANKS_PER_ENERGY of School Rank (like the User Rank raising
+    // The Battle Cats' max energy). A full refill costs ENERGY_REFILL_PEARLS. Stored as an amount and the moment it
+    // was counted (energyTime): what came back since is worked out from the clock when asked
+    static constexpr int ENERGY_BASE_MAX = 50;
+    static constexpr int SCHOOL_RANKS_PER_ENERGY = 2;
+    static constexpr int ENERGY_REGEN_SECONDS = 60;
+    static constexpr int ENERGY_REFILL_PEARLS = 20;
+    int get_max_energy() const;
+    int get_energy() const;                           // Now (what came back since energyTime counted)
+    int seconds_to_next_energy() const;               // Until the next point comes back (0: full)
+    int seconds_to_energy(int amount) const;          // Until there is this much (0: there is, -1: more than the max)
+    bool spend_energy(int amount);                    // false (nothing spent) if there isn't enough
+    bool refill_energy();                             // Back to the max for ENERGY_REFILL_PEARLS (false: not enough
+                                                      // pearls, or already full)
+    void fill_energy();                               // Back to the max for free (a new save, the debug tools)
+
 public:
     // Currency
     int shells = 0;
@@ -192,6 +211,8 @@ public:
     std::string shopAdsDay;                // The day of the shop's free videos counted, and how many
     int shopAdsToday = 0;
     std::array<int, static_cast<size_t>(BaseUpgrade::COUNT)> baseUpgradeLevels{ 1, 1 };   // Saved in "progression"
+    int energy = ENERGY_BASE_MAX;          // The energy when energyTime counted it (get_energy: now)
+    std::int64_t energyTime = 0;           // Then, in seconds since 1970 (std::time); points come back from there
 
     // Units
     struct OwnedUnit

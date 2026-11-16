@@ -110,6 +110,8 @@ set(PROJECT_SOURCES
     src/uis/widgets/UIUpgradeIcon.cpp
     src/uis/widgets/UIUpgradeSlider.cpp
     src/uis/widgets/UIPlayerShellsInfo.cpp
+    src/uis/widgets/UIEnergyMeter.cpp
+    src/uis/widgets/UIEnergyCost.cpp
     src/uis/widgets/UIEquipIcon.cpp
     src/uis/widgets/UIEquipSlot.cpp
     src/uis/widgets/UIEquipSlider.cpp

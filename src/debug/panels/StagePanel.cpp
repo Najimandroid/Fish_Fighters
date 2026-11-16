@@ -60,6 +60,18 @@ void StagePanel::draw_menus(DebugContext& context)
         ImGui::InputInt("##ShellAmount", &m_shellAmount, 100, 1000);
         ImGui::SameLine();
         if (ImGui::Button("Add shells")) player->gain_shells(m_shellAmount);
+
+        // Energy: the stages' cost (PlayerData), to test the energy window and the countdown
+        const int energy = player->get_energy();
+        const int maxEnergy = player->get_max_energy();
+        char energyText[64];
+        std::snprintf(energyText, sizeof(energyText), "Energy %d / %d (next in %d s)", energy, maxEnergy, player->seconds_to_next_energy());
+        ImGui::ProgressBar(maxEnergy > 0 ? static_cast<float>(energy) / maxEnergy : 0.f, ImVec2(-FLT_MIN, 0.f), energyText);
+        if (ImGui::Button("Fill energy")) player->fill_energy();
+        ImGui::SameLine();
+        if (ImGui::Button("Empty energy")) player->spend_energy(energy);
+        ImGui::SameLine();
+        if (ImGui::Button("-10")) player->spend_energy(std::min(10, energy));
     }
 }
 

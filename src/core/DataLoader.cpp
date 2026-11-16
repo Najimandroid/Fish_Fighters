@@ -407,6 +407,7 @@ bool DataLoader::load_stages(const std::string& path)
         if (value.contains("playerBaseHealth")) data->playerBaseHealth = read_float(value, "playerBaseHealth");
 
         data->length = read_float(value, "length");
+        if (value.contains("energyCost")) data->energyCost = std::max(0, read_int(value, "energyCost"));
 
         data->baseTexture = value.at("baseTexture").get<std::string>();
         data->backgroundTexture = value.at("backgroundTexture").get<std::string>();
@@ -621,6 +622,7 @@ bool DataLoader::load_player(const std::string& path)
 
         m_playerData->ownedUnits[1] = { 1, 0 };
         m_playerData->equippedUnits[0] = 1;
+        m_playerData->fill_energy();
 
         m_playerLoaded = true;
         return save_player(path);
@@ -719,6 +721,14 @@ bool DataLoader::load_player(const std::string& path)
             m_playerData->baseUpgradeLevels[static_cast<size_t>(PlayerData::BaseUpgrade::WALLET)] = level("wallet");
         }
         m_playerData->adsToday = progression.contains("adsToday") ? progression.at("adsToday").get<int>() : 0;
+
+        // The energy and when it was counted (missing in older saves: full, from now; it needs the fish for the max)
+        if (progression.contains("energy") && progression.contains("energyTime"))
+        {
+            m_playerData->energy = std::max(0, read_int(progression, "energy"));
+            m_playerData->energyTime = progression.at("energyTime").get<std::int64_t>();
+        }
+        else m_playerData->fill_energy();
 
         // Enemies met in battle (missing in older saves)
         m_playerData->seenEnemies.clear();
@@ -819,6 +829,8 @@ bool DataLoader::save_player(const std::string& path)
     j["progression"]["shopAdsToday"] = m_playerData->shopAdsToday;
     j["progression"]["baseUpgrades"]["health"] = m_playerData->get_base_upgrade_level(PlayerData::BaseUpgrade::HEALTH);
     j["progression"]["baseUpgrades"]["wallet"] = m_playerData->get_base_upgrade_level(PlayerData::BaseUpgrade::WALLET);
+    j["progression"]["energy"] = m_playerData->energy;
+    j["progression"]["energyTime"] = m_playerData->energyTime;
 
     // Enemies met in battle (sorted, so the file doesn't change order between saves)
     std::vector<int> seenEnemies(m_playerData->seenEnemies.begin(), m_playerData->seenEnemies.end());

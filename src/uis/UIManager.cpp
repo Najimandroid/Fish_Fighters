@@ -45,6 +45,8 @@
 #include "widgets/UIAdOverlay.h"
 #include "widgets/UIPearlShop.h"
 #include "widgets/UIChartBackground.h"
+#include "widgets/UIEnergyMeter.h"
+#include "widgets/UIEnergyCost.h"
 #include "UISkin.h"
 #include "../core/Platform.h"
 
@@ -593,6 +595,8 @@ void UIManager::generate_fish_tank_uis()
     add_ui_element(std::make_shared<UIFishTank>(m_dataLoader));   // The lineup swims in the porthole
     add_ui_element(titleBar);
     add_ui_element(shellsInfo);
+    auto energyDialog = make_energy_dialog();
+    add_energy_meter(energyDialog);
     add_bottom_bar(UITitleBar::Material::STEEL, true, false);   // The floor's front edge: the Fish and the clam stand on it
     add_ui_element(battleButton);
     add_ui_element(upgradeButton);
@@ -662,6 +666,7 @@ void UIManager::generate_fish_tank_uis()
     add_ui_element(optionsMenu);  // Windows last: on top while open
     add_ui_element(quitDialog);
     add_ui_element(rankInfo);
+    add_ui_element(energyDialog);
 }
 
 /*
@@ -983,6 +988,104 @@ void UIManager::add_bottom_bar(UITitleBar::Material material, bool showsScales, 
     plus->set_frame(true);   // On the bottom bar
     plus->set_callback([this, back = m_screenAgain]() { m_pendingAction = [this, back]() { generate_shop_uis(back); }; });
     add_ui_element(plus);
+}
+
+/*
+ * The energy on the title bar (UIEnergyMeter), left of the shells, and the "+" inside its right end that opens the
+ * energy window (greyed while full; the window is the screen's, added last)
+ */
+void UIManager::add_energy_meter(const std::shared_ptr<UIConfirmDialog>& energyDialog)
+{
+    auto meter = std::make_shared<UIEnergyMeter>(m_dataLoader);
+    const float plusSize = 50.f;
+    auto plus = std::make_shared<UIButtonElement>(sf::Vector2f{ plusSize, plusSize }, UIEnergyMeter::refill_button_position(plusSize), "+");
+    plus->set_text_size(40);
+    plus->set_frame(true);   // On the title bar's energy pill
+    std::weak_ptr<UIConfirmDialog> weakDialog = energyDialog;
+    plus->set_callback([this, weakDialog]() { open_energy_dialog(weakDialog.lock(), 0, false); });
+    meter->set_refill_button(plus);
+    add_ui_element(meter);
+    add_ui_element(plus);
+}
+
+std::shared_ptr<UIConfirmDialog> UIManager::make_energy_dialog()
+{
+    auto dialog = std::make_shared<UIConfirmDialog>("", "", "REFILL", "LATER");
+    dialog->set_confirm_tint(sf::Color::White);   // A good action: yellow
+    dialog->set_confirm_sound("");                // The purchase sound instead (or the shop's screen change)
+    return dialog;
+}
+
+/*
+ * The energy window. With enough pearls: REFILL spends ENERGY_REFILL_PEARLS and fills it to the max (the meter's digits
+ * roll up). Without: GET PEARLS opens the Pearl Shop, whose back button comes back to this screen (from the results:
+ * the battle is left first, and the shop goes back to the map). It says how long the wait is either way
+ */
+void UIManager::open_energy_dialog(const std::shared_ptr<UIConfirmDialog>& dialog, int needed, bool inBattle)
+{
+    auto player = m_dataLoader->get_player_data().lock();
+    if (!dialog || !player) return;
+
+    const int energy = player->get_energy();
+    const int max = player->get_max_energy();
+    const int price = PlayerData::ENERGY_REFILL_PEARLS;
+    const bool canPay = player->pearls >= price;
+    const auto number = [](int value) { return std::to_string(value); };
+
+    std::string explanation;
+    if (needed > 0)
+    {
+        const int wait = player->seconds_to_energy(needed);
+        explanation = "This stage needs " + number(needed) + " energy and you have " + number(energy)
+            + (wait > 0 ? ": enough in " + UIEnergyMeter::format_time(wait) + "." : ": your max grows with your School Rank.");
+    }
+    else
+    {
+        explanation = std::string("It comes back by itself, ")
+            + (PlayerData::ENERGY_REGEN_SECONDS == 60 ? "1 every minute" : "1 every " + number(PlayerData::ENERGY_REGEN_SECONDS) + " seconds")
+            + ": full in " + UIEnergyMeter::format_time(player->seconds_to_energy(max)) + ".";
+    }
+    explanation += canPay ? " Refill it to " + number(max) + " for " + number(price) + " Pearls?"
+        : " A refill costs " + number(price) + " Pearls and you have " + number(player->pearls) + ".";
+
+    dialog->set_texts(needed > 0 ? "Not enough energy" : "Refill your energy?", explanation, canPay ? "REFILL" : "GET PEARLS");
+    dialog->open([this, canPay, inBattle, back = m_screenAgain]()
+        {
+            if (canPay)
+            {
+                auto player = m_dataLoader->get_player_data().lock();
+                if (player && player->refill_energy())
+                {
+                    if (m_audio) m_audio->play_sound("purchase");
+                    m_dataLoader->save_progress();
+                }
+                return;
+            }
+            if (inBattle)
+                m_pendingAction = [this]() { wipe_out_of_battle([this]() { generate_shop_uis([this]() { generate_chapter_map_uis(); }); }); };
+            else
+                m_pendingAction = [this, back]() { generate_shop_uis(back); };
+        });
+}
+
+/*
+ * A battle starts if there's the energy for it: it's spent (and saved) right away, so leaving or losing doesn't give
+ * it back, like The Battle Cats. Without enough, the energy window opens instead
+ */
+void UIManager::try_start_battle(int stageUid, const std::shared_ptr<UIConfirmDialog>& energyDialog, bool inBattle)
+{
+    auto stageData = m_dataLoader->get_stage_data(stageUid);
+    auto player = m_dataLoader->get_player_data().lock();
+    if (!stageData || !player || m_pendingBattleStage >= 0) return;
+
+    if (!player->spend_energy(stageData->energyCost))
+    {
+        if (m_audio) m_audio->play_sound("ui_error");
+        open_energy_dialog(energyDialog, stageData->energyCost, inBattle);
+        return;
+    }
+    if (stageData->energyCost > 0) m_dataLoader->save_progress();
+    start_battle(stageUid);
 }
 
 /*
@@ -1319,10 +1422,17 @@ void UIManager::generate_chapter_map_uis()
     battleButton->set_attention(true);
     battleButton->set_selected(true);    // The pink frame pulses round it, like The Battle Cats' Attack!
     battleButton->set_click_sound("");   // The battle start jingle instead; the stage's theme follows it
-    battleButton->set_callback([this, chapterMap]()
+    auto energyDialog = make_energy_dialog();
+    std::weak_ptr<UIConfirmDialog> weakEnergyDialog = energyDialog;
+    battleButton->set_callback([this, chapterMap, weakEnergyDialog]()
         {
-            m_pendingAction = [this, chapterMap]() { start_battle(chapterMap->get_selected_stage_uid()); };
+            m_pendingAction = [this, chapterMap, weakEnergyDialog]() { try_start_battle(chapterMap->get_selected_stage_uid(), weakEnergyDialog.lock(), false); };
         });
+    // What the stage selected costs, on a tag straddling BATTLE!'s top edge
+    std::weak_ptr<UIChapterMap> weakMap = chapterMap;
+    auto energyCost = std::make_shared<UIEnergyCost>(m_dataLoader,
+        [weakMap]() { auto map = weakMap.lock(); return map ? map->get_selected_stage_uid() : -1; },
+        sf::Vector2f{ 1470.f + 210.f, UISkin::CONTENT_BOTTOM - 16.f - 172.f });
 
     const int chapterUid = m_dataLoader->get_player_data().lock()->currentChapter;
     chapterMap->load_chapter(chapterUid);
@@ -1340,9 +1450,11 @@ void UIManager::generate_chapter_map_uis()
     add_ui_element(chapterMap);
     add_ui_element(titleBar);
     add_ui_element(shellsInfo);
+    add_energy_meter(energyDialog);
     add_bottom_bar();
     add_ui_element(equipShortcut);
     add_ui_element(battleButton);
+    add_ui_element(energyCost);
     add_ui_element(backButton);
     add_ui_element(add_info_button(titleBar->get_info_position(), "The chapter map",
         "# Picking a stage\n"
@@ -1352,7 +1464,13 @@ void UIManager::generate_chapter_map_uis()
         "{green|Green}: cleared. {yellow|Yellow}: the next one to play. {gray|Grey}, with a padlock: they open as you clear the stages before them. The Fish walks to the stage you pick.\n"
         "\n"
         "# The panel\n"
-        "The {red|enemy base's health}, the {orange|shells} a win brings, and the {blue|enemies} you'll meet (black until you've met them)."));
+        "The {red|enemy base's health}, the {orange|shells} a win brings, and the {blue|enemies} you'll meet (black until you've met them).\n"
+        "\n"
+        "# Energy\n"
+        "Each stage costs {yellow|energy} to play: the tag on {yellow|BATTLE!} says how much. It's spent when the battle starts, won or lost. "
+        "It comes back by itself, {cyan|1 every minute}, even with the game closed. Your {purple|School Rank} raises the most you can hold. "
+        "Out of it? The {yellow|+} on the energy refills it for " + std::to_string(PlayerData::ENERGY_REFILL_PEARLS) + " {pink|Pearls}."));
+    add_ui_element(energyDialog);   // A window: last
 }
 
 /*
@@ -1433,12 +1551,16 @@ void UIManager::generate_victory_uis()
     UIResultsPanel::Actions actions;
     actions.primaryLabel = "RETURN TO MAP";
     actions.primary = [this]() { m_pendingAction = [this]() { wipe_out_of_battle([this]() { generate_chapter_map_uis(); }); }; };
+    // RETRY costs the stage's energy again (the energy window over the results without enough)
+    auto energyDialog = make_energy_dialog();
+    std::weak_ptr<UIConfirmDialog> weakEnergyDialog = energyDialog;
     actions.secondaryLabel = "RETRY";
-    actions.secondary = [this, result]() { m_pendingAction = [this, result]() { start_battle(result.stageUID); }; };
+    actions.secondary = [this, result, weakEnergyDialog]() { m_pendingAction = [this, result, weakEnergyDialog]() { try_start_battle(result.stageUID, weakEnergyDialog.lock(), true); }; };
     actions.retry = actions.secondary;
     actions.back = [this]() { m_pendingAction = [this]() { wipe_out_of_battle([this]() { generate_fish_tank_uis(); }); }; };
 
     add_ui_element(std::make_shared<UIResultsPanel>(result, stageName, m_dataLoader, actions));
+    add_ui_element(energyDialog);
 }
 
 /*
@@ -1455,14 +1577,17 @@ void UIManager::generate_defeat_uis()
     if (auto stageData = m_dataLoader->get_stage_data(result.stageUID)) stageName = stageData->name;
 
     UIResultsPanel::Actions actions;
+    auto energyDialog = make_energy_dialog();   // RETRY costs the stage's energy again
+    std::weak_ptr<UIConfirmDialog> weakEnergyDialog = energyDialog;
     actions.primaryLabel = "RETRY";
-    actions.primary = [this, result]() { m_pendingAction = [this, result]() { start_battle(result.stageUID); }; };
+    actions.primary = [this, result, weakEnergyDialog]() { m_pendingAction = [this, result, weakEnergyDialog]() { try_start_battle(result.stageUID, weakEnergyDialog.lock(), true); }; };
     actions.retry = actions.primary;
     actions.secondaryLabel = "UPGRADE";
     actions.secondary = [this]() { m_pendingAction = [this]() { wipe_out_of_battle([this]() { generate_upgrade_menu_uis(); }); }; };
     actions.back = [this]() { m_pendingAction = [this]() { wipe_out_of_battle([this]() { generate_chapter_map_uis(); }); }; };
 
     add_ui_element(std::make_shared<UIResultsPanel>(result, stageName, m_dataLoader, actions));
+    add_ui_element(energyDialog);
 }
 
 /*
@@ -1552,6 +1677,8 @@ std::vector<std::string> UIManager::hub_tips() const
                 + (milestone.shinyScales == 1 ? " Shiny Scale!" : " Shiny Scales!"));
             break;
         }
+    if (player->get_energy() < player->get_max_energy() / 4)
+        tips.push_back("Low on energy! It comes back by itself, 1 a minute.");
     if (const std::string next = next_stage_label(); !next.empty())
         tips.push_back("Next: " + next + ". Ready?");
 

@@ -3,6 +3,7 @@
 #include "../EditorWidgets.h"
 #include "../ProjectQueries.h"
 #include "../../data/BattlefieldLayout.h"
+#include "../../data/PlayerData.h"
 
 #include <algorithm>
 #include <cmath>
@@ -478,6 +479,10 @@ namespace
             text_field(ctx, STAGES_FILE, "Name", stage, "stageName");
             int_field(ctx, STAGES_FILE, "Enemy limit", stage, "enemiesLimit", 1, 1000, "Maximum enemies on the field at once.", 0.1f);
             int_field(ctx, STAGES_FILE, "Unit limit", stage, "unitsLimit", 1, 1000, "Maximum fish the player can have on the field.", 0.1f);
+            int_field(ctx, STAGES_FILE, "Energy cost", stage, "energyCost", 0, PlayerData::ENERGY_BASE_MAX,
+                ("Energy spent to play it (0: free). Shown on the map's BATTLE!. It comes back 1 a minute; the most a player holds is "
+                    + std::to_string(PlayerData::ENERGY_BASE_MAX) + " + School Rank / " + std::to_string(PlayerData::SCHOOL_RANKS_PER_ENERGY)
+                    + ", so a cost over " + std::to_string(PlayerData::ENERGY_BASE_MAX) + " could never be paid by a new player.").c_str(), 0.1f);
             end_properties();
         }
 

@@ -462,3 +462,81 @@ bool PlayerData::buy_shiny_scales(int count)
     shinyScales += count;
     return true;
 }
+
+// ===== Energy =====
+
+namespace
+{
+    std::int64_t now_seconds()
+    {
+        return static_cast<std::int64_t>(std::time(nullptr));
+    }
+}
+
+int PlayerData::get_max_energy() const
+{
+    return ENERGY_BASE_MAX + get_school_rank() / SCHOOL_RANKS_PER_ENERGY;
+}
+
+/*
+ * The energy now: the points that came back since energyTime, up to the max. Nothing comes back above the max (a
+ * refill or a bigger max from before stays as it is). A clock set back counts as no time passed
+ */
+int PlayerData::get_energy() const
+{
+    const int max = get_max_energy();
+    if (energy >= max) return energy;
+    const std::int64_t elapsed = std::max<std::int64_t>(0, now_seconds() - energyTime);
+    return static_cast<int>(std::min<std::int64_t>(max, energy + elapsed / ENERGY_REGEN_SECONDS));
+}
+
+int PlayerData::seconds_to_next_energy() const
+{
+    if (get_energy() >= get_max_energy()) return 0;
+    const std::int64_t elapsed = std::max<std::int64_t>(0, now_seconds() - energyTime);
+    return ENERGY_REGEN_SECONDS - static_cast<int>(elapsed % ENERGY_REGEN_SECONDS);
+}
+
+int PlayerData::seconds_to_energy(int amount) const
+{
+    const int current = get_energy();
+    if (current >= amount) return 0;
+    if (amount > get_max_energy()) return -1;   // It stops coming back at the max
+    return (amount - current - 1) * ENERGY_REGEN_SECONDS + seconds_to_next_energy();
+}
+
+/*
+ * Spends energy: what came back is counted in first (energy, and energyTime moved on by the points counted, so the
+ * point on its way keeps its progress); from full, the next point starts coming back now
+ */
+bool PlayerData::spend_energy(int amount)
+{
+    if (amount <= 0) return true;
+    const std::int64_t now = now_seconds();
+    const int max = get_max_energy();
+    if (now < energyTime) energyTime = now;   // The clock was set back: count from now
+    if (energy >= max) energyTime = now;
+    else
+    {
+        const std::int64_t points = (now - energyTime) / ENERGY_REGEN_SECONDS;
+        if (energy + points >= max) { energy = max; energyTime = now; }
+        else { energy += static_cast<int>(points); energyTime += points * ENERGY_REGEN_SECONDS; }
+    }
+    if (energy < amount) return false;
+    energy -= amount;
+    return true;
+}
+
+bool PlayerData::refill_energy()
+{
+    if (pearls < ENERGY_REFILL_PEARLS || get_energy() >= get_max_energy()) return false;
+    pearls -= ENERGY_REFILL_PEARLS;
+    fill_energy();
+    return true;
+}
+
+void PlayerData::fill_energy()
+{
+    energy = std::max(get_energy(), get_max_energy());
+    energyTime = now_seconds();
+}

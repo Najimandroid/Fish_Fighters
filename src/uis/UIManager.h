@@ -110,6 +110,18 @@ private:
     // like a frozen game, and the battle's intro carries on from where the jingle is. Run it as a deferred action
     void start_battle(int stageUid);
     void finish_battle_start();
+
+    // Energy (PlayerData, like The Battle Cats'): a stage costs some to play (StageData::energyCost).
+    // try_start_battle spends it and starts the battle, or opens the energy window when there isn't enough (a deferred
+    // action; inBattle: from the results' RETRY)
+    void try_start_battle(int stageUid, const std::shared_ptr<UIConfirmDialog>& energyDialog, bool inBattle);
+    // The energy window (make_energy_dialog: add it last, it's a window), and the meter on a menu's title bar, left of
+    // the shells, whose "+" opens it
+    std::shared_ptr<UIConfirmDialog> make_energy_dialog();
+    void add_energy_meter(const std::shared_ptr<UIConfirmDialog>& energyDialog);
+    // The energy window: a refill to the max for pearls, or GET PEARLS (the Pearl Shop) without enough of them.
+    // needed: what the stage asks for (0: opened by the meter's "+")
+    void open_energy_dialog(const std::shared_ptr<UIConfirmDialog>& dialog, int needed, bool inBattle);
     std::shared_ptr<UIBattleIntro> m_battleCover;   // The water over the screen being left
     int m_pendingBattleStage = -1;                  // The stage loading under it (-1: none)
     sf::Clock m_jingleClock;                        // Since the jingle started

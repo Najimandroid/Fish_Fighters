@@ -33,6 +33,7 @@ struct StageData
     float baseHealth = 100.0f;             // Starting health of the enemy base
     float playerBaseHealth = 350.0f;       // Starting health of the player base (optional "playerBaseHealth" in the JSON)
     float length = 960.0f;                 // Distance between the enemy base and the player base
+    int energyCost = 0;                    // Energy spent to play it (PlayerData's energy; optional "energyCost": free)
 
     // ===== Enemy Waves =====
     std::vector<std::shared_ptr<EnemyStageData>> enemies;

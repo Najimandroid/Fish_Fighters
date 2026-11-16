@@ -1,7 +1,10 @@
 #include "SaveDataEditor.h"
 #include "EditorWidgets.h"
+#include "../data/PlayerData.h"
 
 #include <algorithm>
+#include <cstdint>
+#include <ctime>
 #include <fstream>
 #include <set>
 
@@ -240,6 +243,43 @@ void SaveDataEditor::draw_progress(EditorContext& ctx)
         property_label("Pearls", "The rare currency of the Pearl Shop (a new fish's first look in the encyclopedia, the shop's free videos)");
         int pearls = m_save["money"].contains("pearls") ? read_int(m_save["money"], "pearls") : 0;
         if (ImGui::DragInt("##pearls", &pearls, 1.f, 0, 1000000)) { m_save["money"]["pearls"] = std::max(0, pearls); m_hasChanges = true; }
+
+        // Energy: saved as an amount and when it was counted ("energyTime", seconds since 1970); a point comes back
+        // every ENERGY_REGEN_SECONDS since then, up to the max (PlayerData). Editing it counts it from now
+        ordered_json& progression = m_save["progression"];
+        int schoolRank = 0;
+        if (m_save["units"]["owned"].is_object())
+            for (const auto& [uid, unit] : m_save["units"]["owned"].items()) schoolRank += read_int(unit, "level", 1) + read_int(unit, "extraLevels", 0);
+        const int maxEnergy = PlayerData::ENERGY_BASE_MAX + schoolRank / PlayerData::SCHOOL_RANKS_PER_ENERGY;
+        const bool hasEnergy = progression.contains("energy") && progression.contains("energyTime");
+        const std::int64_t now = static_cast<std::int64_t>(std::time(nullptr));
+        int energy = maxEnergy;
+        if (hasEnergy)
+        {
+            energy = read_int(progression, "energy");
+            const std::int64_t time = progression["energyTime"].is_number() ? progression["energyTime"].get<std::int64_t>() : now;
+            if (energy < maxEnergy) energy = static_cast<int>(std::min<std::int64_t>(maxEnergy, energy + std::max<std::int64_t>(0, now - time) / PlayerData::ENERGY_REGEN_SECONDS));
+        }
+        property_label("Energy", ("Spent to play a stage (its Energy cost); 1 comes back every " + std::to_string(PlayerData::ENERGY_REGEN_SECONDS)
+            + " s up to the max: " + std::to_string(PlayerData::ENERGY_BASE_MAX) + " + School Rank / " + std::to_string(PlayerData::SCHOOL_RANKS_PER_ENERGY)
+            + " (" + std::to_string(maxEnergy) + " here). Without it in the save the game starts it full").c_str());
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 90.f);
+        if (ImGui::DragInt("##energy", &energy, 1.f, 0, 1000, hasEnergy ? "%d" : "%d (full)"))
+        {
+            progression["energy"] = std::max(0, energy);
+            progression["energyTime"] = now;
+            m_hasChanges = true;
+        }
+        ImGui::SameLine();
+        ImGui::BeginDisabled(!hasEnergy);
+        if (ImGui::Button("Full", ImVec2(-FLT_MIN, 0.f)))
+        {
+            progression.erase("energy");
+            progression.erase("energyTime");
+            m_hasChanges = true;
+        }
+        ImGui::EndDisabled();
+        ImGui::SetItemTooltip("Takes the energy out of the save: the game fills it when it loads the save");
 
         property_label("Current chapter", "The chapter the map opens on");
         int chapter = read_int(m_save["progression"], "currentChapter", 1);

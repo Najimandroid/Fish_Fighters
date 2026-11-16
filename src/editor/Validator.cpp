@@ -189,6 +189,13 @@ namespace
             check_image(project, report, read_string(stage, "baseTexture"), owner, "enemy base image", target);
             check_image(project, report, read_string(stage, "backgroundTexture"), owner, "background", target);
 
+            // Energy: a cost over the smallest max (a new player's) can't be paid by everyone
+            if (read_int(stage, "energyCost", 0) < 0)
+                add(report, true, owner + ": its energy cost is negative", target);
+            else if (read_int(stage, "energyCost", 0) > PlayerData::ENERGY_BASE_MAX)
+                add(report, false, owner + ": it costs " + std::to_string(read_int(stage, "energyCost", 0)) + " energy, more than a new player can hold ("
+                    + std::to_string(PlayerData::ENERGY_BASE_MAX) + ")", target);
+
             // Music: names of assets/audios/music/music.json
             if (stage.contains("music") && !audio.find_music(read_string(stage, "music")))
                 add(report, false, owner + ": its theme \"" + read_string(stage, "music") + "\" isn't in music.json (no music in that battle)", target);

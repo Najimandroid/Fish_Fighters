@@ -49,6 +49,53 @@ namespace
         return canvas.getTexture();
     }
 
+    // A stand-in for the energy icon until there's a drawing of it (assets/images/textures/ui/icon_energy.png replaces
+    // it): a yellow lightning bolt, lighter on its upper stroke, a dark outline like the other icons
+    sf::Texture make_energy_texture()
+    {
+        const unsigned int size = 128;
+        sf::RenderTexture canvas({ size, size });
+        canvas.clear(sf::Color::Transparent);
+
+        // The bolt's outline, clockwise from the top left; it is drawn as two convex pieces split along C-F
+        const sf::Vector2f A{ 60.f, 8.f }, B{ 92.f, 8.f }, C{ 70.f, 52.f }, D{ 96.f, 52.f }, E{ 44.f, 122.f }, F{ 56.f, 72.f }, G{ 32.f, 72.f };
+        const auto piece = [&canvas](std::initializer_list<sf::Vector2f> points, sf::Color color)
+            {
+                sf::ConvexShape shape(points.size());
+                std::size_t i = 0;
+                for (const sf::Vector2f& point : points) shape.setPoint(i++, point);
+                shape.setFillColor(color);
+                canvas.draw(shape);
+            };
+        piece({ A, B, C, F, G }, sf::Color(255, 216, 70));
+        piece({ C, D, E, F }, sf::Color(250, 186, 40));
+        piece({ A + sf::Vector2f{ 8.f, 6.f }, B + sf::Vector2f{ -9.f, 6.f }, sf::Vector2f{ 62.f, 40.f }, sf::Vector2f{ 50.f, 40.f } }, sf::Color(255, 244, 170));
+
+        // The outline: a thick line along each edge, round at the corners
+        const float thickness = 7.f;
+        const sf::Color ink(26, 22, 34);
+        const sf::Vector2f outline[] = { A, B, C, D, E, F, G };
+        for (std::size_t i = 0; i < std::size(outline); ++i)
+        {
+            const sf::Vector2f from = outline[i];
+            const sf::Vector2f to = outline[(i + 1) % std::size(outline)];
+            const sf::Vector2f edge = to - from;
+            sf::RectangleShape line({ edge.length(), thickness });
+            line.setOrigin({ 0.f, thickness / 2.f });
+            line.setPosition(from);
+            line.setRotation(edge.angle());
+            line.setFillColor(ink);
+            canvas.draw(line);
+            sf::CircleShape joint(thickness / 2.f, 16);
+            joint.setOrigin({ thickness / 2.f, thickness / 2.f });
+            joint.setPosition(from);
+            joint.setFillColor(ink);
+            canvas.draw(joint);
+        }
+        canvas.display();
+        return canvas.getTexture();
+    }
+
     // Loads a font the first time it's asked for
     const sf::Font& load_font(sf::Font& font, bool& isLoaded, const std::string& fileName)
     {
@@ -114,6 +161,8 @@ const sf::Texture& UISkin::texture(const std::string& name)
     auto texture = std::make_unique<sf::Texture>();
     if (name == "icon_pearl" && !Platform::exists(TEXTURE_FOLDER + name + ".png"))
         *texture = make_pearl_texture();   // No drawing of it yet: a stand-in pearl
+    else if (name == "icon_energy" && !Platform::exists(TEXTURE_FOLDER + name + ".png"))
+        *texture = make_energy_texture();  // Same for the energy: a stand-in lightning bolt
     else if (!texture->loadFromFile(TEXTURE_FOLDER + name + ".png"))
         std::cerr << "UISkin: can't load the texture " << name << "\n";
     texture->setSmooth(true);

@@ -397,6 +397,7 @@ void ContentPanel::create_stage(EditorContext& ctx)
         { "stageName", "New stage" },
         { "enemiesLimit", 10 },
         { "unitsLimit", 10 },
+        { "energyCost", 10 },
         { "baseHealth", 1000 },
         { "length", 1600 },
         { "baseTexture", default_image(ctx, ImageFolder::BASES, "defaultBase.png") },

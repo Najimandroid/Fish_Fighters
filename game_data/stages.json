@@ -4,6 +4,7 @@
         "stageName": "DEBUG",
         "enemiesLimit": 20,
         "unitsLimit": 20,
+        "energyCost": 0,
         "baseHealth": 1000000,
         "playerBaseHealth": 1000000,
         "length": 1280,
@@ -23,6 +24,7 @@
         "stageName": "Shrimps' Lair",
         "enemiesLimit": 30,
         "unitsLimit": 20,
+        "energyCost": 5,
         "baseHealth": 200,
         "length": 1000,
         "baseTexture": "assets/images/textures/bases/RocksBase.png",
@@ -92,6 +94,7 @@
         "stageName": "Shallow Encounters",
         "enemiesLimit": 20,
         "unitsLimit": 20,
+        "energyCost": 0,
         "baseHealth": 100,
         "length": 1100,
         "baseTexture": "assets/images/textures/bases/enemyBaseTEST.png",
@@ -126,6 +129,7 @@
         "stageName": "A Hard Shell",
         "enemiesLimit": 20,
         "unitsLimit": 20,
+        "energyCost": 5,
         "baseHealth": 150,
         "length": 1300,
         "baseTexture": "assets/images/textures/bases/enemyBaseTEST.png",
@@ -187,6 +191,7 @@
         "stageName": "Rocky Edge",
         "enemiesLimit": 20,
         "unitsLimit": 20,
+        "energyCost": 5,
         "baseHealth": 200,
         "length": 1700,
         "baseTexture": "assets/images/textures/bases/RocksBase.png",
@@ -248,6 +253,7 @@
         "stageName": "Clam Leader",
         "enemiesLimit": 5,
         "unitsLimit": 20,
+        "energyCost": 5,
         "baseHealth": 300,
         "length": 1000,
         "baseTexture": "assets/images/textures/bases/RocksBase.png",
@@ -327,6 +333,7 @@
         "stageName": "Starlit Corals",
         "enemiesLimit": 40,
         "unitsLimit": 20,
+        "energyCost": 5,
         "baseHealth": 500,
         "length": 2045,
         "baseTexture": "assets/images/textures/bases/starBase.png",
@@ -430,6 +437,7 @@
         "stageName": "Colorful Waters",
         "enemiesLimit": 20,
         "unitsLimit": 20,
+        "energyCost": 5,
         "baseHealth": 500,
         "length": 2160,
         "baseTexture": "assets/images/textures/bases/RocksBase.png",
@@ -523,6 +531,7 @@
         "stageName": "Dizzy Spins",
         "enemiesLimit": 20,
         "unitsLimit": 20,
+        "energyCost": 6,
         "baseHealth": 600,
         "length": 1160,
         "baseTexture": "assets/images/textures/bases/starBase.png",
@@ -585,6 +594,7 @@
         "stageName": "Run & Pinch",
         "enemiesLimit": 20,
         "unitsLimit": 20,
+        "energyCost": 7,
         "baseHealth": 1500,
         "length": 1460,
         "baseTexture": "assets/images/textures/bases/RocksBase.png",
@@ -689,6 +699,7 @@
         "stageName": "Jelly Field",
         "enemiesLimit": 10,
         "unitsLimit": 20,
+        "energyCost": 6,
         "baseHealth": 1000,
         "length": 1600,
         "baseTexture": "assets/images/textures/bases/JellyBase.png",
@@ -765,6 +776,7 @@
         "stageName": "Shocking Ain't It?",
         "enemiesLimit": 10,
         "unitsLimit": 20,
+        "energyCost": 6,
         "baseHealth": 1000,
         "length": 1600,
         "baseTexture": "assets/images/textures/bases/JellyBase.png",
@@ -831,6 +843,7 @@
         "stageName": "Shiny Sand",
         "enemiesLimit": 10,
         "unitsLimit": 20,
+        "energyCost": 6,
         "baseHealth": 1000,
         "length": 900,
         "baseTexture": "assets/images/textures/bases/RocksBase.png",
@@ -893,6 +906,7 @@
         "stageName": "On The Pit's Edge",
         "enemiesLimit": 10,
         "unitsLimit": 20,
+        "energyCost": 6,
         "baseHealth": 1000,
         "length": 1300,
         "baseTexture": "assets/images/textures/bases/crabBase.png",
@@ -983,6 +997,7 @@
         "stageName": "The Pit",
         "enemiesLimit": 10,
         "unitsLimit": 20,
+        "energyCost": 6,
         "baseHealth": 1200,
         "length": 1450,
         "baseTexture": "assets/images/textures/bases/crabBase.png",
@@ -1063,6 +1078,7 @@
         "stageName": "Pinch & Hide",
         "enemiesLimit": 20,
         "unitsLimit": 20,
+        "energyCost": 7,
         "baseHealth": 1200,
         "length": 1100,
         "baseTexture": "assets/images/textures/bases/RocksBase.png",
@@ -1153,6 +1169,7 @@
         "stageName": "Seafood Bed",
         "enemiesLimit": 40,
         "unitsLimit": 20,
+        "energyCost": 7,
         "baseHealth": 1200,
         "length": 800,
         "baseTexture": "assets/images/textures/bases/crabBase.png",
@@ -1257,6 +1274,7 @@
         "stageName": "Zap Behind The Wall",
         "enemiesLimit": 40,
         "unitsLimit": 20,
+        "energyCost": 7,
         "baseHealth": 1200,
         "length": 1200,
         "baseTexture": "assets/images/textures/bases/JellyBase.png",
@@ -1347,6 +1365,7 @@
         "stageName": "Staring: A Snail!",
         "enemiesLimit": 40,
         "unitsLimit": 20,
+        "energyCost": 7,
         "baseHealth": 1200,
         "length": 1200,
         "baseTexture": "assets/images/textures/bases/starBase.png",
@@ -1445,6 +1464,7 @@
         "stageName": "Peculiar Algaes",
         "enemiesLimit": 20,
         "unitsLimit": 20,
+        "energyCost": 7,
         "baseHealth": 1500,
         "length": 1600,
         "baseTexture": "assets/images/textures/bases/enemyBaseTEST.png",
@@ -1549,6 +1569,7 @@
         "stageName": "The Submerged Roots",
         "enemiesLimit": 40,
         "unitsLimit": 20,
+        "energyCost": 8,
         "baseHealth": 1500,
         "length": 2200,
         "baseTexture": "assets/images/textures/bases/ShipwreckBase.png",
@@ -1639,6 +1660,7 @@
         "stageName": "Deadly Depths",
         "enemiesLimit": 20,
         "unitsLimit": 20,
+        "energyCost": 8,
         "baseHealth": 1500,
         "length": 1500,
         "baseTexture": "assets/images/textures/bases/SharkBase.png",
@@ -1687,6 +1709,7 @@
         "stageName": "Armored Escort",
         "enemiesLimit": 20,
         "unitsLimit": 20,
+        "energyCost": 8,
         "baseHealth": 1800,
         "length": 1400,
         "baseTexture": "assets/images/textures/bases/RocksBase.png",
@@ -1763,6 +1786,7 @@
         "stageName": "Crusty Parade",
         "enemiesLimit": 25,
         "unitsLimit": 20,
+        "energyCost": 8,
         "baseHealth": 1950,
         "length": 1500,
         "baseTexture": "assets/images/textures/bases/crabBase.png",
@@ -1867,6 +1891,7 @@
         "stageName": "Pins & Needles",
         "enemiesLimit": 20,
         "unitsLimit": 20,
+        "energyCost": 8,
         "baseHealth": 2050,
         "length": 1600,
         "baseTexture": "assets/images/textures/bases/RocksBase.png",
@@ -1957,6 +1982,7 @@
         "stageName": "Prickly Patrol",
         "enemiesLimit": 25,
         "unitsLimit": 20,
+        "energyCost": 8,
         "baseHealth": 2150,
         "length": 1800,
         "baseTexture": "assets/images/textures/bases/starBase.png",
@@ -1965,7 +1991,7 @@
         "enemies": [
             {
                 "UID": 10,
-                "amount": -1,
+                "amount": 3,
                 "respawnTime": 35,
                 "spawnStart": 5,
                 "layer": -1,
@@ -2047,6 +2073,7 @@
         "stageName": "Big Sister",
         "enemiesLimit": 25,
         "unitsLimit": 20,
+        "energyCost": 9,
         "baseHealth": 2250,
         "length": 1300,
         "baseTexture": "assets/images/textures/bases/RocksBase.png",
@@ -2141,6 +2168,7 @@
         "stageName": "Catch The Current",
         "enemiesLimit": 30,
         "unitsLimit": 20,
+        "energyCost": 9,
         "baseHealth": 2350,
         "length": 1000,
         "baseTexture": "assets/images/textures/bases/starBase.png",
@@ -2150,7 +2178,7 @@
             {
                 "UID": 4,
                 "amount": -1,
-                "respawnTime": 4,
+                "respawnTime": 6,
                 "spawnStart": 1,
                 "layer": -1,
                 "baseHealth": 100,
@@ -2164,7 +2192,7 @@
             {
                 "UID": 5,
                 "amount": -1,
-                "respawnTime": 7,
+                "respawnTime": 10,
                 "spawnStart": 3,
                 "layer": -1,
                 "baseHealth": 100,
@@ -2178,7 +2206,7 @@
             {
                 "UID": 9,
                 "amount": -1,
-                "respawnTime": 10,
+                "respawnTime": 14,
                 "spawnStart": 8,
                 "layer": -1,
                 "baseHealth": 100,
@@ -2217,6 +2245,7 @@
         "stageName": "Big Pinch",
         "enemiesLimit": 20,
         "unitsLimit": 20,
+        "energyCost": 9,
         "baseHealth": 3000,
         "length": 1600,
         "baseTexture": "assets/images/textures/bases/crabBase.png",
@@ -2240,7 +2269,7 @@
             {
                 "UID": 5,
                 "amount": -1,
-                "respawnTime": 8,
+                "respawnTime": 12,
                 "spawnStart": 2,
                 "layer": -1,
                 "baseHealth": 100,
@@ -2254,7 +2283,7 @@
             {
                 "UID": 9,
                 "amount": -1,
-                "respawnTime": 10,
+                "respawnTime": 15,
                 "spawnStart": 5,
                 "layer": -1,
                 "baseHealth": 100,
@@ -2311,6 +2340,7 @@
         "stageName": "Low Tide",
         "enemiesLimit": 30,
         "unitsLimit": 20,
+        "energyCost": 9,
         "baseHealth": 2550,
         "length": 2000,
         "baseTexture": "assets/images/textures/bases/RocksBase.png",
@@ -2401,6 +2431,7 @@
         "stageName": "Stinging Bloom",
         "enemiesLimit": 25,
         "unitsLimit": 20,
+        "energyCost": 9,
         "baseHealth": 2650,
         "length": 1700,
         "baseTexture": "assets/images/textures/bases/JellyBase.png",
@@ -2491,6 +2522,7 @@
         "stageName": "Clownfish Not Included",
         "enemiesLimit": 25,
         "unitsLimit": 20,
+        "energyCost": 9,
         "baseHealth": 2750,
         "length": 1500,
         "baseTexture": "assets/images/textures/bases/JellyBase.png",
@@ -2567,6 +2599,7 @@
         "stageName": "Sandbar Siege",
         "enemiesLimit": 25,
         "unitsLimit": 20,
+        "energyCost": 10,
         "baseHealth": 2850,
         "length": 1600,
         "baseTexture": "assets/images/textures/bases/RocksBase.png",
@@ -2590,7 +2623,7 @@
             {
                 "UID": 4,
                 "amount": -1,
-                "respawnTime": 8,
+                "respawnTime": 10,
                 "spawnStart": 2,
                 "layer": -1,
                 "baseHealth": 100,
@@ -2603,7 +2636,7 @@
             },
             {
                 "UID": 11,
-                "amount": -1,
+                "amount": 2,
                 "respawnTime": 40,
                 "spawnStart": 5,
                 "layer": -1,
@@ -2618,7 +2651,7 @@
             {
                 "UID": 8,
                 "amount": -1,
-                "respawnTime": 10,
+                "respawnTime": 14,
                 "spawnStart": 8,
                 "layer": -1,
                 "baseHealth": 100,
@@ -2657,6 +2690,7 @@
         "stageName": "Sniper's Nest",
         "enemiesLimit": 25,
         "unitsLimit": 20,
+        "energyCost": 10,
         "baseHealth": 2950,
         "length": 1800,
         "baseTexture": "assets/images/textures/bases/RocksBase.png",
@@ -2747,6 +2781,7 @@
         "stageName": "The Glowing Dark",
         "enemiesLimit": 30,
         "unitsLimit": 20,
+        "energyCost": 10,
         "baseHealth": 3050,
         "length": 1600,
         "baseTexture": "assets/images/textures/bases/JellyBase.png",
@@ -2823,6 +2858,7 @@
         "stageName": "Royal Guard",
         "enemiesLimit": 25,
         "unitsLimit": 20,
+        "energyCost": 10,
         "baseHealth": 3150,
         "length": 1700,
         "baseTexture": "assets/images/textures/bases/JellyBase.png",
@@ -2845,7 +2881,7 @@
             },
             {
                 "UID": 10,
-                "amount": -1,
+                "amount": 2,
                 "respawnTime": 30,
                 "spawnStart": 5,
                 "layer": -1,
@@ -2859,7 +2895,7 @@
             },
             {
                 "UID": 11,
-                "amount": -1,
+                "amount": 2,
                 "respawnTime": 40,
                 "spawnStart": 20,
                 "layer": -1,
@@ -2913,6 +2949,7 @@
         "stageName": "High Voltage Throne",
         "enemiesLimit": 20,
         "unitsLimit": 20,
+        "energyCost": 10,
         "baseHealth": 4100,
         "length": 1500,
         "baseTexture": "assets/images/textures/bases/JellyBase.png",
@@ -2927,8 +2964,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    1.6,
-                    1.6
+                    1.4,
+                    1.4
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -2941,8 +2978,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    1.2,
-                    1.2
+                    1.1,
+                    1.1
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -2969,8 +3006,8 @@
                 "layer": -1,
                 "baseHealth": 99,
                 "magnification": [
-                    1.6,
-                    1.6
+                    1.4,
+                    1.4
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -2983,8 +3020,8 @@
                 "layer": -1,
                 "baseHealth": 99,
                 "magnification": [
-                    1.6,
-                    1.6
+                    1.4,
+                    1.4
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3007,6 +3044,7 @@
         "stageName": "Afterglow",
         "enemiesLimit": 25,
         "unitsLimit": 20,
+        "energyCost": 10,
         "baseHealth": 3350,
         "length": 1400,
         "baseTexture": "assets/images/textures/bases/JellyBase.png",
@@ -3021,8 +3059,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2,
-                    2
+                    1.7,
+                    1.7
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3035,8 +3073,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    1.3,
-                    1.3
+                    1.2,
+                    1.2
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3049,8 +3087,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    1.2,
-                    1.2
+                    1.1,
+                    1.1
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3063,8 +3101,8 @@
                 "layer": -1,
                 "baseHealth": 60,
                 "magnification": [
-                    1.6,
-                    1.6
+                    1.4,
+                    1.4
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3083,6 +3121,7 @@
         "stageName": "Abyssal Plain",
         "enemiesLimit": 25,
         "unitsLimit": 20,
+        "energyCost": 11,
         "baseHealth": 3450,
         "length": 2200,
         "baseTexture": "assets/images/textures/bases/RocksBase.png",
@@ -3092,41 +3131,41 @@
             {
                 "UID": 8,
                 "amount": -1,
-                "respawnTime": 10,
+                "respawnTime": 12,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2,
-                    2
+                    1.7,
+                    1.7
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
             },
             {
                 "UID": 11,
-                "amount": -1,
-                "respawnTime": 30,
+                "amount": 3,
+                "respawnTime": 40,
                 "spawnStart": 5,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    1.4,
-                    1.4
+                    1.3,
+                    1.3
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
             },
             {
                 "UID": 10,
-                "amount": -1,
-                "respawnTime": 30,
+                "amount": 3,
+                "respawnTime": 40,
                 "spawnStart": 20,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    1.4,
-                    1.4
+                    1.3,
+                    1.3
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3139,8 +3178,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    1.3,
-                    1.3
+                    1.2,
+                    1.2
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3159,6 +3198,7 @@
         "stageName": "The Headliner",
         "enemiesLimit": 30,
         "unitsLimit": 20,
+        "energyCost": 11,
         "baseHealth": 3600,
         "length": 1500,
         "baseTexture": "assets/images/textures/bases/starBase.png",
@@ -3173,8 +3213,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    1.6,
-                    1.6
+                    1.4,
+                    1.4
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3187,8 +3227,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2,
-                    2
+                    1.7,
+                    1.7
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3201,8 +3241,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    1.6,
-                    1.6
+                    1.4,
+                    1.4
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3229,8 +3269,8 @@
                 "layer": -1,
                 "baseHealth": 90,
                 "magnification": [
-                    1.6,
-                    1.6
+                    1.4,
+                    1.4
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3253,6 +3293,7 @@
         "stageName": "Encore!",
         "enemiesLimit": 25,
         "unitsLimit": 20,
+        "energyCost": 11,
         "baseHealth": 3650,
         "length": 1600,
         "baseTexture": "assets/images/textures/bases/starBase.png",
@@ -3267,8 +3308,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    1.8,
-                    1.8
+                    1.5,
+                    1.5
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3281,8 +3322,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    1.6,
-                    1.6
+                    1.4,
+                    1.4
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3295,8 +3336,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    1.3,
-                    1.3
+                    1.2,
+                    1.2
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3323,8 +3364,8 @@
                 "layer": -1,
                 "baseHealth": 50,
                 "magnification": [
-                    1.2,
-                    1.2
+                    1.1,
+                    1.1
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3343,6 +3384,7 @@
         "stageName": "Kelp Maze",
         "enemiesLimit": 30,
         "unitsLimit": 20,
+        "energyCost": 11,
         "baseHealth": 3750,
         "length": 1800,
         "baseTexture": "assets/images/textures/bases/RocksBase.png",
@@ -3357,8 +3399,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2,
-                    2
+                    1.7,
+                    1.7
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3371,8 +3413,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    1.8,
-                    1.8
+                    1.5,
+                    1.5
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3385,8 +3427,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    1.8,
-                    1.8
+                    1.5,
+                    1.5
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3399,8 +3441,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    1.8,
-                    1.8
+                    1.5,
+                    1.5
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3413,8 +3455,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    1.4,
-                    1.4
+                    1.3,
+                    1.3
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3427,8 +3469,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    1.4,
-                    1.4
+                    1.3,
+                    1.3
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3441,8 +3483,8 @@
                 "layer": -1,
                 "baseHealth": 50,
                 "magnification": [
-                    1.4,
-                    1.4
+                    1.3,
+                    1.3
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3461,6 +3503,7 @@
         "stageName": "Twin Claws",
         "enemiesLimit": 20,
         "unitsLimit": 20,
+        "energyCost": 11,
         "baseHealth": 3850,
         "length": 1700,
         "baseTexture": "assets/images/textures/bases/crabBase.png",
@@ -3470,13 +3513,13 @@
             {
                 "UID": 9,
                 "amount": -1,
-                "respawnTime": 8,
+                "respawnTime": 11,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2,
-                    2
+                    1.7,
+                    1.7
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3484,13 +3527,13 @@
             {
                 "UID": 5,
                 "amount": -1,
-                "respawnTime": 9,
+                "respawnTime": 12,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    1.8,
-                    1.8
+                    1.5,
+                    1.5
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3498,13 +3541,13 @@
             {
                 "UID": 8,
                 "amount": -1,
-                "respawnTime": 12,
+                "respawnTime": 16,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2,
-                    2
+                    1.7,
+                    1.7
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3531,8 +3574,8 @@
                 "layer": -1,
                 "baseHealth": 50,
                 "magnification": [
-                    1.2,
-                    1.2
+                    1.1,
+                    1.1
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3551,6 +3594,7 @@
         "stageName": "Lightning Fists",
         "enemiesLimit": 25,
         "unitsLimit": 20,
+        "energyCost": 11,
         "baseHealth": 3950,
         "length": 1500,
         "baseTexture": "assets/images/textures/bases/RocksBase.png",
@@ -3565,8 +3609,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2,
-                    2
+                    1.7,
+                    1.7
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3579,8 +3623,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2,
-                    2
+                    1.7,
+                    1.7
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3641,6 +3685,7 @@
         "stageName": "Reef Reunion",
         "enemiesLimit": 35,
         "unitsLimit": 20,
+        "energyCost": 12,
         "baseHealth": 4100,
         "length": 2000,
         "baseTexture": "assets/images/textures/bases/starBase.png",
@@ -3650,7 +3695,7 @@
             {
                 "UID": 1,
                 "amount": -1,
-                "respawnTime": 2,
+                "respawnTime": 3,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
@@ -3664,7 +3709,7 @@
             {
                 "UID": 6,
                 "amount": -1,
-                "respawnTime": 6,
+                "respawnTime": 9,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
@@ -3678,7 +3723,7 @@
             {
                 "UID": 4,
                 "amount": -1,
-                "respawnTime": 8,
+                "respawnTime": 12,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
@@ -3692,7 +3737,7 @@
             {
                 "UID": 5,
                 "amount": -1,
-                "respawnTime": 10,
+                "respawnTime": 15,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
@@ -3706,7 +3751,7 @@
             {
                 "UID": 7,
                 "amount": -1,
-                "respawnTime": 10,
+                "respawnTime": 14,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
@@ -3720,7 +3765,7 @@
             {
                 "UID": 8,
                 "amount": -1,
-                "respawnTime": 12,
+                "respawnTime": 18,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
@@ -3759,6 +3804,7 @@
         "stageName": "Rock Pool",
         "enemiesLimit": 25,
         "unitsLimit": 20,
+        "energyCost": 12,
         "baseHealth": 4200,
         "length": 1100,
         "baseTexture": "assets/images/textures/bases/RocksBase.png",
@@ -3773,8 +3819,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    1.5,
-                    1.5
+                    1.3,
+                    1.3
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3787,8 +3833,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2.5,
-                    2.5
+                    2,
+                    2
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3801,8 +3847,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2.2,
-                    2.2
+                    1.8,
+                    1.8
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3815,8 +3861,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    1.5,
-                    1.5
+                    1.3,
+                    1.3
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3829,8 +3875,8 @@
                 "layer": -1,
                 "baseHealth": 60,
                 "magnification": [
-                    1.5,
-                    1.5
+                    1.3,
+                    1.3
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3849,6 +3895,7 @@
         "stageName": "Seagrass Ambush",
         "enemiesLimit": 30,
         "unitsLimit": 20,
+        "energyCost": 12,
         "baseHealth": 4300,
         "length": 1700,
         "baseTexture": "assets/images/textures/bases/RocksBase.png",
@@ -3863,8 +3910,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2.5,
-                    2.5
+                    2,
+                    2
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3877,8 +3924,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2.5,
-                    2.5
+                    2,
+                    2
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3891,8 +3938,8 @@
                 "layer": -1,
                 "baseHealth": 70,
                 "magnification": [
-                    1.2,
-                    1.2
+                    1.1,
+                    1.1
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3905,8 +3952,8 @@
                 "layer": -1,
                 "baseHealth": 70,
                 "magnification": [
-                    2.2,
-                    2.2
+                    1.8,
+                    1.8
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3919,8 +3966,8 @@
                 "layer": -1,
                 "baseHealth": 70,
                 "magnification": [
-                    1.2,
-                    1.2
+                    1.1,
+                    1.1
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3933,8 +3980,8 @@
                 "layer": -1,
                 "baseHealth": 70,
                 "magnification": [
-                    2.2,
-                    2.2
+                    1.8,
+                    1.8
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3957,6 +4004,7 @@
         "stageName": "Jelly Jam Session",
         "enemiesLimit": 30,
         "unitsLimit": 20,
+        "energyCost": 12,
         "baseHealth": 4400,
         "length": 1600,
         "baseTexture": "assets/images/textures/bases/JellyBase.png",
@@ -3971,8 +4019,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2.2,
-                    2.2
+                    1.8,
+                    1.8
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3985,8 +4033,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2.2,
-                    2.2
+                    1.8,
+                    1.8
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -3999,8 +4047,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    1.6,
-                    1.6
+                    1.4,
+                    1.4
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4027,8 +4075,8 @@
                 "layer": -1,
                 "baseHealth": 30,
                 "magnification": [
-                    1.3,
-                    1.3
+                    1.2,
+                    1.2
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4047,6 +4095,7 @@
         "stageName": "Mantis Mayhem",
         "enemiesLimit": 20,
         "unitsLimit": 20,
+        "energyCost": 12,
         "baseHealth": 5600,
         "length": 1600,
         "baseTexture": "assets/images/textures/bases/SharkBase.png",
@@ -4061,8 +4110,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    3,
-                    3
+                    2.3,
+                    2.3
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4070,13 +4119,13 @@
             {
                 "UID": 9,
                 "amount": -1,
-                "respawnTime": 8,
+                "respawnTime": 11,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2.4,
-                    2.4
+                    1.9,
+                    1.9
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4089,8 +4138,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    1.6,
-                    1.6
+                    1.4,
+                    1.4
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4117,8 +4166,8 @@
                 "layer": -1,
                 "baseHealth": 90,
                 "magnification": [
-                    1.2,
-                    1.2
+                    1.1,
+                    1.1
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4141,6 +4190,7 @@
         "stageName": "Lights Out",
         "enemiesLimit": 8,
         "unitsLimit": 20,
+        "energyCost": 12,
         "baseHealth": 4600,
         "length": 1500,
         "baseTexture": "assets/images/textures/bases/JellyBase.png",
@@ -4203,6 +4253,7 @@
         "stageName": "Fifty Fathoms",
         "enemiesLimit": 30,
         "unitsLimit": 20,
+        "energyCost": 13,
         "baseHealth": 4800,
         "length": 1800,
         "baseTexture": "assets/images/textures/bases/SharkBase.png",
@@ -4217,8 +4268,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    3,
-                    3
+                    2.3,
+                    2.3
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4231,8 +4282,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2.6,
-                    2.6
+                    2,
+                    2
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4245,8 +4296,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    1.4,
-                    1.4
+                    1.3,
+                    1.3
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4259,8 +4310,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    1.4,
-                    1.4
+                    1.3,
+                    1.3
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4273,8 +4324,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    1.4,
-                    1.4
+                    1.3,
+                    1.3
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4287,8 +4338,8 @@
                 "layer": -1,
                 "baseHealth": 50,
                 "magnification": [
-                    1.8,
-                    1.8
+                    1.5,
+                    1.5
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4307,6 +4358,7 @@
         "stageName": "Spine Alley",
         "enemiesLimit": 25,
         "unitsLimit": 20,
+        "energyCost": 13,
         "baseHealth": 4900,
         "length": 1500,
         "baseTexture": "assets/images/textures/bases/RocksBase.png",
@@ -4316,13 +4368,13 @@
             {
                 "UID": 10,
                 "amount": -1,
-                "respawnTime": 15,
+                "respawnTime": 25,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2,
-                    2
+                    1.7,
+                    1.7
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4330,13 +4382,13 @@
             {
                 "UID": 4,
                 "amount": -1,
-                "respawnTime": 4,
+                "respawnTime": 5,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2.6,
-                    2.6
+                    2,
+                    2
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4349,8 +4401,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    1.8,
-                    1.8
+                    1.5,
+                    1.5
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4363,8 +4415,8 @@
                 "layer": -1,
                 "baseHealth": 50,
                 "magnification": [
-                    1.5,
-                    1.5
+                    1.3,
+                    1.3
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4383,6 +4435,7 @@
         "stageName": "King Crab's Court",
         "enemiesLimit": 25,
         "unitsLimit": 20,
+        "energyCost": 13,
         "baseHealth": 6400,
         "length": 1500,
         "baseTexture": "assets/images/textures/bases/crabBase.png",
@@ -4392,13 +4445,13 @@
             {
                 "UID": 8,
                 "amount": -1,
-                "respawnTime": 8,
+                "respawnTime": 14,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2.6,
-                    2.6
+                    2,
+                    2
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4406,13 +4459,13 @@
             {
                 "UID": 5,
                 "amount": -1,
-                "respawnTime": 6,
+                "respawnTime": 10,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2.6,
-                    2.6
+                    2,
+                    2
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4420,13 +4473,13 @@
             {
                 "UID": 9,
                 "amount": -1,
-                "respawnTime": 8,
+                "respawnTime": 12,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2.6,
-                    2.6
+                    2,
+                    2
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4461,14 +4514,14 @@
             },
             {
                 "UID": 2,
-                "amount": -1,
-                "respawnTime": 45,
+                "amount": 2,
+                "respawnTime": 30,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 20,
                 "magnification": [
-                    1.5,
-                    1.5
+                    1.3,
+                    1.3
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4491,6 +4544,7 @@
         "stageName": "Graveyard Gate",
         "enemiesLimit": 30,
         "unitsLimit": 20,
+        "energyCost": 13,
         "baseHealth": 5100,
         "length": 1800,
         "baseTexture": "assets/images/textures/bases/ShipwreckBase.png",
@@ -4500,13 +4554,13 @@
             {
                 "UID": 9,
                 "amount": -1,
-                "respawnTime": 5,
+                "respawnTime": 11,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2.8,
-                    2.8
+                    2.2,
+                    2.2
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4514,13 +4568,13 @@
             {
                 "UID": 8,
                 "amount": -1,
-                "respawnTime": 10,
+                "respawnTime": 16,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2.8,
-                    2.8
+                    2.2,
+                    2.2
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4528,27 +4582,27 @@
             {
                 "UID": 13,
                 "amount": -1,
-                "respawnTime": 15,
+                "respawnTime": 18,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2,
-                    2
+                    1.7,
+                    1.7
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
             },
             {
                 "UID": 11,
-                "amount": -1,
+                "amount": 3,
                 "respawnTime": 40,
                 "spawnStart": 20,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2,
-                    2
+                    1.7,
+                    1.7
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4556,13 +4610,13 @@
             {
                 "UID": 5,
                 "amount": -1,
-                "respawnTime": 4,
+                "respawnTime": 10,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 60,
                 "magnification": [
-                    2.8,
-                    2.8
+                    2.2,
+                    2.2
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4581,6 +4635,7 @@
         "stageName": "Crow's Nest",
         "enemiesLimit": 30,
         "unitsLimit": 20,
+        "energyCost": 13,
         "baseHealth": 5250,
         "length": 2200,
         "baseTexture": "assets/images/textures/bases/ShipwreckBase.png",
@@ -4590,41 +4645,41 @@
             {
                 "UID": 13,
                 "amount": -1,
-                "respawnTime": 8,
+                "respawnTime": 14,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2,
-                    2
+                    1.7,
+                    1.7
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
             },
             {
                 "UID": 10,
-                "amount": -1,
-                "respawnTime": 20,
+                "amount": 4,
+                "respawnTime": 30,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2.2,
-                    2.2
+                    1.8,
+                    1.8
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
             },
             {
                 "UID": 11,
-                "amount": -1,
-                "respawnTime": 30,
+                "amount": 3,
+                "respawnTime": 35,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2.2,
-                    2.2
+                    1.8,
+                    1.8
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4637,8 +4692,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    3,
-                    3
+                    2.3,
+                    2.3
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4651,8 +4706,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    1.5,
-                    1.5
+                    1.3,
+                    1.3
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4671,6 +4726,7 @@
         "stageName": "Ghost Lights",
         "enemiesLimit": 30,
         "unitsLimit": 20,
+        "energyCost": 13,
         "baseHealth": 5400,
         "length": 1700,
         "baseTexture": "assets/images/textures/bases/JellyBase.png",
@@ -4680,13 +4736,13 @@
             {
                 "UID": 7,
                 "amount": -1,
-                "respawnTime": 4,
+                "respawnTime": 5,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    3,
-                    3
+                    2.3,
+                    2.3
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4694,13 +4750,13 @@
             {
                 "UID": 9,
                 "amount": -1,
-                "respawnTime": 8,
+                "respawnTime": 11,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    3,
-                    3
+                    2.3,
+                    2.3
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4708,13 +4764,13 @@
             {
                 "UID": 12,
                 "amount": -1,
-                "respawnTime": 15,
+                "respawnTime": 20,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2.2,
-                    2.2
+                    1.8,
+                    1.8
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4727,8 +4783,8 @@
                 "layer": -1,
                 "baseHealth": 70,
                 "magnification": [
-                    1.6,
-                    1.6
+                    1.4,
+                    1.4
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4741,8 +4797,8 @@
                 "layer": -1,
                 "baseHealth": 30,
                 "magnification": [
-                    1.6,
-                    1.6
+                    1.4,
+                    1.4
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4761,6 +4817,7 @@
         "stageName": "The Last Show",
         "enemiesLimit": 30,
         "unitsLimit": 20,
+        "energyCost": 14,
         "baseHealth": 7000,
         "length": 1600,
         "baseTexture": "assets/images/textures/bases/starBase.png",
@@ -4770,13 +4827,13 @@
             {
                 "UID": 4,
                 "amount": -1,
-                "respawnTime": 2,
+                "respawnTime": 3,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    3,
-                    3
+                    2.3,
+                    2.3
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4789,8 +4846,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2,
-                    2
+                    1.7,
+                    1.7
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4812,13 +4869,13 @@
             {
                 "UID": 15,
                 "amount": -1,
-                "respawnTime": 45,
+                "respawnTime": 60,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 95,
                 "magnification": [
-                    1.8,
-                    1.8
+                    1.5,
+                    1.5
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4831,8 +4888,8 @@
                 "layer": -1,
                 "baseHealth": 50,
                 "magnification": [
-                    3,
-                    3
+                    2.3,
+                    2.3
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4855,6 +4912,7 @@
         "stageName": "Undertow",
         "enemiesLimit": 25,
         "unitsLimit": 20,
+        "energyCost": 14,
         "baseHealth": 5700,
         "length": 1200,
         "baseTexture": "assets/images/textures/bases/SharkBase.png",
@@ -4864,13 +4922,13 @@
             {
                 "UID": 5,
                 "amount": -1,
-                "respawnTime": 4,
+                "respawnTime": 9,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    3,
-                    3
+                    2.3,
+                    2.3
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4878,13 +4936,13 @@
             {
                 "UID": 9,
                 "amount": -1,
-                "respawnTime": 6,
+                "respawnTime": 11,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    3,
-                    3
+                    2.3,
+                    2.3
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4892,13 +4950,13 @@
             {
                 "UID": 16,
                 "amount": -1,
-                "respawnTime": 18,
+                "respawnTime": 24,
                 "spawnStart": 10,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    1.8,
-                    1.8
+                    1.5,
+                    1.5
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4911,8 +4969,8 @@
                 "layer": -1,
                 "baseHealth": 40,
                 "magnification": [
-                    1.8,
-                    1.8
+                    1.5,
+                    1.5
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -4931,6 +4989,7 @@
         "stageName": "Dead Man's Chest",
         "enemiesLimit": 30,
         "unitsLimit": 20,
+        "energyCost": 14,
         "baseHealth": 5850,
         "length": 1600,
         "baseTexture": "assets/images/textures/bases/ShipwreckBase.png",
@@ -4940,21 +4999,7 @@
             {
                 "UID": 6,
                 "amount": -1,
-                "respawnTime": 3,
-                "spawnStart": 0,
-                "layer": -1,
-                "baseHealth": 100,
-                "magnification": [
-                    4,
-                    4
-                ],
-                "isBoss": 0,
-                "bypassEnemyLimit": 0
-            },
-            {
-                "UID": 8,
-                "amount": -1,
-                "respawnTime": 8,
+                "respawnTime": 7,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
@@ -4966,29 +5011,43 @@
                 "bypassEnemyLimit": 0
             },
             {
-                "UID": 11,
+                "UID": 8,
                 "amount": -1,
-                "respawnTime": 20,
+                "respawnTime": 15,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2.6,
-                    2.6
+                    2.3,
+                    2.3
+                ],
+                "isBoss": 0,
+                "bypassEnemyLimit": 0
+            },
+            {
+                "UID": 11,
+                "amount": -1,
+                "respawnTime": 40,
+                "spawnStart": 0,
+                "layer": -1,
+                "baseHealth": 100,
+                "magnification": [
+                    2,
+                    2
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
             },
             {
                 "UID": 10,
-                "amount": -1,
+                "amount": 3,
                 "respawnTime": 30,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2.4,
-                    2.4
+                    1.9,
+                    1.9
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -5021,6 +5080,7 @@
         "stageName": "The Abyss Stares Back",
         "enemiesLimit": 30,
         "unitsLimit": 20,
+        "energyCost": 14,
         "baseHealth": 6000,
         "length": 1800,
         "baseTexture": "assets/images/textures/bases/SharkBase.png",
@@ -5035,8 +5095,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    3.5,
-                    3.5
+                    2.6,
+                    2.6
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -5049,8 +5109,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    3,
-                    3
+                    2.3,
+                    2.3
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -5063,8 +5123,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2.4,
-                    2.4
+                    1.9,
+                    1.9
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -5077,8 +5137,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2.4,
-                    2.4
+                    1.9,
+                    1.9
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -5091,8 +5151,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2.4,
-                    2.4
+                    1.9,
+                    1.9
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -5105,8 +5165,8 @@
                 "layer": -1,
                 "baseHealth": 70,
                 "magnification": [
-                    2,
-                    2
+                    1.7,
+                    1.7
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -5119,8 +5179,8 @@
                 "layer": -1,
                 "baseHealth": 40,
                 "magnification": [
-                    2,
-                    2
+                    1.7,
+                    1.7
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -5133,8 +5193,8 @@
                 "layer": -1,
                 "baseHealth": 15,
                 "magnification": [
-                    2,
-                    2
+                    1.7,
+                    1.7
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -5153,6 +5213,7 @@
         "stageName": "Heart Of The Wreck",
         "enemiesLimit": 30,
         "unitsLimit": 20,
+        "energyCost": 14,
         "baseHealth": 9000,
         "length": 1800,
         "baseTexture": "assets/images/textures/bases/SharkBase.png",
@@ -5167,8 +5228,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    3.5,
-                    3.5
+                    2.6,
+                    2.6
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -5176,13 +5237,13 @@
             {
                 "UID": 9,
                 "amount": -1,
-                "respawnTime": 8,
+                "respawnTime": 10,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    3.2,
-                    3.2
+                    2.4,
+                    2.4
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -5195,8 +5256,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    3.2,
-                    3.2
+                    2.4,
+                    2.4
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -5209,8 +5270,8 @@
                 "layer": -1,
                 "baseHealth": 100,
                 "magnification": [
-                    2.4,
-                    2.4
+                    1.9,
+                    1.9
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
@@ -5260,13 +5321,13 @@
             {
                 "UID": 15,
                 "amount": -1,
-                "respawnTime": 40,
+                "respawnTime": 60,
                 "spawnStart": 0,
                 "layer": -1,
                 "baseHealth": 33,
                 "magnification": [
-                    2.2,
-                    2.2
+                    1.8,
+                    1.8
                 ],
                 "isBoss": 0,
                 "bypassEnemyLimit": 0
