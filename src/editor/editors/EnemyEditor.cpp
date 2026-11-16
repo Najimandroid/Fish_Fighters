@@ -61,7 +61,7 @@ namespace
             EntityFields::icon(ctx, AssetLibrary::enemy_icon_path(uid), "Icon",
                 "Shown in the encyclopedia and on the chapter map.\nFile: icon_<UID>.png in assets/images/textures/icons/enemies.\n"
                 "Replacing it keeps the previous file as icon_..(old).png.", enemy);
-            EntityFields::sprite(ctx, ENEMIES_FILE, enemy, ImageFolder::ENEMY_SHEETS);
+            EntityFields::sprite(ctx, ENEMIES_FILE, enemy, ImageFolder::ENEMY_SHEETS, AssetLibrary::enemy_icon_path(uid));
             end_properties();
         }
     }

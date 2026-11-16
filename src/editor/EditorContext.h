@@ -4,6 +4,7 @@
 #include "TextureCache.h"
 #include "AssetLibrary.h"
 #include "AudioLibrary.h"
+#include "FileDialog.h"
 
 #include "imgui.h"
 
@@ -129,10 +130,12 @@ public:
     }
 
     // ===== File dialog =====
-    void request_png_dialog(ImGuiID requester, std::string title)
+    void request_png_dialog(ImGuiID requester, std::string title) { request_file_dialog(requester, std::move(title), FileDialog::Kind::PNG); }
+    void request_file_dialog(ImGuiID requester, std::string title, FileDialog::Kind kind)
     {
         m_dialogRequester = requester;
         m_dialogTitle = std::move(title);
+        m_dialogKind = kind;
     }
 
     std::optional<std::filesystem::path> take_dialog_result(ImGuiID requester)
@@ -147,6 +150,7 @@ public:
     // Used by the EditorApp between frames
     bool has_dialog_request() const { return m_dialogRequester != 0; }
     const std::string& get_dialog_title() const { return m_dialogTitle; }
+    FileDialog::Kind get_dialog_kind() const { return m_dialogKind; }
     void deliver_dialog_result(std::optional<std::filesystem::path> result)
     {
         m_dialogResultOwner = m_dialogRequester;
@@ -185,6 +189,7 @@ private:
 
     ImGuiID m_dialogRequester = 0;
     std::string m_dialogTitle;
+    FileDialog::Kind m_dialogKind = FileDialog::Kind::PNG;
     ImGuiID m_dialogResultOwner = 0;
     std::optional<std::filesystem::path> m_dialogResult;
     int m_dialogResultAge = 0;

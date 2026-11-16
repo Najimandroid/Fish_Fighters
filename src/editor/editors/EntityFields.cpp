@@ -1,6 +1,7 @@
 #include "EntityFields.h"
 
 #include "../EditorWidgets.h"
+#include "../MdpImport.h"
 
 #include <algorithm>
 
@@ -45,10 +46,44 @@ namespace EntityFields
         ImGui::TextDisabled("%.1f (one target, without abilities)", damage_per_second(entity));
     }
 
-    void sprite(EditorContext& ctx, DataFile file, ordered_json& entity, ImageFolder folder)
+    void sprite(EditorContext& ctx, DataFile file, ordered_json& entity, ImageFolder folder, const std::string& iconPath)
     {
         image_field(ctx, file, "Sprite sheet", entity, "texture", folder,
             "Frames side by side: idle and walk first, then the knockback frame, then the attack.");
+
+        // From a FireAlpaca drawing: the sheet, the icon, the frame numbers
+        property_label("From a drawing",
+            "Makes the sprite sheet and the icon from a FireAlpaca (.mdp) drawing and fills in the frames below.\n"
+            "In the drawing, each frame is a layer named Walk1, Walk2..., Knockback1, Attack1, Attack2...\n"
+            "(the canvas is one frame: the fish at its size in the game; other layers are left out).\n"
+            "The sheet is saved as <drawing name>_sheet.png in the sheets folder, the icon over the current one\n"
+            "(the previous files are kept as ..(old).png).");
+        const ImGuiID mdpId = ImGui::GetID("ImportMdp");
+        if (ImGui::Button("Import .mdp...")) ctx.request_file_dialog(mdpId, "Pick the drawing (layers Walk1.., Knockback1, Attack1..)", FileDialog::Kind::MDP);
+        if (auto picked = ctx.take_dialog_result(mdpId))
+        {
+            std::string error;
+            if (auto made = MdpImport::convert(ctx.project.get_project_folder(), *picked, error))
+            {
+                const std::string sheetPath = std::string(AssetLibrary::folder(folder)) + "/" + picked->stem().string() + "_sheet.png";
+                if (ctx.assets.replace(sheetPath, made->sheet, error) && ctx.assets.replace(iconPath, made->icon, error))
+                {
+                    ctx.textures.forget(sheetPath);
+                    ctx.textures.forget(iconPath);
+                    entity["texture"] = sheetPath;
+                    entity["frameCount"] = made->frameCount;
+                    entity["knockbackFrameIndex"] = made->knockbackFrameIndex;
+                    ctx.commit(file);
+                    std::string message = picked->filename().string() + ": " + std::to_string(made->walk) + " walk + 1 knockback + "
+                        + std::to_string(made->attack) + " attack frames of " + std::to_string(made->frameWidth) + " x "
+                        + std::to_string(made->frameHeight) + " -> " + sheetPath + " and the icon";
+                    for (const std::string& note : made->notes) message += "\n" + note;
+                    ctx.notify(message);
+                }
+                else ctx.notify(error, true);
+            }
+            else ctx.notify(error, true);
+        }
 
         if (int_field(ctx, file, "Frames", entity, "frameCount", 1, 256,
             "Number of frames in the sheet. Frame width = sheet width / frames.", 0.05f))
@@ -100,11 +135,20 @@ void EntityFields::icon(EditorContext& ctx, const std::string& iconPath, const c
     ImGui::SameLine();
     const sf::Texture* sheet = ctx.textures.get(read_string(entity, "texture"));
     ImGui::BeginDisabled(!sheet);
-    if (ImGui::Button("Make from first frame") && sheet)
+    const bool isMakeClicked = ImGui::Button("Make from first frame");
+    ImGui::SetItemTooltip("Framed like the hand-made icons: the first frame mirrored to face right, zoomed, its head near the right edge");
+    if (isMakeClicked && sheet)
     {
+        // Framed by tools/art/mdp_to_sheet.js; without Node.js, the whole frame fitted in the icon
         std::string error;
-        const auto image = AssetLibrary::make_icon(*sheet, read_int(entity, "frameCount", 1));
-        if (image && ctx.assets.replace(iconPath, *image, error)) ctx.notify("Icon made from the first frame: " + iconPath);
+        const int frames = read_int(entity, "frameCount", 1);
+        if (auto made = MdpImport::icon_from_sheet(ctx.project.get_project_folder(), ctx.project.resolve(read_string(entity, "texture")), frames, error))
+        {
+            if (ctx.assets.replace(iconPath, *made, error)) ctx.notify("Icon made from the first frame: " + iconPath);
+            else ctx.notify(error, true);
+        }
+        else if (const auto image = AssetLibrary::make_icon(*sheet, frames); image && ctx.assets.replace(iconPath, *image, error))
+            ctx.notify("Icon made from the first frame (fitted, the framing tool failed: " + error + "): " + iconPath);
         else ctx.notify(error.empty() ? "Can't make the icon" : error, true);
         ctx.textures.forget(iconPath);
         ctx.mark_changed();

@@ -173,7 +173,7 @@ void EditorApp::between_frames()
     // The file dialog blocks: it's opened here, between two frames
     if (m_context.has_dialog_request())
     {
-        m_context.deliver_dialog_result(FileDialog::open_png(m_window, m_context.get_dialog_title().c_str()));
+        m_context.deliver_dialog_result(FileDialog::open(m_window, m_context.get_dialog_title().c_str(), m_context.get_dialog_kind()));
         m_imguiClock.restart();
     }
     else m_context.age_dialog_result();

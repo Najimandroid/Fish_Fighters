@@ -222,7 +222,7 @@ namespace
             EntityFields::icon(ctx, AssetLibrary::unit_icon_path(uid, formIndex), "Deploy icon",
                 "Shown in the deploy bar and the equip menu.\nFile: icon_<UID>_<form>.png in assets/images/textures/icons/units.\n"
                 "Replacing it keeps the previous file as icon_..(old).png.", form);
-            EntityFields::sprite(ctx, UNITS_FILE, form, ImageFolder::UNIT_SHEETS);
+            EntityFields::sprite(ctx, UNITS_FILE, form, ImageFolder::UNIT_SHEETS, AssetLibrary::unit_icon_path(uid, formIndex));
             end_properties();
         }
     }

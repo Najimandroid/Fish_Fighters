@@ -11,6 +11,11 @@ namespace FileDialog
 {
     std::optional<std::filesystem::path> open_png(const sf::Window& owner, const char* title)
     {
+        return open(owner, title, Kind::PNG);
+    }
+
+    std::optional<std::filesystem::path> open(const sf::Window& owner, const char* title, Kind kind)
+    {
         wchar_t fileName[MAX_PATH] = L"";
 
         // Dialog title, widened (titles are plain ASCII)
@@ -20,7 +25,7 @@ namespace FileDialog
         OPENFILENAMEW dialog{};
         dialog.lStructSize = sizeof(dialog);
         dialog.hwndOwner = static_cast<HWND>(owner.getNativeHandle());
-        dialog.lpstrFilter = L"PNG images (*.png)\0*.png\0";
+        dialog.lpstrFilter = kind == Kind::MDP ? L"FireAlpaca drawings (*.mdp)\0*.mdp\0" : L"PNG images (*.png)\0*.png\0";
         dialog.lpstrFile = fileName;
         dialog.nMaxFile = MAX_PATH;
         dialog.lpstrTitle = wideTitle.c_str();

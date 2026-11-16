@@ -228,6 +228,7 @@ set(EDITOR_SOURCES
     src/editor/FileDialog.cpp
     src/editor/GameBuilds.cpp
     src/editor/GameBuilder.cpp
+    src/editor/MdpImport.cpp
     src/editor/SaveDataEditor.cpp
     src/editor/Validator.cpp
     src/editor/EditorWidgets.cpp
